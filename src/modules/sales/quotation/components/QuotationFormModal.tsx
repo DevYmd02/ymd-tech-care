@@ -11,6 +11,7 @@ import { LeadSearchModal } from './LeadSearchModal';
 import { useQuotationForm } from '@sales/quotation/hooks/useQuotationForm';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
 import { logger } from '@utils/logger';
+import { useToast } from '@ui/feedback/Toast';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { QuotationHeader } from '@sales/quotation/types/quotation.types';
 
@@ -26,6 +27,7 @@ interface QuotationFormModalProps {
 const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden';
 
 export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess, readOnly = false }: QuotationFormModalProps) {
+    const { toast } = useToast();
     // 🏗️ Use custom hook for all business logic
     const {
         isEdit,
@@ -99,9 +101,11 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
             
             setIsConfirmOpen(false);
             onSuccess?.();
+            toast(`บันทึกใบเสนอราคา ${isEdit ? 'สำเร็จ' : 'เรียบร้อยแล้ว'}`, 'success');
             onClose();
         } catch (error) {
             logger.error('💥 [QuotationForm] Save Failed:', error);
+            toast('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาตรวจสอบอีกครั้ง', 'error');
         } finally {
             setIsSubmitting(false);
         }

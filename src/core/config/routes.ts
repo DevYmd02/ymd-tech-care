@@ -45,6 +45,7 @@ export const implementedRoutes = {
         quotationApproval: '/sales/quotation-approval',
         reservation: '/sales/reservation',
         order: '/sales/order',
+        orderApproval: '/sales/order-approval',
     },
 };
 
@@ -153,7 +154,6 @@ export const placeholderRoutes: Record<string, PlaceholderRoute[]> = {
         { path: 'audit/reports', title: 'Audit Reports' },
     ],
     sales: [
-        { path: 'sales/order-approval', title: 'Sales Order Approval' },
         { path: 'sales/delivery', title: 'Delivery / DO' },
         { path: 'sales/invoice', title: 'Sales Invoice' },
         { path: 'sales/return', title: 'Sales Return' },

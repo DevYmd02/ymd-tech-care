@@ -1,0 +1,425 @@
+/**
+ * @file SalesOrderApproveListPage.tsx
+ * @description หน้ารายการอนุมัติใบสั่งขาย (Sales Order Approval List Page)
+ */
+
+import { useState, useMemo } from 'react';
+import { ShieldCheck, Search, Plus, FileText, Eye, Clock } from 'lucide-react';
+import { PageListLayout, SmartTable, FilterField } from '@ui';
+import { createColumnHelper } from '@tanstack/react-table';
+import { SOStatusBadge } from '../shared/components/SOStatusBadge';
+import { AOFormModal } from './components/AOFormModal';
+import { AOHistoryModal } from '../shared/components/AOHistoryModal';
+import { useAOListData } from './hooks/useAOListData';
+import type { AOListItem, SOForApproval } from './types/sales-order-approval.types';
+import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
+
+const STATUS_OPTIONS = [
+  { value: 'ALL', label: 'ทั้งหมด' },
+  { value: 'PENDING', label: 'รออนุมัติ' },
+  { value: 'APPROVED', label: 'อนุมัติแล้ว' },
+  { value: 'REJECTED', label: 'ไม่อนุมัติ' },
+  { value: 'CANCELLED', label: 'ยกเลิก' },
+];
+
+type ColItem = AOListItem;
+const columnHelper = createColumnHelper<ColItem>();
+
+export default function SalesOrderApproveListPage() {
+  const [soNo, setSoNo] = useState('');
+  const [aoNo, setAoNo] = useState('');
+  const [customerFilter, setCustomerFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('PENDING');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSoId, setSelectedSoId] = useState<string | number | undefined>(undefined);
+  const [selectedItem, setSelectedItem] = useState<SOForApproval | AOListItem | undefined>(undefined);
+
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historySoId, setHistorySoId] = useState<string | undefined>(undefined);
+  const [historySoNo, setHistorySoNo] = useState<string>('');
+
+  const { 
+    filteredData, 
+    mergedData, 
+    isLoading, 
+    refetch 
+  } = useAOListData({
+    statusFilter,
+    soNo,
+    aoNo,
+    customerFilter,
+    startDate,
+    endDate
+  });
+
+  const handleOpenApproval = (row: AOListItem) => {
+    const soId = row.so_id;
+    if (!soId) return;
+    setSelectedSoId(soId);
+    setSelectedItem(row);
+    setIsModalOpen(true);
+  };
+
+  const handleClearFilter = () => {
+    setSoNo('');
+    setAoNo('');
+    setCustomerFilter('');
+    setStatusFilter('PENDING');
+    setStartDate('');
+    setEndDate('');
+  };
+
+  const formatDate = (val?: string) => {
+    if (!val) return '-';
+    const [y, m, d] = val.split('-');
+    return y && m && d ? `${d}/${m}/${y}` : val;
+  };
+
+  const fmt = (n?: number) =>
+    n !== undefined && n !== null
+      ? new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(n)
+      : '-';
+
+  const columns = useMemo(
+    () => [
+      columnHelper.display({
+        id: 'index',
+        header: () => <div className="flex justify-center w-full">ลำดับ</div>,
+        cell: (info) => <div className="text-center">{info.row.index + 1}</div>,
+        size: 55,
+        enableSorting: false,
+      }),
+      columnHelper.accessor('so_no', {
+        header: 'เลขที่ SO',
+        cell: (info) => (
+          <span 
+            onClick={() => {
+              setHistorySoId(String(info.row.original.so_id));
+              setHistorySoNo(info.row.original.so_no || '');
+              setIsHistoryOpen(true);
+            }}
+            className="text-blue-600 dark:text-blue-400 font-semibold hover:underline cursor-pointer transition-all"
+          >
+            {info.getValue() || '-'}
+          </span>
+        ),
+        size: 140,
+        enableSorting: false,
+      }),
+      columnHelper.accessor('ao_no', {
+        header: 'เลขที่ AO',
+        cell: (info) => (
+          <span
+            className={`font-bold ${
+              info.getValue()
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-gray-400 italic text-xs'
+            }`}
+          >
+            {info.getValue() || '— รอพิจารณา —'}
+          </span>
+        ),
+        size: 140,
+        enableSorting: false,
+      }),
+      columnHelper.accessor('so_date', {
+        header: 'วันที่ SO',
+        cell: (info) => <span className="text-sm">{formatDate(String(info.getValue() || ''))}</span>,
+        size: 110,
+        enableSorting: false,
+      }),
+      columnHelper.accessor('customer_name', {
+        header: 'ลูกค้า',
+        cell: (info) => (
+          <div className="flex flex-col max-w-[200px]">
+            <span className="font-medium text-gray-900 dark:text-gray-100 truncate">
+              {info.getValue() || '-'}
+            </span>
+            {info.row.original.customer_code && (
+              <span className="text-xs text-gray-400">{info.row.original.customer_code}</span>
+            )}
+          </div>
+        ),
+        size: 200,
+        enableSorting: false,
+      }),
+      columnHelper.accessor('base_total_amount', {
+        header: () => <div className="text-center w-full">มูลค่ารวม (บาท)</div>,
+        cell: (info) => {
+          const row = info.row.original;
+          const currency = row.currency || 'THB';
+          const quoteAmount = Number(row.quote_total_amount || 0);
+          const baseAmount = Number(info.getValue() || 0);
+
+          return (
+            <div className="flex flex-col items-center gap-0.5 w-full">
+              <div className="flex items-center gap-1 text-emerald-600 font-bold justify-center">
+                <span className="text-xs">฿</span>
+                <span>{fmt(baseAmount)}</span>
+              </div>
+              {currency !== 'THB' && (
+                <div className="text-[10px] text-gray-400 font-medium italic">
+                  ({String(currency)} {fmt(quoteAmount)})
+                </div>
+              )}
+            </div>
+          );
+        },
+        size: 130,
+        enableSorting: false,
+      }),
+      columnHelper.accessor('approval_emp_name', {
+        header: () => <div className="text-center w-full">ผู้อนุมัติ</div>,
+        cell: (info) => (
+          <div className="text-center text-sm text-gray-600 dark:text-gray-300">
+            {info.getValue() || '-'}
+          </div>
+        ),
+        size: 140,
+        enableSorting: false,
+      }),
+      columnHelper.accessor('status', {
+        header: () => <div className="text-center w-full">สถานะ</div>,
+        cell: (info) => (
+          <div className="flex justify-center">
+            <SOStatusBadge status={String(info.getValue() || '')} />
+          </div>
+        ),
+        size: 120,
+        enableSorting: false,
+      }),
+      columnHelper.display({
+        id: 'actions',
+        header: () => <div className="text-center w-full">การจัดการ</div>,
+        cell: (info) => {
+          const row = info.row.original;
+          const isPending = row.status === 'PENDING' || row.status === 'SUBMITTED';
+          const canViewHistory = row.status === 'APPROVED' || row.status === 'REJECTED';
+
+          return (
+            <div className="flex justify-center items-center gap-2">
+              {isPending ? (
+                <button
+                  onClick={() => handleOpenApproval(row)}
+                  className="h-8 px-2.5 bg-[#00a67e] hover:bg-[#008f6d] text-white rounded-lg text-[11px] font-bold shadow-sm transition-all active:scale-95 flex items-center gap-1 whitespace-nowrap"
+                >
+                  <ShieldCheck size={13} strokeWidth={2.5} />
+                  พิจารณาอนุมัติ
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleOpenApproval(row)}
+                    title="ดูรายละเอียด"
+                    className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all active:scale-90"
+                  >
+                    <Eye size={16} strokeWidth={2} />
+                  </button>
+                  
+                  {canViewHistory && (
+                    <button
+                      onClick={() => {
+                        setHistorySoId(String(row.so_id));
+                        setHistorySoNo(row.so_no || '');
+                        setIsHistoryOpen(true);
+                      }}
+                      title="ดูประวัติการอนุมัติ"
+                      className="p-1 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 rounded-full transition-all active:scale-90"
+                    >
+                      <Clock size={16} strokeWidth={2.5} />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        },
+        size: 120,
+        enableSorting: false,
+      }),
+    ],
+    [],
+  );
+
+  return (
+    <>
+      <PageListLayout
+        title="อนุมัติใบสั่งขาย (Sales Order Approval)"
+        subtitle="พิจารณาและอนุมัติใบสั่งขายที่อยู่ในสถานะรออนุมัติ"
+        icon={ShieldCheck}
+        accentColor="emerald"
+        totalCount={filteredData.length}
+        isLoading={isLoading}
+        searchForm={
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+            <FilterField
+              label="เลขที่ใบสั่งขาย (SO)"
+              value={soNo}
+              onChange={setSoNo}
+              placeholder="SO-xxxx"
+              accentColor="emerald"
+            />
+            <FilterField
+              label="เลขที่อนุมัติ (AO)"
+              value={aoNo}
+              onChange={setAoNo}
+              placeholder="AO-xxxx"
+              accentColor="emerald"
+            />
+            <FilterField
+              label="ลูกค้า"
+              value={customerFilter}
+              onChange={setCustomerFilter}
+              placeholder="ชื่อลูกค้า"
+              accentColor="emerald"
+            />
+            <FilterField
+              label="วันที่ตั้งแต่"
+              type="date"
+              value={startDate}
+              onChange={setStartDate}
+              accentColor="emerald"
+            />
+            <FilterField
+              label="สถานะ"
+              type="select"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={STATUS_OPTIONS}
+              accentColor="emerald"
+            />
+
+            <div className="md:col-span-5 flex flex-col md:flex-row md:justify-end gap-3 mt-2">
+              <div className="grid grid-cols-2 md:flex gap-2">
+                <button
+                  onClick={handleClearFilter}
+                  className="h-10 bg-white hover:bg-gray-100 text-slate-700 border border-gray-200 rounded-lg font-medium transition-all flex items-center justify-center px-4 gap-2"
+                >
+                  <Plus size={18} className="rotate-45 text-slate-500" strokeWidth={2.5} />
+                  ล้างค่า
+                </button>
+                <button
+                  onClick={() => refetch()}
+                  className="h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center px-6 gap-2"
+                >
+                  <Search size={18} strokeWidth={3} />
+                  ค้นหา
+                </button>
+              </div>
+              
+              <button
+                onClick={() => {
+                  setSelectedSoId(undefined);
+                  setSelectedItem(undefined);
+                  setIsModalOpen(true);
+                }}
+                className="h-10 w-full md:w-auto px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                <FileText size={18} strokeWidth={2.5} /> รายการอนุมัติใบสั่งขาย
+              </button>
+            </div>
+          </div>
+        }
+      >
+        {mergedData.filter(r => r.status === 'PENDING' || r.status === 'SUBMITTED').length > 0 && (
+          <div className="mb-3 px-4 py-2.5 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/50 rounded-lg flex items-center gap-2">
+            <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400" />
+            <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+              มีใบสั่งขาย{' '}
+              <strong>{mergedData.filter(r => r.status === 'PENDING' || r.status === 'SUBMITTED').length}</strong>{' '}
+              รายการ รอการพิจารณาอนุมัติ
+            </span>
+          </div>
+        )}
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <SmartTable
+            data={filteredData}
+            columns={columns}
+            isLoading={isLoading}
+            pagination={{
+              pageIndex: 1,
+              pageSize: 20,
+              totalCount: filteredData.length,
+              onPageChange: () => {},
+              onPageSizeChange: () => {},
+            }}
+            renderMobileCard={(item) => (
+              <SalesMobileCard 
+                docNo={item.so_no || '-'}
+                customerName={item.customer_name || 'ไม่ระบุ'}
+                date={item.so_date ? formatDate(String(item.so_date)) : '-'}
+                amount={item.base_total_amount || 0}
+                statusBadge={<SOStatusBadge status={String(item.status || '')} />}
+                onClick={() => handleOpenApproval(item)}
+                employeeName={item.approval_emp_name}
+                actions={
+                  <div className="flex gap-2 w-full">
+                    {item.status === 'PENDING' || item.status === 'SUBMITTED' ? (
+                      <button
+                        onClick={() => handleOpenApproval(item)}
+                        className="flex-1 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2"
+                      >
+                        <ShieldCheck size={14} /> พิจารณาอนุมัติ
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleOpenApproval(item)}
+                          className="flex-1 h-9 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center justify-center gap-2"
+                        >
+                          <Eye size={14} /> ดูรายละเอียด
+                        </button>
+                        {(item.status === 'APPROVED' || item.status === 'REJECTED') && (
+                          <button
+                            onClick={() => {
+                              setHistorySoId(String(item.so_id));
+                              setHistorySoNo(item.so_no || '');
+                              setIsHistoryOpen(true);
+                            }}
+                            className="h-9 px-3 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold flex items-center justify-center"
+                          >
+                            <Clock size={14} />
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                }
+              />
+            )}
+          />
+        </div>
+      </PageListLayout>
+
+      <AOFormModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedSoId(undefined);
+          setSelectedItem(undefined);
+        }}
+        soId={selectedSoId}
+        approvalItem={selectedItem}
+        onSuccess={() => {
+          refetch();
+        }}
+      />
+
+      <AOHistoryModal 
+        isOpen={isHistoryOpen}
+        onClose={() => {
+          setIsHistoryOpen(false);
+          setHistorySoId(undefined);
+          setHistorySoNo('');
+        }}
+        soId={historySoId}
+        soNo={historySoNo}
+      />
+
+    </>
+  );
+}

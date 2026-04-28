@@ -9,6 +9,7 @@ import { Save, ShoppingCart, Printer, Loader2 } from 'lucide-react';
 import { logger } from '@utils/logger';
 import { FormProvider } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
+import { useToast } from '@ui/feedback/Toast';
 import { WindowFormLayout } from '@ui';
 import { MasterDataService } from '@master-data';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
@@ -56,6 +57,7 @@ export function SalesOrderFormModal({
     initialData,
     onSuccess,
 }: SalesOrderFormModalProps) {
+    const { toast } = useToast();
     const isEdit = !!id;
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -165,11 +167,20 @@ export function SalesOrderFormModal({
     // --------------------------------------------------------
     const onFormSubmit = async (data: SalesOrderFormValues) => {
         setIsSubmitting(true);
-        logger.debug('Submitting Sales Order:', data);
-        await new Promise((r) => setTimeout(r, 1000));
-        setIsSubmitting(false);
-        onSuccess?.();
-        onClose();
+        try {
+            logger.debug('Submitting Sales Order:', data);
+            // Simulate API call
+            await new Promise((r) => setTimeout(r, 1000));
+            
+            toast(`บันทึกใบสั่งขาย ${isEdit ? 'สำเร็จ' : 'เรียบร้อยแล้ว'}`, 'success');
+            onSuccess?.();
+            onClose();
+        } catch (error) {
+            logger.error('Failed to submit sales order:', error);
+            toast('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // --------------------------------------------------------
