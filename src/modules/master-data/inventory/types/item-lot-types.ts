@@ -15,6 +15,10 @@ export interface ItemLot {
     expiry_date?: string | null;
     status: ItemLotStatus;
     note?: string | null;
+    warehouse_id?: number | null;
+    warehouse_name?: string;
+    location_id?: number | null;
+    location_name?: string;
     qty_issued: number;
     qty_reserved: number;
     qty_stock: number; // On Hand
@@ -32,6 +36,8 @@ export interface ItemLotFormData {
     expiry_date?: string | null;
     status: ItemLotStatus;
     note?: string | null;
+    warehouse_id?: number | null;
+    location_id?: number | null;
 }
 
 export const initialItemLotFormData = (itemId: number): ItemLotFormData => ({

@@ -109,7 +109,9 @@ export const MOCK_LOT_NUMBERS: LotNo[] = [
         balance_qty: 150, 
         sale_stock: 120,
         warehouse_id: 1, // Main Warehouse
+        warehouse_name: 'คลังหลัก',
         location_id: 1000, // Zone A
+        location_name: 'โซน A',
         mfg_date: '2024-01-01',
         expiry_date: '2025-01-01',
         created_at: new Date().toISOString(),
@@ -125,7 +127,9 @@ export const MOCK_LOT_NUMBERS: LotNo[] = [
         balance_qty: 45, 
         sale_stock: 30,
         warehouse_id: 1,
+        warehouse_name: 'คลังหลัก',
         location_id: 1001, // Zone B
+        location_name: 'โซน B',
         mfg_date: '2024-02-15',
         expiry_date: '2025-02-15',
         created_at: new Date().toISOString(),
@@ -141,7 +145,9 @@ export const MOCK_LOT_NUMBERS: LotNo[] = [
         balance_qty: 500, 
         sale_stock: 480,
         warehouse_id: 2, // Secondary Warehouse
+        warehouse_name: 'คลังรอง',
         location_id: 1002, // Zone C
+        location_name: 'โซน C',
         mfg_date: '2024-03-10',
         expiry_date: '2025-03-10',
         created_at: new Date().toISOString(),

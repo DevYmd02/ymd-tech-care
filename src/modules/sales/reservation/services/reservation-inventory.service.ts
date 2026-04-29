@@ -4,6 +4,24 @@ import type { LotNo } from '@inventory/types/inventory-master.types';
 import { USE_MOCK } from '@core/api/api';
 import { MOCK_LOT_NUMBERS } from '@inventory/mocks/inventory-master.mock';
 
+interface ItemLotBalanceRecord {
+    id?: number;
+    lot_id?: number;
+    item_id?: number;
+    warehouse_id?: number;
+    location_id?: number;
+    qty_on_hand?: number | string;
+    qty_reserved?: number | string;
+    qty_available?: number | string;
+    balance_qty?: number | string;
+    sale_stock?: number | string;
+    item_lot?: Record<string, unknown>;
+    lot?: Record<string, unknown>;
+    warehouse?: Record<string, unknown>;
+    location?: Record<string, unknown>;
+    [key: string]: unknown;
+}
+
 /**
  * Service for Inventory-related lookups specifically within the Reservation module.
  * This separates transactional stock queries from general master data lookups.
@@ -48,30 +66,50 @@ export const ReservationInventoryService = {
         }
 
         try {
-            // Updated endpoint to /item-lot as /lot-numbers is returning 404 on some environments
-            const response = await api.get<LotNo[] | { items: LotNo[], total: number }>('/item-lot', { params });
+            // Use /item-lot-balance to get records per warehouse/location
+            const response = await api.get<ItemLotBalanceRecord[] | { items?: ItemLotBalanceRecord[], data?: ItemLotBalanceRecord[], total?: number }>('/item-lot-balance', { params });
             
             // Normalize response (handle both array and { items, total } formats)
-            const rawItems = Array.isArray(response) ? response : (response.items || []);
-            const total = Array.isArray(response) ? response.length : (response.total || rawItems.length);
+            let rawItems: ItemLotBalanceRecord[] = [];
+            let total = 0;
+            
+            if (Array.isArray(response)) {
+                rawItems = response;
+                total = response.length;
+            } else if (response && typeof response === 'object') {
+                rawItems = response.items || response.data || [];
+                total = response.total || rawItems.length;
+            }
 
-            // Normalize items (ensure code and id exist regardless of backend field names)
+            // Normalize items to match LotNo interface
             const normalizedItems = rawItems
-                .filter(item => {
+                .filter((item: ItemLotBalanceRecord) => {
                     if (!params.item_id) return true;
-                    const r = (item as unknown) as Record<string, unknown>;
-                    const recordItemId = item.item_id || r['item_id'];
-                    return String(recordItemId) === String(params.item_id);
+                    return String(item.item_id) === String(params.item_id);
                 })
-                .map(item => {
-                    const r = (item as unknown) as Record<string, unknown>;
+                .map((item: ItemLotBalanceRecord) => {
+                    // Extract potential nested relations
+                    const lotData = item.item_lot || item.lot || item;
+                    const whData = item.warehouse || item;
+                    const locData = item.location || item;
+                    
                     return {
                         ...item,
-                        // Map common lot field variations
-                        id: item.id || (r['lot_no_id'] as number) || (r['lot_id'] as number) || 0,
-                        lot_no_id: (r['lot_no_id'] as number) || (r['lot_id'] as number) || item.id || 0,
-                        code: item.code || (r['lot_no'] as string) || (r['lot_no_code'] as string) || '',
-                        name_th: item.name_th || (r['lot_no'] as string) || '',
+                        id: item.id || item.lot_id || lotData.id || 0,
+                        lot_no_id: item.lot_id || lotData.id || item.id || 0,
+                        code: lotData.code || lotData.lot_no || lotData.lot_no_code || '',
+                        name_th: lotData.name_th || '',
+                        mfg_date: lotData.mfg_date,
+                        expiry_date: lotData.expiry_date,
+                        qty_on_hand: item.qty_on_hand ? Number(item.qty_on_hand) : 0,
+                        qty_reserved: item.qty_reserved ? Number(item.qty_reserved) : 0,
+                        qty_available: item.qty_available ? Number(item.qty_available) : 0,
+                        balance_qty: item.qty_on_hand !== undefined ? Number(item.qty_on_hand) : Number(item.balance_qty || 0),
+                        sale_stock: item.qty_available !== undefined ? Number(item.qty_available) : Number(item.sale_stock || 0),
+                        warehouse_id: item.warehouse_id,
+                        warehouse_name: whData.warehouse_name || whData.name_th || '',
+                        location_id: item.location_id,
+                        location_name: locData.location_name || locData.name_th || locData.name || ''
                     } as LotNo;
                 });
 
@@ -79,9 +117,35 @@ export const ReservationInventoryService = {
                 items: normalizedItems, 
                 total 
             };
-        } catch (error) {
-            logger.error('Failed to fetch available lots for reservation:', error);
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: unknown }; message?: string };
+            logger.error('Failed to fetch available lots from item-lot-balance:', err.response?.data || err.message || err);
             return { items: [], total: 0 };
+        }
+    },
+
+    /**
+     * เพิ่มข้อมูลสต็อกตั้งต้น (สร้าง Balance ใหม่)
+     */
+    createBalance: async (data: {
+        lot_id: number;
+        item_id: number | string;
+        warehouse_id: number;
+        location_id: number;
+        qty_on_hand: number;
+    }) => {
+        try {
+            // Calculate available based on reserved = 0 for new balances
+            const payload = {
+                ...data,
+                qty_reserved: 0,
+                qty_available: data.qty_on_hand
+            };
+            const response = await api.post<{ data?: unknown }>('/item-lot-balance', payload);
+            return response?.data || response;
+        } catch (error) {
+            logger.error('Failed to create item-lot-balance:', error);
+            throw error;
         }
     },
 

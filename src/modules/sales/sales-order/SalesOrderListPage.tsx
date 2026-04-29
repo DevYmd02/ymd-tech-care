@@ -164,7 +164,7 @@ export default function SalesOrderListPage() {
             columnHelper.accessor('so_date', {
                 header: 'วันที่',
                 cell: (info) => (
-                    <div className="text-slate-100 font-medium">
+                    <div className="text-slate-700 dark:text-slate-100 font-medium">
                         {formatDisplayDate(info.getValue())}
                     </div>
                 ),
@@ -178,7 +178,7 @@ export default function SalesOrderListPage() {
                     const displayName = nameFromLookup || info.getValue() || 'ไม่ระบุ';
 
                     return (
-                        <span className="font-bold text-slate-100">
+                        <span className="font-bold text-slate-700 dark:text-slate-100">
                             {displayName}
                         </span>
                     );
