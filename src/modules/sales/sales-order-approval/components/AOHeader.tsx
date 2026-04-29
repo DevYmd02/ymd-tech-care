@@ -1,9 +1,10 @@
-import { FileText, User, Calendar } from 'lucide-react';
+import { FileText, User, Calendar, Search } from 'lucide-react';
 import { useFormContext, Controller } from 'react-hook-form';
 import { MulticurrencyWrapper } from '@components/forms/MulticurrencyWrapper';
 import type { AOFormData } from '../schemas/ao.schema';
 import { SOStatusBadge } from '@sales/shared/components/SOStatusBadge';
 import type { Currency } from '@master-data/types/master-data-types';
+import { StatusCheckbox } from '@ui';
 
 const formatDate = (val?: string): string => {
   if (!val) return '-';
@@ -17,9 +18,10 @@ const formatDate = (val?: string): string => {
 interface AOHeaderProps {
   currencies?: Currency[];
   readOnly?: boolean;
+  onSearchSO?: () => void;
 }
 
-export function AOHeader({ currencies = [], readOnly = false }: AOHeaderProps) {
+export function AOHeader({ currencies = [], readOnly = false, onSearchSO }: AOHeaderProps) {
   const { watch, control, setValue, register } = useFormContext<AOFormData>();
 
   const soNo = watch('so_no');
@@ -33,6 +35,13 @@ export function AOHeader({ currencies = [], readOnly = false }: AOHeaderProps) {
   const branchName = watch('branch_name');
   const empSaleName = watch('emp_sale_name');
   const taxCode = watch('tax_code');
+
+  const reservationNo = watch('reservation_no');
+  const shipDays = watch('ship_days');
+  const shipDate = watch('ship_date');
+  const empDeptName = watch('emp_dept_name');
+  const empAreaId = watch('emp_area_id');
+  const jobId = watch('job_id');
 
   const inputClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white placeholder-gray-400 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm italic cursor-not-allowed";
   const labelClass = "block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider";
@@ -49,7 +58,17 @@ export function AOHeader({ currencies = [], readOnly = false }: AOHeaderProps) {
           <FileText size={20} strokeWidth={2.5} />
           <h3 className="text-lg font-bold">ข้อมูลใบสั่งขาย — Header Sales Order</h3>
         </div>
-        <SOStatusBadge status={status} />
+        <div className="flex items-center gap-4">
+          <div className="flex items-center bg-white dark:bg-gray-800 px-3 py-1 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm transform scale-90 origin-right">
+              <StatusCheckbox
+                  name="onhold"
+                  control={control}
+                  label="ON HOLD"
+                  disabled={true}
+              />
+          </div>
+          <SOStatusBadge status={status} />
+        </div>
       </div>
 
       <div className={cardSection}>
@@ -63,6 +82,16 @@ export function AOHeader({ currencies = [], readOnly = false }: AOHeaderProps) {
               placeholder="ระบบออกให้อัตโนมัติ"
               className={`${inputClass} font-bold text-emerald-700 dark:text-emerald-300 flex-1`}
             />
+            {!readOnly && onSearchSO && (
+              <button
+                type="button"
+                onClick={onSearchSO}
+                className="flex items-center justify-center w-9 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition-colors shadow-sm active:scale-95"
+                title="ค้นหาใบสั่งขาย"
+              >
+                <Search size={16} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -73,6 +102,27 @@ export function AOHeader({ currencies = [], readOnly = false }: AOHeaderProps) {
             value={formatDate(soDate)}
             readOnly
             className={`${inputClass} bg-gray-50`}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className={labelClass}>อ้างอิงใบจอง</label>
+          <input
+            type="text"
+            value={reservationNo || '-'}
+            readOnly
+            className={`${inputClass} italic`}
+            placeholder="RS-xxxx"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className={labelClass}>สาขา (BRANCH_ID)</label>
+          <input
+            type="text"
+            value={branchName || '-'}
+            readOnly
+            className={inputClass}
           />
         </div>
 
@@ -90,16 +140,6 @@ export function AOHeader({ currencies = [], readOnly = false }: AOHeaderProps) {
           </div>
         </div>
 
-        <div className="lg:col-span-2 space-y-1">
-          <label className={labelClass}>สาขา (BRANCH_ID)</label>
-          <input
-            type="text"
-            value={branchName || '-'}
-            readOnly
-            className={inputClass}
-          />
-        </div>
-
         <div className="space-y-1">
           <label className={labelClass}>เครดิตเทอม (วัน)</label>
           <input
@@ -111,10 +151,50 @@ export function AOHeader({ currencies = [], readOnly = false }: AOHeaderProps) {
         </div>
 
         <div className="space-y-1">
-          <label className={labelClass}>ประเภทภาษี (TAX_CODE)</label>
+          <label className={labelClass}>ส่งของภายใน (วัน) (SHIP_DAYS)</label>
           <input
             type="text"
-            value={taxCode || '-'}
+            value={shipDays || 0}
+            readOnly
+            className={inputClass}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className={labelClass}>วันที่กำหนดส่ง (SHIP_DATE)</label>
+          <input
+            type="text"
+            value={formatDate(shipDate)}
+            readOnly
+            className={inputClass}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className={labelClass}>แผนกขาย (EMP_DEPT_ID)</label>
+          <input
+            type="text"
+            value={empDeptName || '-'}
+            readOnly
+            className={inputClass}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className={labelClass}>เขตการขาย (EMP_AREA_ID)</label>
+          <input
+            type="text"
+            value={empAreaId || '-'}
+            readOnly
+            className={inputClass}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className={labelClass}>โครงการ/งาน (JOB_ID)</label>
+          <input
+            type="text"
+            value={jobId || '-'}
             readOnly
             className={inputClass}
           />
@@ -130,7 +210,17 @@ export function AOHeader({ currencies = [], readOnly = false }: AOHeaderProps) {
           />
         </div>
 
-        <div className="lg:col-span-3 space-y-1">
+        <div className="space-y-1">
+          <label className={labelClass}>ประเภทภาษี (TAX_CODE)</label>
+          <input
+            type="text"
+            value={taxCode || '-'}
+            readOnly
+            className={inputClass}
+          />
+        </div>
+
+        <div className="lg:col-span-2 space-y-1">
           <label className={labelClass}>หมายเหตุทั่วไป (REMARKS)</label>
           <input
             type="text"

@@ -89,6 +89,15 @@ export const AOFormSchema = z.object({
   payment_term_days: z.coerce.number().default(0),
   remarks: z.string().optional().default(''),
 
+  reservation_no: z.string().optional().default(''),
+  ship_days: z.coerce.number().optional().default(0),
+  ship_date: z.string().optional().default(''),
+  emp_dept_id: z.union([z.string(), z.number()]).optional().default(''),
+  emp_dept_name: z.string().optional().default(''),
+  emp_area_id: z.union([z.string(), z.number()]).optional().default(''),
+  job_id: z.union([z.string(), z.number()]).optional().default(''),
+  onhold: z.enum(['Y', 'N']).default('N'),
+
   lines: z.array(AOLineSchema).default([]),
 });
 

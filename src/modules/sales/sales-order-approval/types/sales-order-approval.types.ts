@@ -137,6 +137,14 @@ export interface SOForApproval {
   emp_sale_id?: string | number;
   emp_sale_name?: string;
   cust_po_no?: string;
+  reservation_no?: string;
+  ship_days?: number;
+  ship_date?: string;
+  emp_dept_id?: string | number;
+  emp_dept_name?: string;
+  emp_area_id?: string | number;
+  job_id?: string | number;
+  onhold?: 'Y' | 'N';
 
   lines: SOLineForApproval[];
   saleOrderLines?: SOLineForApproval[];

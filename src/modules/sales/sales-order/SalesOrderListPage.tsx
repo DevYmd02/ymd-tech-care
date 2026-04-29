@@ -131,7 +131,7 @@ export default function SalesOrderListPage() {
         if (!isConfirmed) return;
 
         try {
-            await SalesOrderService.update(id, { status: 'SUBMITTED' });
+            await SalesOrderService.update(id, { status: 'APPROVED' });
             refetch();
         } catch (error) {
             console.error('Failed to submit sales order:', error);
