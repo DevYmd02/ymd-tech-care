@@ -15,7 +15,8 @@ import type { CurrencyMappedItem } from '@/modules/master-data/currency/types/cu
 import type { POListItem } from '@/modules/procurement/types';
 import type { CreateGRNPayload, GRNLineItemInput } from '@/modules/procurement/types/grn-types';
 import { MasterDataService } from '@/modules/master-data';
-import type { DepartmentListItem } from '@/modules/master-data/types/master-data-types';
+import type { DepartmentListItem, WarehouseListItem } from '@/modules/master-data/types/master-data-types';
+import type { EmployeeListItem } from '@/modules/master-data/company/types/employee.types';
 import { logger } from '@/shared/utils/logger';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 
@@ -64,6 +65,8 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
     const [currentLotLineIndex, setCurrentLotLineIndex] = useState<number | null>(null);
     const [uomOptions, setUomOptions] = useState<UnitListItem[]>([]);
     const [deptOptions, setDeptOptions] = useState<DepartmentListItem[]>([]);
+    const [warehouseOptions, setWarehouseOptions] = useState<WarehouseListItem[]>([]);
+    const [employeeOptions, setEmployeeOptions] = useState<EmployeeListItem[]>([]);
 
 
     
@@ -103,6 +106,16 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
             // Load Departments
             MasterDataService.getDepartments().then((res) => {
                 setDeptOptions(res);
+            });
+
+            // Load Warehouses
+            MasterDataService.getWarehouses().then((res) => {
+                setWarehouseOptions(res);
+            });
+
+            // Load Employees
+            MasterDataService.getEmployees().then((res) => {
+                setEmployeeOptions(res);
             });
         }
         prevIsOpenRef.current = isOpen;
@@ -396,13 +409,13 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                             <label className={labelClass}>
-                                เลขที่ GRN <span className="text-gray-400 font-normal">(grn_no)</span> <span className="text-red-500">*</span>
+                                เลขที่ GRN <span className="text-red-500">*</span>
                             </label>
                             <input type="text" value={grnNo} readOnly className={`${inputClass} bg-gray-50 dark:bg-gray-800/50 text-gray-500 font-medium`} />
                         </div>
                         <div>
                             <label className={labelClass}>
-                                วันที่รับ <span className="text-gray-400 font-normal">(grn_date)</span> <span className="text-red-500">*</span>
+                                วันที่รับ <span className="text-red-500">*</span>
                             </label>
                             <div className="relative h-8">
                                 <CustomDateInput 
@@ -414,7 +427,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                         </div>
                         <div>
                             <label className={labelClass}>
-                                เลขที่ PO อ้างอิง <span className="text-gray-400 font-normal">(po_id FK)</span> <span className="text-red-500">*</span>
+                                เลขที่ PO อ้างอิง <span className="text-red-500">*</span>
                             </label>
                             <div className="flex gap-2">
                                 <input 
@@ -439,33 +452,35 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
                         <div>
                             <label className={labelClass}>
-                                รับเข้าคลัง <span className="text-gray-400 font-normal">(warehouse_id FK)</span> <span className="text-red-500">*</span>
+                                รับเข้าคลัง <span className="text-red-500">*</span>
                             </label>
-                            <div className="relative">
+                             <div className="relative">
                                 <select value={warehouseId || ''} onChange={(e) => setWarehouseId(e.target.value ? Number(e.target.value) : undefined)} className={selectClass}>
                                     <option value="">-- เลือกคลังสินค้า --</option>
-                                    <option value={1}>คลังสินค้าหลัก</option>
-                                    <option value={2}>คลังสินค้าสาขา</option>
+                                    {warehouseOptions.map(wh => (
+                                        <option key={wh.warehouse_id} value={wh.warehouse_id}>{wh.warehouse_name}</option>
+                                    ))}
                                 </select>
                                 <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
                             </div>
                         </div>
                         <div>
                             <label className={labelClass}>
-                                ผู้รับสินค้า <span className="text-gray-400 font-normal">(received_by)</span> <span className="text-red-500">*</span>
+                                ผู้รับสินค้า <span className="text-red-500">*</span>
                             </label>
-                            <div className="relative">
+                             <div className="relative">
                                 <select value={receivedBy || ''} onChange={(e) => setReceivedBy(e.target.value ? Number(e.target.value) : undefined)} className={selectClass}>
                                     <option value="">-- เลือกผู้รับสินค้า --</option>
-                                    <option value={1}>สมชาย ใจดี</option>
-                                    <option value={2}>สมหญิง รักดี</option>
+                                    {employeeOptions.map(emp => (
+                                        <option key={emp.employee_id} value={emp.employee_id}>{emp.employee_name}</option>
+                                    ))}
                                 </select>
                                 <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
                             </div>
                         </div>
                         <div>
                             <label className={labelClass}>
-                                แผนก <span className="text-gray-400 font-normal">(department_code)</span>
+                                แผนก
                             </label>
                             <div className="relative">
                                 <select value={empDeptId || ''} onChange={(e) => setEmpDeptId(e.target.value)} className={selectClass}>
@@ -485,7 +500,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
                         <div>
                             <label className={labelClass}>
-                                งาน <span className="text-gray-400 font-normal">(job_code)</span>
+                                งาน
                             </label>
                             <div className="relative">
                                 <select value={jobId || ''} onChange={(e) => setJobId(e.target.value)} className={selectClass}>
@@ -498,7 +513,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                         </div>
                         <div>
                             <label className={labelClass}>
-                                สถานะ <span className="text-gray-400 font-normal">(status)</span>
+                                สถานะ
                             </label>
                             <div className="relative">
                                 <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${selectClass} font-medium text-violet-600`}>
@@ -514,7 +529,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                     {/* Remarks */}
                     <div className="mt-6">
                         <label className={labelClass}>
-                            หมายเหตุ <span className="text-gray-400 font-normal">(remarks - optional)</span>
+                            หมายเหตุ <span className="text-gray-400 font-normal">(เพิ่มเติม)</span>
                         </label>
                         <textarea 
                             value={remark}
@@ -639,26 +654,14 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                         <table className="w-full min-w-[1000px] text-sm table-fixed border-collapse">
                             <thead>
                                 <tr className="bg-gray-50 dark:bg-gray-800/80 text-gray-600 dark:text-gray-400">
-                                    <th className="px-6 py-4 text-center w-[60px] font-bold border-b border-gray-100 dark:border-gray-800">ลำดับ</th>
-                                    <th className="px-6 py-4 text-left w-[180px] font-bold border-b border-gray-100 dark:border-gray-800 leading-tight">
-                                        รหัสสินค้า<br/><span className="text-[10px] font-normal text-gray-400">(item_id FK)</span>
-                                    </th>
+                                     <th className="px-6 py-4 text-center w-[60px] font-bold border-b border-gray-100 dark:border-gray-800">ลำดับ</th>
+                                    <th className="px-6 py-4 text-left w-[180px] font-bold border-b border-gray-100 dark:border-gray-800 leading-tight">รหัสสินค้า</th>
                                     <th className="px-6 py-4 text-left font-bold border-b border-gray-100 dark:border-gray-800">ชื่อสินค้า</th>
-                                    <th className="px-6 py-4 text-center w-[120px] font-bold border-b border-gray-100 dark:border-gray-800 leading-tight">
-                                        จำนวนสั่ง<br/><span className="text-[10px] font-normal text-gray-400">(PO Qty)</span>
-                                    </th>
-                                    <th className="px-6 py-4 text-center w-[120px] font-bold border-b border-gray-100 dark:border-gray-800 leading-tight">
-                                        จำนวนรับ<br/><span className="text-[10px] font-normal text-red-500">(qty_received)*</span>
-                                    </th>
-                                    <th className="px-6 py-4 text-left w-[120px] font-bold border-b border-gray-100 dark:border-gray-800 leading-tight">
-                                        หน่วย<br/><span className="text-[10px] font-normal text-gray-400">(uom_id FK)</span>
-                                    </th>
-                                    <th className="px-6 py-4 text-left w-[150px] font-bold border-b border-gray-100 dark:border-gray-800 leading-tight">
-                                        Lot No<br/><span className="text-[10px] font-normal text-gray-400">(lot_no)</span>
-                                    </th>
-                                    <th className="px-6 py-4 text-left w-[200px] font-bold border-b border-gray-100 dark:border-gray-800 leading-tight">
-                                        หมายเหตุ<br/><span className="text-[10px] font-normal text-gray-400">(remarks)</span>
-                                    </th>
+                                    <th className="px-6 py-4 text-center w-[120px] font-bold border-b border-gray-100 dark:border-gray-800 leading-tight">จำนวนสั่ง</th>
+                                    <th className="px-6 py-4 text-center w-[120px] font-bold border-b border-gray-100 dark:border-gray-800 leading-tight">จำนวนรับ*</th>
+                                    <th className="px-6 py-4 text-left w-[120px] font-bold border-b border-gray-100 dark:border-gray-800 leading-tight">หน่วย</th>
+                                    <th className="px-6 py-4 text-left w-[150px] font-bold border-b border-gray-100 dark:border-gray-800 leading-tight">Lot No</th>
+                                    <th className="px-6 py-4 text-left w-[200px] font-bold border-b border-gray-100 dark:border-gray-800 leading-tight">หมายเหตุ</th>
                                     <th className="px-4 py-4 text-center w-[60px] font-bold border-b border-gray-100 dark:border-gray-800">ลบ</th>
                                 </tr>
                             </thead>
@@ -818,7 +821,10 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                 onClose={() => setIsLotSearchOpen(false)}
                 onSelect={handleSelectLot}
                 itemId={currentLotLineIndex !== null ? items[currentLotLineIndex]?.item_id : undefined}
-                vendorId={selectedPO?.vendor_id}
+                itemName={currentLotLineIndex !== null ? items[currentLotLineIndex]?.item_name : undefined}
+                itemCode={currentLotLineIndex !== null ? items[currentLotLineIndex]?.item_code : undefined}
+                warehouseId={warehouseId}
+                title="เลือกและจัดการล็อตสินค้า (GRN)"
             />
         </WindowFormLayout>
     );

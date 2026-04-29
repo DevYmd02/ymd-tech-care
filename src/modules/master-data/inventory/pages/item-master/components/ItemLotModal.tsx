@@ -236,7 +236,7 @@ export function ItemLotModal({ isOpen, onClose, item }: ItemLotModalProps) {
                                                     <div className="flex items-center justify-center gap-1 transition-opacity">
                                                         <button 
                                                             onClick={() => handleOpenEditForm(lot)}
-                                                            className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                                                            className="p-1.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
                                                             title="แก้ไข"
                                                         >
                                                             <Edit2 size={14} />

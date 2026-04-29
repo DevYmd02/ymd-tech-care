@@ -121,7 +121,7 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
             });
 
             // Refresh data
-            await queryClient.invalidateQueries({ queryKey: ['lot-lookup-reservation'] });
+            await queryClient.invalidateQueries({ queryKey: ['lot-lookup-grn'] });
             await queryClient.invalidateQueries({ queryKey: ['item-lots', itemId] });
 
             onClose();
@@ -144,21 +144,21 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
         <DialogFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title="ปรับปรุงจำนวนสต็อก (Quick Adjust)"
+            title="ปรับปรุงจำนวนสต็อก (GRN Adjust)"
             titleIcon={
-                <div className="bg-amber-500 p-1.5 rounded-lg shadow-sm">
+                <div className="bg-indigo-600 p-1.5 rounded-lg shadow-sm">
                     <Package size={20} className="text-white" />
                 </div>
             }
             width="max-w-[480px]"
-            headerColor="bg-amber-500"
+            headerColor="bg-indigo-600"
         >
             <div className="space-y-5 p-1">
                 {/* Header Info Banner */}
                 <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50 rounded-xl p-4 shadow-sm relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 bg-amber-500/5 rounded-full -mr-4 -mt-4 blur-2xl group-hover:bg-amber-500/10 transition-all duration-500"></div>
+                    <div className="absolute top-0 right-0 p-8 bg-indigo-500/5 rounded-full -mr-4 -mt-4 blur-2xl group-hover:bg-indigo-500/10 transition-all duration-500"></div>
                     <div className="relative z-10">
-                        <div className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest mb-1">Lot Number</div>
+                        <div className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mb-1">Lot Number</div>
                         <div className="text-xl font-black text-slate-900 dark:text-white tracking-tight mb-1">{lotNo}</div>
                         <div className="text-sm text-slate-500 dark:text-slate-400 font-medium truncate">{itemName}</div>
                     </div>
@@ -172,7 +172,7 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
                         className={`${infoCardClass} text-left transition-all hover:bg-gray-100 dark:hover:bg-gray-800 border-dashed border-gray-300 dark:border-gray-600`}
                     >
                         <div className="flex items-center gap-2 mb-1">
-                            <Warehouse size={14} className="text-amber-500" />
+                            <Warehouse size={14} className="text-indigo-500" />
                             <span className={labelClass.replace('mb-1.5', 'mb-0')}>คลังสินค้า (คลิกเพื่อเปลี่ยน)</span>
                         </div>
                         <div className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">
@@ -190,7 +190,7 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
                         }`}
                     >
                         <div className="flex items-center gap-2 mb-1">
-                            <MapPin size={14} className="text-amber-500" />
+                            <MapPin size={14} className="text-indigo-500" />
                             <span className={labelClass.replace('mb-1.5', 'mb-0')}>ที่เก็บ (คลิกเพื่อเปลี่ยน)</span>
                         </div>
                         <div className="text-xs font-bold text-gray-700 dark:text-gray-300 truncate">
@@ -226,10 +226,10 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
                                 value={newQty === 0 ? '' : newQty}
                                 onChange={(e) => setNewQty(e.target.value === '' ? 0 : Number(e.target.value))}
                                 onFocus={(e) => e.target.select()}
-                                className="w-full text-center text-3xl font-black text-amber-600 bg-transparent border-none focus:ring-0 p-0"
+                                className="w-full text-center text-3xl font-black text-indigo-600 bg-transparent border-none focus:ring-0 p-0"
                                 autoFocus
                             />
-                            <div className="h-0.5 w-full bg-amber-500/20 rounded-full mt-1"></div>
+                            <div className="h-0.5 w-full bg-indigo-500/20 rounded-full mt-1"></div>
                         </div>
                     </div>
 
@@ -246,8 +246,6 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
                     </div>
                 </div>
 
-
-
                 {/* Actions */}
                 <div className="flex gap-3 pt-2">
                     <button
@@ -262,7 +260,7 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
                         type="button"
                         onClick={handleSubmit}
                         disabled={isSaving || !hasChanges}
-                        className="flex-[2] h-12 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-amber-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale whitespace-nowrap"
+                        className="flex-[2] h-12 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale whitespace-nowrap"
                     >
                         {isSaving ? (
                             <RotateCcw size={18} className="animate-spin" />
@@ -280,7 +278,7 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
             onClose={() => setIsWarehouseSearchOpen(false)}
             onSelect={(wh) => {
                 setSelectedWarehouse({ id: Number(wh.warehouse_id), name: wh.warehouse_name });
-                setSelectedLocation(null); // Reset location when warehouse changes
+                setSelectedLocation(null); 
                 setIsWarehouseSearchOpen(false);
             }}
             warehouses={warehouses}

@@ -134,8 +134,8 @@ export const ItemLotService = {
         supplier_vendor_id: null,
       };
 
-      console.log('[ItemLotService] PATCH to:', `/item-lot-balance/${balanceId}`);
-      console.log('[ItemLotService] Payload:', payload);
+      logger.info('[ItemLotService] PATCH to:', `/item-lot-balance/${balanceId}`);
+      logger.info('[ItemLotService] Payload:', payload);
 
       await api.patch(`/item-lot-balance/${balanceId}`, payload);
       return true;

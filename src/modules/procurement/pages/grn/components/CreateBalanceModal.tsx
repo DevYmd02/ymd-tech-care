@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ItemLotService } from '@inventory/services/item-lot.service';
 import { MasterDataService } from '@master-data/services/master-data.service';
 import { LocationService } from '@inventory/services/inventory-master.service';
-import { ReservationInventoryService } from '../services/reservation-inventory.service';
+import { GrnInventoryService } from '../../../services/grn-inventory.service';
 
 import type { ItemLot } from '@inventory/types/item-lot-types';
 
@@ -75,7 +75,7 @@ export const CreateBalanceModal: React.FC<CreateBalanceModalProps> = ({
         setError(null);
         setIsSaving(true);
         try {
-            await ReservationInventoryService.createBalance({
+            await GrnInventoryService.createBalance({
                 lot_id: Number(lotId),
                 item_id: itemId,
                 warehouse_id: Number(warehouseId),
@@ -83,8 +83,10 @@ export const CreateBalanceModal: React.FC<CreateBalanceModalProps> = ({
                 qty_on_hand: Number(qty)
             });
 
-            // Refresh the balances in the main search modal
-            await queryClient.invalidateQueries({ queryKey: ['lot-lookup-reservation'] });
+            // Refresh the balances
+            await queryClient.invalidateQueries({ queryKey: ['lot-lookup-grn'] });
+            await queryClient.invalidateQueries({ queryKey: ['item-lots', itemId] });
+            
             onCreated?.();
             onClose();
         } catch (err) {
@@ -99,14 +101,14 @@ export const CreateBalanceModal: React.FC<CreateBalanceModalProps> = ({
         <DialogFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            title="นำเข้าสต็อก (Add Balance)"
+            title="นำเข้าสต็อก (GRN Add Balance)"
             titleIcon={
-                <div className="bg-amber-500 p-1.5 rounded-lg shadow-sm">
+                <div className="bg-indigo-600 p-1.5 rounded-lg shadow-sm">
                     <PackagePlus size={20} className="text-white" />
                 </div>
             }
             width="max-w-md"
-            headerColor="bg-amber-500"
+            headerColor="bg-indigo-600"
         >
             <div className="p-6 space-y-5">
                 {error && (
@@ -123,7 +125,7 @@ export const CreateBalanceModal: React.FC<CreateBalanceModalProps> = ({
                         <select
                             value={lotId}
                             onChange={(e) => setLotId(Number(e.target.value) || '')}
-                            className="w-full h-11 px-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-amber-500 text-gray-900 dark:text-white"
+                            className="w-full h-11 px-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white transition-all"
                             disabled={isLoadingLots}
                         >
                             <option value="">-- เลือกล็อต --</option>
@@ -138,7 +140,7 @@ export const CreateBalanceModal: React.FC<CreateBalanceModalProps> = ({
                             })}
                         </select>
                         {lots.length === 0 && !isLoadingLots && (
-                            <p className="text-xs text-amber-600 mt-1">ยังไม่มีล็อตในระบบ กรุณาสร้าง Lot ใหม่ก่อน</p>
+                            <p className="text-xs text-indigo-600 mt-1">ยังไม่มีล็อตในระบบ กรุณาสร้าง Lot ใหม่ก่อน</p>
                         )}
                     </div>
 
@@ -149,9 +151,9 @@ export const CreateBalanceModal: React.FC<CreateBalanceModalProps> = ({
                             value={warehouseId}
                             onChange={(e) => {
                                 setWarehouseId(Number(e.target.value) || '');
-                                setLocationId(''); // Reset location when warehouse changes
+                                setLocationId(''); 
                             }}
-                            className="w-full h-11 px-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-amber-500 text-gray-900 dark:text-white"
+                            className="w-full h-11 px-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white transition-all"
                         >
                             <option value="">-- เลือกคลังสินค้า --</option>
                             {warehouses.map(wh => (
@@ -168,7 +170,7 @@ export const CreateBalanceModal: React.FC<CreateBalanceModalProps> = ({
                         <select
                             value={locationId}
                             onChange={(e) => setLocationId(Number(e.target.value) || '')}
-                            className="w-full h-11 px-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-amber-500 text-gray-900 dark:text-white"
+                            className="w-full h-11 px-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white transition-all"
                             disabled={!warehouseId}
                         >
                             <option value="">-- เลือกที่เก็บ --</option>
@@ -189,7 +191,7 @@ export const CreateBalanceModal: React.FC<CreateBalanceModalProps> = ({
                             onChange={(e) => setQty(e.target.value === '' ? '' : Number(e.target.value))}
                             onFocus={(e) => e.target.select()}
                             placeholder="ระบุจำนวน..."
-                            className="w-full h-11 px-3 text-lg font-bold text-amber-600 dark:text-amber-400 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-amber-500 placeholder-gray-400 dark:placeholder-gray-500"
+                            className="w-full h-11 px-3 text-lg font-bold text-indigo-600 dark:text-indigo-400 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 focus:ring-2 focus:ring-indigo-500 placeholder-gray-400 dark:placeholder-gray-500 transition-all"
                         />
                     </div>
                 </div>
@@ -206,7 +208,7 @@ export const CreateBalanceModal: React.FC<CreateBalanceModalProps> = ({
                 <button
                     onClick={handleSubmit}
                     disabled={isSaving}
-                    className="flex-1 h-11 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 disabled:opacity-50 transition-all active:scale-95 whitespace-nowrap"
+                    className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 disabled:opacity-50 transition-all active:scale-95 whitespace-nowrap"
                 >
                     {isSaving ? (
                         <>

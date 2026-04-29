@@ -66,8 +66,6 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
     const [selectedVendorName, setSelectedVendorName] = useState('');
     const [isVendorSearchOpen, setIsVendorSearchOpen] = useState(false);
 
-
-
     // Reset form when opening or when itemId/defaults change
     useEffect(() => {
         if (isOpen) {
@@ -91,8 +89,6 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
         handleChange('supplier_vendor_id', null);
         setSelectedVendorName('');
     };
-
-
 
     const validate = (): string | null => {
         if (!form.lot_no.trim()) return 'กรุณากรอกเลขล็อต (Lot No.)';
@@ -122,7 +118,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
             await ItemLotService.upsert(payload);
 
             // Invalidate lot queries
-            await queryClient.invalidateQueries({ queryKey: ['lot-lookup-reservation'] });
+            await queryClient.invalidateQueries({ queryKey: ['lot-lookup-grn'] });
             await queryClient.invalidateQueries({ queryKey: ['item-lots', itemId] });
 
             onCreated?.(payload.lot_no);
@@ -136,7 +132,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
     };
 
     const inputClass =
-        'w-full h-10 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all';
+        'w-full h-10 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all';
     const labelClass = 'block text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-1.5';
 
     return (
@@ -144,24 +140,24 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
             <DialogFormLayout
                 isOpen={isOpen}
                 onClose={onClose}
-                title="สร้าง Lot Number ใหม่"
+                title="สร้าง Lot Number ใหม่ (GRN)"
                 titleIcon={
-                    <div className="bg-emerald-600 p-1.5 rounded-lg shadow-sm">
+                    <div className="bg-indigo-600 p-1.5 rounded-lg shadow-sm">
                         <Tag size={20} className="text-white" />
                     </div>
                 }
                 width="max-w-[640px]"
-                headerColor="bg-emerald-600"
+                headerColor="bg-indigo-600"
             >
                 <div className="space-y-5 p-1">
                     {/* Item Info Banner */}
-                    <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/40 rounded-xl overflow-hidden shadow-sm">
+                    <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/40 rounded-xl overflow-hidden shadow-sm">
                         <div className="flex items-center gap-3 px-4 py-3">
-                            <div className="p-2 bg-purple-600 rounded-lg shrink-0">
+                            <div className="p-2 bg-indigo-600 rounded-lg shrink-0">
                                 <Tag size={16} className="text-white" />
                             </div>
                             <div className="min-w-0 flex-1">
-                                <div className="text-[10px] font-bold text-purple-500 uppercase tracking-widest">ผูกกับสินค้า</div>
+                                <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">ผูกกับสินค้า</div>
                                 <div className="font-bold text-gray-900 dark:text-white truncate">
                                     {itemName || `Item ID: ${itemId}`}
                                 </div>
@@ -170,8 +166,6 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                                 )}
                             </div>
                         </div>
-
-
                     </div>
 
                     {/* Error Alert */}
@@ -212,7 +206,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                                         <button type="button" onClick={handleClearVendor} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500"><X size={14} /></button>
                                     )}
                                 </div>
-                                <button type="button" onClick={() => setIsVendorSearchOpen(true)} className="h-10 w-10 bg-purple-600 text-white rounded-lg flex items-center justify-center"><Search size={18} /></button>
+                                <button type="button" onClick={() => setIsVendorSearchOpen(true)} className="h-10 w-10 bg-indigo-600 text-white rounded-lg flex items-center justify-center"><Search size={18} /></button>
                             </div>
                         </div>
 
@@ -225,8 +219,6 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                             <label className={labelClass}>วันหมดอายุ (EXP Date)</label>
                             <CustomDateInput value={form.expiry_date || ''} onChange={(val) => handleChange('expiry_date', val || null)} className={inputClass} />
                         </div>
-
-
 
                         <div>
                             <label className={labelClass}>สถานะ</label>
@@ -245,7 +237,7 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
 
                     <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 dark:border-gray-800">
                         <button type="button" onClick={onClose} className="h-11 px-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-all active:scale-95 whitespace-nowrap">ยกเลิก</button>
-                        <button type="button" onClick={handleSubmit} disabled={isSaving} className="h-11 px-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap min-w-[160px]">
+                        <button type="button" onClick={handleSubmit} disabled={isSaving} className="h-11 px-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap min-w-[160px]">
                             {isSaving ? (
                                 <>
                                     <RotateCcw size={18} className="animate-spin" />

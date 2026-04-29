@@ -9,6 +9,7 @@ import { FileText, Search, Plus, Send } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
+import { logger } from '@/shared/utils/logger';
 import type { QuotationHeader, QuotationLineData } from '@sales/quotation/types/quotation.types';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import { QuotationFormModal } from '@sales/quotation/components/QuotationFormModal';
@@ -203,7 +204,7 @@ export default function QuotationListPage() {
             setIsApproveConfirmOpen(false);
             toast('ส่งใบเสนอราคาเพื่อรออนุมัติเรียบร้อยแล้ว', 'success');
         } catch (error) {
-            console.error('Failed to send for approval:', error);
+            logger.error('Failed to send for approval:', error);
             toast('เกิดข้อผิดพลาดในการส่งอนุมัติ กรุณาลองใหม่อีกครั้ง', 'error');
         } finally {
             setIsApproveLoading(false);

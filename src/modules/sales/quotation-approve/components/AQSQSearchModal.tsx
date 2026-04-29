@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
 import { useDebounce } from '@hooks/useDebounce';
 import { AQService } from '../services/aq.service';
+import { logger } from '@/shared/utils/logger';
 import type { SQForApproval } from '../types/quotation-approve.types';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
@@ -76,7 +77,7 @@ export const AQSQSearchModal: React.FC<AQSQSearchModalProps> = React.memo(({
     const finalId = Number(rawId);
     
     if (!finalId) {
-      console.warn('[AQSQSearchModal] Could not discover a valid numeric ID in item:', item);
+      logger.warn('[AQSQSearchModal] Could not discover a valid numeric ID in item:', item);
     }
     
     onSelect(finalId, item);
