@@ -129,6 +129,8 @@ export interface ShelfFormData extends IBaseFormData {
 
 export interface LotNo extends IBaseMaster {
     lot_no_id: number;
+    lot_id?: number; // Master reference
+    lot_balance_id?: number; // Specific balance reference
     expiry_date?: string;
     mfg_date?: string;
     supplier_vendor_id?: number | string;
@@ -136,8 +138,13 @@ export interface LotNo extends IBaseMaster {
     note?: string;
     balance_qty?: number;
     sale_stock?: number;
+    qty_on_hand?: number;
+    qty_reserved?: number;
+    qty_available?: number;
     warehouse_id?: number;
+    warehouse_name?: string;
     location_id?: number;
+    location_name?: string;
 }
 
 export interface LotNoFormData extends IBaseFormData {

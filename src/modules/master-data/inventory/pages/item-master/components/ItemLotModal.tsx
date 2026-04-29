@@ -196,8 +196,8 @@ export function ItemLotModal({ isOpen, onClose, item }: ItemLotModalProps) {
                                                     <div className="font-bold text-gray-900 dark:text-white text-[13px]">{lot.lot_no}</div>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="text-[13px] text-gray-600 dark:text-gray-400 line-clamp-1" title={lot.supplier_name}>
-                                                        {lot.supplier_name || '-'}
+                                                    <div className="text-[13px] text-gray-600 dark:text-gray-400 line-clamp-1" title={lot.supplier_name || ''}>
+                                                        {lot.supplier_name || vendors.find(v => Number(v.vendor_id) === Number(lot.supplier_vendor_id))?.vendor_name || '-'}
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-right">
@@ -233,7 +233,7 @@ export function ItemLotModal({ isOpen, onClose, item }: ItemLotModalProps) {
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex items-center justify-center gap-1 transition-opacity">
                                                         <button 
                                                             onClick={() => handleOpenEditForm(lot)}
                                                             className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
