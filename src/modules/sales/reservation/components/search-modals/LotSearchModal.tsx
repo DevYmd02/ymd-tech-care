@@ -455,15 +455,13 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                                                 เลือก <Check size={14} />
                                                             </button>
                                                             
-                                                            {qtyStock <= 0 && (
-                                                                <button 
-                                                                    onClick={() => handleAddBalance(id)}
-                                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
-                                                                >
-                                                                    <PackagePlus size={14} />
-                                                                    นำเข้า
-                                                                </button>
-                                                            )}
+                                                            <button 
+                                                                onClick={() => handleAddBalance(id)}
+                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 dark:border-amber-700/50 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
+                                                            >
+                                                                <PackagePlus size={14} />
+                                                                + เติมสต็อก
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
