@@ -230,9 +230,9 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                 <button
                                     onClick={() => numericItemId > 0 && handleAddBalance()}
                                     disabled={numericItemId <= 0}
-                                    className={`h-10 px-4 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 ${
+                                    className={`h-10 px-4 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap ${
                                         numericItemId > 0
-                                            ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                                            ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
                                             : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                                     }`}
                                 >
@@ -242,9 +242,9 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                 <button
                                     onClick={() => numericItemId > 0 && setIsCreateOpen(true)}
                                     disabled={numericItemId <= 0}
-                                    className={`h-10 px-4 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 ${
+                                    className={`h-10 px-4 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap ${
                                         numericItemId > 0
-                                            ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                                            ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20'
                                             : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                                     }`}
                                 >
@@ -373,7 +373,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                                     <div className="flex items-center justify-center gap-2">
                                                         <button 
                                                             onClick={(e) => handleOpenAdjust(e, lot)}
-                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-amber-200 dark:border-amber-700 text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded-lg text-[10px] font-bold transition-all shadow-sm"
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-[10px] font-bold transition-all shadow-sm"
                                                         >
                                                             <Edit2 size={12} /> แก้ไข
                                                         </button>

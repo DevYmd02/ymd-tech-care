@@ -243,18 +243,18 @@ export const CreateLotModal: React.FC<CreateLotModalProps> = ({
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-800">
-                        <button type="button" onClick={onClose} className="h-10 px-5 bg-white border border-gray-200 rounded-lg text-sm font-bold">ยกเลิก</button>
-                        <button type="button" onClick={handleSubmit} disabled={isSaving} className="h-10 px-6 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow-sm">
+                    <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 dark:border-gray-800">
+                        <button type="button" onClick={onClose} className="h-11 px-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 transition-all active:scale-95 whitespace-nowrap">ยกเลิก</button>
+                        <button type="button" onClick={handleSubmit} disabled={isSaving} className="h-11 px-10 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 whitespace-nowrap min-w-[160px]">
                             {isSaving ? (
                                 <>
-                                    <RotateCcw size={16} className="animate-spin" />
-                                    กำลังบันทึก...
+                                    <RotateCcw size={18} className="animate-spin" />
+                                    <span>กำลังบันทึก...</span>
                                 </>
                             ) : (
                                 <>
-                                    <CheckCircle size={16} />
-                                    สร้าง Lot
+                                    <CheckCircle size={18} />
+                                    <span>สร้าง Lot</span>
                                 </>
                             )}
                         </button>

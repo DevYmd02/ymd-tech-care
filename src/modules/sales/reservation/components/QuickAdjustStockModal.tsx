@@ -154,13 +154,13 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
             headerColor="bg-amber-500"
         >
             <div className="space-y-5 p-1">
-                {/* Header Info */}
-                <div className="bg-gray-900 text-white rounded-xl p-4 shadow-lg overflow-hidden relative group">
-                    <div className="absolute top-0 right-0 p-8 bg-amber-500/10 rounded-full -mr-4 -mt-4 blur-2xl group-hover:bg-amber-500/20 transition-all duration-500"></div>
+                {/* Header Info Banner */}
+                <div className="bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-700/50 rounded-xl p-4 shadow-sm relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 bg-amber-500/5 rounded-full -mr-4 -mt-4 blur-2xl group-hover:bg-amber-500/10 transition-all duration-500"></div>
                     <div className="relative z-10">
-                        <div className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Lot Number</div>
-                        <div className="text-lg font-black tracking-tight mb-2">{lotNo}</div>
-                        <div className="text-sm text-gray-400 font-medium truncate">{itemName}</div>
+                        <div className="text-[10px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-widest mb-1">Lot Number</div>
+                        <div className="text-xl font-black text-slate-900 dark:text-white tracking-tight mb-1">{lotNo}</div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400 font-medium truncate">{itemName}</div>
                     </div>
                 </div>
 
@@ -254,7 +254,7 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
                         type="button"
                         onClick={onClose}
                         disabled={isSaving}
-                        className="flex-1 h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-50"
+                        className="flex-1 h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-50 whitespace-nowrap"
                     >
                         ยกเลิก
                     </button>
@@ -262,14 +262,14 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
                         type="button"
                         onClick={handleSubmit}
                         disabled={isSaving || !hasChanges}
-                        className="flex-[2] h-12 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-amber-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale"
+                        className="flex-[2] h-12 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-amber-500/20 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale whitespace-nowrap"
                     >
                         {isSaving ? (
                             <RotateCcw size={18} className="animate-spin" />
                         ) : (
                             <Save size={18} />
                         )}
-                        บันทึกการปรับสต็อก
+                        <span>บันทึกการปรับสต็อก</span>
                     </button>
                 </div>
             </div>

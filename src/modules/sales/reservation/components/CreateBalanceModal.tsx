@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
-import { PackagePlus, Save, AlertCircle } from 'lucide-react';
+import { PackagePlus, Save, AlertCircle, RotateCcw } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ItemLotService } from '@inventory/services/item-lot.service';
 import { MasterDataService } from '@master-data/services/master-data.service';
@@ -199,21 +199,24 @@ export const CreateBalanceModal: React.FC<CreateBalanceModalProps> = ({
             <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex gap-3">
                 <button
                     onClick={onClose}
-                    className="flex-1 h-11 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700"
+                    className="flex-1 h-11 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-bold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all active:scale-95 whitespace-nowrap"
                 >
                     ยกเลิก
                 </button>
                 <button
                     onClick={handleSubmit}
                     disabled={isSaving}
-                    className="flex-1 h-11 bg-amber-500 text-white font-bold rounded-xl hover:bg-amber-600 shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="flex-1 h-11 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 disabled:opacity-50 transition-all active:scale-95 whitespace-nowrap"
                 >
                     {isSaving ? (
-                        <>กำลังบันทึก...</>
+                        <>
+                            <RotateCcw className="animate-spin" size={18} />
+                            <span>กำลังบันทึก...</span>
+                        </>
                     ) : (
                         <>
                             <Save size={18} />
-                            บันทึกนำเข้าสต็อก
+                            <span>บันทึกนำเข้าสต็อก</span>
                         </>
                     )}
                 </button>

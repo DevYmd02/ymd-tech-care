@@ -43,7 +43,7 @@ export default function LotNoList() {
         { accessorKey: 'code', header: 'รหัส', cell: ({ getValue }) => <span className="font-medium text-blue-600">{getValue() as string}</span> },
         { accessorKey: 'name_th', header: 'ชื่อ (ไทย)' },
         { accessorKey: 'is_active', header: 'สถานะ', cell: () => <ActiveStatusBadge isActive={true} />, size: 100 },
-        { id: 'actions', header: 'จัดการ', size: 100, cell: ({ row }) => (<div className="flex items-center gap-2"><button onClick={() => { setEditingId(row.original.id); setIsModalOpen(true); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit2 size={18} /></button><button onClick={() => handleDelete(row.original.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={18} /></button></div>)},
+        { id: 'actions', header: 'จัดการ', size: 100, cell: ({ row }) => (<div className="flex items-center gap-2"><button onClick={() => { setEditingId(row.original.id); setIsModalOpen(true); }} className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors" title="แก้ไข"><Edit2 size={18} /></button><button onClick={() => handleDelete(row.original.id)} className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="ลบ"><Trash2 size={18} /></button></div>)},
     ], [filters.page, filters.limit, handleDelete]);
 
     return (
