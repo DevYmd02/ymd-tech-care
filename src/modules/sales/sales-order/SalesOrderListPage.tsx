@@ -10,6 +10,7 @@ import { ShoppingCart, Search, Plus, Edit, Eye, Send } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { SalesOrderService, type SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
+import { logger } from '@/shared/utils/logger';
 import { SalesOrderFormModal } from './components/SalesOrderFormModal';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
@@ -134,7 +135,7 @@ export default function SalesOrderListPage() {
             await SalesOrderService.update(id, { status: 'APPROVED' });
             refetch();
         } catch (error) {
-            console.error('Failed to submit sales order:', error);
+            logger.error('Failed to submit sales order:', error);
         }
     }, [confirm, refetch]);
 
