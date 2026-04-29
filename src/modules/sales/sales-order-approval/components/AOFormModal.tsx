@@ -14,6 +14,7 @@ import { AOFormSummary } from './AOFormSummary';
 import { AOHistoryModal } from '../../shared/components/AOHistoryModal';
 import type { AOListItem, SOForApproval } from '../types/sales-order-approval.types';
 import type { AOLineFormData } from '../schemas/ao.schema';
+import { SOSearchModal } from './SOSearchModal';
 
 interface Props {
   isOpen: boolean;
@@ -40,11 +41,18 @@ export const AOFormModal: React.FC<Props> = ({
     isConfirmModalOpen, setIsConfirmModalOpen,
     handleReject, handleConfirmReject,
     isConfirmRejectOpen, setIsConfirmRejectOpen,
-    activeId,
+    activeId, loadSOData,
   } = useAOForm({ soId, isOpen, onClose, onSuccess, approvalItem });
 
   const { register, watch, formState: { errors } } = formMethods;
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isSOSearchOpen, setIsSOSearchOpen] = useState(false);
+
+  const handleSelectSO = (so: SOForApproval) => {
+    if (so.so_id) {
+      loadSOData(so.so_id, so);
+    }
+  };
 
   const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden';
 
@@ -138,6 +146,7 @@ export const AOFormModal: React.FC<Props> = ({
                 <div className="p-6">
                   <AOHeader
                     readOnly={isAlreadyProcessed}
+                    onSearchSO={!isAlreadyProcessed ? () => setIsSOSearchOpen(true) : undefined}
                   />
                 </div>
               </div>
@@ -258,6 +267,11 @@ export const AOFormModal: React.FC<Props> = ({
         onClose={() => setIsHistoryOpen(false)}
         soId={activeId as string}
         soNo={watch('so_no')}
+      />
+      <SOSearchModal
+        isOpen={isSOSearchOpen}
+        onClose={() => setIsSOSearchOpen(false)}
+        onSelect={handleSelectSO}
       />
     </>
   );

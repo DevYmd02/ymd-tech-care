@@ -153,6 +153,15 @@ function normalizeSO(raw: unknown): SOForApproval | null {
     discount_expression: String(obj.discount_expression || obj.discount_input || '0'),
     discount_amount: Number(obj.discount_amount || obj.quote_discount_amount || 0),
 
+    reservation_no: String(obj.reservation_no || ''),
+    ship_days: Number(obj.ship_days || 0),
+    ship_date: String(obj.ship_date || '').split('T')[0],
+    emp_dept_id: (obj.emp_dept_id as string | number) || 0,
+    emp_dept_name: String(obj.emp_dept_name || ''),
+    emp_area_id: (obj.emp_area_id as string | number) || 0,
+    job_id: (obj.job_id as string | number) || 0,
+    onhold: (obj.onhold === 'Y' || obj.onhold === true) ? 'Y' : 'N',
+
     lines,
     sub_total: Number(obj.sub_total || lines.reduce((s, l) => s + (l.net_amount || 0), 0) || 0),
   };
@@ -210,6 +219,14 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
     emp_sale_name: '',
     payment_term_days: 0,
     remarks: '',
+    reservation_no: '',
+    ship_days: 0,
+    ship_date: '',
+    emp_dept_id: '',
+    emp_dept_name: '',
+    emp_area_id: '',
+    job_id: '',
+    onhold: 'N',
     lines: [],
   }), []);
 
@@ -376,6 +393,14 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
         branch_name: so.branch_name || String(aoItemArg?.branch_name || ''),
         emp_sale_id: so.emp_sale_id || '',
         emp_sale_name: so.emp_sale_name || String(aoItemArg?.emp_sale_name || ''),
+        reservation_no: so.reservation_no || '',
+        ship_days: so.ship_days || 0,
+        ship_date: so.ship_date || '',
+        emp_dept_id: so.emp_dept_id || '',
+        emp_dept_name: so.emp_dept_name || '',
+        emp_area_id: so.emp_area_id || '',
+        job_id: so.job_id || '',
+        onhold: so.onhold || 'N',
         isMulticurrency: Boolean(so.isMulticurrency),
         lines: mappedLines,
       } as AOFormData);
@@ -548,6 +573,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
     lines,
     updateLine,
     activeId,
+    loadSOData,
     status: formMethods.watch('status'),
     isMulticurrency: formMethods.watch('isMulticurrency'),
   };
