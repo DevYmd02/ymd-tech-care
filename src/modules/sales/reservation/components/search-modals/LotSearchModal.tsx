@@ -1,16 +1,16 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, Tag, Check, Plus, PackagePlus, Layers, List, Edit2, MapPin } from 'lucide-react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
-import { ReservationInventoryService } from '@sales/reservation/services/reservation-inventory.service';
+import { ReservationInventoryService } from '../../services/reservation-inventory.service';
 import type { LotNo } from '@inventory/types/inventory-master.types';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@hooks/useDebounce';
 import { formatThaiDate as formatDate } from '@utils/dateUtils';
-import { CreateLotModal } from './CreateLotModal';
+import { CreateLotModal } from '../inventory/CreateLotModal';
 import { MasterDataService } from '@master-data/services/master-data.service';
 import { LocationService } from '@inventory/services/inventory-master.service';
-import { QuickAdjustStockModal } from './QuickAdjustStockModal';
-import { CreateBalanceModal } from './CreateBalanceModal';
+import { QuickAdjustStockModal } from '../inventory/QuickAdjustStockModal';
+import { CreateBalanceModal } from '../inventory/CreateBalanceModal';
 import { ItemLotService } from '@inventory/services/item-lot.service';
 import type { ItemLot } from '@inventory/types/item-lot-types';
 
@@ -553,3 +553,5 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
         </>
     );
 });
+
+

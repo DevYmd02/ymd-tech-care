@@ -1,15 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery } from '@tanstack/react-query';
-import { MasterDataService } from '@master-data';
-import { CustomerService } from '@customer/customer-master/services/customer.service';
-import { UnitService } from '@inventory/services/unit.service';
-import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
-import { WarehouseService } from '@inventory/services/warehouse.service';
-import { LocationService } from '@inventory/services/inventory-master.service';
-import { SaleAreaService } from '@sales-master/pages/area/services/area.service';
-
 import { QuotationService } from '@sales/quotation/services/quotation.service';
 import type { QuotationFormData } from '@sales/quotation/types/quotation.types';
 import { ItemMasterService } from '@inventory/services/item-master.service';
@@ -25,7 +16,6 @@ import {
 import type { Currency } from '@master-data/types/master-data-types';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import type { ItemListItem, UnitListItem } from '@inventory/types/product-types';
-import type { TaxCode } from '@master-data/tax/types/tax-types';
 import type { LotNo, Location as LocationItem } from '@inventory/types/inventory-master.types';
 import type { EstimateHeader } from '@sales/estimate/services/estimate.service';
 import type { WarehouseListItem } from '@master-data/types/master-data-types';
@@ -37,6 +27,7 @@ import {
 } from '../schemas/reservation-schemas';
 import { ReservationService, type AvailableApproval } from '../services/reservation.service';
 import type { AQLine } from '@sales/quotation-approve/types/quotation-approve.types';
+import { useReservationMasterData } from './useReservationMasterData';
 
 /**
  * 🕵️ Local interfaces for data discovery phase
@@ -145,123 +136,42 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     }, [isOpen, id, reset, initialData, toast]);
 
 
-    // Data Fetching
-    const { data: branches = [] } = useQuery({
-        queryKey: ['master-branches'],
-        queryFn: MasterDataService.getBranches,
-        enabled: isOpen
-    });
+    // Master Data Hook
+    const {
+        branches,
+        currencies,
+        customers,
+        taxCodes,
+        departments,
+        projects,
+        saleAreas,
+        employees,
+        uoms,
+        warehouses,
+        locations,
+        priceLevelNames,
+        isMasterDataReady
+    } = useReservationMasterData(isOpen);
 
-    const { data: currencies = [] } = useQuery<Currency[]>({
-        queryKey: ['master-currencies'],
-        queryFn: MasterDataService.getCurrencies,
-        enabled: isOpen
-    });
-
-    const { data: customerResponse } = useQuery({
-        queryKey: ['master-customers'],
-        queryFn: () => CustomerService.getList({ limit: 1000 }),
-        enabled: isOpen,
-        staleTime: 30 * 60 * 1000,
-    });
-    const customers = customerResponse?.data || [];
-
-    const { data: taxCodes = [] } = useQuery<TaxCode[]>({
-        queryKey: ['master-tax-codes'],
-        queryFn: TaxCodeService.getTaxCodes,
-        enabled: isOpen
-    });
-
-    const { data: departments = [] } = useQuery({
-        queryKey: ['master-departments'],
-        queryFn: MasterDataService.getDepartments,
-        enabled: isOpen
-    });
-
-    const { data: projects = [] } = useQuery({
-        queryKey: ['master-projects'],
-        queryFn: MasterDataService.getProjects,
-        enabled: isOpen
-    });
-
-    const { data: saleAreas = [] } = useQuery({
-        queryKey: ['master-sale-areas'],
-        queryFn: () => SaleAreaService.getList(),
-        enabled: isOpen
-    });
-
-    const { data: employees = [] } = useQuery({
-        queryKey: ['master-employees'],
-        queryFn: MasterDataService.getEmployees,
-        enabled: isOpen
-    });
-
-    const { data: uomResponse } = useQuery({
-        queryKey: ['master-units'],
-        queryFn: () => UnitService.getAll({ limit: 1000 }),
-        enabled: isOpen,
-        staleTime: 30 * 60 * 1000,
-    });
-    const uoms = useMemo(() => uomResponse?.items || [], [uomResponse]);
-
-    const { data: warehouseResponse } = useQuery({
-        queryKey: ['master-warehouses'],
-        queryFn: () => WarehouseService.getAll(),
-        enabled: isOpen,
-        staleTime: 30 * 60 * 1000,
-    });
-    const warehouses = useMemo(() => warehouseResponse?.items || [], [warehouseResponse]);
-
-    const { data: locationResponse } = useQuery({
-        queryKey: ['master-locations'],
-        queryFn: () => LocationService.getAll({ limit: 1000 }),
-        enabled: isOpen,
-        staleTime: 30 * 60 * 1000,
-    });
-    const locations = useMemo(() => locationResponse?.items || [], [locationResponse]);
-
-    const { data: priceLevelNames = [] } = useQuery({
-        queryKey: ['master-price-level-names'],
-        queryFn: MasterDataService.getPriceLevelNames,
-        enabled: isOpen
-    });
-
-    // 🏗️ Initialization Guard: Wait for critical master data
+    // Initialization Guard: Reset when ID changes or Master Data becomes ready
     useEffect(() => {
-        const currentTarget = id || 'new';
-
-        const isMasterDataReady = (
-            (branches?.length > 0 || !isOpen) && 
-            (taxCodes?.length > 0 || !isOpen) && 
-            (uoms?.length > 0 || !isOpen)
-        );
-
-        if (isOpen && !isMasterDataReady) {
-            logger.debug('⏳ [ReservationForm] Waiting for master data...', {
-                branches: branches?.length,
-                taxCodes: taxCodes?.length,
-                uoms: uoms?.length
-            });
+        if (!isOpen) {
+            lastInitializedId.current = null;
             return;
         }
 
-        if (isOpen && lastInitializedId.current !== currentTarget) {
+        const currentTarget = id || 'new';
+
+        if (!isMasterDataReady) {
+            logger.debug('⏳ [ReservationForm] Waiting for master data...');
+            return;
+        }
+
+        if (lastInitializedId.current !== currentTarget) {
             reset(initialData ? { ...defaultValues, ...initialData } : defaultValues);
             lastInitializedId.current = currentTarget;
-        } else if (!isOpen) {
-            lastInitializedId.current = null;
         }
-    }, [
-        isOpen, 
-        initialData, 
-        reset, 
-        defaultValues, 
-        id, 
-        branches?.length, 
-        taxCodes?.length, 
-        uoms?.length,
-        currencies?.length
-    ]);
+    }, [isOpen, isMasterDataReady, id, initialData, reset, defaultValues]);
 
     // Exchange Rate Sync Logic
     const isMulti = useWatch({ control, name: 'isMulticurrency' });

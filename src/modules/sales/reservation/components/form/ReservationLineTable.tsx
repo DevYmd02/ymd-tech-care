@@ -2,8 +2,8 @@ import { useRef } from 'react';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { Plus, Trash2, Package, Search, AlertCircle } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
-import type { ReservationLineValues, ReservationFormValues } from '../schemas/reservation-schemas';
-import type { ReservationLineData } from '../types/reservation.types';
+import type { ReservationLineValues, ReservationFormValues } from '../../schemas/reservation-schemas';
+import type { ReservationLineData } from '../../types/reservation.types';
 import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
 
@@ -422,3 +422,4 @@ export function ReservationLineTable({
         </section>
     );
 }
+

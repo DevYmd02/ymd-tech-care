@@ -5,8 +5,10 @@ import { ItemLotService } from '@inventory/services/item-lot.service';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MasterDataService } from '@master-data/services/master-data.service';
 import { LocationService } from '@inventory/services/inventory-master.service';
-import { WarehouseSearchModal } from './WarehouseSearchModal';
-import { LocationSearchModal } from './LocationSearchModal';
+import { WarehouseSearchModal } from '../search-modals/WarehouseSearchModal';
+import { LocationSearchModal } from '../search-modals/LocationSearchModal';
+import type { WarehouseListItem } from '@master-data/types/master-data-types';
+import type { Location } from '@inventory/types/inventory-master.types';
 import axios from 'axios';
 
 interface QuickAdjustStockModalProps {
@@ -278,7 +280,7 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
         <WarehouseSearchModal
             isOpen={isWarehouseSearchOpen}
             onClose={() => setIsWarehouseSearchOpen(false)}
-            onSelect={(wh) => {
+            onSelect={(wh: WarehouseListItem) => {
                 setSelectedWarehouse({ id: Number(wh.warehouse_id), name: wh.warehouse_name });
                 setSelectedLocation(null); // Reset location when warehouse changes
                 setIsWarehouseSearchOpen(false);
@@ -291,7 +293,7 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
             isOpen={isLocationSearchOpen}
             onClose={() => setIsLocationSearchOpen(false)}
             warehouseId={selectedWarehouse?.id ?? null}
-            onSelect={(loc) => {
+            onSelect={(loc: Location) => {
                 setSelectedLocation({ id: Number(loc.location_id), name: loc.name_th });
                 setIsLocationSearchOpen(false);
             }}
