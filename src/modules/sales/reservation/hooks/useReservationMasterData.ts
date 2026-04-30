@@ -15,14 +15,16 @@ export const useReservationMasterData = (isOpen: boolean) => {
     const { data: branches = [] } = useQuery({
         queryKey: ['master-branches'],
         queryFn: MasterDataService.getBranches,
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: 5 * 60 * 1000,
     });
 
     // Currencies
     const { data: currencies = [] } = useQuery<Currency[]>({
         queryKey: ['master-currencies'],
         queryFn: MasterDataService.getCurrencies,
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: 5 * 60 * 1000,
     });
 
     // Customers
@@ -30,7 +32,7 @@ export const useReservationMasterData = (isOpen: boolean) => {
         queryKey: ['master-customers'],
         queryFn: () => CustomerService.getList({ limit: 1000 }),
         enabled: isOpen,
-        staleTime: 30 * 60 * 1000,
+        staleTime: 5 * 60 * 1000,
     });
     const customers = customerResponse?.data || [];
 
@@ -38,35 +40,40 @@ export const useReservationMasterData = (isOpen: boolean) => {
     const { data: taxCodes = [] } = useQuery<TaxCode[]>({
         queryKey: ['master-tax-codes'],
         queryFn: TaxCodeService.getTaxCodes,
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: 5 * 60 * 1000,
     });
 
     // Departments
     const { data: departments = [] } = useQuery({
         queryKey: ['master-departments'],
         queryFn: MasterDataService.getDepartments,
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: 5 * 60 * 1000,
     });
 
     // Projects
     const { data: projects = [] } = useQuery({
         queryKey: ['master-projects'],
         queryFn: MasterDataService.getProjects,
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: 5 * 60 * 1000,
     });
 
     // Sale Areas
     const { data: saleAreas = [] } = useQuery({
         queryKey: ['master-sale-areas'],
         queryFn: () => SaleAreaService.getList(),
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: 5 * 60 * 1000,
     });
 
     // Employees
     const { data: employees = [] } = useQuery({
         queryKey: ['master-employees'],
         queryFn: MasterDataService.getEmployees,
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: 5 * 60 * 1000,
     });
 
     // Units (UOMs)
@@ -74,7 +81,7 @@ export const useReservationMasterData = (isOpen: boolean) => {
         queryKey: ['master-units'],
         queryFn: () => UnitService.getAll({ limit: 1000 }),
         enabled: isOpen,
-        staleTime: 30 * 60 * 1000,
+        staleTime: 5 * 60 * 1000,
     });
     const uoms = useMemo(() => uomResponse?.items || [], [uomResponse]);
 
@@ -83,7 +90,7 @@ export const useReservationMasterData = (isOpen: boolean) => {
         queryKey: ['master-warehouses'],
         queryFn: () => WarehouseService.getAll(),
         enabled: isOpen,
-        staleTime: 30 * 60 * 1000,
+        staleTime: 5 * 60 * 1000,
     });
     const warehouses = useMemo(() => warehouseResponse?.items || [], [warehouseResponse]);
 
@@ -92,7 +99,7 @@ export const useReservationMasterData = (isOpen: boolean) => {
         queryKey: ['master-locations'],
         queryFn: () => LocationService.getAll({ limit: 1000 }),
         enabled: isOpen,
-        staleTime: 30 * 60 * 1000,
+        staleTime: 5 * 60 * 1000,
     });
     const locations = useMemo(() => locationResponse?.items || [], [locationResponse]);
 
@@ -100,7 +107,8 @@ export const useReservationMasterData = (isOpen: boolean) => {
     const { data: priceLevelNames = [] } = useQuery({
         queryKey: ['master-price-level-names'],
         queryFn: MasterDataService.getPriceLevelNames,
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: 5 * 60 * 1000,
     });
 
     const isMasterDataReady = useMemo(() => {

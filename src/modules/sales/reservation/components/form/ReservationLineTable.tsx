@@ -230,66 +230,33 @@ export function ReservationLineTable({
                                     
                                     <td className="px-2 py-2">
                                         <div className="relative group/lot">
-                                            {line.reserve_policy === 'MANUAL' ? (
-                                                <>
-                                                    <div 
-                                                        onClick={!isLocked ? () => {
-                                                            if (line.item_id) {
-                                                                onSearchLot?.(index);
-                                                            } else {
-                                                                showNoItemToast();
-                                                            }
-                                                        } : undefined}
-                                                        className={`absolute left-0 top-0 bottom-0 flex items-center pl-2 ${!isLocked ? 'cursor-pointer group-hover/lot:text-orange-500 text-gray-400' : 'text-gray-300'}`}
-                                                    >
-                                                        <Search size={14} />
-                                                    </div>
-                                                    <input 
-                                                        type="text" 
-                                                        value={line.lot_no || ''} 
-                                                        readOnly
-                                                        disabled={isLocked}
-                                                        onClick={!isLocked ? () => {
-                                                            if (line.item_id) {
-                                                                onSearchLot?.(index);
-                                                            } else {
-                                                                showNoItemToast();
-                                                            }
-                                                        } : undefined}
-                                                        placeholder="เลือกล็อต..."
-                                                        className={`${compactInputClass} ${getFieldErrorClass(index, 'lot_no')} pl-7 cursor-pointer font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-gray-800 border-orange-100 dark:border-gray-700 focus:ring-orange-500`}
-                                                    />
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <div 
-                                                        onClick={!isLocked ? () => {
-                                                            if (line.item_id) {
-                                                                onSearchLot?.(index);
-                                                            } else {
-                                                                showNoItemToast();
-                                                            }
-                                                        } : undefined}
-                                                        className={`absolute left-0 top-0 bottom-0 flex items-center pl-2 ${!isLocked ? 'cursor-pointer group-hover/lot:text-blue-500 text-gray-400' : 'text-gray-300'}`}
-                                                    >
-                                                        <Search size={14} />
-                                                    </div>
-                                                    <input 
-                                                        type="text" 
-                                                        value={line.lot_no || 'เลือก Lot No'} 
-                                                        readOnly
-                                                        disabled={isLocked}
-                                                        onClick={!isLocked ? () => {
-                                                            if (line.item_id) {
-                                                                onSearchLot?.(index);
-                                                            } else {
-                                                                showNoItemToast();
-                                                            }
-                                                        } : undefined}
-                                                        className={`${compactInputClass} ${getFieldErrorClass(index, 'lot_no')} pl-7 cursor-pointer font-bold ${line.lot_no ? 'text-blue-600 dark:text-blue-300' : 'text-blue-500 dark:text-blue-400'} bg-white dark:bg-gray-800 border-blue-100 dark:border-gray-700 hover:border-blue-400 focus:ring-blue-500 transition-colors`}
-                                                    />
-                                                </>
-                                            )}
+                                            <div 
+                                                onClick={!isLocked ? () => {
+                                                    if (line.item_id) {
+                                                        onSearchLot?.(index);
+                                                    } else {
+                                                        showNoItemToast();
+                                                    }
+                                                } : undefined}
+                                                className={`absolute left-0 top-0 bottom-0 flex items-center pl-2 ${!isLocked ? 'cursor-pointer group-hover/lot:text-purple-500 text-gray-400' : 'text-gray-300'}`}
+                                            >
+                                                <Search size={14} />
+                                            </div>
+                                            <input 
+                                                type="text" 
+                                                value={line.lot_no || ''} 
+                                                readOnly
+                                                disabled={isLocked}
+                                                onClick={!isLocked ? () => {
+                                                    if (line.item_id) {
+                                                        onSearchLot?.(index);
+                                                    } else {
+                                                        showNoItemToast();
+                                                    }
+                                                } : undefined}
+                                                placeholder="เลือกล็อตสินค้า..."
+                                                className={`${compactInputClass} ${getFieldErrorClass(index, 'lot_no')} pl-7 cursor-pointer font-bold text-purple-600 dark:text-purple-400 bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700 hover:border-purple-400 focus:ring-purple-500 transition-colors`}
+                                            />
                                         </div>
                                     </td>
 

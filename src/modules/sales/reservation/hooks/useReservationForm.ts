@@ -266,7 +266,6 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             lot_no: '',
             line_discount_input: '',
             line_discount: 0, 
-            reserve_policy: 'AUTO',
             line_total: 0, 
             note: '',
             tax_code_id: taxCodeId || undefined,
@@ -352,7 +351,6 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             
             line.lot_id = lot.lot_no_id ? Number(lot.lot_no_id) : (lot.id ? Number(lot.id) : null);
             line.lot_no = lot.code || '';
-            line.reserve_policy = 'MANUAL';
 
             // 💡 Auto-fill Warehouse/Location if they are empty
             if (!line.warehouse_id && lot.warehouse_id) {
@@ -718,7 +716,6 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                         lot_no: '',
                         line_discount_input: ldInput,
                         line_discount: calculatedLD,
-                        reserve_policy: 'AUTO' as const,
                         line_total: calculateLineTotal(qtyToUse, price, calculatedLD),
                         tax_code_id: qLine.tax_code_id ? Number(qLine.tax_code_id) : (detail.tax_code_id ? Number(detail.tax_code_id) : undefined),
                         note: String(qLine.note || ''),
