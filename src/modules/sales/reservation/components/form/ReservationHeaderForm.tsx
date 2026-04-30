@@ -2,7 +2,7 @@ import { FileBox, Search, User, ClipboardList } from 'lucide-react';
 import { useFormContext, Controller } from 'react-hook-form';
 import { MulticurrencyWrapper } from '@components/forms/MulticurrencyWrapper';
 import { CustomDateInput, StatusCheckbox } from '@ui';
-import type { ReservationFormData } from '../types/reservation.types';
+import type { ReservationFormData } from '../../types/reservation.types';
 import type { 
     BranchListItem, 
     Currency, 
@@ -515,3 +515,4 @@ export function ReservationHeaderForm({
         </section>
     );
 }
+

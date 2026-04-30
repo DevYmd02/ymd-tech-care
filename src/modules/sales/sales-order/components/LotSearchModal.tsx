@@ -41,6 +41,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
             limit: 100 
         }),
         enabled: isOpen,
+        staleTime: 0,
     });
 
     const lots = useMemo(() => response?.items || [], [response]);
@@ -115,7 +116,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
                                 {lots.length > 0 ? (
-                                    lots.map((lot) => (
+                                    lots.slice(0, 100).map((lot) => (
                                         <tr 
                                             key={lot.lot_no_id || lot.id} 
                                             className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors group cursor-pointer"

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Edit, Printer, Eye, Send } from 'lucide-react';
-import type { ReservationHeader } from '../services/reservation.service';
+import type { ReservationHeader } from '../../services/reservation.service';
 
 interface RSActionsCellProps {
     row: ReservationHeader;
@@ -62,3 +62,4 @@ export const RSActionsCell: React.FC<RSActionsCellProps> = ({
         </div>
     );
 };
+

@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { Save, FileBox, Printer, Loader2 } from 'lucide-react';
 import { FormProvider } from 'react-hook-form';
 import { WindowFormLayout } from '@ui';
-import { ReservationHeaderForm } from './ReservationHeaderForm';
-import { ReservationLineTable } from './ReservationLineTable';
-import { ReservationSummary } from './ReservationSummary';
-import { CustomerSearchModal } from './CustomerSearchModal';
-import { ProductSearchModal } from './ProductSearchModal';
-import { LeadSearchModal } from './LeadSearchModal';
-import { LotSearchModal } from './LotSearchModal';
-import { AQSearchModal } from './AQSearchModal';
-import { WarehouseSearchModal } from './WarehouseSearchModal';
-import { LocationSearchModal } from './LocationSearchModal';
+import { ReservationHeaderForm } from './form/ReservationHeaderForm';
+import { ReservationLineTable } from './form/ReservationLineTable';
+import { ReservationSummary } from './form/ReservationSummary';
+import { CustomerSearchModal } from './search-modals/CustomerSearchModal';
+import { ProductSearchModal } from './search-modals/ProductSearchModal';
+import { LeadSearchModal } from './search-modals/LeadSearchModal';
+import { LotSearchModal } from './search-modals/LotSearchModal';
+import { AQSearchModal } from './search-modals/AQSearchModal';
+import { WarehouseSearchModal } from './search-modals/WarehouseSearchModal';
+import { LocationSearchModal } from './search-modals/LocationSearchModal';
 import { ConfirmationModal } from '@system/ConfirmationModal';
 
 import { useReservationForm } from '../hooks/useReservationForm';
@@ -28,6 +28,15 @@ interface ReservationFormModalProps {
     onSuccess?: () => void;
     readOnly?: boolean;
 }
+
+const FIELD_LABELS: Record<string, string> = {
+    reservation_date: 'วันที่จอง',
+    customer_id: 'ลูกค้า',
+    branch_id: 'สาขา',
+    currency_code: 'สกุลเงิน',
+    emp_dept_id: 'แผนก',
+    lines: 'รายการสินค้า'
+};
 
 const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden';
 
@@ -152,43 +161,6 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         }
     };
 
-    // Modal Footer
-    const ModalFooter = (
-        <div className="flex justify-between items-center w-full bg-slate-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4">
-            <div className="flex items-center gap-4">
-                {isEdit && (
-                    <button 
-                        type="button" 
-                        className="h-10 px-6 bg-purple-50 dark:bg-purple-900/10 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg text-sm font-bold flex items-center gap-2 border border-purple-200 dark:border-purple-800 transition-all"
-                    >
-                        <Printer size={18} />
-                        พิมพ์ใบสั่งจอง
-                    </button>
-                )}
-            </div>
-            <div className="flex gap-2">
-                <button 
-                    type="button" 
-                    onClick={onClose}
-                    disabled={isSubmitting || isLoading}
-                    className="h-10 px-6 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
-                >
-                    ยกเลิก
-                </button>
-                {!readOnly && (
-                    <button 
-                        type="submit" 
-                        form="reservation-form"
-                        disabled={isSubmitting || isLoading}
-                        className="h-10 px-8 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
-                    >
-                        {(isSubmitting || isLoading) ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                        {isEdit ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างใบจอง'}
-                    </button>
-                )}
-            </div>
-        </div>
-    );
 
     return (
         <WindowFormLayout
@@ -196,7 +168,15 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
             onClose={onClose}
             title={isEdit ? 'แก้ไขรายละเอียดใบสั่งจองสินค้า (Sales Reservation)' : 'สร้างใบสั่งจองใหม่ (Create Sales Reservation)'}
             headerColor="bg-purple-600"
-            footer={ModalFooter}
+            footer={
+                <ReservationFormFooter 
+                    isEdit={isEdit}
+                    isSubmitting={isSubmitting}
+                    isLoading={isLoading}
+                    readOnly={readOnly}
+                    onClose={onClose}
+                />
+            }
             titleIcon={
                 <div className="bg-white/20 p-1.5 rounded shadow-sm">
                     <FileBox size={16} strokeWidth={3} className="text-white" />
@@ -217,14 +197,6 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                         id="reservation-form" 
                         onSubmit={handleSubmit(onFormSubmit, (errors) => {
                             logger.debug('Validation Errors:', errors);
-                            const FIELD_LABELS: Record<string, string> = {
-                                reservation_date: 'วันที่จอง',
-                                customer_id: 'ลูกค้า',
-                                branch_id: 'สาขา',
-                                currency_code: 'สกุลเงิน',
-                                emp_dept_id: 'แผนก',
-                                lines: 'รายการสินค้า'
-                            };
                             const errorFields = Object.keys(errors)
                                 .map(key => FIELD_LABELS[key] || key)
                                 .join(', ');
@@ -375,5 +347,52 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
             />
 
         </WindowFormLayout>
+    );
+}
+
+interface ReservationFormFooterProps {
+    isEdit: boolean;
+    isSubmitting: boolean;
+    isLoading: boolean;
+    readOnly?: boolean;
+    onClose: () => void;
+}
+
+function ReservationFormFooter({ isEdit, isSubmitting, isLoading, readOnly, onClose }: ReservationFormFooterProps) {
+    return (
+        <div className="flex justify-between items-center w-full bg-slate-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4">
+            <div className="flex items-center gap-4">
+                {isEdit && (
+                    <button 
+                        type="button" 
+                        className="h-10 px-6 bg-purple-50 dark:bg-purple-900/10 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg text-sm font-bold flex items-center gap-2 border border-purple-200 dark:border-purple-800 transition-all"
+                    >
+                        <Printer size={18} />
+                        พิมพ์ใบสั่งจอง
+                    </button>
+                )}
+            </div>
+            <div className="flex gap-2">
+                <button 
+                    type="button" 
+                    onClick={onClose}
+                    disabled={isSubmitting || isLoading}
+                    className="h-10 px-6 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+                >
+                    ยกเลิก
+                </button>
+                {!readOnly && (
+                    <button 
+                        type="submit" 
+                        form="reservation-form"
+                        disabled={isSubmitting || isLoading}
+                        className="h-10 px-8 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                    >
+                        {(isSubmitting || isLoading) ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                        {isEdit ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างใบจอง'}
+                    </button>
+                )}
+            </div>
+        </div>
     );
 }

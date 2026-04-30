@@ -36,7 +36,7 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
         queryKey: ['available-reservations'],
         queryFn: () => SalesOrderService.getAvailableRS(),
         enabled: isOpen,
-        staleTime: 1000 * 60 * 5,
+        staleTime: 0,
     });
 
     // Local filtering based on search term
@@ -113,7 +113,7 @@ export const ReservationSearchModal: React.FC<ReservationSearchModalProps> = Rea
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
                                 {reservations.length > 0 ? (
-                                    reservations.map((rs: ReservationHeader) => (
+                                    reservations.slice(0, 100).map((rs: ReservationHeader) => (
                                         <tr 
                                             key={rs.reservation_id} 
                                             className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors group cursor-pointer"

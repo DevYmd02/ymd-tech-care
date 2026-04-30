@@ -1,0 +1,131 @@
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { MasterDataService } from '@master-data';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { UnitService } from '@inventory/services/unit.service';
+import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
+import { WarehouseService } from '@inventory/services/warehouse.service';
+import { LocationService } from '@inventory/services/inventory-master.service';
+import { SaleAreaService } from '@sales-master/pages/area/services/area.service';
+import type { Currency } from '@master-data/types/master-data-types';
+import type { TaxCode } from '@master-data/tax/types/tax-types';
+
+export const useReservationMasterData = (isOpen: boolean) => {
+    // Branches
+    const { data: branches = [] } = useQuery({
+        queryKey: ['master-branches'],
+        queryFn: MasterDataService.getBranches,
+        enabled: isOpen
+    });
+
+    // Currencies
+    const { data: currencies = [] } = useQuery<Currency[]>({
+        queryKey: ['master-currencies'],
+        queryFn: MasterDataService.getCurrencies,
+        enabled: isOpen
+    });
+
+    // Customers
+    const { data: customerResponse } = useQuery({
+        queryKey: ['master-customers'],
+        queryFn: () => CustomerService.getList({ limit: 1000 }),
+        enabled: isOpen,
+        staleTime: 30 * 60 * 1000,
+    });
+    const customers = customerResponse?.data || [];
+
+    // Tax Codes
+    const { data: taxCodes = [] } = useQuery<TaxCode[]>({
+        queryKey: ['master-tax-codes'],
+        queryFn: TaxCodeService.getTaxCodes,
+        enabled: isOpen
+    });
+
+    // Departments
+    const { data: departments = [] } = useQuery({
+        queryKey: ['master-departments'],
+        queryFn: MasterDataService.getDepartments,
+        enabled: isOpen
+    });
+
+    // Projects
+    const { data: projects = [] } = useQuery({
+        queryKey: ['master-projects'],
+        queryFn: MasterDataService.getProjects,
+        enabled: isOpen
+    });
+
+    // Sale Areas
+    const { data: saleAreas = [] } = useQuery({
+        queryKey: ['master-sale-areas'],
+        queryFn: () => SaleAreaService.getList(),
+        enabled: isOpen
+    });
+
+    // Employees
+    const { data: employees = [] } = useQuery({
+        queryKey: ['master-employees'],
+        queryFn: MasterDataService.getEmployees,
+        enabled: isOpen
+    });
+
+    // Units (UOMs)
+    const { data: uomResponse } = useQuery({
+        queryKey: ['master-units'],
+        queryFn: () => UnitService.getAll({ limit: 1000 }),
+        enabled: isOpen,
+        staleTime: 30 * 60 * 1000,
+    });
+    const uoms = useMemo(() => uomResponse?.items || [], [uomResponse]);
+
+    // Warehouses
+    const { data: warehouseResponse } = useQuery({
+        queryKey: ['master-warehouses'],
+        queryFn: () => WarehouseService.getAll(),
+        enabled: isOpen,
+        staleTime: 30 * 60 * 1000,
+    });
+    const warehouses = useMemo(() => warehouseResponse?.items || [], [warehouseResponse]);
+
+    // Locations
+    const { data: locationResponse } = useQuery({
+        queryKey: ['master-locations'],
+        queryFn: () => LocationService.getAll({ limit: 1000 }),
+        enabled: isOpen,
+        staleTime: 30 * 60 * 1000,
+    });
+    const locations = useMemo(() => locationResponse?.items || [], [locationResponse]);
+
+    // Price Level Names
+    const { data: priceLevelNames = [] } = useQuery({
+        queryKey: ['master-price-level-names'],
+        queryFn: MasterDataService.getPriceLevelNames,
+        enabled: isOpen
+    });
+
+    const isMasterDataReady = useMemo(() => {
+        if (!isOpen) return true;
+        return (
+            branches.length > 0 &&
+            taxCodes.length > 0 &&
+            uoms.length > 0 &&
+            currencies.length > 0
+        );
+    }, [isOpen, branches.length, taxCodes.length, uoms.length, currencies.length]);
+
+    return {
+        branches,
+        currencies,
+        customers,
+        taxCodes,
+        departments,
+        projects,
+        saleAreas,
+        employees,
+        uoms,
+        warehouses,
+        locations,
+        priceLevelNames,
+        isMasterDataReady
+    };
+};

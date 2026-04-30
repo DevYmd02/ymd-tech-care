@@ -1,16 +1,16 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, Tag, Check, Plus, PackagePlus, Layers, List, Edit2, MapPin } from 'lucide-react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
-import { ReservationInventoryService } from '@sales/reservation/services/reservation-inventory.service';
+import { ReservationInventoryService } from '../../services/reservation-inventory.service';
 import type { LotNo } from '@inventory/types/inventory-master.types';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@hooks/useDebounce';
 import { formatThaiDate as formatDate } from '@utils/dateUtils';
-import { CreateLotModal } from './CreateLotModal';
+import { CreateLotModal } from '../inventory/CreateLotModal';
 import { MasterDataService } from '@master-data/services/master-data.service';
 import { LocationService } from '@inventory/services/inventory-master.service';
-import { QuickAdjustStockModal } from './QuickAdjustStockModal';
-import { CreateBalanceModal } from './CreateBalanceModal';
+import { QuickAdjustStockModal } from '../inventory/QuickAdjustStockModal';
+import { CreateBalanceModal } from '../inventory/CreateBalanceModal';
 import { ItemLotService } from '@inventory/services/item-lot.service';
 import type { ItemLot } from '@inventory/types/item-lot-types';
 
@@ -324,7 +324,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
                                     {availableLots.length > 0 ? (
-                                        availableLots.map((lot: LotNo) => (
+                                        availableLots.slice(0, 100).map((lot: LotNo) => (
                                             <tr 
                                                 key={`${lot.lot_no_id || lot.id}-${lot.warehouse_id || 'nw'}-${lot.location_id || 'nl'}`} 
                                                 className="hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors group cursor-pointer"
@@ -414,7 +414,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
                                     {masterLots.length > 0 ? (
-                                        masterLots.map((lot) => {
+                                        masterLots.slice(0, 100).map((lot) => {
                                             const id = Number(lot.lot_id);
                                             const lotNo = String(lot.lot_no || '');
                                             const status = String(lot.status || 'ACTIVE');
@@ -455,15 +455,13 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                                                 เลือก <Check size={14} />
                                                             </button>
                                                             
-                                                            {qtyStock <= 0 && (
-                                                                <button 
-                                                                    onClick={() => handleAddBalance(id)}
-                                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
-                                                                >
-                                                                    <PackagePlus size={14} />
-                                                                    นำเข้า
-                                                                </button>
-                                                            )}
+                                                            <button 
+                                                                onClick={() => handleAddBalance(id)}
+                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 dark:border-amber-700/50 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
+                                                            >
+                                                                <PackagePlus size={14} />
+                                                                + เติมสต็อก
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -553,3 +551,5 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
         </>
     );
 });
+
+

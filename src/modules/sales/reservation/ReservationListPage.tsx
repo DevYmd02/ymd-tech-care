@@ -8,7 +8,7 @@ import type { ReservationHeader } from './services/reservation.service';
 import { useQuery } from '@tanstack/react-query';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import { RSStatusBadge } from '@sales/shared/components/RSStatusBadge';
-import { RSActionsCell } from './components/RSActionsCell';
+import { RSActionsCell } from './components/form/RSActionsCell';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 import { ReservationService } from './services/reservation.service';
 import { useToast } from '@/shared/components/ui/feedback/Toast';

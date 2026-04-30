@@ -188,7 +188,7 @@ export default function SalesOrderApproveListPage() {
             <SOStatusBadge status={String(info.getValue() || '')} />
           </div>
         ),
-        size: 120,
+        size: 100,
         enableSorting: false,
       }),
       columnHelper.display({
@@ -241,7 +241,7 @@ export default function SalesOrderApproveListPage() {
         enableSorting: false,
       }),
     ],
-    [],
+    [], 
   );
 
   return (
