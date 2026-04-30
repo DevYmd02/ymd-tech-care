@@ -324,7 +324,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
                                     {availableLots.length > 0 ? (
-                                        availableLots.map((lot: LotNo) => (
+                                        availableLots.slice(0, 100).map((lot: LotNo) => (
                                             <tr 
                                                 key={`${lot.lot_no_id || lot.id}-${lot.warehouse_id || 'nw'}-${lot.location_id || 'nl'}`} 
                                                 className="hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors group cursor-pointer"
@@ -414,7 +414,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
                                     {masterLots.length > 0 ? (
-                                        masterLots.map((lot) => {
+                                        masterLots.slice(0, 100).map((lot) => {
                                             const id = Number(lot.lot_id);
                                             const lotNo = String(lot.lot_no || '');
                                             const status = String(lot.status || 'ACTIVE');

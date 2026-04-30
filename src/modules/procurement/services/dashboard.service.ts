@@ -228,6 +228,7 @@ export const ProcurementDashboardService = {
             const trendData: TrendItem[] = [];
             for (let i = 6; i >= 0; i--) {
                 const d = new Date();
+                d.setDate(1); // Set to 1st of month to avoid overflow issues (e.g. Feb 30 -> March)
                 d.setMonth(d.getMonth() - i);
                 const m = d.getMonth();
                 const y = d.getFullYear();

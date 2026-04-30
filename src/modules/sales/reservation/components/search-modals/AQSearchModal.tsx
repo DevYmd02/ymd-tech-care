@@ -32,7 +32,7 @@ export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
         queryKey: ['available-approvals'],
         queryFn: ReservationService.getAvailableApprovals,
         enabled: isOpen,
-        staleTime: 1000 * 60 * 5, 
+        staleTime: 0, 
     });
 
     // Helper to extract sq_no robustly
@@ -138,7 +138,7 @@ export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
                                 {filteredApprovals.length > 0 ? (
-                                    filteredApprovals.map((aq) => (
+                                    filteredApprovals.slice(0, 100).map((aq) => (
                                         <tr 
                                             key={aq.aq_id} 
                                             className="hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors group cursor-pointer"

@@ -34,7 +34,7 @@ export const LeadSearchModal: React.FC<LeadSearchModalProps> = React.memo(({
             limit: 100
         }),
         enabled: isOpen,
-        staleTime: 1000 * 60 * 5, 
+        staleTime: 0, 
     });
 
     const estimates = useMemo<EstimateHeader[]>(() => response?.data || [], [response]);
@@ -99,8 +99,8 @@ export const LeadSearchModal: React.FC<LeadSearchModalProps> = React.memo(({
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
-                                {estimates.length > 0 ? (
-                                    estimates.map((estimate) => (
+                                {estimates.slice(0, 100).length > 0 ? (
+                                    estimates.slice(0, 100).map((estimate) => (
                                         <tr 
                                             key={estimate.id} 
                                             className="hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors group cursor-pointer"

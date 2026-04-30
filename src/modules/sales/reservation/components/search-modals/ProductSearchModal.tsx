@@ -32,7 +32,7 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = React.memo(
         queryKey: ['products-lookup-reservation', debouncedSearch],
         queryFn: () => ItemMasterService.getAll({ q: debouncedSearch, limit: 100 }),
         enabled: isOpen,
-        staleTime: 1000 * 60 * 5, 
+        staleTime: 0, 
     });
 
     const products = useMemo(() => response?.items || [], [response]);

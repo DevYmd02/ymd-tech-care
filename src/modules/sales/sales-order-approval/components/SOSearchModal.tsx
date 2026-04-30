@@ -36,7 +36,7 @@ export const SOSearchModal: React.FC<SOSearchModalProps> = React.memo(({
         queryKey: ['pending-sales-orders-lookup'],
         queryFn: () => AOService.getPendingSOs(),
         enabled: isOpen,
-        staleTime: 1000 * 60 * 5, // 5 minutes
+        staleTime: 0, // ดึงข้อมูลใหม่เสมอเมื่อเปิด Modal (Background refetch)
     });
 
     // Local filtering based on search term
@@ -114,7 +114,7 @@ export const SOSearchModal: React.FC<SOSearchModalProps> = React.memo(({
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
                                 {filteredSOs.length > 0 ? (
-                                    filteredSOs.map((so: SOForApproval) => (
+                                    filteredSOs.slice(0, 100).map((so: SOForApproval) => (
                                         <tr 
                                             key={so.so_id} 
                                             className="hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors group cursor-pointer"

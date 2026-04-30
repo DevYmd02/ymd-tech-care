@@ -29,7 +29,7 @@ export const AQSQSearchModal: React.FC<AQSQSearchModalProps> = React.memo(({
     queryKey: ['sq-approvals-lookup-pending', isOpen],
     queryFn: () => AQService.getPendingSQs(),
     enabled: isOpen,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
   });
 
   const allPending = useMemo(() => (rawData || []) as unknown as SQForApproval[], [rawData]);
@@ -156,7 +156,7 @@ export const AQSQSearchModal: React.FC<AQSQSearchModalProps> = React.memo(({
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-transparent">
                 {filteredData.length > 0 ? (
-                  filteredData.map((item) => (
+                  filteredData.slice(0, 100).map((item) => (
                     <tr
                       key={item.sq_id}
                       className="hover:bg-emerald-50/40 dark:hover:bg-emerald-900/10 transition-colors group cursor-pointer"

@@ -38,7 +38,7 @@ const CHECK_DEFICIT_OPTIONS = [
     { id: 0, name: '(Default)' },
     { id: 1, name: 'สินค้าติดลบไม่ได้' },
     { id: 2, name: 'สินค้าติดลบได้' },
-    { id: 3, name: 'แสดงข้อความถาม' },
+    { id: 3, name: 'แสดงข้อความถามก่อนใช้' },
     { id: 4, name: 'ตามรายตัวสินค้า' },
 ];
 
@@ -47,14 +47,14 @@ const CHECK_DEFICIT_OPTION_OPTIONS = [
     { id: 0, name: '(Default)' },
     { id: 1, name: 'รวมคลังสินค้า' },
     { id: 2, name: 'แยกคลังสินค้า' },
-    { id: 3, name: 'แยกคลังและที่เก็บสินค้า' },
+    { id: 3, name: 'แยกคลังและที่เก็บ' },
 ];
 
 // Options for check_qty_flag (ตรวจสอบจำนวนสินค้า)
 const CHECK_QTY_FLAG_OPTIONS = [
     { id: 0, name: '(Default)' },
     { id: 1, name: 'ยอดสินค้าคงเหลือ' },
-    { id: 2, name: 'Sale Stock' },
+    { id: 2, name: 'ยอดจองสินค้า' },
 ];
 
 
