@@ -1,11 +1,12 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import toast from 'react-hot-toast';
+import { useToast } from '@ui/feedback/Toast';
 import { logger } from '@/shared/utils/logger';
 import type { ICOption, ICOptionFilters } from '../types/ic-option.types';
 import { ICOptionService } from '../services/ic-option.service';
 import { BranchService } from '@/modules/master-data/company/services/branch.service';
 
 export function useICOption() {
+    const { toast } = useToast();
     const [data, setData] = useState<ICOption[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,12 +41,12 @@ export function useICOption() {
 
             setData(enrichedData);
         } catch (error) {
-            toast.error('เกิดข้อผิดพลาดในการโหลดข้อมูล Base IC Option');
+            toast('เกิดข้อผิดพลาดในการโหลดข้อมูล Base IC Option', 'error');
             logger.error('Fetch error:', error);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [toast]);
 
     useEffect(() => {
         fetchData();
