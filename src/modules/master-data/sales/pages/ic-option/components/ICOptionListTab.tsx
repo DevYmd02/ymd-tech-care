@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
+import { useToast } from '@ui/feedback/Toast';
 import { Save, ChevronDown, Loader2 } from 'lucide-react';
 import { ICOptionListService } from '../services/ic-option-list.service';
 import { SystemDocumentService } from '../services/system-document.service';
@@ -56,6 +56,7 @@ interface GridTabProps {
 }
 
 function GridTab({ documents, itemMap, icOptionId, onSaved }: GridTabProps) {
+    const { toast } = useToast();
     const [drafts, setDrafts] = useState<Map<number, Partial<ICOptionListItem>>>(new Map());
     const [savingIds, setSavingIds] = useState<Set<number>>(new Set());
 
@@ -106,10 +107,10 @@ function GridTab({ documents, itemMap, icOptionId, onSaved }: GridTabProps) {
                 next.delete(docId);
                 return next;
             });
-            toast.success('บันทึกสำเร็จ');
+            toast('บันทึกสำเร็จ', 'success');
             onSaved();
         } catch {
-            toast.error('เกิดข้อผิดพลาด');
+            toast('เกิดข้อผิดพลาด', 'error');
         } finally {
             setSavingIds((p) => { const n = new Set(p); n.delete(docId); return n; });
         }

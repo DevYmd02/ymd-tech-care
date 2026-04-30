@@ -7,7 +7,7 @@ import { ICOptionService } from './services/ic-option.service';
 import { icOptionSchema, type ICOptionFormData } from './types/ic-option.types';
 import { BranchService } from '@company/services/branch.service';
 import { useQuery } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
+import { useToast } from '@ui/feedback/Toast';
 import { logger } from '@/shared/utils/logger';
 import { ICOptionListTab } from './components/ICOptionListTab';
 
@@ -42,7 +42,7 @@ const CHECK_DEFICIT_OPTIONS = [
     { id: 4, name: 'ตามรายตัวสินค้า' },
 ];
 
-// Options for check_deficit_option (เงื่อนไขการตรวจสอบ)
+// Options for check_deficit_option (ตรวจสอบจำนวนสินค้า)
 const CHECK_DEFICIT_OPTION_OPTIONS = [
     { id: 0, name: '(Default)' },
     { id: 1, name: 'รวมคลังสินค้า' },
@@ -50,7 +50,7 @@ const CHECK_DEFICIT_OPTION_OPTIONS = [
     { id: 3, name: 'แยกคลังและที่เก็บ' },
 ];
 
-// Options for check_qty_flag (ตรวจสอบจำนวนสินค้า)
+// Options for check_qty_flag (ตรวจสอบสินค้าติดลบด้วย)
 const CHECK_QTY_FLAG_OPTIONS = [
     { id: 0, name: '(Default)' },
     { id: 1, name: 'ยอดสินค้าคงเหลือ' },
@@ -164,6 +164,7 @@ export default function ICOptionFormModal({
     existingBranchIds = []
 }: ICOptionFormModalProps) {
     const isEditMode = !!editId;
+    const { toast } = useToast();
     const [activeTab, setActiveTab] = useState<ModalTab>('settings');
 
     // Reset to settings tab when modal opens
@@ -211,7 +212,7 @@ export default function ICOptionFormModal({
                         
                         reset(normalizedData);
                     } else {
-                        toast.error('ไม่พบข้อมูล Base IC Option');
+                        toast('ไม่พบข้อมูล Base IC Option', 'error');
                         onClose();
                     }
                 });
@@ -219,7 +220,7 @@ export default function ICOptionFormModal({
                 reset(DEFAULT_FORM_VALUES);
             }
         }
-    }, [isOpen, isEditMode, editId, reset, onClose]);
+    }, [isOpen, isEditMode, editId, reset, onClose, toast]);
  
     const onSubmit: SubmitHandler<FieldValues> = useCallback(async (formData) => {
         const data = formData as ICOptionFormData;
@@ -248,24 +249,24 @@ export default function ICOptionFormModal({
                 // For updates, we send the payload without the ID in the body
                 // as it's already in the URL: /inventory-option/:id
                 await ICOptionService.updateICOption(editId, payload);
-                toast.success('บันทึกการตั้งค่าสำเร็จ');
+                toast('บันทึกการตั้งค่าสำเร็จ', 'success');
             } else {
                 // Check if branch already has a config
                 if (existingBranchIds.includes(Number(data.branch_id))) {
-                    toast.error('สาขานี้มีการตั้งค่าอยู่แล้ว ไม่สามารถเพิ่มซ้ำได้');
+                    toast('สาขานี้มีการตั้งค่าอยู่แล้ว ไม่สามารถเพิ่มซ้ำได้', 'error');
                     return;
                 }
                 
                 // For creation, we include everything
                 await ICOptionService.createICOption(payload as ICOptionFormData);
-                toast.success('บันทึกข้อมูลสำเร็จ');
+                toast('บันทึกข้อมูลสำเร็จ', 'success');
             }
             onSuccess();
         } catch (error) {
-            toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+            toast('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง', 'error');
             logger.error('Submit Error:', error);
         }
-    }, [isEditMode, editId, onSuccess, existingBranchIds]);
+    }, [isEditMode, editId, onSuccess, existingBranchIds, toast]);
 
     /**
      * WINSPEED Price Source Options
@@ -431,7 +432,7 @@ export default function ICOptionFormModal({
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-violet-500 dark:text-violet-400">เงื่อนไขการตรวจสอบ</label>
+                                    <label className="block text-xs font-bold uppercase tracking-wider text-violet-500 dark:text-violet-400">ตรวจสอบจำนวนสินค้า</label>
                                     <select
                                         {...register('check_deficit_option', { valueAsNumber: true })}
                                         className="w-full px-3 py-2.5 border rounded-lg shadow-sm focus:ring-2 focus:ring-violet-400 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm border-violet-200 dark:border-violet-900/40 appearance-none"
@@ -440,7 +441,7 @@ export default function ICOptionFormModal({
                                     </select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="block text-xs font-bold uppercase tracking-wider text-cyan-500 dark:text-cyan-400">ตรวจสอบจำนวนสินค้า</label>
+                                    <label className="block text-xs font-bold uppercase tracking-wider text-cyan-500 dark:text-cyan-400">ตรวจสอบสินค้าติดลบด้วย</label>
                                     <select
                                         {...register('check_qty_flag', { valueAsNumber: true })}
                                         className="w-full px-3 py-2.5 border rounded-lg shadow-sm focus:ring-2 focus:ring-cyan-400 bg-white dark:bg-gray-800 dark:border-gray-600 dark:text-white text-sm border-cyan-200 dark:border-cyan-900/40 appearance-none"

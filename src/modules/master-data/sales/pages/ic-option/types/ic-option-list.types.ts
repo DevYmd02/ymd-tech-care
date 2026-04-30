@@ -18,7 +18,7 @@ export const NEGATIVE_STOCK_CHECK_OPTIONS = [
     { id: 0, name: '(Default)' },
     { id: 1, name: 'สินค้าติดลบไม่ได้' },
     { id: 2, name: 'สินค้าติดลบได้' },
-    { id: 3, name: 'แสดงข้อความถาม' },
+    { id: 3, name: 'แสดงข้อความถามก่อนใช้' },
     { id: 4, name: 'ตามรายตัวสินค้า' },
 ] as const;
 
@@ -28,8 +28,9 @@ export const NEGATIVE_STOCK_CHECK_OPTIONS = [
 // ==========================================
 export const NEGATIVE_STOCK_MODE_OPTIONS = [
     { id: 0, name: '(Default)' },
-    { id: 1, name: 'ยอดสินค้าคงเหลือ' },
-    { id: 2, name: 'Sale Stock' },
+    { id: 1, name: 'รวมคลังสินค้า' },
+    { id: 2, name: 'แยกคลังสินค้า' },
+    { id: 3, name: 'แยกคลังและที่เก็บ' },
 ] as const;
 
 // ==========================================
@@ -38,8 +39,8 @@ export const NEGATIVE_STOCK_MODE_OPTIONS = [
 // ==========================================
 export const QUANTITY_VALIDATION_OPTIONS = [
     { id: 0, name: '(Default)' },
-    { id: 1, name: 'ยอดสั่งจอง ,ค้างส่ง ,ค้างรับ ,Sale Stock' },
-    { id: 2, name: 'ยอด Sale Stock' },
+    { id: 1, name: 'ยอดสินค้าคงเหลือ' },
+    { id: 2, name: 'ยอดจองสินค้า' },
 ] as const;
 
 // ==========================================
