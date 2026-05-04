@@ -22,6 +22,7 @@ import { SQActionsCell } from './components/SQActionsCell';
 import { AQHistoryModal } from '@sales/shared/components/AQHistoryModal';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 import { useToast } from '@ui/feedback/Toast';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 // ====================================================================================
 // CONSTANTS
@@ -290,11 +291,11 @@ export default function QuotationListPage() {
                     <div className="flex flex-col items-center gap-0.5 w-full">
                         <div className="flex items-center gap-1 text-emerald-600 font-bold">
                             <span className="text-xs">฿</span>
-                            <span>{convertedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span>{formatNumber(convertedAmount)}</span>
                         </div>
                         {currency !== 'THB' && (
                             <div className="text-[10px] text-gray-400 font-medium italic">
-                                ({currency} {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })})
+                                ({currency} {formatNumber(totalAmount)})
                             </div>
                         )}
                     </div>

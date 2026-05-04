@@ -5,6 +5,7 @@
 
 import { Calculator, AlertCircle } from 'lucide-react';
 import { styles } from '@shared/constants/styles';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 interface SalesOrderSummaryProps {
     subTotal: number;
@@ -63,9 +64,7 @@ export function SalesOrderSummary({
                             type="text"
                             placeholder={
                                 discountAmount > 0
-                                    ? discountAmount.toLocaleString(undefined, {
-                                          minimumFractionDigits: 2,
-                                      })
+                                    ? formatNumber(discountAmount)
                                     : '0.00 หรือ 0%'
                             }
                             value={discountInput ?? ''}
@@ -79,10 +78,7 @@ export function SalesOrderSummary({
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500">รวมราคาบรรทัด (sub_total):</span>
                     <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        {subTotal.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                        })}{' '}
+                        {formatNumber(subTotal)}{' '}
                         {currencySymbol}
                     </span>
                 </div>
@@ -90,10 +86,7 @@ export function SalesOrderSummary({
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500">ภาษี VAT {taxRate}% (vat_amount):</span>
                     <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        {vatAmount.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                        })}{' '}
+                        {formatNumber(vatAmount)}{' '}
                         {currencySymbol}
                     </span>
                 </div>
@@ -104,10 +97,7 @@ export function SalesOrderSummary({
                     </span>
                     <div className="text-right overflow-hidden max-w-[250px]">
                         <span className={`text-2xl font-black truncate block ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-emerald-700 dark:text-emerald-400'}`}>
-                            {totalAmount.toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                            })}
+                            {formatNumber(totalAmount)}
                         </span>
                         <span className={`ml-2 text-sm font-bold ${isNegative ? 'text-red-500/60' : 'text-emerald-600/60'}`}>
                             {currencySymbol}

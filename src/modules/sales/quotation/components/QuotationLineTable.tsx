@@ -4,6 +4,7 @@ import type { DeepPartial } from 'react-hook-form';
 import type { QuotationLineValues, QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { UnitListItem } from '@inventory/types/product-types';
 import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/price-level-name.types';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 interface QuotationLineTableProps {
     lines: DeepPartial<QuotationLineValues>[];
@@ -240,7 +241,7 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                          />
                                          {String(line.discount_expression || '').includes('%') && (line.line_discount ?? 0) > 0 && (
                                              <div className="text-[10px] font-bold text-red-600 dark:text-red-400 whitespace-nowrap animate-in fade-in slide-in-from-top-1 duration-200">
-                                                 {`-${(line.line_discount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} ${currencySymbol}`}
+                                                 {`-${formatNumber(line.line_discount || 0)} ${currencySymbol}`}
                                              </div>
                                          )}
                                      </div>
@@ -257,7 +258,7 @@ export function QuotationLineTable({ lines, onAddLine, onRemoveLine, onLineChang
                                  </td>
                                  <td className={`px-2 py-1.5 ${readOnly ? 'text-center' : 'text-right'} font-bold text-sm ${(line.line_total ?? 0) < 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
                                      <div className={`flex flex-col ${readOnly ? 'items-center' : 'items-end'} overflow-hidden max-w-[150px]`}>
-                                         <span className={`truncate w-full ${readOnly ? 'text-center' : 'text-right'}`}>{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                         <span className={`truncate w-full ${readOnly ? 'text-center' : 'text-right'}`}>{formatNumber(line.line_total || 0)}</span>
                                         {hasLineFieldError(index, 'line_total') && (
                                             <div className="flex items-center gap-0.5 text-[9px] font-medium text-red-500 mt-0.5">
                                                 <AlertCircle size={8} />

@@ -14,6 +14,7 @@ import { ReservationService } from './services/reservation.service';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@utils/logger';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
+import { formatNumber } from '@/shared/utils/numberUtils';
 // ====================================================================================
 // CONSTANTS
 // ====================================================================================
@@ -190,11 +191,11 @@ export default function ReservationListPage() {
                 return (
                     <div className="flex flex-col items-end pr-4 gap-0.5 w-full">
                         <div className="text-emerald-600 font-bold">
-                            <span>฿ {baseTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <span>฿ {formatNumber(baseTotal)}</span>
                         </div>
                         {currency !== 'THB' && (
                             <div className="text-[10px] text-gray-400 font-medium italic">
-                                ({currency} {quoteTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })})
+                                ({currency} {formatNumber(quoteTotal)})
                             </div>
                         )}
                     </div>

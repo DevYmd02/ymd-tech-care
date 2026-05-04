@@ -3,12 +3,15 @@
  * @description ตารางรายการสินค้าในใบสั่งขาย (sale_order_line D10) - รุ่นอัปเกรด High-Density & Sticky
  */
 
+import { useRef } from 'react';
 import { Plus, Trash2, ShoppingBag, Search, AlertCircle } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
+import { useToast } from '@ui/feedback/Toast';
 import type { SalesOrderLineValues, SalesOrderFormValues } from '../schemas/sales-order.schemas';
 import type { SalesOrderLineData } from '../types/sales-order.types';
 import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 interface SalesOrderLineTableProps {
     lines: SalesOrderLineData[];
@@ -40,7 +43,17 @@ export function SalesOrderLineTable({
     readOnly = false,
 }: SalesOrderLineTableProps) {
     const { formState: { errors } } = useFormContext<SalesOrderFormValues>();
+    const { toast } = useToast();
     const isLocked = readOnly;
+
+    // Toast Throttle (Prevent double toast)
+    const toastThrottleRef = useRef(false);
+    const showNoItemToast = () => {
+        if (toastThrottleRef.current) return;
+        toastThrottleRef.current = true;
+        toast('กรุณาเลือกสินค้าก่อนเลือกล็อต', 'warning');
+        setTimeout(() => { toastThrottleRef.current = false; }, 1500);
+    };
 
     const getLineError = (index: number) => {
         if (!errors.lines || !Array.isArray(errors.lines)) return undefined;
@@ -226,7 +239,13 @@ export function SalesOrderLineTable({
                                         <td className="px-2 py-2">
                                             <div className="relative group/lot">
                                                 <div 
-                                                    onClick={!isLocked ? () => onSearchLot?.(index) : undefined}
+                                                    onClick={!isLocked ? () => {
+                                                        if (line.item_id) {
+                                                            onSearchLot?.(index);
+                                                        } else {
+                                                            showNoItemToast();
+                                                        }
+                                                    } : undefined}
                                                     className={`absolute left-0 top-0 bottom-0 flex items-center pl-2 ${!isLocked ? 'cursor-pointer group-hover/lot:text-orange-500 text-gray-400' : 'text-gray-300'}`}
                                                 >
                                                     <Search size={14} />
@@ -236,7 +255,13 @@ export function SalesOrderLineTable({
                                                     value={line.lot_no || ''} 
                                                     readOnly
                                                     disabled={isLocked}
-                                                    onClick={!isLocked ? () => onSearchLot?.(index) : undefined}
+                                                    onClick={!isLocked ? () => {
+                                                        if (line.item_id) {
+                                                            onSearchLot?.(index);
+                                                        } else {
+                                                            showNoItemToast();
+                                                        }
+                                                    } : undefined}
                                                     placeholder="เลือกล็อต..."
                                                     className={`${compactInputClass} pl-7 cursor-pointer font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-gray-800 border-orange-100 dark:border-gray-700 focus:ring-orange-500`}
                                                 />
@@ -279,7 +304,7 @@ export function SalesOrderLineTable({
                                         {/* Line Total */}
                                         <td className="px-2 py-2">
                                             <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner overflow-hidden max-w-[150px] ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-700'}`}>
-                                                <span className="truncate w-full text-right overflow-hidden">{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                <span className="truncate w-full text-right overflow-hidden">{formatNumber(line.line_total || 0)}</span>
                                                 {hasLineFieldError(index, 'line_total') && (
                                                     <div className="flex items-center gap-0.5 text-[8px] font-medium text-red-500 mt-[-2px]">
                                                         <AlertCircle size={8} />

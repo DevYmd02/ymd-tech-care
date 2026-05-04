@@ -13,6 +13,7 @@ import { AOHistoryModal } from '../shared/components/AOHistoryModal';
 import { useAOListData } from './hooks/useAOListData';
 import type { AOListItem, SOForApproval } from './types/sales-order-approval.types';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'ทั้งหมด' },
@@ -77,11 +78,6 @@ export default function SalesOrderApproveListPage() {
     const [y, m, d] = val.split('-');
     return y && m && d ? `${d}/${m}/${y}` : val;
   };
-
-  const fmt = (n?: number) =>
-    n !== undefined && n !== null
-      ? new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(n)
-      : '-';
 
   const columns = useMemo(
     () => [
@@ -158,11 +154,11 @@ export default function SalesOrderApproveListPage() {
             <div className="flex flex-col items-center gap-0.5 w-full">
               <div className="flex items-center gap-1 text-emerald-600 font-bold justify-center">
                 <span className="text-xs">฿</span>
-                <span>{fmt(baseAmount)}</span>
+                <span>{formatNumber(baseAmount)}</span>
               </div>
               {currency !== 'THB' && (
                 <div className="text-[10px] text-gray-400 font-medium italic">
-                  ({String(currency)} {fmt(quoteAmount)})
+                  ({String(currency)} {formatNumber(quoteAmount)})
                 </div>
               )}
             </div>

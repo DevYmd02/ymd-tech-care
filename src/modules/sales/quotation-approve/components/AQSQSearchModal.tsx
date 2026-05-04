@@ -9,6 +9,7 @@ import type { SQForApproval } from '../types/quotation-approve.types';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import { extractArrayFromResponse } from '@utils/clientFilterUtils';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 export interface AQSQSearchModalProps {
   isOpen: boolean;
@@ -91,11 +92,6 @@ export const AQSQSearchModal: React.FC<AQSQSearchModalProps> = React.memo(({
     const [y, m, d] = cleaned.split('-');
     return y && m && d ? `${d}/${m}/${y}` : cleaned;
   };
-
-  const fmt = (n?: number) =>
-    n !== undefined && n !== null
-      ? new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(n)
-      : '-';
 
   return (
     <DialogFormLayout
@@ -184,7 +180,7 @@ export const AQSQSearchModal: React.FC<AQSQSearchModalProps> = React.memo(({
                       </td>
                       <td className="px-6 py-4 text-right whitespace-nowrap">
                         <span className="font-mono font-bold text-gray-900 dark:text-emerald-400">
-                          {fmt(item.quote_total_amount || item.total_amount)}
+                          {formatNumber(item.quote_total_amount || item.total_amount)}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center whitespace-nowrap">

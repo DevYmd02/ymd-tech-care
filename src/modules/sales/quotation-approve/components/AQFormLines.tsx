@@ -6,6 +6,7 @@
 
 import { Package, Tag } from 'lucide-react';
 import type { AQLineFormData } from '../schemas/aq.schema';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 interface AQFormLinesProps {
   lines: AQLineFormData[];
@@ -13,9 +14,6 @@ interface AQFormLinesProps {
   readOnly?: boolean;
   priceLevelNames?: import('@sales-master/pages/price-level-name/types/price-level-name.types').PriceLevelName[];
 }
-
-const fmt = (n: number) =>
-  new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
 
 const fmtQty = (n: number) =>
   new Intl.NumberFormat('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 3 }).format(n || 0);
@@ -137,7 +135,7 @@ export function AQFormLines({ lines, updateLine, readOnly = false, priceLevelNam
                   <td className={`${tdClass} text-right`}>
                     <div className="flex flex-col items-end gap-1">
                       <span className="text-blue-600 dark:text-blue-400 font-bold text-base">
-                        {fmt(line.unit_price)}
+                        {formatNumber(line.unit_price)}
                       </span>
                       
                       {/* 🏷️ Price Source Badge */}
@@ -175,11 +173,11 @@ export function AQFormLines({ lines, updateLine, readOnly = false, priceLevelNam
                       <span className="text-orange-500 dark:text-orange-400 font-medium">
                         {line.discount_expression && line.discount_expression !== '0'
                           ? line.discount_expression
-                          : fmt(line.discount_amount)}
+                          : formatNumber(line.discount_amount)}
                       </span>
                       {String(line.discount_expression || '').includes('%') && (line.discount_amount || 0) > 0 && (
                         <div className="text-[10px] font-bold text-red-500 dark:text-red-400 whitespace-nowrap animate-in fade-in slide-in-from-top-1 duration-200">
-                          -{fmt(line.discount_amount)}
+                          -{formatNumber(line.discount_amount)}
                         </div>
                       )}
                     </div>
@@ -187,13 +185,13 @@ export function AQFormLines({ lines, updateLine, readOnly = false, priceLevelNam
 
                   {/* ยอดสุทธิเสนอ */}
                   <td className={`${tdClass} text-right font-bold text-gray-900 dark:text-gray-100`}>
-                    {fmt(line.net_amount)}
+                    {formatNumber(line.net_amount)}
                   </td>
 
                   {/* ยอดที่อนุมัติ */}
                   <td className={`${tdClass} text-right font-bold`}>
                     <span className={isApproved ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}>
-                      {fmt(line.approved_net_amount || 0)}
+                      {formatNumber(line.approved_net_amount || 0)}
                     </span>
                   </td>
 

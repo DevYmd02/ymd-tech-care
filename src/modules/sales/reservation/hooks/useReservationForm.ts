@@ -352,11 +352,12 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             line.lot_id = lot.lot_no_id ? Number(lot.lot_no_id) : (lot.id ? Number(lot.id) : null);
             line.lot_no = lot.code || '';
 
-            // 💡 Auto-fill Warehouse/Location if they are empty
-            if (!line.warehouse_id && lot.warehouse_id) {
+            // 💡 Ensure Warehouse/Location match the selected LOT
+            // This is critical when selecting from "Show All Stock"
+            if (lot.warehouse_id) {
                 line.warehouse_id = String(lot.warehouse_id);
             }
-            if (!line.location_id && lot.location_id) {
+            if (lot.location_id) {
                 line.location_id = String(lot.location_id);
             }
 

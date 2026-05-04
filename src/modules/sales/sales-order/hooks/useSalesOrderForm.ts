@@ -252,12 +252,21 @@ export function useSalesOrderForm({
             line.item_code = product.item_code || '';
             line.item_name = product.item_name || '';
             
-            const productUomId = product.uom_id || product.unit_id;
-            const foundUom = uoms.find(
-                (u) => String(u.id || u.unit_id) === String(productUomId)
-            );
-            line.uom_id = foundUom ? String(foundUom.id || foundUom.unit_id) : '';
-            line.unit_price = Number(product.standard_cost || 0);
+            // 💡 Robust UOM Mapping: Try all possible ID fields
+            const productUomId = product.uom_id || product.unit_id || product.sale_uom_id || product.base_uom_id || product.sales_unit_id;
+            
+            if (productUomId) {
+                line.uom_id = String(productUomId);
+            } else {
+                // Fallback: search in uoms list by name if ID is missing
+                const foundByName = uoms.find(u => 
+                    (u.unit_name && u.unit_name === product.unit_name) || 
+                    (u.uom_name && u.uom_name === product.uom_name)
+                );
+                line.uom_id = foundByName ? String(foundByName.id || foundByName.unit_id) : '';
+            }
+
+            line.unit_price = Number(product.standard_cost || product.price || 0);
             line.qty_ordered = 1;
             line.line_total = line.unit_price;
             

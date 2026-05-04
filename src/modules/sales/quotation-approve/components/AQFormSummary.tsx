@@ -6,6 +6,7 @@
 import { Calculator } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import type { AQFormData } from '../schemas/aq.schema';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 export function AQFormSummary() {
   const { watch } = useFormContext<AQFormData>();
@@ -39,10 +40,6 @@ export function AQFormSummary() {
 
   const isMC = docCurrency !== systemCurrency;
 
-
-  const fmt = (n: number) =>
-    new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
-
   // Helper for percentage display (e.g. 0.07 -> 7%)
   const fmtPct = (rate: number) => {
     const pct = rate < 1 ? rate * 100 : rate;
@@ -74,21 +71,21 @@ export function AQFormSummary() {
           <div className="space-y-1.5 opacity-60 text-xs">
             <div className="flex justify-between items-center">
               <span className="text-gray-500 font-medium">ยอดรวมสินค้า:</span>
-              <span className="font-bold text-gray-700 dark:text-gray-300">{fmt(subTotal)}</span>
+              <span className="font-bold text-gray-700 dark:text-gray-300">{formatNumber(subTotal)}</span>
             </div>
             {discountAmount > 0 && (
               <div className="flex justify-between items-center text-orange-600 dark:text-orange-400">
                 <span className="font-medium underline decoration-dotted">ส่วนลดท้ายบิล ({discountExpr}):</span>
-                <span className="font-bold">- {fmt(discountAmount)}</span>
+                <span className="font-bold">- {formatNumber(discountAmount)}</span>
               </div>
             )}
             <div className="flex justify-between items-center">
               <span className="text-gray-500 font-medium">ภาษีมูลค่าเพิ่ม ({fmtPct(taxRate)}%):</span>
-              <span className="font-bold text-gray-700 dark:text-gray-300">{fmt(quoteTax)}</span>
+              <span className="font-bold text-gray-700 dark:text-gray-300">{formatNumber(quoteTax)}</span>
             </div>
             <div className="flex justify-between items-center pt-1 border-t border-dashed border-slate-200 dark:border-slate-800">
               <span className="font-black text-slate-600 dark:text-slate-400 uppercase">รวมสุทธิเดิม:</span>
-              <span className="font-black text-blue-600 dark:text-blue-500">{fmt(quoteTotal)}</span>
+              <span className="font-black text-blue-600 dark:text-blue-500">{formatNumber(quoteTotal)}</span>
             </div>
           </div>
         </div>
@@ -100,17 +97,17 @@ export function AQFormSummary() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between items-center">
               <span className="text-gray-500 font-medium">ยอดรวมสินค้า:</span>
-              <span className="font-bold text-gray-800 dark:text-gray-200">{fmt(approvedSubTotalDisplay)}</span>
+              <span className="font-bold text-gray-800 dark:text-gray-200">{formatNumber(approvedSubTotalDisplay)}</span>
             </div>
             {approvedDiscount > 0 && (
               <div className="flex justify-between items-center text-orange-600 dark:text-orange-400">
                 <span className="font-medium underline decoration-dotted italic">ส่วนลดท้ายบิล ({discountExpr}):</span>
-                <span className="font-bold">- {fmt(approvedDiscount)}</span>
+                <span className="font-bold">- {formatNumber(approvedDiscount)}</span>
               </div>
             )}
             <div className="flex justify-between items-center">
               <span className="text-gray-500 font-medium">ภาษีมูลค่าเพิ่ม ({fmtPct(taxRate)}%):</span>
-              <span className="font-bold text-gray-800 dark:text-gray-200">{fmt(approvedTaxAmountDisplay)}</span>
+              <span className="font-bold text-gray-800 dark:text-gray-200">{formatNumber(approvedTaxAmountDisplay)}</span>
             </div>
           </div>
 
@@ -119,7 +116,7 @@ export function AQFormSummary() {
               <div className="flex items-baseline gap-2">
                 <span className="text-xs font-black text-gray-400 uppercase">NET TOTAL</span>
                 <span className="text-3xl font-black text-slate-800 dark:text-emerald-400 tracking-tighter">
-                  {fmt(finalApprovedTotalDisplay)}
+                  {formatNumber(finalApprovedTotalDisplay)}
                 </span>
               </div>
               
@@ -130,7 +127,7 @@ export function AQFormSummary() {
                 </span>
                 {isMC && (
                   <span className="text-[10px] text-gray-400 italic">
-                    ( ≈ {fmt(isFullApproval && (watch('base_total_amount') || 0) > 0 ? (watch('base_total_amount') || 0) : (finalApprovedTotalDisplay * exchangeRate))} {(systemCurrency !== 'THB' || docCurrency === 'THB') ? docCurrency : systemCurrency} )
+                    ( ≈ {formatNumber(isFullApproval && (watch('base_total_amount') || 0) > 0 ? (watch('base_total_amount') || 0) : (finalApprovedTotalDisplay * exchangeRate))} {(systemCurrency !== 'THB' || docCurrency === 'THB') ? docCurrency : systemCurrency} )
                   </span>
                 )}
 

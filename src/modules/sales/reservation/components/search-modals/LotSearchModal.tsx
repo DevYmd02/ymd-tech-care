@@ -13,6 +13,7 @@ import { QuickAdjustStockModal } from '../inventory/QuickAdjustStockModal';
 import { CreateBalanceModal } from '../inventory/CreateBalanceModal';
 import { ItemLotService } from '@inventory/services/item-lot.service';
 import type { ItemLot } from '@inventory/types/item-lot-types';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 export interface LotSearchModalProps {
     isOpen: boolean;
@@ -340,17 +341,17 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                                 </td>
                                                 <td className="px-6 py-4 text-right whitespace-nowrap">
                                                     <span className="font-bold text-gray-900 dark:text-white">
-                                                        {(lot.qty_on_hand ?? lot.balance_qty ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                                        {formatNumber(lot.qty_on_hand ?? lot.balance_qty ?? 0)}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right whitespace-nowrap">
                                                     <span className="font-bold text-orange-600 dark:text-orange-400">
-                                                        {(lot.qty_reserved ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                                        {formatNumber(lot.qty_reserved ?? 0)}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right whitespace-nowrap">
                                                     <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                                                        {(lot.qty_available ?? lot.sale_stock ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                                        {formatNumber(lot.qty_available ?? lot.sale_stock ?? 0)}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -371,12 +372,14 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                                 </td>
                                                 <td className="px-6 py-4 text-center whitespace-nowrap">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <button 
-                                                            onClick={(e) => handleOpenAdjust(e, lot)}
-                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-[10px] font-bold transition-all shadow-sm"
-                                                        >
-                                                            <Edit2 size={12} /> แก้ไข
-                                                        </button>
+                                                        {!ignoreFilters && (
+                                                            <button 
+                                                                onClick={(e) => handleOpenAdjust(e, lot)}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-[10px] font-bold transition-all shadow-sm"
+                                                            >
+                                                                <Edit2 size={12} /> แก้ไข
+                                                            </button>
+                                                        )}
                                                         <button 
                                                             onClick={(e) => { e.stopPropagation(); handleSelect(lot); }}
                                                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all"
@@ -440,7 +443,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                                     </td>
                                                     <td className="px-6 py-4 text-right whitespace-nowrap">
                                                         <span className="text-gray-600 dark:text-gray-400 font-medium">
-                                                            {qtyStock.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                                            {formatNumber(qtyStock)}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
@@ -492,7 +495,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                             {activeTab === 'available' && (
                                 <p className="text-gray-500 dark:text-gray-400">
                                     รวมสต็อกพร้อมใช้: <span className="font-bold text-emerald-600">
-                                        {availableLots.reduce((acc, l) => acc + (l.qty_available || 0), 0).toLocaleString('th-TH')}
+                                        {formatNumber(availableLots.reduce((acc, l) => acc + (l.qty_available || 0), 0))}
                                     </span>
                                 </p>
                             )}

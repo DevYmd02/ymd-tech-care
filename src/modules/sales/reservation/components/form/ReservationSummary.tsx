@@ -1,5 +1,6 @@
 import { Calculator, AlertCircle } from 'lucide-react';
 import { styles } from '@shared/constants/styles';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 interface ReservationSummaryProps {
     subTotal: number;
@@ -55,7 +56,7 @@ export function ReservationSummary({
                         <div className="relative w-40">
                             <input 
                                 type="text" 
-                                placeholder={discountAmount > 0 ? discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00 หรือ 0%"}
+                                placeholder={discountAmount > 0 ? formatNumber(discountAmount) : "0.00 หรือ 0%"}
                                 value={discountInput ?? ''} 
                                 onChange={(e) => onDiscountChange(e.target.value)}
                                 disabled={disabled}
@@ -65,7 +66,7 @@ export function ReservationSummary({
                         </div>
                         {String(discountInput || '').includes('%') && discountAmount > 0 && (
                             <span className="text-xs font-bold text-red-500 pr-1 animate-in fade-in slide-in-from-right-1">
-                                -{discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
+                                -{formatNumber(discountAmount)} {currencySymbol}
                             </span>
                         )}
                     </div>
@@ -74,14 +75,14 @@ export function ReservationSummary({
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500">รวมราคาบรรทัด (sub_total):</span>
                     <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        {subTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
+                        {formatNumber(subTotal)} {currencySymbol}
                     </span>
                 </div>
 
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500">ภาษี VAT {taxRate}% (vat_amount):</span>
                     <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        {vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
+                        {formatNumber(vatAmount)} {currencySymbol}
                     </span>
                 </div>
 
@@ -89,7 +90,7 @@ export function ReservationSummary({
                     <span className={`text-lg font-bold ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-purple-700 dark:text-purple-400'} text-nowrap`}>มูลค่ารวมทั้งสิ้น:</span>
                     <div className="text-right overflow-hidden max-w-[250px]">
                         <span className={`text-2xl font-black truncate block ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-purple-700 dark:text-purple-400'}`}>
-                            {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {formatNumber(totalAmount)}
                         </span>
                         <span className={`ml-2 text-sm font-bold ${isNegative ? 'text-red-500/60' : 'text-purple-600/60'}`}>{currencySymbol}</span>
                     </div>

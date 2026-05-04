@@ -5,11 +5,12 @@ import { ItemLotService } from '@inventory/services/item-lot.service';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MasterDataService } from '@master-data/services/master-data.service';
 import { LocationService } from '@inventory/services/inventory-master.service';
-import { WarehouseSearchModal } from '../search-modals/WarehouseSearchModal';
-import { LocationSearchModal } from '../search-modals/LocationSearchModal';
+import { WarehouseSearchModal } from '@sales/shared/components/search-modals/WarehouseSearchModal';
+import { LocationSearchModal } from '@sales/shared/components/search-modals/LocationSearchModal';
 import type { WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
 import axios from 'axios';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 interface QuickAdjustStockModalProps {
     isOpen: boolean;
@@ -214,7 +215,7 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
                     <div className="flex items-center justify-between gap-8 mb-6">
                         <div className="text-center flex-1">
                             <div className={labelClass}>จำนวนเดิม</div>
-                            <div className="text-2xl font-bold text-gray-400">{currentQty.toLocaleString()}</div>
+                            <div className="text-2xl font-bold text-gray-400">{formatNumber(currentQty)}</div>
                         </div>
                         
                         <div className="flex flex-col items-center justify-center p-2 bg-gray-50 dark:bg-gray-800 rounded-full">
@@ -243,7 +244,7 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
                             'bg-gray-100 text-gray-500'
                         }`}>
                             {diff > 0 ? <TrendingUp size={14} /> : diff < 0 ? <TrendingDown size={14} /> : null}
-                            {diff === 0 ? 'ไม่มีการเปลี่ยนแปลง' : `ส่วนต่าง: ${diff > 0 ? '+' : ''}${diff.toLocaleString()}`}
+                            {diff === 0 ? 'ไม่มีการเปลี่ยนแปลง' : `ส่วนต่าง: ${diff > 0 ? '+' : ''}${formatNumber(diff)}`}
                         </div>
                     </div>
                 </div>
@@ -287,6 +288,7 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
             }}
             warehouses={warehouses}
             isLoading={isLoadingWarehouses}
+            accentColor="amber"
         />
 
         <LocationSearchModal
@@ -299,6 +301,7 @@ export const QuickAdjustStockModal: React.FC<QuickAdjustStockModalProps> = ({
             }}
             locations={locations}
             isLoading={isLoadingLocations}
+            accentColor="amber"
         />
         </>
     );

@@ -10,8 +10,8 @@ import { ProductSearchModal } from './search-modals/ProductSearchModal';
 import { LeadSearchModal } from './search-modals/LeadSearchModal';
 import { LotSearchModal } from './search-modals/LotSearchModal';
 import { AQSearchModal } from './search-modals/AQSearchModal';
-import { WarehouseSearchModal } from './search-modals/WarehouseSearchModal';
-import { LocationSearchModal } from './search-modals/LocationSearchModal';
+import { WarehouseSearchModal } from '@sales/shared/components/search-modals/WarehouseSearchModal';
+import { LocationSearchModal } from '@sales/shared/components/search-modals/LocationSearchModal';
 import { ConfirmationModal } from '@system/ConfirmationModal';
 
 import { useReservationForm } from '../hooks/useReservationForm';
@@ -339,6 +339,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 onSelect={handleSelectWarehouse}
                 warehouses={warehouses}
                 itemId={activeWarehouseLine?.item_id}
+                accentColor="purple"
             />
 
             <LocationSearchModal 
@@ -348,6 +349,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 onSelect={handleSelectLocation}
                 locations={locations}
                 itemId={activeLocationLine?.item_id}
+                accentColor="purple"
             />
 
         </WindowFormLayout>

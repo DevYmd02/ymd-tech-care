@@ -1,6 +1,7 @@
 import { Calculator } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import type { AOFormData } from '../schemas/ao.schema';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 export function AOFormSummary() {
   const { watch } = useFormContext<AOFormData>();
@@ -16,48 +17,75 @@ export function AOFormSummary() {
   const isMulticurrency = watch('isMulticurrency') as boolean;
   const currency = isMulticurrency ? (watch('quote_currency_code') as string) : (watch('base_currency_code') as string) || 'THB';
 
-  const fmt = (val: number) => new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(val);
-
   return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-gray-800 text-emerald-600 dark:text-emerald-400">
-        <Calculator size={20} strokeWidth={2.5} />
-        <h3 className="text-lg font-bold">สรุปยอดรวม (Summary)</h3>
+    <section className="flex flex-col lg:flex-row justify-between gap-8 mt-6">
+      {/* Left side: Notes matching premium style */}
+      <div className="flex-1">
+        <div className="p-5 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/50">
+          <p className="text-gray-400 dark:text-gray-500 text-sm italic leading-relaxed">
+            * การคำนวณยอดเงินอนุมัติรวม จะอ้างอิงจากรายการสินค้าที่ถูกทำเครื่องหมาย "อนุมัติ" 
+            พร้อมราคาและส่วนลดที่ระบุในแต่ละรายการ ข้อมูลนี้ถูกดึงมาจาก Sales Order ต้นฉบับ
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div>
-          {/* Padding to push to right */}
+      {/* Right side: Financial Summary Card matching AQ styling */}
+      <div className="w-full lg:w-[400px] space-y-4 bg-slate-50/50 dark:bg-slate-900/30 p-6 rounded-2xl border border-slate-100 dark:border-slate-800/50 shadow-sm">
+        <div className="flex items-center gap-2 mb-2 text-slate-500 dark:text-slate-400 font-black uppercase tracking-wider text-sm">
+          <Calculator size={18} />
+          <span>สรุปมูลค่าการพิจารณา</span>
         </div>
 
-        <div className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-xl border border-gray-200 dark:border-gray-800 space-y-3">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500 dark:text-gray-400 font-medium">รวมมูลค่าสินค้าที่อนุมัติ</span>
-            <span className="font-mono font-bold text-gray-900 dark:text-white">
-              {fmt(approvedSubTotal)} <span className="text-xs text-gray-400 ml-1">{currency}</span>
-            </span>
-          </div>
-
-          <div className="border-t border-gray-200 dark:border-gray-700 my-2 pt-2">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500 dark:text-gray-400">ยอดรวมตามใบสั่งขาย (Sub Total)</span>
-              <span className="font-mono text-gray-600">{fmt(baseSubTotal)} {currency}</span>
+        {/* Original SO Reference Section */}
+        <div className="space-y-2 pb-4 border-b border-slate-200 dark:border-slate-800">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-70">อ้างอิงยอดเดิม (SO REFERENCE)</p>
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center text-gray-500 dark:text-gray-400">
+              <span className="font-medium">ยอดรวมสินค้า:</span>
+              <span className="font-bold">{formatNumber(baseSubTotal)}</span>
             </div>
             {baseDiscount > 0 && (
-              <div className="flex justify-between items-center text-sm text-red-500">
-                <span>ส่วนลดท้ายบิล (Discount)</span>
-                <span className="font-mono">-{fmt(baseDiscount)} {currency}</span>
+              <div className="flex justify-between items-center text-red-500 dark:text-red-400">
+                <span className="font-medium">ส่วนลดท้ายบิล:</span>
+                <span className="font-bold">- {formatNumber(baseDiscount)}</span>
               </div>
             )}
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500 dark:text-gray-400">ภาษีมูลค่าเพิ่ม (VAT)</span>
-              <span className="font-mono text-gray-600">{fmt(baseVat)} {currency}</span>
+            <div className="flex justify-between items-center text-gray-500 dark:text-gray-400">
+              <span className="font-medium">ภาษีมูลค่าเพิ่ม (VAT):</span>
+              <span className="font-bold">{formatNumber(baseVat)}</span>
             </div>
-            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
-              <span className="text-base font-bold text-gray-900 dark:text-white">ยอดสุทธิใบสั่งขาย (Total)</span>
-              <span className="text-lg font-mono font-black text-emerald-600 dark:text-emerald-400">
-                {fmt(baseTotal)} <span className="text-sm font-normal text-gray-500 ml-1">{currency}</span>
-              </span>
+            <div className="flex justify-between items-center pt-1 border-t border-dashed border-slate-200 dark:border-slate-800">
+              <span className="font-black text-slate-600 dark:text-slate-400 uppercase">รวมสุทธิเดิม:</span>
+              <span className="font-black text-blue-600 dark:text-blue-500">{formatNumber(baseTotal)} {currency}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Approval Section */}
+        <div className="pt-2 space-y-3">
+          <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">ยอดพิจารณาอนุมัติ (TOTAL APPROVED)</p>
+          
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 dark:text-gray-400 font-medium">รวมมูลค่าสินค้าที่อนุมัติ:</span>
+              <span className="font-bold text-gray-800 dark:text-gray-200">{formatNumber(approvedSubTotal)}</span>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex flex-col items-end">
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-black text-gray-400 uppercase">APPROVED TOTAL</span>
+                <span className="text-3xl font-black text-slate-800 dark:text-emerald-400 tracking-tighter">
+                  {formatNumber(approvedSubTotal)}
+                </span>
+              </div>
+              
+              <div className="mt-1">
+                <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded text-[10px] font-bold uppercase tracking-widest">
+                  {currency}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -65,3 +93,4 @@ export function AOFormSummary() {
     </section>
   );
 }
+
