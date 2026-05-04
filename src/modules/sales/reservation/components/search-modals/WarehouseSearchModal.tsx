@@ -1,7 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { DialogFormLayout } from '@ui';
 import { Search, Warehouse } from 'lucide-react';
 import type { WarehouseListItem } from '@master-data/types/master-data-types';
+import { ReservationInventoryService } from '../../services/reservation-inventory.service';
+
+interface WarehouseStockItem extends WarehouseListItem {
+    qty_on_hand?: string | number;
+    qty_reserved?: string | number;
+    qty_available?: string | number;
+}
 
 interface WarehouseSearchModalProps {
     isOpen: boolean;
@@ -9,27 +16,67 @@ interface WarehouseSearchModalProps {
     onSelect: (data: WarehouseListItem) => void;
     warehouses: WarehouseListItem[];
     isLoading?: boolean;
+    itemId?: string | number | null;
 }
 
 export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({ 
     isOpen, 
     onClose, 
     onSelect, 
-    warehouses,
-    isLoading = false 
+    warehouses: initialWarehouses,
+    isLoading: initialLoading = false,
+    itemId
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [localWarehouses, setLocalWarehouses] = useState<WarehouseStockItem[]>([]);
+    const [isLoading, setIsLoading] = useState(initialLoading);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setSearchTerm('');
+            return;
+        }
+
+        const fetchStock = async () => {
+            if (itemId) {
+                setIsLoading(true);
+                try {
+                    const stockData = await ReservationInventoryService.getWarehouseStock(itemId);
+                    if (stockData && stockData.length > 0) {
+                        // Merge or replace with stock data
+                        setLocalWarehouses(stockData as unknown as WarehouseStockItem[]);
+                    } else {
+                        setLocalWarehouses(initialWarehouses);
+                    }
+                } catch {
+                    setLocalWarehouses(initialWarehouses);
+                } finally {
+                    setIsLoading(false);
+                }
+            } else {
+                setLocalWarehouses(initialWarehouses);
+                setIsLoading(initialLoading);
+            }
+        };
+
+        fetchStock();
+    }, [isOpen, itemId, initialWarehouses, initialLoading]);
 
     const filteredItems = useMemo(() => {
-        if (!searchTerm) return warehouses;
+        if (!searchTerm) return localWarehouses;
         
         const lowerSearch = searchTerm.toLowerCase();
-        return warehouses.filter(wh => 
+        return localWarehouses.filter(wh => 
             (wh.warehouse_name || '').toLowerCase().includes(lowerSearch) || 
             (wh.warehouse_code || '').toLowerCase().includes(lowerSearch) ||
             String(wh.warehouse_id).includes(searchTerm)
         );
-    }, [warehouses, searchTerm]);
+    }, [localWarehouses, searchTerm]);
+
+    const formatNum = (val: string | number | null | undefined) => {
+        const num = Number(val);
+        return isNaN(num) ? '0.00' : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    };
 
     return (
         <DialogFormLayout
@@ -41,7 +88,7 @@ export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({
                     <Warehouse size={24} />
                 </div>
             }
-            width="max-w-3xl"
+            width="max-w-5xl" // Increased width to accommodate new columns
             headerColor="bg-purple-600"
         >
             <div className="p-1">
@@ -66,8 +113,14 @@ export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({
                         <thead className="bg-gray-50/80 dark:bg-gray-800/80 backdrop-blur sticky top-0 z-10 border-b border-gray-100 dark:border-gray-700">
                             <tr className="text-gray-500 dark:text-gray-400 uppercase text-[11px] font-bold tracking-wider">
                                 <th className="px-4 py-4 text-center w-20">เลือก</th>
-                                <th className="px-4 py-4">รหัสคลัง</th>
                                 <th className="px-4 py-4">ชื่อคลัง</th>
+                                {itemId && (
+                                    <>
+                                        <th className="px-4 py-4 text-right">คงเหลือ</th>
+                                        <th className="px-4 py-4 text-right">จอง</th>
+                                        <th className="px-4 py-4 text-right">พร้อมใช้</th>
+                                    </>
+                                )}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
@@ -75,8 +128,14 @@ export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({
                                 Array.from({ length: 5 }).map((_, idx) => (
                                     <tr key={idx} className="animate-pulse">
                                         <td className="px-4 py-4 text-center"><div className="h-7 w-14 bg-gray-100 dark:bg-gray-800 rounded-lg mx-auto" /></td>
-                                        <td className="px-4 py-4"><div className="h-4 w-24 bg-gray-100 dark:bg-gray-800 rounded shadow-sm" /></td>
                                         <td className="px-4 py-4"><div className="h-4 w-48 bg-gray-100 dark:bg-gray-800 rounded shadow-sm" /></td>
+                                        {itemId && (
+                                            <>
+                                                <td className="px-4 py-4"><div className="h-4 w-16 bg-gray-100 dark:bg-gray-800 rounded shadow-sm ml-auto" /></td>
+                                                <td className="px-4 py-4"><div className="h-4 w-16 bg-gray-100 dark:bg-gray-800 rounded shadow-sm ml-auto" /></td>
+                                                <td className="px-4 py-4"><div className="h-4 w-16 bg-gray-100 dark:bg-gray-800 rounded shadow-sm ml-auto" /></td>
+                                            </>
+                                        )}
                                     </tr>
                                 ))
                             ) : filteredItems.length > 0 ? (
@@ -97,13 +156,19 @@ export const WarehouseSearchModal: React.FC<WarehouseSearchModalProps> = ({
                                                 เลือก
                                             </button>
                                         </td>
-                                        <td className="px-4 py-4 font-mono font-bold text-purple-700 dark:text-purple-400">{item.warehouse_code}</td>
                                         <td className="px-4 py-4 text-gray-700 dark:text-gray-300 font-medium">{item.warehouse_name}</td>
+                                        {itemId && (
+                                            <>
+                                                <td className="px-4 py-4 text-right text-gray-600 dark:text-gray-400">{formatNum(item.qty_on_hand)}</td>
+                                                <td className="px-4 py-4 text-right text-orange-600 dark:text-orange-400">{formatNum(item.qty_reserved)}</td>
+                                                <td className="px-4 py-4 text-right font-bold text-green-600 dark:text-green-400">{formatNum(item.qty_available)}</td>
+                                            </>
+                                        )}
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={3} className="px-4 py-16 text-center text-gray-400 dark:text-gray-500 italic bg-gray-50/30 dark:bg-gray-800/10">
+                                    <td colSpan={itemId ? 5 : 2} className="px-4 py-16 text-center text-gray-400 dark:text-gray-500 italic bg-gray-50/30 dark:bg-gray-800/10">
                                         <div className="flex flex-col items-center gap-2">
                                             <Search size={32} className="opacity-20" />
                                             <span>ไม่พบข้อมูลคลังที่คุณค้นหา</span>

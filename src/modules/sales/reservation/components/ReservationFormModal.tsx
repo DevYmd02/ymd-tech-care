@@ -96,6 +96,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         setActiveWarehouseLineIndex,
         setActiveLocationLineIndex,
         activeLocationLineIndex,
+        activeWarehouseLineIndex,
     } = useReservationForm(isOpen, id, initialData);
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -107,6 +108,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
     // Helper for search modals to avoid index errors
     const activeLotLine = activeLotLineIndex !== null ? (formData.lines || [])[activeLotLineIndex] : null;
     const activeLocationLine = activeLocationLineIndex !== null ? (formData.lines || [])[activeLocationLineIndex] : null;
+    const activeWarehouseLine = activeWarehouseLineIndex !== null ? (formData.lines || [])[activeWarehouseLineIndex] : null;
 
     // Derived values for summary
     const selectedTaxCode = taxCodes.find(t => String(t.tax_code_id) === String(formData.tax_code_id));
@@ -336,6 +338,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 onClose={() => setIsWarehouseSearchOpen(false)}
                 onSelect={handleSelectWarehouse}
                 warehouses={warehouses}
+                itemId={activeWarehouseLine?.item_id}
             />
 
             <LocationSearchModal 
@@ -344,6 +347,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 warehouseId={activeLocationLine?.warehouse_id || null}
                 onSelect={handleSelectLocation}
                 locations={locations}
+                itemId={activeLocationLine?.item_id}
             />
 
         </WindowFormLayout>
