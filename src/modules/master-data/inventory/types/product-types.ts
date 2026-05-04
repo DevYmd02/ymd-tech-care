@@ -689,6 +689,11 @@ export interface ItemListItem {
     sale_uom_name?: string;
     is_batch_control?: boolean;
     lot_tracking_level?: string;
+    // 💡 Added for Sales/Procurement mapping
+    sale_uom_id?: number;
+    base_uom_id?: number;
+    sales_unit_id?: number;
+    price?: number;
 }
 
 export const initialItemMasterFormData: ItemMasterFormData = {
