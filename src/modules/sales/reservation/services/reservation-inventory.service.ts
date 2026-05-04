@@ -150,12 +150,30 @@ export const ReservationInventoryService = {
     },
 
     /**
-     * ดึงยอดสต็อกคงเหลือปัจจุบัน (Real-time Balance)
-     * (สำหรับขยายขีดความสามารถในอนาคต)
+     * ดึงข้อมูลสต็อกแยกตามคลังสินค้าสำหรับสินค้าที่ระบุ
+     * ใช้ API: /sale-reservation/warehouse-stock/{itemId}
      */
-    getStockBalance: async (itemId: string | number, locationId?: string | number) => {
-        // Implementation for future use
-        logger.debug('Fetching stock balance for:', itemId, locationId);
-        return { balance: 0, sale_stock: 0 };
+    getWarehouseStock: async (itemId: string | number) => {
+        try {
+            const response = await api.get<Record<string, unknown>[]>(`/sale-reservation/warehouse-stock/${itemId}`);
+            return Array.isArray(response) ? response : [];
+        } catch (error) {
+            logger.error('Failed to fetch warehouse stock:', error);
+            return [];
+        }
+    },
+
+    /**
+     * ดึงข้อมูลสต็อกแยกตามที่เก็บสำหรับสินค้าและคลังที่ระบุ
+     * ใช้ API: /sale-reservation/location-in-warehouse-stock/{itemId}/{warehouseId}
+     */
+    getLocationStock: async (itemId: string | number, warehouseId: string | number) => {
+        try {
+            const response = await api.get<Record<string, unknown>[]>(`/sale-reservation/location-in-warehouse-stock/${itemId}/${warehouseId}`);
+            return Array.isArray(response) ? response : [];
+        } catch (error) {
+            logger.error('Failed to fetch location stock:', error);
+            return [];
+        }
     }
 };
