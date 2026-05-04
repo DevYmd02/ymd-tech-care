@@ -34,7 +34,8 @@ import type { IEmployee } from '@master-data/company/types/employee-types';
 import { WarehouseSearchModal } from './WarehouseSearchModal';
 import { LocationSearchModal } from './LocationSearchModal';
 import { LotSearchModal } from './LotSearchModal';
-import { useConfirmation } from '@hooks/useConfirmation';
+import type { LotNo } from '@inventory/types/inventory-master.types';
+import { useConfirmation } from '@hooks/useConfirmation';;
 
 // ============================================================
 // Props
@@ -396,6 +397,7 @@ export function SalesOrderFormModal({
                 isOpen={isWarehouseSearchOpen}
                 onClose={() => setIsWarehouseSearchOpen(false)}
                 warehouses={warehouses}
+                itemId={activeLineIndex !== null ? formData.lines?.[activeLineIndex]?.item_id || null : null}
                 onSelect={(warehouse) => {
                     if (activeLineIndex !== null) {
                         handleLineChange(activeLineIndex, 'warehouse_id', String(warehouse.warehouse_id));
@@ -412,6 +414,7 @@ export function SalesOrderFormModal({
                 isOpen={isLocationSearchOpen}
                 onClose={() => setIsLocationSearchOpen(false)}
                 warehouseId={activeLineIndex !== null ? String(formData.lines?.[activeLineIndex]?.warehouse_id || '') : null}
+                itemId={activeLineIndex !== null ? formData.lines?.[activeLineIndex]?.item_id || null : null}
                 locations={locations}
                 onSelect={(location) => {
                     if (activeLineIndex !== null) {
@@ -423,9 +426,19 @@ export function SalesOrderFormModal({
             <LotSearchModal
                 isOpen={isLotSearchOpen}
                 onClose={() => setIsLotSearchOpen(false)}
-                onSelect={(lot) => {
+                onSelect={(lot: LotNo) => {
                     if (activeLineIndex !== null) {
-                        handleLineChange(activeLineIndex, 'lot_no', lot.code);
+                        // Update lot_no
+                        handleLineChange(activeLineIndex, 'lot_no', lot.code || '');
+                        // 💡 Sync warehouse & location to match the selected LOT
+                        // Critical when user picks from "Show All Stock" (different warehouse)
+                        if (lot.warehouse_id) {
+                            handleLineChange(activeLineIndex, 'warehouse_id', String(lot.warehouse_id));
+                        }
+                        if (lot.location_id) {
+                            handleLineChange(activeLineIndex, 'location_id', String(lot.location_id));
+                        }
+                        setIsLotSearchOpen(false);
                     }
                 }}
                 warehouseId={activeLineIndex !== null ? String(formData.lines?.[activeLineIndex]?.warehouse_id || '') : undefined}
@@ -435,3 +448,5 @@ export function SalesOrderFormModal({
         </WindowFormLayout>
     );
 }
+
+

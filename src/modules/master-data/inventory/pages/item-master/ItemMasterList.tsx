@@ -286,18 +286,17 @@ export default function ItemMasterList() {
             enableSorting: false,
 
             cell: ({ row }) => (
-                <div className="flex items-center justify-center gap-2">
-                    {/* Lot Manage Button - Only show if batch control is enabled or level is not NONE */}
+                <div className="flex items-center justify-center gap-1">
+                    {/* Lot Manage Button - Option 1.5: Ghost Text Style */}
                     {(row.original.is_batch_control || row.original.lot_tracking_level !== 'NONE') && (
                         <button 
                             onClick={() => handleLotManage(row.original.item_id, row.original.item_code, row.original.item_name)}
-                            className="px-2 py-1 text-[10px] font-bold bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-800/50 rounded hover:bg-orange-100 transition-colors"
+                            className="px-2 py-1.5 text-[11px] font-semibold text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30 rounded-lg transition-colors"
                             title="จัดการ Lot Number"
                         >
                             LOT
                         </button>
                     )}
-
 
                     <button 
                         onClick={() => handleEdit(row.original.item_id)}

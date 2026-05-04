@@ -371,12 +371,14 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                                 </td>
                                                 <td className="px-6 py-4 text-center whitespace-nowrap">
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <button 
-                                                            onClick={(e) => handleOpenAdjust(e, lot)}
-                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-[10px] font-bold transition-all shadow-sm"
-                                                        >
-                                                            <Edit2 size={12} /> แก้ไข
-                                                        </button>
+                                                        {!ignoreFilters && (
+                                                            <button 
+                                                                onClick={(e) => handleOpenAdjust(e, lot)}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-[10px] font-bold transition-all shadow-sm"
+                                                            >
+                                                                <Edit2 size={12} /> แก้ไข
+                                                            </button>
+                                                        )}
                                                         <button 
                                                             onClick={(e) => { e.stopPropagation(); handleSelect(lot); }}
                                                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all"
