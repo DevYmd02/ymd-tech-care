@@ -220,4 +220,3 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
         </DialogFormLayout>
     );
 };
-

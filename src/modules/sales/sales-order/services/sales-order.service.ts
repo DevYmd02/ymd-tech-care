@@ -128,18 +128,50 @@ export const SalesOrderService = {
 
                 const rawLines = (Array.isArray(rawLinesData) ? rawLinesData : []) as Record<string, unknown>[];
                 
-                r['lines'] = rawLines.map((l: Record<string, unknown>) => {
+                // 🛠️ Line Mapping with Enrichment (Mirrors ReservationService for robustness)
+                r['lines'] = await Promise.all(rawLines.map(async (l: Record<string, unknown>) => {
                     const item = (l['item'] || l['item_header'] || l['product'] || {}) as Record<string, unknown>;
-                    const lot = (l['lot'] || l['lot_header'] || {}) as Record<string, unknown>;
                     
                     const itemId = String(l['item_id'] || item['item_id'] || item['id'] || '');
-                    const itemName = String(item['item_name'] || item['item_name_th'] || item['name'] || l['item_name'] || (itemId ? `[Item ID: ${itemId}]` : ''));
+                    let itemCode = String(item['item_code'] || item['code'] || l['item_code'] || '');
+                    let itemName = String(item['item_name'] || item['item_name_th'] || item['name'] || l['item_name'] || '');
+
+                    // 🚀 Re-Enrich Items if missing (Essential fallback)
+                    if ((!itemCode || !itemName) && itemId) {
+                        try {
+                            const masterRes = await api.get<unknown>(`/item-master/${itemId}`);
+                            const master = ((masterRes as Record<string, unknown>)?.data || masterRes) as Record<string, unknown>;
+                            if (master) {
+                                itemCode = itemCode || String(master['item_code'] || master['code'] || '');
+                                itemName = itemName || String(master['item_name'] || master['name'] || master['item_name_th'] || '');
+                            }
+                        } catch { /* ignore */ }
+                    }
+
+                    // Final fallback for name if still missing
+                    if (!itemName && itemId) itemName = `[Item ID: ${itemId}]`;
+
+                    const lotIdVal = l['lot_id'];
+                    const lotObj = (typeof lotIdVal === 'object' && lotIdVal !== null) ? (lotIdVal as Record<string, unknown>) : ((l['lot'] || l['lot_header'] || {}) as Record<string, unknown>);
+                    let lotNo = String(l['lot_no'] || l['lot_number'] || lotObj['lot_no'] || lotObj['code'] || '');
+
+                    // 🚀 Re-Enrich Lots if missing (Essential fallback)
+                    if (!lotNo && lotIdVal && (typeof lotIdVal === 'number' || typeof lotIdVal === 'string')) {
+                        try {
+                            const lotRes = await api.get<unknown>(`/item-lot/${lotIdVal}`);
+                            const lotData = (lotRes as Record<string, unknown>)?.data || lotRes;
+                            if (lotData && typeof lotData === 'object' && !Array.isArray(lotData)) {
+                                const lotItem = lotData as Record<string, unknown>;
+                                lotNo = String(lotItem['lot_no'] || lotItem['code'] || '');
+                            }
+                        } catch { /* ignore */ }
+                    }
 
                     return {
                         ...l,
                         so_line_id: String(l['so_line_id'] || l['id'] || l['line_id'] || ''),
                         item_id: itemId,
-                        item_code: String(item['item_code'] || item['code'] || l['item_code'] || ''),
+                        item_code: itemCode,
                         item_name: itemName,
                         uom_id: String(l['uom_id'] || item['uom_id'] || l['uom_header_id'] || ''),
                         warehouse_id: String(l['warehouse_id'] || l['wh_id'] || ''),
@@ -149,10 +181,14 @@ export const SalesOrderService = {
                         line_discount: Number(l['discount_amount'] || l['line_discount'] || 0),
                         line_discount_input: String(l['discount_expression'] || l['line_discount_input'] || '0'),
                         line_total: Number(l['net_amount'] || l['line_total'] || l['amount'] || 0),
-                        lot_id: l['lot_id'] ? String(l['lot_id']) : undefined,
-                        lot_no: String(l['lot_no'] || lot['lot_no'] || ''),
+                        lot_id: lotIdVal ? String(
+                            (typeof lotIdVal === 'object' && lotIdVal !== null) 
+                                ? ((lotIdVal as Record<string, unknown>).id || (lotIdVal as Record<string, unknown>).lot_id || '') 
+                                : lotIdVal
+                        ) : undefined,
+                        lot_no: lotNo,
                     };
-                });
+                }));
 
                 // Map header fields (Capture raw IDs first for enrichment)
                 const customerObj = (r['customer'] || r['customer_header'] || {}) as Record<string, unknown>;
