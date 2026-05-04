@@ -104,18 +104,35 @@ export function useEmployeeDeptForm(editId: string | number | null, isOpen: bool
 
     // Hydrate form when data is fetched
     useEffect(() => {
-        if (isOpen && isEdit && initialData) {
-            reset({
-                emp_dept_code: initialData.emp_dept_code || initialData.dept_code || initialData.section_code || '',
-                emp_dept_name: initialData.emp_dept_name || initialData.dept_name || initialData.section_name || '',
-                emp_dept_nameeng: initialData.emp_dept_nameeng || initialData.dept_nameeng || initialData.section_name_en || '',
-                emp_side_id: initialData.emp_side_id || initialData.side_id || initialData.department_id || '',
-                is_active: initialData.is_active ?? true,
-            });
-        } else if (isOpen && !isEdit) {
+        if (!isOpen) return;
+
+        if (isEdit) {
+            if (initialData) {
+                // Determine active status from various possible field names/formats
+                const rawData = initialData as unknown as Record<string, unknown>;
+                const isActive = 
+                    rawData.is_active === true || 
+                    rawData.is_active === 1 || 
+                    rawData.is_active === '1' || 
+                    rawData.is_active === 'Y' || 
+                    rawData.is_active === 'ACTIVE' ||
+                    rawData.active === true;
+
+                reset({
+                    emp_dept_code: initialData.emp_dept_code || initialData.dept_code || initialData.section_code || '',
+                    emp_dept_name: initialData.emp_dept_name || initialData.dept_name || initialData.section_name || '',
+                    emp_dept_nameeng: initialData.emp_dept_nameeng || initialData.dept_nameeng || initialData.section_name_en || '',
+                    emp_side_id: initialData.emp_side_id || initialData.side_id || initialData.department_id || '',
+                    is_active: isActive,
+                });
+            } else if (isLoadingInitial) {
+                // While loading, reset to initial to clear stale data from previous edit
+                reset(initialEmployeeDeptData);
+            }
+        } else {
             reset(initialEmployeeDeptData);
         }
-    }, [isOpen, isEdit, initialData, reset]);
+    }, [isOpen, isEdit, initialData, isLoadingInitial, reset]);
 
     const saveMutation = useMutation({
         mutationFn: async (data: EmployeeDeptFormData) => {
@@ -132,7 +149,7 @@ export function useEmployeeDeptForm(editId: string | number | null, isOpen: bool
         },
         onSuccess: (res) => {
             if (res.success) {
-                // Invalidate both the list and the specific detail query to ensure fresh data
+                // Invalidate both the list and the specific detail record
                 queryClient.invalidateQueries({ queryKey: ['employee-depts'] });
                 if (editId) {
                     queryClient.invalidateQueries({ queryKey: ['employee-dept', editId] });

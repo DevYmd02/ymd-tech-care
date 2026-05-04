@@ -25,7 +25,7 @@ import { useConfirmation } from '@hooks/useConfirmation';
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
     { value: 'DRAFT', label: 'แบบร่าง' },
-    { value: 'SUBMITTED', label: 'ส่งแล้ว' },
+    { value: 'PENDING', label: 'รออนุมัติ' },
     { value: 'APPROVED', label: 'อนุมัติแล้ว' },
     { value: 'CONFIRMED', label: 'ยืนยันแล้ว' },
     { value: 'CLOSED', label: 'ปิดรายการ' },
@@ -121,7 +121,11 @@ export default function SalesOrderListPage() {
         setIsFormModalOpen(true);
     };
 
-    const handleSubmit = useCallback(async (id: string) => {
+    const handleSubmit = useCallback(async (id: string, rawRow?: SalesOrderHeader) => {
+        // 🔍 Debug: log what ID we got and the raw data to diagnose API field names
+        logger.info('[handleSubmit] so_id received:', id);
+        logger.info('[handleSubmit] raw row data:', rawRow?.rawData);
+
         const isConfirmed = await confirm({
             title: 'ยืนยันการส่งอนุมัติ',
             description: 'คุณต้องการส่งอนุมัติใบสั่งขายนี้ใช่หรือไม่?',
@@ -133,7 +137,7 @@ export default function SalesOrderListPage() {
         if (!isConfirmed) return;
 
         try {
-            await SalesOrderService.update(id, { status: 'APPROVED' });
+            await SalesOrderService.updateStatus(id, 'PENDING');
             refetch();
         } catch (error) {
             logger.error('Failed to submit sales order:', error);
@@ -236,7 +240,7 @@ export default function SalesOrderListPage() {
                         </button>
                         {info.row.original.status === 'DRAFT' && (
                             <button
-                                onClick={() => handleSubmit(info.row.original.so_id)}
+                                onClick={() => handleSubmit(info.row.original.so_id, info.row.original)}
                                 className="h-7 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
                             >
                                 <Send size={12} /> 

@@ -21,7 +21,7 @@ export interface SalesOrderHeader {
     customer_name: string;      // ชื่อลูกค้า (join)
     customer_id: string;        // ID ลูกค้า
     customer_code: string;      // รหัสลูกค้า (join)
-    status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CONFIRMED' | 'CLOSED' | 'CANCELLED';
+    status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'CONFIRMED' | 'CLOSED' | 'CANCELLED';
     total_amount: number;       // total_amount
     base_total_amount?: number; // base_total_amount
     currency_code: string;      // currency_code
@@ -58,7 +58,7 @@ export const SalesOrderService = {
 
                 return {
                     ...item,
-                    so_id: String(item.so_id || item.id || ''),
+                    so_id: String(item.so_id || item.sale_order_id || item.uuid || item.header_id || item.id || ''),
                     so_no: String(item.so_no || ''),
                     so_date: item.so_date ? String(item.so_date).split('T')[0] : '',
                     customer_id: String(item.customer_id || customerObj.customer_id || sqHeader.customer_id || aqHeader.customer_id || ''),
@@ -268,6 +268,24 @@ export const SalesOrderService = {
                 errorData.message.forEach(m => logger.error('Validation Error:', m));
             } else {
                 logger.error(`Failed to update sales order ${id}:`, errorData || err.message);
+            }
+            throw error;
+        }
+    },
+
+    /** อัปเดตสถานะ Sales Order (เฉพาะ status เท่านั้น ไม่ผ่าน sanitizeData) */
+    updateStatus: async (id: string, status: string) => {
+        logger.info(`🚀 [SalesOrderService] UPDATE STATUS for ${id}:`, { status });
+        try {
+            const response = await api.patch(`/sale-order/${id}`, { status, so_status: status });
+            return { success: true, data: response };
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string | string[] } }; message: string };
+            const errorData = err.response?.data;
+            if (errorData && Array.isArray(errorData.message)) {
+                errorData.message.forEach(m => logger.error('Validation Error:', m));
+            } else {
+                logger.error(`Failed to update status for sales order ${id}:`, errorData || err.message);
             }
             throw error;
         }

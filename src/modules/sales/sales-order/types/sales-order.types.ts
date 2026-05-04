@@ -41,7 +41,7 @@ export interface SalesOrderFormData {
     currency_code: string;                            // FK→currency default 'THB'
     payment_term_days: number;                        // int default 0
     onhold: 'Y' | 'N';                               // char(1) default 'N'
-    status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CONFIRMED' | 'CLOSED' | 'CANCELLED';
+    status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'CONFIRMED' | 'CLOSED' | 'CANCELLED';
     sub_total: number;                                // numeric(18,2)
     discount_amount: number;                          // numeric(18,2)
     discount_input?: string;                          // UI helper

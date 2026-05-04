@@ -168,10 +168,10 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                         className={`${styles.input} cursor-pointer ${errors.sideId ? 'border-red-500 focus:ring-red-200' : ''}`}
                         {...register('sideId')}
                     >
-                        <option value="">เลือกฝ่าย</option>
+                        <option value={0}>-- เลือกฝ่าย --</option>
                         {sides.map(side => (
-                            <option key={side.side_id || side.department_id} value={side.side_id || side.department_id}>
-                                {(side.side_code || side.department_code)} - {(side.side_name || side.department_name)}
+                            <option key={side.side_id || side.department_id || side.emp_side_id} value={side.side_id || side.department_id || side.emp_side_id}>
+                                {(side.emp_side_code || side.side_code || side.department_code || '-')} - {(side.emp_side_name || side.side_name || side.department_name || '-')}
                             </option>
                         ))}
                     </select>
@@ -189,7 +189,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                             className={`${styles.input} cursor-pointer ${errors.positionId ? 'border-red-500 focus:ring-red-200' : ''}`}
                             {...register('positionId', { valueAsNumber: true })}
                         >
-                            <option value="">เลือกตำแหน่ง</option>
+                            <option value={0}>-- เลือกตำแหน่ง --</option>
                             {positions.map(pos => (
                                 <option key={pos.position_id} value={pos.position_id}>
                                     {pos.position_code} - {pos.position_name}

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Clock, CheckCircle, XCircle, AlertCircle, User, Calendar } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import api from '@core/api/api';
+import { Clock, CheckCircle, XCircle, AlertCircle, User, Calendar } from 'lucide-react';
+import { AOService } from '@sales/sales-order-approval/services/ao.service';
+import type { AOListItem } from '@sales/sales-order-approval/types/sales-order-approval.types';
 import { ModalLayout } from '@ui';
 import { SOStatusBadge } from './SOStatusBadge';
 
@@ -27,12 +28,9 @@ const formatTime = (val?: string) => {
 export const AOHistoryModal: React.FC<Props> = ({ isOpen, onClose, soId, soNo }) => {
   const { data: history, isLoading } = useQuery({
     queryKey: ['so-approval-history', soId],
-    queryFn: async () => {
+    queryFn: () => {
       if (!soId) return [];
-      const res = await api.get<any[]>(`/sale-order-approval`, {
-        params: { so_id: soId }
-      });
-      return Array.isArray(res) ? res : (res as any).data || [];
+      return AOService.getApprovalList({ so_id: soId });
     },
     enabled: isOpen && !!soId,
   });
@@ -65,7 +63,7 @@ export const AOHistoryModal: React.FC<Props> = ({ isOpen, onClose, soId, soNo })
           </div>
         ) : (
           <div className="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent dark:before:via-slate-800">
-            {history.map((item: any, index: number) => {
+            {history.map((item: AOListItem, index: number) => {
               const isApproved = item.status === 'APPROVED';
               const isRejected = item.status === 'REJECTED';
               
@@ -89,7 +87,7 @@ export const AOHistoryModal: React.FC<Props> = ({ isOpen, onClose, soId, soNo })
                       </div>
                       <div className="flex items-center gap-2 text-xs font-bold text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-md">
                         <Calendar size={12} />
-                        {formatDate(item.ao_date)} {formatTime(item.created_at)}
+                        {formatDate(item.ao_date)} {formatTime(String(item.created_at || ''))}
                       </div>
                     </div>
 
@@ -107,11 +105,11 @@ export const AOHistoryModal: React.FC<Props> = ({ isOpen, onClose, soId, soNo })
                       </div>
                     </div>
 
-                    {item.remarks && (
+                    {!!item.remarks && (
                       <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
                         <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">ความคิดเห็น / เหตุผล</div>
                         <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed italic">
-                          "{item.remarks}"
+                          &ldquo;{String(item.remarks)}&rdquo;
                         </p>
                       </div>
                     )}

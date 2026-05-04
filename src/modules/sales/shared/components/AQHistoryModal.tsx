@@ -11,7 +11,7 @@ import { ModalLayout } from '@layout/ModalLayout';
 import { SmartTable } from '@ui/data-display/SmartTable';
 import { AQService } from '@sales/quotation-approve/services/aq.service';
 import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
-import type { AQHeader } from '@sales/quotation-approve/types/quotation-approve.types';
+import type { AQListItem } from '@sales/quotation-approve/types/quotation-approve.types';
 
 interface AQHistoryModalProps {
   isOpen: boolean;
@@ -20,7 +20,7 @@ interface AQHistoryModalProps {
   sqNo?: string;
 }
 
-const columnHelper = createColumnHelper<AQHeader>();
+const columnHelper = createColumnHelper<AQListItem>();
 
 export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
   isOpen,
@@ -35,21 +35,14 @@ export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
     enabled: isOpen && !!sqId,
   });
 
-  const displayData = React.useMemo(() => {
+  const displayData = React.useMemo((): AQListItem[] => {
     if (!historyData) return [];
-    let rawItems: AQHeader[] = [];
-    const r = historyData as Record<string, unknown>;
-    if (Array.isArray(r.data)) {
-      rawItems = r.data as AQHeader[];
-    } else if (Array.isArray(historyData)) {
-      rawItems = historyData as AQHeader[];
-    }
-
+    
     // Defensive client-side filtering by sqId to ensure each record shows its own history
     if (sqId) {
-      return rawItems.filter((item) => Number(item.sq_id) === Number(sqId));
+      return historyData.filter((item) => Number(item.sq_id) === Number(sqId));
     }
-    return rawItems;
+    return historyData;
   }, [historyData, sqId]);
 
   // 2. Table Columns
@@ -83,25 +76,11 @@ export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
     columnHelper.accessor('base_total_amount', {
       header: () => <div className="text-right w-full">ยอดรวม (บาท)</div>,
       cell: (info) => {
-        const row = info.row.original;
-        const status = row.status;
-
-        // 🛡️ Business Logic: If not APPROVED, the financial impact in history must be 0
-        if (status !== 'APPROVED') {
-          return <div className="text-right font-bold text-gray-400">0.00</div>;
-        }
-
-        // 🛡️ Financial Consistency: Prioritize original SQ total if available in snapshot
-        const rawRow = row as unknown as Record<string, unknown>;
-        const sqObj = (row.sq || rawRow.sale_quotation || rawRow.quotation) as Record<string, unknown> | undefined;
-        const sqTotal = Number(sqObj?.base_total_amount || sqObj?.total_amount || sqObj?.quote_total_amount || 0);
-        
-        // Ensure we don't show negative values and handle fallback
-        const displayAmount = Math.max(0, (sqTotal > 0) ? sqTotal : (Number(info.getValue()) || 0));
+        const amount = Number(info.getValue()) || 0;
 
         return (
           <div className="text-right font-bold text-emerald-600 dark:text-emerald-400">
-            {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(displayAmount)}
+            {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(amount)}
           </div>
         );
       },
@@ -112,9 +91,9 @@ export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
       cell: (info) => (
         <div className="flex flex-col items-center gap-1">
           <SQStatusBadge status={info.getValue()} />
-          {info.row.original.remarks && (
-            <span className="text-[10px] text-gray-500 italic max-w-[150px] truncate" title={info.row.original.remarks}>
-              หมายเหตุ: {info.row.original.remarks}
+          {!!info.row.original.remarks && (
+            <span className="text-[10px] text-gray-500 italic max-w-[150px] truncate" title={String(info.row.original.remarks)}>
+              หมายเหตุ: {String(info.row.original.remarks)}
             </span>
           )}
         </div>

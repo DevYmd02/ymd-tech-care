@@ -159,10 +159,15 @@ export default function EmployeeList() {
             header: 'ฝ่าย',
             cell: ({ row }) => {
                 const item = row.original;
-                return item.department_name || 
-                       item.department?.department_name || 
-                       item.side_name || 
-                       item.side?.side_name || '-';
+                // Use a type-safe way to access potentially missing fields
+                const dept = item.department;
+                const side = item.side;
+                
+                const code = item.emp_side_code || item.side_code || item.department_code || dept?.department_code || side?.side_code;
+                const name = item.emp_side_name || item.side_name || item.department_name || dept?.department_name || side?.side_name;
+                
+                if (code && name) return `${code} - ${name}`;
+                return name || code || '-';
             },
         },
         {
@@ -257,6 +262,7 @@ export default function EmployeeList() {
 
             {/* Modal */}
             <EmployeeFormModal 
+                key={editingId || 'new'}
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}

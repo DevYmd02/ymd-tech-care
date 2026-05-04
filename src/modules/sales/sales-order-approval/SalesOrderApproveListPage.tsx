@@ -192,7 +192,7 @@ export default function SalesOrderApproveListPage() {
         header: () => <div className="text-center w-full">การจัดการ</div>,
         cell: (info) => {
           const row = info.row.original;
-          const isPending = row.status === 'PENDING' || row.status === 'SUBMITTED';
+          const isPending = row.status === 'PENDING';
           const canViewHistory = row.status === 'APPROVED' || row.status === 'REJECTED';
 
           return (
@@ -320,12 +320,12 @@ export default function SalesOrderApproveListPage() {
           </div>
         }
       >
-        {mergedData.filter(r => r.status === 'PENDING' || r.status === 'SUBMITTED').length > 0 && (
+        {mergedData.filter(r => r.status === 'PENDING').length > 0 && (
           <div className="mb-3 px-4 py-2.5 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200 dark:border-emerald-800/50 rounded-lg flex items-center gap-2">
             <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400" />
             <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
               มีใบสั่งขาย{' '}
-              <strong>{mergedData.filter(r => r.status === 'PENDING' || r.status === 'SUBMITTED').length}</strong>{' '}
+              <strong>{mergedData.filter(r => r.status === 'PENDING').length}</strong>{' '}
               รายการ รอการพิจารณาอนุมัติ
             </span>
           </div>
@@ -354,7 +354,7 @@ export default function SalesOrderApproveListPage() {
                 employeeName={item.approval_emp_name}
                 actions={
                   <div className="flex gap-2 w-full">
-                    {item.status === 'PENDING' || item.status === 'SUBMITTED' ? (
+                    {item.status === 'PENDING' ? (
                       <button
                         onClick={() => handleOpenApproval(item)}
                         className="flex-1 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2"

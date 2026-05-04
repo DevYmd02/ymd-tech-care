@@ -227,15 +227,13 @@ export default function EmployeeSideList() {
             </div>
 
             {/* Modal */}
-            <EmployeeSideFormModal 
-                isOpen={isModalOpen} 
+            <EmployeeSideFormModal
+                key={editingId || 'new'}
+                isOpen={isModalOpen}
                 onClose={handleModalClose}
-                editId={editingId}
                 onSuccess={handleSaveSuccess}
+                editId={editingId}
             />
         </div>
     );
 }
-
-
-
