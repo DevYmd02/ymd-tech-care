@@ -1,5 +1,6 @@
 import { Calculator, AlertCircle } from 'lucide-react';
 import { styles } from '@shared/constants/styles';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 interface QuotationSummaryProps {
     subTotal: number;
@@ -54,7 +55,7 @@ export function QuotationSummary({
                     <div className="flex flex-col items-end w-40 gap-1.5">
                         <input 
                             type="text" 
-                            placeholder={discountAmount > 0 ? discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : "0.00 หรือ 0%"}
+                            placeholder={discountAmount > 0 ? formatNumber(discountAmount) : "0.00 หรือ 0%"}
                             value={discountInput ?? ''} 
                             onChange={(e) => {
                                 // 🚫 Restrict to: Digits, Dot, and Percent sign only
@@ -69,7 +70,7 @@ export function QuotationSummary({
                         {/* ✨ Show calculated savings always if discount is applied as percentage */}
                         {String(discountInput || '').includes('%') && discountAmount > 0 && (
                             <div className="text-[11px] font-bold text-red-600 dark:text-red-400 whitespace-nowrap animate-in fade-in slide-in-from-top-1 duration-200">
-                                {`-${discountAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${currencySymbol}`}
+                                {`-${formatNumber(discountAmount)} ${currencySymbol}`}
                             </div>
                         )}
                     </div>
@@ -78,14 +79,14 @@ export function QuotationSummary({
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500">ยอดก่อนภาษี (sub_total):</span>
                     <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        {subTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
+                        {formatNumber(subTotal)} {currencySymbol}
                     </span>
                 </div>
 
                 <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500">ภาษี VAT {taxRate}% (vat_amount):</span>
                     <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        {vatAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
+                        {formatNumber(vatAmount)} {currencySymbol}
                     </span>
                 </div>
 
@@ -93,7 +94,7 @@ export function QuotationSummary({
                     <span className={`text-lg font-bold ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>มูลค่ารวมทั้งสิ้น:</span>
                     <div className="text-right overflow-hidden max-w-[250px]">
                         <span className={`text-2xl font-black truncate block ${isNegative ? 'text-red-600 dark:text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>
-                            {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {formatNumber(totalAmount)}
                         </span>
                         <span className={`ml-2 text-sm font-bold ${isNegative ? 'text-red-500/60' : 'text-blue-600/60'}`}>{currencySymbol}</span>
                     </div>

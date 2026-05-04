@@ -6,6 +6,7 @@ import type { ReservationLineValues, ReservationFormValues } from '../../schemas
 import type { ReservationLineData } from '../../types/reservation.types';
 import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 interface ReservationLineTableProps {
     lines: ReservationLineData[];
@@ -325,7 +326,7 @@ export function ReservationLineTable({
                                             />
                                             {String(line.line_discount_input || '').includes('%') && (line.line_discount ?? 0) > 0 && (
                                                 <div className="text-[10px] font-bold text-red-500 whitespace-nowrap animate-in fade-in slide-in-from-top-1 duration-200">
-                                                    -{line.line_discount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {currencySymbol}
+                                                    -{formatNumber(line.line_discount)} {currencySymbol}
                                                 </div>
                                             )}
                                         </div>
@@ -333,7 +334,7 @@ export function ReservationLineTable({
                                     
                                     <td className="px-2 py-2">
                                         <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner overflow-hidden max-w-[150px] ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700'}`}>
-                                            <span className="truncate w-full text-right overflow-hidden">{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                            <span className="truncate w-full text-right overflow-hidden">{formatNumber(line.line_total || 0)}</span>
                                             {hasLineFieldError(index, 'line_total') && (
                                                 <div className="flex items-center gap-0.5 text-[8px] font-medium text-red-500 mt-[-2px]">
                                                     <AlertCircle size={8} />

@@ -1,6 +1,7 @@
 import React from 'react';
 import type { FieldErrors, FieldValues } from 'react-hook-form';
 import { logger } from '@/shared/utils/logger';
+import type { ToastType } from '@/shared/components/ui/feedback/Toast';
 
 /**
  * Recursive extractor for react-hook-form errors.
@@ -42,7 +43,7 @@ export const ErrorToastUI = (errorMessages: string[]) => {
 /**
  * Standard Form Error Handler for react-hook-form.
  */
-export const handleFormErrorWithToast = (errors: FieldErrors<FieldValues>, toast: any) => {
+export const handleFormErrorWithToast = (errors: FieldErrors<FieldValues>, toast: (message: string | React.ReactNode, type?: ToastType, title?: string) => void) => {
     logger.error('Form Validation Errors:', errors);
     const errorMessages = extractErrorMessages(errors);
     

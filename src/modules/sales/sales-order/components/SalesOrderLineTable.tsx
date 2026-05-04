@@ -11,6 +11,7 @@ import type { SalesOrderLineValues, SalesOrderFormValues } from '../schemas/sale
 import type { SalesOrderLineData } from '../types/sales-order.types';
 import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 interface SalesOrderLineTableProps {
     lines: SalesOrderLineData[];
@@ -303,7 +304,7 @@ export function SalesOrderLineTable({
                                         {/* Line Total */}
                                         <td className="px-2 py-2">
                                             <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner overflow-hidden max-w-[150px] ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-700'}`}>
-                                                <span className="truncate w-full text-right overflow-hidden">{(line.line_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                                <span className="truncate w-full text-right overflow-hidden">{formatNumber(line.line_total || 0)}</span>
                                                 {hasLineFieldError(index, 'line_total') && (
                                                     <div className="flex items-center gap-0.5 text-[8px] font-medium text-red-500 mt-[-2px]">
                                                         <AlertCircle size={8} />

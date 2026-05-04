@@ -14,6 +14,7 @@ import { AQHistoryModal } from '@sales/shared/components/AQHistoryModal';
 import { useAQListData } from './hooks/useAQListData';
 import type { AQListItem, SQForApproval } from './types/quotation-approve.types';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -96,11 +97,6 @@ export default function QuotationApproveListPage() {
     return y && m && d ? `${d}/${m}/${y}` : val;
   };
 
-  const fmt = (n?: number) =>
-    n !== undefined && n !== null
-      ? new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(n)
-      : '-';
-
   // ─────────────────────────────────────────────────────────────────────────
   // Columns
   // ─────────────────────────────────────────────────────────────────────────
@@ -179,11 +175,11 @@ export default function QuotationApproveListPage() {
             <div className="flex flex-col items-center gap-0.5 w-full">
               <div className="flex items-center gap-1 text-emerald-600 font-bold justify-center">
                 <span className="text-xs">฿</span>
-                <span>{fmt(baseAmount)}</span>
+                <span>{formatNumber(baseAmount)}</span>
               </div>
               {currency !== 'THB' && (
                 <div className="text-[10px] text-gray-400 font-medium italic">
-                  ({String(currency)} {fmt(quoteAmount)})
+                  ({String(currency)} {formatNumber(quoteAmount)})
                 </div>
               )}
             </div>

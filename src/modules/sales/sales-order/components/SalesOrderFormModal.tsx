@@ -31,8 +31,8 @@ import type { ItemListItem } from '@inventory/types/product-types';
 import { ReservationSearchModal } from './ReservationSearchModal';
 import { EmployeeSearchModal } from '@master-data/employee/components/EmployeeSearchModal';
 import type { IEmployee } from '@master-data/company/types/employee-types';
-import { WarehouseSearchModal } from './WarehouseSearchModal';
-import { LocationSearchModal } from './LocationSearchModal';
+import { WarehouseSearchModal } from '@sales/shared/components/search-modals/WarehouseSearchModal';
+import { LocationSearchModal } from '@sales/shared/components/search-modals/LocationSearchModal';
 import { LotSearchModal } from './LotSearchModal';
 import type { LotNo } from '@inventory/types/inventory-master.types';
 import { useConfirmation } from '@hooks/useConfirmation';;
@@ -408,6 +408,7 @@ export function SalesOrderFormModal({
                         }
                     }
                 }}
+                accentColor="indigo"
             />
             
             <LocationSearchModal
@@ -421,6 +422,7 @@ export function SalesOrderFormModal({
                         handleLineChange(activeLineIndex, 'location_id', String(location.location_id));
                     }
                 }}
+                accentColor="indigo"
             />
 
             <LotSearchModal

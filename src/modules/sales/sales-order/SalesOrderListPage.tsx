@@ -14,6 +14,7 @@ import { logger } from '@/shared/utils/logger';
 import { SalesOrderFormModal } from './components/SalesOrderFormModal';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { formatNumber } from '@/shared/utils/numberUtils';
 import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
 import { useConfirmation } from '@hooks/useConfirmation';
 
@@ -197,9 +198,7 @@ export default function SalesOrderListPage() {
                         <div className="flex justify-center items-center gap-1.5 font-bold text-emerald-500">
                             <span className="text-xs">฿</span>
                             <span>
-                                {amount.toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                })}
+                                {formatNumber(amount)}
                             </span>
                         </div>
                     );

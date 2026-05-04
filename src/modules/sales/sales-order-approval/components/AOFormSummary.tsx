@@ -1,6 +1,7 @@
 import { Calculator } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import type { AOFormData } from '../schemas/ao.schema';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 export function AOFormSummary() {
   const { watch } = useFormContext<AOFormData>();
@@ -15,8 +16,6 @@ export function AOFormSummary() {
 
   const isMulticurrency = watch('isMulticurrency') as boolean;
   const currency = isMulticurrency ? (watch('quote_currency_code') as string) : (watch('base_currency_code') as string) || 'THB';
-
-  const fmt = (val: number) => new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val || 0);
 
   return (
     <section className="flex flex-col lg:flex-row justify-between gap-8 mt-6">
@@ -43,21 +42,21 @@ export function AOFormSummary() {
           <div className="space-y-1.5 text-xs">
             <div className="flex justify-between items-center text-gray-500 dark:text-gray-400">
               <span className="font-medium">ยอดรวมสินค้า:</span>
-              <span className="font-bold">{fmt(baseSubTotal)}</span>
+              <span className="font-bold">{formatNumber(baseSubTotal)}</span>
             </div>
             {baseDiscount > 0 && (
               <div className="flex justify-between items-center text-red-500 dark:text-red-400">
                 <span className="font-medium">ส่วนลดท้ายบิล:</span>
-                <span className="font-bold">- {fmt(baseDiscount)}</span>
+                <span className="font-bold">- {formatNumber(baseDiscount)}</span>
               </div>
             )}
             <div className="flex justify-between items-center text-gray-500 dark:text-gray-400">
               <span className="font-medium">ภาษีมูลค่าเพิ่ม (VAT):</span>
-              <span className="font-bold">{fmt(baseVat)}</span>
+              <span className="font-bold">{formatNumber(baseVat)}</span>
             </div>
             <div className="flex justify-between items-center pt-1 border-t border-dashed border-slate-200 dark:border-slate-800">
               <span className="font-black text-slate-600 dark:text-slate-400 uppercase">รวมสุทธิเดิม:</span>
-              <span className="font-black text-blue-600 dark:text-blue-500">{fmt(baseTotal)} {currency}</span>
+              <span className="font-black text-blue-600 dark:text-blue-500">{formatNumber(baseTotal)} {currency}</span>
             </div>
           </div>
         </div>
@@ -69,7 +68,7 @@ export function AOFormSummary() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between items-center">
               <span className="text-gray-500 dark:text-gray-400 font-medium">รวมมูลค่าสินค้าที่อนุมัติ:</span>
-              <span className="font-bold text-gray-800 dark:text-gray-200">{fmt(approvedSubTotal)}</span>
+              <span className="font-bold text-gray-800 dark:text-gray-200">{formatNumber(approvedSubTotal)}</span>
             </div>
           </div>
 
@@ -78,7 +77,7 @@ export function AOFormSummary() {
               <div className="flex items-baseline gap-2">
                 <span className="text-xs font-black text-gray-400 uppercase">APPROVED TOTAL</span>
                 <span className="text-3xl font-black text-slate-800 dark:text-emerald-400 tracking-tighter">
-                  {fmt(approvedSubTotal)}
+                  {formatNumber(approvedSubTotal)}
                 </span>
               </div>
               

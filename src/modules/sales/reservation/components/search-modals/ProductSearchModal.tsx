@@ -5,6 +5,7 @@ import { ItemMasterService } from '@inventory/services/item-master.service';
 import type { ItemListItem } from '@inventory/types/product-types';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@hooks/useDebounce';
+import { formatNumber } from '@/shared/utils/numberUtils';
 
 /**
  * @file ProductSearchModal.tsx
@@ -121,7 +122,7 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = React.memo(
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right font-bold text-gray-700 dark:text-gray-200">
-                                                {Number(product.standard_cost || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                {formatNumber(Number(product.standard_cost || 0))}
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <button 
