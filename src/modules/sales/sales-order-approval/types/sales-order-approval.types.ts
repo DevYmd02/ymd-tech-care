@@ -89,6 +89,12 @@ export interface AOLine {
   discount_amount: number;
   discount_rate?: number;
   net_amount: number;
+  warehouse_id?: string | number;
+  warehouse_name?: string;
+  location_id?: string | number;
+  location_name?: string;
+  lot_id?: string | number;
+  lot_no?: string;
   remarks?: string;
   created_at?: string;
   updated_at?: string;
@@ -190,6 +196,12 @@ export interface AOLineFormData {
   is_approved: boolean;
   approved_qty: number;
   approved_net_amount: number;
+  warehouse_id?: string | number;
+  warehouse_name?: string;
+  location_id?: string | number;
+  location_name?: string;
+  lot_id?: string | number;
+  lot_no?: string;
   remarks?: string;
 }
 

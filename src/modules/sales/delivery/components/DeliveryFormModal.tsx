@@ -214,7 +214,7 @@ export function DeliveryFormModal({
                         type="button"
                         onClick={handleSaveClick}
                         disabled={isSubmitting}
-                        className="h-10 px-8 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                        className="h-10 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
                     >
                         {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                         {isEdit ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างรายการจัดส่ง'}
@@ -238,7 +238,7 @@ export function DeliveryFormModal({
                         ? 'แก้ไขรายการจัดส่งสินค้า (Edit Delivery)'
                         : 'สร้างรายการจัดส่งสินค้าใหม่ (Create Delivery)'
             }
-            headerColor={isViewOnly ? 'bg-slate-700' : 'bg-teal-700'}
+            headerColor={isViewOnly ? 'bg-slate-700' : 'bg-amber-600'}
             footer={ModalFooter}
             titleIcon={
                 <div className="bg-white/20 p-1.5 rounded shadow-sm">
@@ -316,14 +316,14 @@ export function DeliveryFormModal({
                     );
                     setIsSalesOrderSearchOpen(false);
                 }}
-                headerColor="bg-teal-700"
+                headerColor="bg-amber-600"
             />
 
             <EmployeeSearchModal
                 isOpen={isEmployeeSearchOpen}
                 onClose={() => setIsEmployeeSearchOpen(false)}
                 onSelect={handleSelectEmployee}
-                headerColor="bg-teal-700"
+                headerColor="bg-amber-600"
             />
 
             <ProductSearchModal
@@ -332,7 +332,7 @@ export function DeliveryFormModal({
                 onSelect={(product: ItemListItem) =>
                     activeLineIndex !== null && handleSelectProduct(activeLineIndex, product)
                 }
-                headerColor="bg-teal-700"
+                headerColor="bg-amber-600"
             />
 
             <WarehouseSearchModal

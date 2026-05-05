@@ -141,6 +141,7 @@ export const INPUT_ERROR = 'w-full h-10 px-3 bg-white dark:bg-gray-700 border bo
 /** Focus rings for different accents */
 export const FOCUS_RINGS = {
     emerald: 'ring-emerald-500 focus:ring-emerald-500',
+    amber: 'ring-amber-500 focus:ring-amber-500',
     blue: 'ring-blue-500 focus:ring-blue-500',
     purple: 'ring-purple-500 focus:ring-purple-500',
     teal: 'ring-teal-500 focus:ring-teal-500',

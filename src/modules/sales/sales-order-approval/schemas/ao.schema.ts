@@ -24,6 +24,14 @@ export const AOLineSchema = z.object({
   discount_amount: z.coerce.number().default(0),
   net_amount: z.coerce.number().default(0),
 
+  // Inventory info (Read-only reference)
+  warehouse_id: z.union([z.string(), z.number()]).optional().default(''),
+  warehouse_name: z.string().optional().default(''),
+  location_id: z.union([z.string(), z.number()]).optional().default(''),
+  location_name: z.string().optional().default(''),
+  lot_id: z.union([z.string(), z.number()]).optional().default(''),
+  lot_no: z.string().optional().default(''),
+
   // Approval interaction
   is_approved: z.boolean().default(false),
   approved_qty: z.coerce.number().min(0).default(0),

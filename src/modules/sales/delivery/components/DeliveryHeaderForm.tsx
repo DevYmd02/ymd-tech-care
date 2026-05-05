@@ -26,11 +26,11 @@ const SHIP_METHOD_OPTIONS = [
 
 const labelClass = 'block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5';
 const inputClass =
-    'w-full h-9 px-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500 transition-all placeholder-slate-400 dark:placeholder-slate-600';
+    'w-full h-9 px-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all placeholder-slate-400 dark:placeholder-slate-600';
 const inputReadonlyClass =
     'w-full h-9 px-3 bg-slate-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-slate-600 dark:text-slate-300 cursor-default select-none truncate flex items-center';
 const searchBtnClass =
-    'absolute right-0 top-0 h-9 w-9 flex items-center justify-center text-slate-400 hover:text-teal-500 dark:hover:text-teal-400 transition-colors';
+    'absolute right-0 top-0 h-9 w-9 flex items-center justify-center text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors';
 const errorClass = 'text-xs text-red-500 mt-1';
 
 export function DeliveryHeaderForm({
@@ -52,8 +52,8 @@ export function DeliveryHeaderForm({
         <div className="space-y-6">
             {/* Section Title */}
             <div className="flex items-center gap-3 pb-3 border-b border-gray-100 dark:border-gray-800">
-                <div className="p-2 bg-teal-50 dark:bg-teal-900/20 rounded-lg">
-                    <FileText size={18} className="text-teal-600 dark:text-teal-400" />
+                <div className="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                    <FileText size={18} className="text-amber-600 dark:text-white" />
                 </div>
                 <div>
                     <h3 className="text-sm font-bold text-slate-700 dark:text-slate-100">ข้อมูลรายการจัดส่ง</h3>
@@ -73,12 +73,13 @@ export function DeliveryHeaderForm({
                     <label className={labelClass}>
                         วันที่จัดส่ง <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative flex items-center">
-                        <Calendar size={14} className="absolute left-3 text-slate-400 pointer-events-none" />
+                    <div className="relative flex items-center group">
+                        <Calendar size={14} className="absolute left-3 text-amber-600 dark:text-white pointer-events-none z-10" />
                         <input
                             type="date"
                             {...register('delivery_date')}
-                            className={inputClass + ' pl-9'}
+                            onClick={(e) => e.currentTarget.showPicker()}
+                            className={inputClass + ' pl-9 cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer'}
                         />
                     </div>
                     {errors.delivery_date && <p className={errorClass}>{errors.delivery_date.message}</p>}
@@ -87,12 +88,13 @@ export function DeliveryHeaderForm({
                     <label className={labelClass}>
                         วันที่เอกสาร <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative flex items-center">
-                        <Calendar size={14} className="absolute left-3 text-slate-400 pointer-events-none" />
+                    <div className="relative flex items-center group">
+                        <Calendar size={14} className="absolute left-3 text-amber-600 dark:text-white pointer-events-none z-10" />
                         <input
                             type="date"
                             {...register('docu_date')}
-                            className={inputClass + ' pl-9'}
+                            onClick={(e) => e.currentTarget.showPicker()}
+                            className={inputClass + ' pl-9 cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer'}
                         />
                     </div>
                     {errors.docu_date && <p className={errorClass}>{errors.docu_date.message}</p>}
@@ -107,7 +109,7 @@ export function DeliveryHeaderForm({
                     </label>
                     <div className="relative">
                         <div
-                            className={inputReadonlyClass + ' cursor-pointer hover:border-teal-400 pr-10 transition-all'}
+                            className={inputReadonlyClass + ' cursor-pointer hover:border-amber-400 pr-10 transition-all'}
                             onClick={onSearchSalesOrder}
                         >
                             {watchedSoNo || (
@@ -120,7 +122,7 @@ export function DeliveryHeaderForm({
                             className={searchBtnClass}
                             title="ค้นหาใบสั่งขาย"
                         >
-                            <Search size={15} />
+                            <Search size={15} className="dark:text-white" />
                         </button>
                     </div>
                     {errors.so_id && <p className={errorClass}>{errors.so_id.message}</p>}
@@ -167,7 +169,7 @@ export function DeliveryHeaderForm({
                 <div>
                     <label className={labelClass}>วิธีจัดส่ง</label>
                     <div className="relative flex items-center">
-                        <Truck size={14} className="absolute left-3 text-slate-400 pointer-events-none" />
+                        <Truck size={14} className="absolute left-3 text-amber-600 dark:text-white pointer-events-none" />
                         <select {...register('ship_method')} className={inputClass + ' pl-9'}>
                             {SHIP_METHOD_OPTIONS.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -186,7 +188,7 @@ export function DeliveryHeaderForm({
                 <div>
                     <label className={labelClass}>หมายเลข Tracking</label>
                     <div className="relative flex items-center">
-                        <Hash size={14} className="absolute left-3 text-slate-400 pointer-events-none" />
+                        <Hash size={14} className="absolute left-3 text-amber-600 dark:text-white pointer-events-none" />
                         <input
                             {...register('tracking_no')}
                             placeholder="Tracking number"
@@ -197,27 +199,27 @@ export function DeliveryHeaderForm({
             </div>
 
             {/* Row 5: Ship To Address, Employee */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex flex-col">
                     <label className={labelClass}>ที่อยู่จัดส่ง</label>
-                    <div className="relative flex items-start">
-                        <MapPin size={14} className="absolute left-3 top-2.5 text-slate-400 pointer-events-none" />
+                    <div className="relative flex-grow">
+                        <MapPin size={14} className="absolute left-3 top-3 text-amber-600 dark:text-white pointer-events-none" />
                         <textarea
                             {...register('ship_to_address')}
-                            rows={3}
+                            rows={4}
                             placeholder="ระบุที่อยู่จัดส่ง..."
                             className={
-                                'w-full px-3 py-2 pl-9 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/40 focus:border-teal-500 transition-all placeholder-slate-400 dark:placeholder-slate-600 resize-none'
+                                'w-full px-3 py-2.5 pl-9 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all placeholder-slate-400 dark:placeholder-slate-600 resize-none h-[108px]'
                             }
                         />
                     </div>
                 </div>
-                <div className="space-y-5">
+                <div className="space-y-3">
                     <div>
                         <label className={labelClass}>พนักงานจัดส่ง</label>
                         <div className="relative">
                             <div
-                                className={inputReadonlyClass + ' cursor-pointer hover:border-teal-400 pr-10 transition-all'}
+                                className={inputReadonlyClass + ' cursor-pointer hover:border-amber-400 pr-10 transition-all'}
                                 onClick={onSearchEmployee}
                             >
                                 {watchedEmpName || (
@@ -230,7 +232,7 @@ export function DeliveryHeaderForm({
                                 className={searchBtnClass}
                                 title="ค้นหาพนักงาน"
                             >
-                                <Search size={15} />
+                                <Search size={15} className="dark:text-white" />
                             </button>
                         </div>
                     </div>

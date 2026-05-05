@@ -34,7 +34,7 @@ export interface FilterFieldProps {
     /** Options for select type */
     options?: SelectOption[];
     /** Accent color for focus ring */
-    accentColor?: 'emerald' | 'blue' | 'purple' | 'teal' | 'indigo';
+    accentColor?: 'emerald' | 'amber' | 'blue' | 'purple' | 'teal' | 'indigo';
     /** Disabled state */
     disabled?: boolean;
     /** Custom class name */
@@ -123,11 +123,12 @@ export interface FilterActionsProps {
     onClear: () => void;
     searchLabel?: string;
     clearLabel?: string;
-    accentColor?: 'emerald' | 'blue' | 'purple' | 'teal' | 'indigo';
+    accentColor?: 'emerald' | 'amber' | 'blue' | 'purple' | 'teal' | 'indigo';
 }
 
 const buttonColors = {
     emerald: 'bg-emerald-600 hover:bg-emerald-700',
+    amber: 'bg-amber-600 hover:bg-amber-700',
     blue: 'bg-blue-600 hover:bg-blue-700',
     purple: 'bg-purple-600 hover:bg-purple-700',
     teal: 'bg-teal-600 hover:bg-teal-700',
