@@ -46,6 +46,7 @@ export const implementedRoutes = {
         reservation: '/sales/reservation',
         order: '/sales/order',
         orderApproval: '/sales/order-approval',
+        delivery: '/sales/delivery',
     },
 };
 
@@ -101,6 +102,7 @@ export const ROUTES = {
     RESERVATION: '/sales/reservation',
     ORDER: '/sales/order',
     ORDER_APPROVAL: '/sales/order-approval',
+    DELIVERY: '/sales/delivery',
   }
 } as const;
 
@@ -154,7 +156,6 @@ export const placeholderRoutes: Record<string, PlaceholderRoute[]> = {
         { path: 'audit/reports', title: 'Audit Reports' },
     ],
     sales: [
-        { path: 'sales/delivery', title: 'Delivery / DO' },
         { path: 'sales/invoice', title: 'Sales Invoice' },
         { path: 'sales/return', title: 'Sales Return' },
         { path: 'sales/pricing', title: 'Pricing & Promotion' },
