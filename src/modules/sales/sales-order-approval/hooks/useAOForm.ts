@@ -113,6 +113,12 @@ function normalizeSO(raw: unknown): SOForApproval | null {
     approved_unit_price: Number(l.approved_unit_price || l.unit_price || 0),
     approved_line_discount: Number(l.approved_line_discount || l.line_discount || 0),
     approved_net_amount: Number(l.approved_net_amount || l.line_total || 0),
+    warehouse_id: String(l.warehouse_id || ''),
+    warehouse_name: String(l.warehouse_name || ''),
+    location_id: String(l.location_id || ''),
+    location_name: String(l.location_name || ''),
+    lot_id: String(l.lot_id || ''),
+    lot_no: String(l.lot_no || ''),
   }));
 
   const subTotal = lines.reduce((sum, l) => sum + l.line_total, 0);
@@ -451,6 +457,33 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
               }
             } catch { /* ignore */ }
           }
+          if ((!line.warehouse_name || line.warehouse_name === '-' || line.warehouse_name === '') && line.warehouse_id && line.warehouse_id !== '0') {
+            try {
+              const res = await api.get<Record<string, unknown>>(`/warehouse/${line.warehouse_id}`);
+              const wh = (res?.data || res) as Record<string, unknown>;
+              if (wh) {
+                line.warehouse_name = String(wh.warehouse_name || wh.name || wh.name_th || line.warehouse_name || '-');
+              }
+            } catch { /* ignore */ }
+          }
+          if ((!line.location_name || line.location_name === '-' || line.location_name === '') && line.location_id && line.location_id !== '0') {
+            try {
+              const res = await api.get<Record<string, unknown>>(`/location/${line.location_id}`);
+              const loc = (res?.data || res) as Record<string, unknown>;
+              if (loc) {
+                line.location_name = String(loc.location_name || loc.name_th || loc.name_en || loc.code || line.location_name || '-');
+              }
+            } catch { /* ignore */ }
+          }
+          if ((!line.lot_no || line.lot_no === '-' || line.lot_no === '') && line.lot_id && line.lot_id !== '0') {
+            try {
+              const res = await api.get<Record<string, unknown>>(`/item-lot/${line.lot_id}`);
+              const lot = (res?.data || res) as Record<string, unknown>;
+              if (lot) {
+                line.lot_no = String(lot.lot_no || lot.lot_no_code || lot.batch_no || lot.code || line.lot_no || '-');
+              }
+            } catch { /* ignore */ }
+          }
         }));
       }
 
@@ -513,6 +546,12 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
           is_approved: aoLine ? Number(aoLine.approved_qty || 0) > 0 : (isHistory ? true : isNew),
           approved_qty: approvedQty,
           approved_net_amount: Number(approvedNet.toFixed(2)),
+          warehouse_id: String(soLine.warehouse_id || ''),
+          warehouse_name: String(soLine.warehouse_name || ''),
+          location_id: String(soLine.location_id || ''),
+          location_name: String(soLine.location_name || ''),
+          lot_id: String(soLine.lot_id || ''),
+          lot_no: String(soLine.lot_no || ''),
           remarks: String(aoLine?.remarks || soLine.note || soLine.remarks || ''),
         };
       });

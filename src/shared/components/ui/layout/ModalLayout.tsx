@@ -128,8 +128,11 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                     sizeClasses[size],
                     /* Frame for Window Variant */
                     variant === 'window' ? cn(
-                        "border-4 rounded-none h-full w-full bg-gray-200 dark:bg-gray-900 shadow-inner",
+                        "border-4 rounded-none h-full w-full bg-slate-200 dark:bg-slate-900 shadow-inner",
                         headerColor === 'bg-emerald-700' ? "border-emerald-700" : 
+                        headerColor === 'bg-teal-700' ? "border-teal-700" : 
+                        headerColor === 'bg-orange-600' ? "border-orange-600" : 
+                        headerColor === 'bg-amber-600' ? "border-amber-600" : 
                         headerColor === 'bg-blue-600' ? "border-blue-600" : 
                         headerColor === 'bg-slate-600' ? "border-slate-600" : 
                         headerColor.replace('bg-', 'border-')

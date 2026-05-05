@@ -173,7 +173,7 @@ export default function DeliveryListPage() {
                 cell: (info) => (
                     <span
                         onClick={() => handleEdit(info.row.original.delivery_id, true)}
-                        className="text-teal-600 font-bold cursor-pointer hover:underline transition-all"
+                        className="text-amber-600 font-bold cursor-pointer hover:underline transition-all"
                     >
                         {info.getValue() || '-'}
                     </span>
@@ -238,7 +238,7 @@ export default function DeliveryListPage() {
                             {/* View */}
                             <button
                                 onClick={() => handleEdit(row.delivery_id, true)}
-                                className="text-slate-400 hover:text-teal-500 transition-colors"
+                                className="text-slate-400 dark:text-white/60 hover:text-amber-500 transition-colors"
                                 title="ดูรายละเอียด"
                             >
                                 <Eye size={16} />
@@ -293,7 +293,7 @@ export default function DeliveryListPage() {
                 title="รายการจัดส่งสินค้า - Delivery Order (DO)"
                 subtitle="จัดการข้อมูลการจัดส่งสินค้าให้ลูกค้า"
                 icon={Truck}
-                accentColor="teal"
+                accentColor="amber"
                 totalCount={apiData?.total || 0}
                 isLoading={isLoading}
                 searchForm={
@@ -303,28 +303,28 @@ export default function DeliveryListPage() {
                             value={deliveryNo}
                             onChange={setDeliveryNo}
                             placeholder="DO-xxxx"
-                            accentColor="teal"
+                            accentColor="amber"
                         />
                         <FilterField
                             label="เลขที่ SO"
                             value={soNo}
                             onChange={setSoNo}
                             placeholder="SO-xxxx"
-                            accentColor="teal"
+                            accentColor="amber"
                         />
                         <FilterField
                             label="ลูกค้า"
                             value={customerFilter}
                             onChange={setCustomerFilter}
                             placeholder="ชื่อลูกค้า"
-                            accentColor="teal"
+                            accentColor="amber"
                         />
                         <FilterField
                             label="วันที่ตั้งแต่"
                             type="date"
                             value={startDate}
                             onChange={setStartDate}
-                            accentColor="teal"
+                            accentColor="amber"
                         />
                         <FilterField
                             label="สถานะ"
@@ -332,7 +332,7 @@ export default function DeliveryListPage() {
                             value={statusFilter}
                             onChange={setStatusFilter}
                             options={STATUS_OPTIONS}
-                            accentColor="teal"
+                            accentColor="amber"
                         />
 
                         <div className="md:col-span-5 flex flex-col md:flex-row md:justify-end gap-3 mt-2">
@@ -346,7 +346,7 @@ export default function DeliveryListPage() {
                                 </button>
                                 <button
                                     onClick={() => { setPage(1); refetch(); }}
-                                    className="h-10 bg-teal-600 hover:bg-teal-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center px-6 gap-2"
+                                    className="h-10 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center px-6 gap-2"
                                 >
                                     <Search size={18} strokeWidth={3} />
                                     ค้นหา
