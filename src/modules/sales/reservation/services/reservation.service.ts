@@ -436,12 +436,22 @@ export const ReservationService = {
 
     /**
      * ยืนยัน Reservation (เปลี่ยนสถานะเป็น CONFIRMED)
+     * 🧪 แก้ไข: ส่งข้อมูลเต็มรูปแบบเพื่อป้องกัน 400 Bad Request จาก Backend
      */
     confirm: async (id: string) => {
-        logger.debug('Confirming reservation:', id);
+        logger.debug('Confirming reservation (Full Sync):', id);
         try {
-            const response = await api.patch(`/sale-reservation/${id}`, { status: 'CONFIRMED' });
-            return { success: true, data: response };
+            // 1. ดึงข้อมูลเต็มรูปแบบมาก่อน
+            const currentData = await ReservationService.getById(id);
+            if (!currentData) {
+                throw new Error('ไม่พบข้อมูลใบสั่งจองสำหรับการยืนยัน');
+            }
+
+            // 2. รวมข้อมูลเดิมเข้ากับสถานะใหม่แล้วสั่งอัปเดตผ่าน Service เดิมที่จัดการ Sanitization ไว้แล้ว
+            return await ReservationService.update(id, {
+                ...currentData,
+                status: 'CONFIRMED'
+            });
         } catch (error) {
             logger.error('Failed to confirm reservation:', error);
             throw error;

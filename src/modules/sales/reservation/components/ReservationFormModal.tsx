@@ -101,6 +101,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [pendingData, setPendingData] = useState<ReservationFormData | null>(null);
+    const [searchType, setSearchType] = useState<'SQ' | 'AQ'>('AQ');
 
 
     const { setValue } = methods;
@@ -221,8 +222,8 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                      employees={employees}
                                      onSearchCustomer={() => setIsCustomerSearchOpen(true)}
                                      onSearchLead={() => setIsLeadSearchOpen(true)}
-                                     onSearchSQ={() => setIsAQSearchOpen(true)}
-                                     onSearchAQ={() => setIsAQSearchOpen(true)}
+                                     onSearchSQ={() => { setSearchType('SQ'); setIsAQSearchOpen(true); }}
+                                     onSearchAQ={() => { setSearchType('AQ'); setIsAQSearchOpen(true); }}
                                      onFetchQuotation={handleFetchQuotation}
                                      readOnly={readOnly}
                                  />
@@ -331,6 +332,8 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 isOpen={isAQSearchOpen}
                 onClose={() => setIsAQSearchOpen(false)}
                 onSelect={handleSelectAQ}
+                title={searchType === 'SQ' ? 'ค้นหาอ้างอิงใบเสนอราคา (SQ)' : 'ค้นหาใบเสนอราคาอนุมัติ (AQ) - Find Approved Quotation'}
+                type={searchType}
             />
 
             <WarehouseSearchModal 

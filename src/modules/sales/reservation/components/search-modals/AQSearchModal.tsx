@@ -17,13 +17,15 @@ export interface AQSearchModalProps {
     onClose: () => void;
     onSelect: (aq: AvailableApproval) => void;
     title?: string;
+    type?: 'SQ' | 'AQ';
 }
 
 export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
     isOpen,
     onClose,
     onSelect,
-    title = 'ค้นหาใบเสนอราคาอนุมัติ (AQ) - Find Approved Quotation (AQ)'
+    title = 'ค้นหาใบเสนอราคาอนุมัติ (AQ) - Find Approved Quotation (AQ)',
+    type = 'AQ'
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearch = useDebounce(searchTerm, 400);
@@ -129,10 +131,21 @@ export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
                         <table className="w-full text-left border-separate border-spacing-0">
                             <thead className="sticky top-0 z-10 bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md">
                                 <tr>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">อ้างอิงใบอนุมัติ (AQ)</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">วันที่ AQ</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขที่ใบเสนอราคา (SQ)</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">วันที่ SQ</th>
+                                    {type === 'SQ' ? (
+                                        <>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขที่ใบเสนอราคา (SQ)</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">วันที่ SQ</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">อ้างอิงใบอนุมัติ (AQ)</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">วันที่ AQ</th>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">อ้างอิงใบอนุมัติ (AQ)</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">วันที่ AQ</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขที่ใบเสนอราคา (SQ)</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">วันที่ SQ</th>
+                                        </>
+                                    )}
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">จัดการ</th>
                                 </tr>
                             </thead>
@@ -144,20 +157,41 @@ export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
                                             className="hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors group cursor-pointer"
                                             onClick={() => handleSelect(aq)}
                                         >
-                                            <td className="px-6 py-4">
-                                                <span className="font-bold text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform inline-block">
-                                                    {aq.aq_no || <span className="text-gray-400 dark:text-gray-600 font-normal italic text-sm">-</span>}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                                {formatThaiDate(aq.aq_date)}
-                                            </td>
-                                            <td className="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200">
-                                                {getSqNo(aq) || <span className="text-gray-400 dark:text-gray-600 font-normal italic text-sm">-</span>}
-                                            </td>
-                                            <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                                {formatThaiDate(getSqDate(aq))}
-                                            </td>
+                                            {type === 'SQ' ? (
+                                                <>
+                                                    <td className="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200">
+                                                        {getSqNo(aq) || <span className="text-gray-400 dark:text-gray-600 font-normal italic text-sm">-</span>}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                        {formatThaiDate(getSqDate(aq))}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="font-bold text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform inline-block">
+                                                            {aq.aq_no || <span className="text-gray-400 dark:text-gray-600 font-normal italic text-sm">-</span>}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                                        {formatThaiDate(aq.aq_date)}
+                                                    </td>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <td className="px-6 py-4">
+                                                        <span className="font-bold text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform inline-block">
+                                                            {aq.aq_no || <span className="text-gray-400 dark:text-gray-600 font-normal italic text-sm">-</span>}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
+                                                        {formatThaiDate(aq.aq_date)}
+                                                    </td>
+                                                    <td className="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200">
+                                                        {getSqNo(aq) || <span className="text-gray-400 dark:text-gray-600 font-normal italic text-sm">-</span>}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                        {formatThaiDate(getSqDate(aq))}
+                                                    </td>
+                                                </>
+                                            )}
 
                                             <td className="px-6 py-4 text-center">
                                                 <button 

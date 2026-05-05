@@ -206,34 +206,35 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     const watchedDiscountInput = useWatch({ control, name: 'discount_input' });
     const discountInput = watchedDiscountInput || '';
     const taxCodeId = useWatch({ control, name: 'tax_code_id' });
+    const { isDirty } = methods.formState;
 
     useEffect(() => {
         const calculatedSubTotal = lines.reduce((sum: number, line: ReservationLineValues) => sum + (line.line_total || 0), 0);
-        if (getValues('sub_total') !== calculatedSubTotal) {
-            setValue('sub_total', calculatedSubTotal);
-        }
-
         const calculatedDiscount = calculateDiscountAmount(calculatedSubTotal, discountInput);
-        if (getValues('discount_amount') !== calculatedDiscount) {
-            setValue('discount_amount', calculatedDiscount);
-        }
-
         const amountAfterDiscount = calculatedSubTotal - calculatedDiscount;
+        
         const safeTaxCodes = Array.isArray(taxCodes) ? taxCodes : [];
         const selectedTaxCode = safeTaxCodes.find(t => String(t.tax_code_id) === String(taxCodeId));
         const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
         
-        // VAT should be calculated AFTER discount
         const vatAmountValue = calculateVatAmount(amountAfterDiscount, taxRate);
-        if (getValues('vat_amount') !== vatAmountValue) {
-            setValue('vat_amount', vatAmountValue);
-        }
-
         const totalAmountValue = calculateNetTotal(calculatedSubTotal, calculatedDiscount, vatAmountValue);
-        if (getValues('total_amount') !== totalAmountValue) {
-            setValue('total_amount', totalAmountValue);
+
+        // 🛡️ Prevent overwriting backend's total_amount with frontend's recalculated rounding difference on initial load
+        const currentTotal = getValues('total_amount') || 0;
+        const currentSubTotal = getValues('sub_total') || 0;
+        const currentVat = getValues('vat_amount') || 0;
+
+        // If form is NOT dirty and the difference is less than 1 Baht (rounding discrepancy), DO NOT overwrite.
+        const isRoundingDiff = !isDirty && currentTotal > 0 && Math.abs(currentTotal - totalAmountValue) < 1;
+
+        if (!isRoundingDiff) {
+            if (currentSubTotal !== calculatedSubTotal) setValue('sub_total', calculatedSubTotal);
+            if (getValues('discount_amount') !== calculatedDiscount) setValue('discount_amount', calculatedDiscount);
+            if (currentVat !== vatAmountValue) setValue('vat_amount', vatAmountValue);
+            if (currentTotal !== totalAmountValue) setValue('total_amount', totalAmountValue);
         }
-    }, [lines, discountInput, taxCodeId, taxCodes, setValue, getValues]);
+    }, [lines, discountInput, taxCodeId, taxCodes, setValue, getValues, isDirty]);
     
     // --------------------------------------------------------
     // Tax Propagation Logic
