@@ -26,6 +26,8 @@ interface QuotationFormModalProps {
 
 const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden';
 
+import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
+
 export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess, readOnly = false }: QuotationFormModalProps) {
     const { toast } = useToast();
     // 🏗️ Use custom hook for all business logic
@@ -72,7 +74,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         priceLevelNames,
     } = useQuotationForm(isOpen, id, initialData);
 
-    const { setValue } = methods;
+    const { setValue, watch } = methods;
 
     // 💾 Form Submission Handler
     const onFormSubmit = (data: QuotationFormValues) => {
@@ -163,7 +165,6 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
             title={readOnly ? 'รายละเอียดใบเสนอราคา (VIEW Sales Quotation)' : (isEdit ? 'แก้ไขใบเสนอราคา (EDIT Sales Quotation)' : 'สร้างใบเสนอราคาใหม่ (CREATE Sales Quotation)')}
             headerColor={readOnly ? 'bg-slate-600' : 'bg-blue-600'}
             footer={ModalFooter}
-            isLoading={isLoadingDetail && !formData.sq_no}
             titleIcon={
                 <div className="bg-white/20 p-1.5 rounded shadow-sm">
                     <FileText size={16} strokeWidth={3} className="text-white" />
@@ -171,13 +172,16 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
             }
         >
             <FormProvider {...methods}>
-                <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
-                    <form id="quotation-form" onSubmit={handleSubmit(onFormSubmit)} className="max-w-[1400px] mx-auto space-y-6">
-                        
-                        {/* 1. Header Section */}
-                        <div className={cardClass}>
-                            <div className="p-6">
-                                <QuotationHeaderForm 
+                {isLoadingDetail && !watch('sq_no') ? (
+                    <SalesFormSkeleton />
+                ) : (
+                    <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
+                        <form id="quotation-form" onSubmit={handleSubmit(onFormSubmit)} className="max-w-[1400px] mx-auto space-y-6">
+                            
+                            {/* 1. Header Section */}
+                            <div className={cardClass}>
+                                <div className="p-6">
+                                    <QuotationHeaderForm 
                                     branches={branches}
                                     currencies={currencies}
                                     customers={customers}
@@ -234,6 +238,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                         </div>
                     </form>
                 </div>
+                )}
             </FormProvider>
 
             {/* Local Search Modals */}
