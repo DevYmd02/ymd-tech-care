@@ -1,6 +1,5 @@
 import api from '@core/api/api';
 import type { ApproveSalesOrderPayload, AOListItem } from '../types/sales-order-approval.types';
-import { SalesOrderService } from '@sales/sales-order/services/sales-order.service';
 import { extractArrayFromResponse } from '@utils/clientFilterUtils';
 
 // API Endpoint constants
@@ -16,7 +15,7 @@ const ENDPOINTS = {
  * Helper สำหรับหา SO Header ในรูปแบบต่างๆ ที่ API อาจจะส่งมา
  */
 const getSoHeader = (obj: Record<string, unknown>) => {
-  return (obj.so_header || obj.so || obj.sale_order || obj.sale_order_header) as Record<string, unknown> | undefined;
+  return (obj.so_header || obj.so || obj.sale_order || obj.sale_order_header || obj.saleOrder || obj.soHeader) as Record<string, unknown> | undefined;
 };
 
 /**
@@ -26,45 +25,42 @@ const mapToAOListItem = (
   obj: Record<string, unknown>, 
   isHistory: boolean, 
   index: number,
-  customerMap?: Map<string | number, string>
+  customerMap?: Map<string | number, string>,
+  soNoMap?: Map<string | number, string>
 ): AOListItem => {
   const soObj = getSoHeader(obj);
-  const soId = String(obj.so_id || obj.id || obj.sale_order_id || 0);
+  const rawSoId = obj.so_id || obj.id || obj.sale_order_id;
+  const soId = typeof rawSoId === 'object' ? String((rawSoId as Record<string, unknown>)?.id || 0) : String(rawSoId || 0);
   
-  const soNo = String(
-    obj.so_no || 
-    obj.sale_order_no || 
-    obj.ref_no || 
-    obj.ref_so_no ||
+  // ดึงเลขที่ SO (ลำดับความสำคัญ: จาก Map Join > จากตัวแปรตรงๆ > จากอ็อบเจกต์ซ้อน > Fallback)
+  const soNo = soNoMap?.get(soId) || String(
+    obj['so_no'] || 
+    obj['soNo'] || 
     soObj?.so_no || 
-    soObj?.code || 
-    soObj?.no || 
-    ''
+    (soId && soId !== '0' ? `SO-${soId}` : '')
   );
 
-  const soDate = String(obj.so_date || obj.sale_order_date || soObj?.so_date || soObj?.date || obj.ao_date || obj.created_at || '').split('T')[0];
-  const cid = String(obj.customer_id || soObj?.customer_id || soObj?.id_customer || '');
-  const rawCustomerName = String(obj.customer_name || obj.customer_name_th || obj.customer_name_en || soObj?.customer_name || soObj?.customer_name_th || obj.cust_name || '');
+  const aoNo = String(obj['so_approval_no'] || obj['soApprovalNo'] || obj['ao_no'] || '');
+
+  const soDate = String(obj.so_date || obj.sale_order_date || obj.ao_date || obj.created_at || '').split('T')[0];
+  const cid = String(obj.customer_id || '');
+  const rawCustomerName = String(obj.customer_name || obj.customer_name_th || obj.customer_name_en || '');
   
-  // ใช้ Customer Name จาก Map ถ้ามี ถ้าไม่มีใช้จาก Raw API
   const customerName = (customerMap?.get(cid)) || (rawCustomerName.includes('Customer ID:') ? '' : rawCustomerName);
-  const customerCode = String(obj.customer_code || soObj?.customer_code || soObj?.code || obj.cust_code || '');
+  const customerCode = String(obj.customer_code || '');
   
-  const rawQuoteAmount = Number(obj.quote_total_amount || obj.base_total_amount || obj.total_amount || 0);
-  const soTotalAmount = Number(soObj?.quote_total_amount || soObj?.base_total_amount || soObj?.total_amount || 0);
-  
-  const displayQuoteAmount = (soTotalAmount > 0) ? soTotalAmount : rawQuoteAmount;
+  const displayQuoteAmount = Number(obj.quote_total_amount || obj.base_total_amount || obj.total_amount || 0);
   const status = String(obj.status || (isHistory ? 'APPROVED' : 'PENDING')).toUpperCase();
 
   const isRejected = status === 'REJECTED';
   const finalQuoteAmount = isRejected ? 0 : displayQuoteAmount;
-  const finalBaseAmount = isRejected ? 0 : Number(obj.base_total_amount || soObj?.base_total_amount || (finalQuoteAmount * Number(obj.exchange_rate || 1)));
+  const finalBaseAmount = isRejected ? 0 : Number(obj.base_total_amount || (finalQuoteAmount * Number(obj.exchange_rate || 1)));
 
   return {
-    row_key: `${isHistory ? 'ao' : 'pending'}-${obj.ao_id || obj.id || soId || index}`,
-    ao_id: Number(obj.ao_id || obj.id || 0),
-    ao_no: String(obj.ao_no || ''),
-    ao_date: String(obj.ao_date || '').split('T')[0],
+    row_key: `${isHistory ? 'ao' : 'pending'}-${obj.ao_id || obj.so_approval_id || obj.id || soId || index}`,
+    ao_id: Number(obj.ao_id || obj.so_approval_id || obj.id || 0),
+    ao_no: aoNo,
+    ao_date: String(obj.ao_date || obj.so_approval_date || '').split('T')[0],
     so_id: soId,
     so_no: soNo,
     so_date: soDate,
@@ -80,53 +76,36 @@ const mapToAOListItem = (
 };
 
 export const AOService = {
-  /**
-   * ดึงรายการที่รออนุมัติ และ Map ให้อยู่ในรูปแบบ AOListItem
-   */
-  getPendingSOs: async (customerMap?: Map<string | number, string>): Promise<AOListItem[]> => {
+  getPendingSOs: async (customerMap?: Map<string | number, string>, soNoMap?: Map<string | number, string>): Promise<AOListItem[]> => {
     const res = await api.get<unknown>(ENDPOINTS.pendingSOs, {
       params: { limit: 1000, page: 1 },
     });
     const items = extractArrayFromResponse<Record<string, unknown>>(res as object);
-    return items.map((item, i) => mapToAOListItem(item, false, i, customerMap));
+    return items.map((item, i) => mapToAOListItem(item, false, i, customerMap, soNoMap));
   },
 
-  /**
-   * ดึงประวัติการอนุมัติ และ Map ให้อยู่ในรูปแบบ AOListItem
-   */
-  getApprovalList: async (params?: Record<string, unknown>, customerMap?: Map<string | number, string>): Promise<AOListItem[]> => {
+  getApprovalList: async (params?: Record<string, unknown>, customerMap?: Map<string | number, string>, soNoMap?: Map<string | number, string>): Promise<AOListItem[]> => {
     const res = await api.get<unknown>(ENDPOINTS.approvalList, { 
       params: { limit: 1000, page: 1, ...params } 
     });
     const items = extractArrayFromResponse<Record<string, unknown>>(res as object);
-    return items.map((item, i) => mapToAOListItem(item, true, i, customerMap));
+    return items.map((item, i) => mapToAOListItem(item, true, i, customerMap, soNoMap));
   },
 
-  /**
-   * ดึงรายละเอียด SO รายตัว
-   */
-  getSOById: async (soId: string | number): Promise<unknown> => {
-    return await SalesOrderService.getById(String(soId));
+  getSOById: async (id: string | number) => {
+    const res = await api.get<unknown>(ENDPOINTS.soDetail(id));
+    return res as Record<string, unknown>;
   },
 
-  /**
-   * ดึง AO รายตัว
-   */
-  getApprovalById: async (aoId: number): Promise<unknown> => {
-    return await api.get<unknown>(ENDPOINTS.approvalDetail(aoId));
+  createApproval: async (payload: ApproveSalesOrderPayload) => {
+    return await api.post(ENDPOINTS.approvalList, payload);
   },
 
-  /**
-   * สร้าง AO ใหม่ (อนุมัติ / ปฏิเสธ)
-   */
-  createApproval: async (payload: ApproveSalesOrderPayload): Promise<unknown> => {
-    return await api.post<unknown>(ENDPOINTS.approvalList, payload);
+  getApprovalById: async (id: number) => {
+    return await api.get(ENDPOINTS.approvalDetail(id));
   },
 
-  /**
-   * อัปเดตสถานะ SO
-   */
-  updateSOStatus: async (soId: string | number, status: string): Promise<unknown> => {
-    return await api.patch<unknown>(ENDPOINTS.updateSO(soId), { status, so_status: status });
-  },
+  updateSOStatus: async (id: string | number, status: string) => {
+    return await api.patch(ENDPOINTS.updateSO(id), { status });
+  }
 };

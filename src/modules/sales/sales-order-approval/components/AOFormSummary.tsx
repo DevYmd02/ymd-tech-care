@@ -2,12 +2,21 @@ import { Calculator } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import type { AOFormData } from '../schemas/ao.schema';
 import { formatNumber } from '@/shared/utils/numberUtils';
+import { calculateDiscountAmount, calculateVatAmount, calculateNetTotal } from '@sales/shared/utils/sales-calculations';
 
 export function AOFormSummary() {
   const { watch } = useFormContext<AOFormData>();
   const lines = watch('lines') || [];
 
   const approvedSubTotal = lines.filter(l => l.is_approved).reduce((sum, l) => sum + (Number(l.approved_net_amount) || 0), 0);
+
+  const discountExpression = watch('discount_expression') || '0';
+  const taxRate = Number(watch('tax_rate')) || 0;
+
+  const approvedDiscount = calculateDiscountAmount(approvedSubTotal, discountExpression);
+  const approvedTaxable = approvedSubTotal - approvedDiscount;
+  const approvedVat = calculateVatAmount(approvedTaxable, taxRate);
+  const approvedNetTotal = calculateNetTotal(approvedSubTotal, approvedDiscount, approvedVat);
 
   const baseSubTotal = (watch('sub_total') as number) || 0;
   const baseDiscount = (watch('quote_discount_amount') as number) || (watch('base_discount_amount') as number) || 0;
@@ -66,10 +75,24 @@ export function AOFormSummary() {
           <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">ยอดพิจารณาอนุมัติ (TOTAL APPROVED)</p>
           
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500 dark:text-gray-400 font-medium">รวมมูลค่าสินค้าที่อนุมัติ:</span>
-              <span className="font-bold text-gray-800 dark:text-gray-200">{formatNumber(approvedSubTotal)}</span>
+            <div className="flex justify-between items-center text-gray-500 dark:text-gray-400">
+              <span className="font-medium">รวมมูลค่าสินค้าที่อนุมัติ:</span>
+              <span className="font-bold">{formatNumber(approvedSubTotal)}</span>
             </div>
+            
+            {approvedDiscount > 0 && (
+              <div className="flex justify-between items-center text-red-500 dark:text-red-400">
+                <span className="font-medium">ส่วนลดท้ายบิลที่อนุมัติ:</span>
+                <span className="font-bold">- {formatNumber(approvedDiscount)}</span>
+              </div>
+            )}
+            
+            {(watch('tax_rate') as number) > 0 && (
+              <div className="flex justify-between items-center text-gray-500 dark:text-gray-400">
+                <span className="font-medium">ภาษีมูลค่าเพิ่ม (VAT):</span>
+                <span className="font-bold">{formatNumber(approvedVat)}</span>
+              </div>
+            )}
           </div>
 
           <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
@@ -77,7 +100,7 @@ export function AOFormSummary() {
               <div className="flex items-baseline gap-2">
                 <span className="text-xs font-black text-gray-400 uppercase">APPROVED TOTAL</span>
                 <span className="text-3xl font-black text-slate-800 dark:text-emerald-400 tracking-tighter">
-                  {formatNumber(approvedSubTotal)}
+                  {formatNumber(approvedNetTotal)}
                 </span>
               </div>
               

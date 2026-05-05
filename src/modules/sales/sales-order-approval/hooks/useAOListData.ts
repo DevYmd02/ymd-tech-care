@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AOService } from '../services/ao.service';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { SalesOrderService } from '@sales/sales-order/services/sales-order.service';
 import { extractArrayFromResponse } from '@utils/clientFilterUtils';
 import type { AOListItem } from '../types/sales-order-approval.types';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
@@ -18,7 +19,7 @@ export interface UseAOListDataParams {
 export const useAOListData = (params: UseAOListDataParams) => {
   const { statusFilter = 'PENDING', soNo, aoNo, customerFilter, startDate, endDate } = params;
 
-  // 1. Customer lookup (Needed for mapping in service)
+  // 1. Customer lookup
   const { data: customerResponse } = useQuery({
     queryKey: ['master-customers-lookup'],
     queryFn: () => CustomerService.getList({ limit: 1000 }),
@@ -34,17 +35,33 @@ export const useAOListData = (params: UseAOListDataParams) => {
     return map;
   }, [customerResponse]);
 
-  // 2. Fetch Pending SOs (Service now returns mapped AOListItem[])
+  // 1.5. SO Number lookup (จำเป็นสำหรับหน้าประวัติที่ API ส่งมาไม่ครบ)
+  const { data: soResponse } = useQuery({
+    queryKey: ['so-numbers-lookup'],
+    queryFn: () => SalesOrderService.getList({ limit: 1000 }),
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const soNoMap = useMemo(() => {
+    const map = new Map<string | number, string>();
+    const items = (soResponse as unknown as { data?: Record<string, unknown>[] })?.data || [];
+    items.forEach((s) => {
+      map.set(String(s.so_id), String(s.so_no || ''));
+    });
+    return map;
+  }, [soResponse]);
+
+  // 2. Fetch Pending SOs
   const { data: pendingData, isLoading: isLoadingPending, refetch: refetchPending } = useQuery({
-    queryKey: ['so-approvals-pending-list', customerMap.size > 0],
-    queryFn: () => AOService.getPendingSOs(customerMap),
+    queryKey: ['so-approvals-pending-list', customerMap.size > 0, soNoMap.size > 0],
+    queryFn: () => AOService.getPendingSOs(customerMap, soNoMap),
     staleTime: 3 * 60 * 1000,
   });
 
-  // 3. Fetch History (Service now returns mapped AOListItem[])
+  // 3. Fetch History
   const { data: historyData, isLoading: isLoadingHistory, refetch: refetchHistory } = useQuery({
-    queryKey: ['so-approvals-history-list', customerMap.size > 0],
-    queryFn: () => AOService.getApprovalList({ limit: 1000, page: 1 }, customerMap),
+    queryKey: ['so-approvals-history-list', customerMap.size > 0, soNoMap.size > 0],
+    queryFn: () => AOService.getApprovalList({ limit: 1000, page: 1 }, customerMap, soNoMap),
     staleTime: 3 * 60 * 1000,
   });
 

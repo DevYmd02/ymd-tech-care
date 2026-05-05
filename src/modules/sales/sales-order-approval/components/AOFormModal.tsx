@@ -31,6 +31,34 @@ const formatDisplayDate = (val?: string) => {
   return y && m && d ? `${d}/${m}/${y}` : cleaned;
 };
 
+const FormSkeleton = () => (
+  <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
+    <div className="max-w-[1400px] mx-auto space-y-6 animate-pulse">
+      {/* Header Skeleton */}
+      <div className="bg-white dark:bg-gray-900 rounded-lg p-6 space-y-4">
+        <div className="h-6 w-1/4 bg-gray-200 dark:bg-gray-800 rounded mb-6" />
+        <div className="grid grid-cols-4 gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+            <div key={i} className="space-y-2">
+              <div className="h-3 w-2/3 bg-gray-200 dark:bg-gray-800 rounded" />
+              <div className="h-9 w-full bg-gray-100 dark:bg-gray-800 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Lines Skeleton */}
+      <div className="bg-white dark:bg-gray-900 rounded-lg p-6 space-y-4">
+        <div className="h-6 w-1/4 bg-gray-200 dark:bg-gray-800 rounded mb-4" />
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} className="h-10 w-full bg-gray-100 dark:bg-gray-800 rounded" />
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export const AOFormModal: React.FC<Props> = ({
   isOpen, onClose, soId, approvalItem, onSuccess,
 }) => {
@@ -41,7 +69,7 @@ export const AOFormModal: React.FC<Props> = ({
     isConfirmModalOpen, setIsConfirmModalOpen,
     handleReject, handleConfirmReject,
     isConfirmRejectOpen, setIsConfirmRejectOpen,
-    activeId, loadSOData,
+    activeId, loadSOData, currencies,
   } = useAOForm({ soId, isOpen, onClose, onSuccess, approvalItem });
 
   const { register, watch, formState: { errors } } = formMethods;
@@ -80,7 +108,7 @@ export const AOFormModal: React.FC<Props> = ({
         footer={
           <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
             <div className="flex items-center gap-2">
-              {activeId && (
+              {!!activeId && (
                 <button
                   type="button"
                   onClick={() => setIsHistoryOpen(true)}
@@ -89,7 +117,7 @@ export const AOFormModal: React.FC<Props> = ({
                   <Clock size={16} /> ประวัติการอนุมัติ
                 </button>
               )}
-              {aoId && (isAlreadyProcessed) && (
+              {!!aoId && (isAlreadyProcessed) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -113,7 +141,7 @@ export const AOFormModal: React.FC<Props> = ({
                 ปิด
               </button>
 
-              {activeId && !isAlreadyProcessed && (
+              {!!activeId && !isAlreadyProcessed && (
                 <>
                   <button
                     type="button"
@@ -139,104 +167,109 @@ export const AOFormModal: React.FC<Props> = ({
         }
       >
         <FormProvider {...formMethods}>
-          <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
-            <div className="max-w-[1400px] mx-auto space-y-6">
+          {isSubmitting && !watch('so_no') ? (
+            <FormSkeleton />
+          ) : (
+            <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
+              <div className="max-w-[1400px] mx-auto space-y-6">
 
-              <div className={cardClass}>
-                <div className="p-6">
-                  <AOHeader
-                    readOnly={isAlreadyProcessed}
-                    onSearchSO={!isAlreadyProcessed ? () => setIsSOSearchOpen(true) : undefined}
-                  />
-                </div>
-              </div>
-
-              <div className={`${cardClass} p-6`}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    เลขที่อนุมัติ (AO_NO)
-                  </label>
-                  <input
-                    {...register('ao_no')}
-                    readOnly
-                    placeholder="ระบบจะออกให้อัตโนมัติ"
-                    className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic cursor-not-allowed font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    วันที่อนุมัติ (AO_DATE)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      readOnly
-                      value={aoNo ? formatDisplayDate(watch('ao_date')) : formatDisplayDate(new Date().toISOString())}
-                      className="w-full h-9 pl-3 pr-8 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white cursor-not-allowed"
+                <div className={cardClass}>
+                  <div className="p-6">
+                    <AOHeader
+                      currencies={currencies}
+                      readOnly={isAlreadyProcessed}
+                      onSearchSO={!isAlreadyProcessed ? () => setIsSOSearchOpen(true) : undefined}
                     />
-                    <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    ผู้อนุมัติ (APPROVAL_EMP)
-                  </label>
-                  <div className="relative">
+                <div className={`${cardClass} p-6`}>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      เลขที่อนุมัติ (AO_NO)
+                    </label>
                     <input
-                      type="text"
+                      {...register('ao_no')}
                       readOnly
-                      value={watch('approval_emp_name') || ''}
-                      className="w-full h-9 pl-9 pr-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white cursor-not-allowed font-semibold"
+                      placeholder="ระบบจะออกให้อัตโนมัติ"
+                      className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic cursor-not-allowed font-bold"
                     />
-                    <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      วันที่อนุมัติ (AO_DATE)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        readOnly
+                        value={aoNo ? formatDisplayDate(watch('ao_date')) : formatDisplayDate(new Date().toISOString())}
+                        className="w-full h-9 pl-3 pr-8 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white cursor-not-allowed"
+                      />
+                      <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      ผู้อนุมัติ (APPROVAL_EMP)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        readOnly
+                        value={watch('approval_emp_name') || ''}
+                        className="w-full h-9 pl-9 pr-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white cursor-not-allowed font-semibold"
+                      />
+                      <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      เหตุผล <span className="text-xs text-gray-400">(กรณีไม่อนุมัติ)</span>
+                      {!isAlreadyProcessed && <span className="text-red-400 ml-1">*จำเป็นถ้าไม่อนุมัติ</span>}
+                    </label>
+                    <input
+                      {...register('reject_reason')}
+                      type="text"
+                      placeholder="ระบุเหตุผล..."
+                      readOnly={isAlreadyProcessed}
+                      className={`w-full h-9 px-3 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white ${
+                        errors?.reject_reason
+                          ? 'border-red-500 ring-1 ring-red-500'
+                          : 'border-gray-300 dark:border-gray-600'
+                      } ${isAlreadyProcessed ? 'bg-gray-50 italic cursor-not-allowed' : ''}`}
+                    />
+                    {errors?.reject_reason && (
+                      <p className="text-red-500 text-[10px] mt-1">{errors.reject_reason.message}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+                <div className={cardClass}>
+                  <div className="p-6">
+                    <AOFormLines
+                      lines={lines as unknown as AOLineFormData[]}
+                      updateLine={updateLine}
+                      readOnly={isAlreadyProcessed}
+                    />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    เหตุผล <span className="text-xs text-gray-400">(กรณีไม่อนุมัติ)</span>
-                    {!isAlreadyProcessed && <span className="text-red-400 ml-1">*จำเป็นถ้าไม่อนุมัติ</span>}
-                  </label>
-                  <input
-                    {...register('reject_reason')}
-                    type="text"
-                    placeholder="ระบุเหตุผล..."
-                    readOnly={isAlreadyProcessed}
-                    className={`w-full h-9 px-3 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white ${
-                      errors?.reject_reason
-                        ? 'border-red-500 ring-1 ring-red-500'
-                        : 'border-gray-300 dark:border-gray-600'
-                    } ${isAlreadyProcessed ? 'bg-gray-50 italic cursor-not-allowed' : ''}`}
-                  />
-                  {errors?.reject_reason && (
-                    <p className="text-red-500 text-[10px] mt-1">{errors.reject_reason.message}</p>
-                  )}
+                <div className={cardClass}>
+                  <div className="p-6">
+                    <AOFormSummary />
+                  </div>
                 </div>
+
               </div>
             </div>
-
-              <div className={cardClass}>
-                <div className="p-6">
-                  <AOFormLines
-                    lines={lines as unknown as AOLineFormData[]}
-                    updateLine={updateLine}
-                    readOnly={isAlreadyProcessed}
-                  />
-                </div>
-              </div>
-
-              <div className={cardClass}>
-                <div className="p-6">
-                  <AOFormSummary />
-                </div>
-              </div>
-
-            </div>
-          </div>
+          )}
         </FormProvider>
       </WindowFormLayout>
 

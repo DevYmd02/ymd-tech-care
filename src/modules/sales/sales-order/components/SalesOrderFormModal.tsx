@@ -186,7 +186,17 @@ export function SalesOrderFormModal({
             logger.debug('Submitting Sales Order:', data);
             
             if (isEdit && id) {
-                await SalesOrderService.update(id, data as unknown as SalesOrderFormData);
+                const submitData = { ...data };
+                const isResubmitting = submitData.status === 'REJECTED';
+                
+                // 1. Save modified data
+                await SalesOrderService.update(id, submitData as unknown as SalesOrderFormData);
+                
+                // 2. Explicitly trigger status update for re-approval
+                if (isResubmitting) {
+                    logger.debug('Re-submitting Sales Order to PENDING status...');
+                    await SalesOrderService.updateStatus(id, 'PENDING');
+                }
             } else {
                 await SalesOrderService.create(data as unknown as SalesOrderFormData);
             }
@@ -203,18 +213,24 @@ export function SalesOrderFormModal({
     };
 
     const handleSaveClick = async () => {
+        const isResubmit = isEdit && formData.status === 'REJECTED';
         const isConfirmed = await confirm({
-            title: isEdit ? 'ยืนยันการแก้ไข' : 'ยืนยันการสร้างใบสั่งขาย',
-            description: isEdit 
-                ? 'คุณแน่ใจหรือไม่ว่าต้องการบันทึกการแก้ไขใบสั่งขายนี้?' 
-                : 'คุณต้องการสร้างใบสั่งขายใหม่จากรายการนี้ใช่หรือไม่?',
+            title: isResubmit ? 'ยืนยันการแก้ไขและส่งอนุมัติใหม่' : (isEdit ? 'ยืนยันการแก้ไข' : 'ยืนยันการสร้างใบสั่งขาย'),
+            description: isResubmit
+                ? 'คุณแน่ใจหรือไม่ว่าต้องการบันทึกการแก้ไขและส่งอนุมัติใบสั่งขายนี้ใหม่อีกครั้ง?'
+                : (isEdit 
+                    ? 'คุณแน่ใจหรือไม่ว่าต้องการบันทึกการแก้ไขใบสั่งขายนี้?' 
+                    : 'คุณต้องการสร้างใบสั่งขายใหม่จากรายการนี้ใช่หรือไม่?'),
             variant: 'warning',
             confirmText: 'ตกลง',
             cancelText: 'ยกเลิก'
         });
 
         if (isConfirmed) {
-            handleSubmit(onFormSubmit)();
+            handleSubmit(onFormSubmit, (errors) => {
+                logger.error('Form validation failed:', errors);
+                toast('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน', 'error');
+            })();
         }
     };
 
@@ -255,7 +271,10 @@ export function SalesOrderFormModal({
                         ) : (
                             <Save size={18} />
                         )}
-                        {isEdit ? 'บันทึกการแก้ไข' : 'ยืนยันสร้างใบสั่งขาย'}
+                        {isEdit 
+                            ? (formData.status === 'REJECTED' ? 'บันทึกและส่งอนุมัติใหม่' : 'บันทึกการแก้ไข') 
+                            : 'ยืนยันสร้างใบสั่งขาย'
+                        }
                     </button>
                 )}
             </div>

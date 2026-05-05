@@ -6,7 +6,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ShoppingCart, Search, Plus, Edit, Eye, Send } from 'lucide-react';
+import { ShoppingCart, Search, Plus, Edit, Eye, Send, Clock } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { SalesOrderService, type SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
@@ -17,6 +17,7 @@ import { CustomerService } from '@customer/customer-master/services/customer.ser
 import { formatNumber } from '@/shared/utils/numberUtils';
 import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
 import { useConfirmation } from '@hooks/useConfirmation';
+import { AOHistoryModal } from '@sales/shared/components/AOHistoryModal';
 
 // ====================================================================================
 // CONSTANTS
@@ -29,6 +30,7 @@ const STATUS_OPTIONS = [
     { value: 'APPROVED', label: 'อนุมัติแล้ว' },
     { value: 'CONFIRMED', label: 'ยืนยันแล้ว' },
     { value: 'CLOSED', label: 'ปิดรายการ' },
+    { value: 'REJECTED', label: 'ไม่อนุมัติ' },
     { value: 'CANCELLED', label: 'ยกเลิก' },
 ];
 
@@ -64,6 +66,11 @@ export default function SalesOrderListPage() {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedSoId, setSelectedSoId] = useState<string | undefined>(undefined);
     const [isViewOnly, setIsViewOnly] = useState(false);
+
+    // History Modal State
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const [historySoId, setHistorySoId] = useState<string | number | undefined>(undefined);
+    const [historySoNo, setHistorySoNo] = useState<string>('');
 
     const { confirm } = useConfirmation();
 
@@ -119,6 +126,12 @@ export default function SalesOrderListPage() {
         setSelectedSoId(id);
         setIsViewOnly(viewOnly);
         setIsFormModalOpen(true);
+    };
+
+    const handleViewHistory = (id: string | number, no: string) => {
+        setHistorySoId(id);
+        setHistorySoNo(no);
+        setIsHistoryModalOpen(true);
     };
 
     const handleSubmit = useCallback(async (id: string, rawRow?: SalesOrderHeader) => {
@@ -230,14 +243,34 @@ export default function SalesOrderListPage() {
                         >
                             <Eye size={16} />
                         </button>
-                        <button
-                            onClick={() => handleEdit(info.row.original.so_id, false)}
-                            className="flex items-center gap-1.5 text-amber-500 hover:text-amber-600 font-bold text-[12px] transition-colors"
-                            title="แก้ไข"
-                        >
-                            <Edit size={14} />
-                            <span>แก้ไข</span>
-                        </button>
+                        {info.row.original.status !== 'DRAFT' && (
+                            <button
+                                onClick={() => handleViewHistory(info.row.original.so_id, info.row.original.so_no)}
+                                className="text-emerald-500 hover:text-emerald-600 transition-colors"
+                                title="ประวัติการอนุมัติ"
+                            >
+                                <Clock size={18} />
+                            </button>
+                        )}
+                        {info.row.original.status === 'REJECTED' ? (
+                            <button
+                                onClick={() => handleEdit(info.row.original.so_id, false)}
+                                className="h-7 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1.5 shadow-sm transition-all active:scale-95 whitespace-nowrap flex-shrink-0"
+                                title="แก้ไขและส่งอนุมัติใหม่"
+                            >
+                                <Edit size={12} />
+                                <span>แก้ไขและส่งอนุมัติใหม่</span>
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => handleEdit(info.row.original.so_id, false)}
+                                className="flex items-center gap-1.5 text-amber-500 hover:text-amber-600 font-bold text-[12px] transition-colors"
+                                title="แก้ไข"
+                            >
+                                <Edit size={14} />
+                                <span>แก้ไข</span>
+                            </button>
+                        )}
                         {info.row.original.status === 'DRAFT' && (
                             <button
                                 onClick={() => handleSubmit(info.row.original.so_id, info.row.original)}
@@ -358,13 +391,25 @@ export default function SalesOrderListPage() {
                                             onClick={() => handleEdit(item.so_id, true)}
                                             className="flex-1 h-9 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
                                         >
-                                            <Eye size={14} /> ดูรายละเอียด
+                                            <Eye size={14} /> รายละเอียด
                                         </button>
+                                        {item.status !== 'DRAFT' && (
+                                            <button 
+                                                onClick={() => handleViewHistory(item.so_id, item.so_no)}
+                                                className="flex-1 h-9 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/20 text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                                            >
+                                                <Clock size={14} /> ประวัติ
+                                            </button>
+                                        )}
                                         <button 
                                             onClick={() => handleEdit(item.so_id, false)}
-                                            className="flex-1 h-9 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
+                                            className={`flex-1 h-9 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 whitespace-nowrap ${
+                                                item.status === 'REJECTED' 
+                                                ? "bg-amber-600 hover:bg-amber-700 text-white shadow-sm" 
+                                                : "bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
+                                            }`}
                                         >
-                                            <Edit size={14} /> แก้ไข
+                                            <Edit size={14} /> {item.status === 'REJECTED' ? "แก้ไขและส่งอนุมัติใหม่" : "แก้ไข"}
                                         </button>
                                     </div>
                                 }
@@ -373,6 +418,14 @@ export default function SalesOrderListPage() {
                     />
                 </div>
             </PageListLayout>
+
+            {/* Approval History Modal */}
+            <AOHistoryModal
+                isOpen={isHistoryModalOpen}
+                onClose={() => setIsHistoryModalOpen(false)}
+                soId={historySoId}
+                soNo={historySoNo}
+            />
 
             {/* Sales Order Form Modal */}
             <SalesOrderFormModal

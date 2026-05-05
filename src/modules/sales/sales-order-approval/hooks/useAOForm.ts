@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
+import api from '@core/api/api';
 import type { FieldErrors, Path, FieldPathValue } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@ui/feedback/Toast';
@@ -72,98 +73,99 @@ function normalizeSO(raw: unknown): SOForApproval | null {
   const r = raw as Record<string, unknown>;
   const obj = findObject(r);
 
-  const soId = obj.so_id || obj.id || obj.sale_order_id || obj.id_sale_order || 0;
-  if (!soId) return null;
+  const customer = (obj.customer || obj.customer_header || obj.customer_ref || {}) as Record<string, unknown>;
+  const branch = (obj.branch || obj.branch_header || obj.branch_ref || {}) as Record<string, unknown>;
+  const dept = (obj.dept || obj.department || obj.emp_dept || obj.dept_ref || {}) as Record<string, unknown>;
+  const tax = (obj.tax_code || obj.tax || obj.taxCode || obj.tax_ref || {}) as Record<string, unknown>;
+  const reservation = (obj.reservation || obj.reservation_header || obj.res_header || obj.reservation_ref || {}) as Record<string, unknown>;
 
-  const rawLines = findLines(obj);
-  const lines: SOLineForApproval[] = rawLines.map((l: unknown) => {
-    const line = l as Record<string, unknown>;
-    const item = (line.item as Record<string, unknown>) || (line.item_master as Record<string, unknown>) || {};
-    const uom = (line.uom as Record<string, unknown>) || (line.unit as Record<string, unknown>) || {};
-    
-    return {
-      so_line_id: (line.so_line_id as string | number) || (line.id as string | number) || 0,
-      item_id: (line.item_id as string | number) || (item.item_id as string | number) || (item.id as string | number) || 0,
-      item_code: String(line.item_code || item.item_code || line.code || ''),
-      item_name: String(line.item_name || item.item_name || item.item_name_th || line.description || line.name || ''),
-      qty_ordered: Number(line.qty_ordered || line.qty || line.quantity || 0),
-      uom_id: (line.uom_id as string | number) || (uom.uom_id as string | number) || (uom.id as string | number) || 0,
-      uom_name: String(line.uom_name || uom.uom_name || uom.unit_name || uom.name || ''),
-      unit_price: Number(line.unit_price || line.price || 0),
-      discount_expression: String(line.discount_expression || line.line_discount_input || '0'),
-      discount_amount: Number(line.line_discount || line.discount_amount || 0),
-      net_amount: Number(line.line_total || line.net_amount || 0),
-      remarks: String(line.remarks || line.note || ''),
-      tax_code_id: (line.tax_code_id as string | number) || null,
-    };
-  });
+  const rawBranchId = obj.branch_id || obj.id_branch || branch.branch_id || branch.id || branch.id_branch || obj.branch_header_id;
+  const rawDeptId = obj.emp_dept_id || obj.dept_id || obj.department_id || obj.id_dept || dept.id || dept.id_dept || obj.id_dept_header;
+  const rawAreaId = obj.emp_area_id || obj.sale_area_id || obj.area_id || obj.id_area || obj.id_sale_area || 
+                    (obj.sale_area as Record<string, unknown>)?.id || (obj.area as Record<string, unknown>)?.id;
+  const rawJobId = obj.job_id || obj.project_id || obj.project_header_id || obj.job_header_id || obj.id_project || obj.id_job ||
+                    (obj.project as Record<string, unknown>)?.id || (obj.job as Record<string, unknown>)?.id;
+  const rawEmpId = obj.emp_sale_id || obj.sale_id || obj.employee_id || obj.sale_employee_id || obj.id_emp_sale ||
+                    (obj.employee as Record<string, unknown>)?.id || (obj.sale_person as Record<string, unknown>)?.id;
+  const rawTaxId = obj.tax_code_id || obj.tax_id || obj.id_tax || obj.tax_code_ref_id || tax.id || tax.id_tax || tax.tax_id ||
+                    (obj.tax_code_header as Record<string, unknown>)?.id;
+  const rawResId = obj.reservation_id || obj.reservation_header_id || obj.res_id || obj.id_reservation || reservation.reservation_id || reservation.id ||
+                    obj.id_reservation_header;
 
-  const getNested = (source: Record<string, unknown>, keys: string[]): Record<string, unknown> => {
-    for (const k of keys) { 
-      const val = source[k];
-      if (val && typeof val === 'object' && !Array.isArray(val)) return val as Record<string, unknown>; 
-    }
-    return {};
-  };
+  const rawLinesData = (
+    obj.sale_order_lines || obj.saleOrderLines || obj.so_lines || obj.lines || obj.items || []
+  ) as Record<string, unknown>[];
 
-  const customer = getNested(obj, ['customer', 'customer_ref', 'customer_master', 'cust']);
-  const branch = getNested(obj, ['branch', 'branch_ref', 'id_branch']);
-  const tax = getNested(obj, ['taxCode', 'tax_code_ref', 'tax', 'tax_id']);
+  const lines = rawLinesData.map((l) => ({
+    so_line_id: String(l.so_line_id || l.id || l.line_id || ''),
+    item_id: String(l.item_id || ''),
+    item_code: String(l.item_code || ''),
+    item_name: String(l.item_name || ''),
+    uom_id: String(l.uom_id || ''),
+    uom_name: String(l.uom_name || ''),
+    qty_ordered: Number(l.qty_ordered || l.qty || l.quantity || 0),
+    unit_price: Number(l.unit_price || l.price || 0),
+    line_discount: Number(l.line_discount || l.discount_amount || 0),
+    line_discount_input: String(l.line_discount_input || l.discount_expression || '0'),
+    line_total: Number(l.line_total || l.net_amount || l.amount || 0),
+    is_approved: true,
+    approved_qty: Number(l.approved_qty || l.qty_ordered || l.qty || 0),
+    approved_unit_price: Number(l.approved_unit_price || l.unit_price || 0),
+    approved_line_discount: Number(l.approved_line_discount || l.line_discount || 0),
+    approved_net_amount: Number(l.approved_net_amount || l.line_total || 0),
+  }));
 
-  const finalBCurrencyCode = String(obj.base_currency_code || obj.currency_code || obj.currency || 'THB');
-  const finalQCurrencyCode = String(obj.quote_currency_code || obj.id_currency_code || obj.currency_code || obj.currency || 'THB');
-  const finalRate = Number(obj.exchange_rate || obj.rate || 1);
+  const subTotal = lines.reduce((sum, l) => sum + l.line_total, 0);
 
   return {
-    so_id: soId as string | number,
-    so_no: String(obj.so_no || obj.sale_order_no || obj.code || obj.no || ''),
-    so_date: String(obj.so_date || obj.sale_order_date || obj.date || '').split('T')[0],
+    so_id: String(obj.so_id || obj.sale_order_id || obj.uuid || obj.header_id || obj.id || ''),
+    so_no: String(obj.so_no || ''),
+    so_date: String(obj.so_date || '').split('T')[0],
     
-    customer_id: (obj.customer_id as string | number) || (customer.customer_id as string | number) || (customer.id as string | number) || (obj.id_customer as string | number) || 0,
-    customer_name: String(obj.customer_name || obj.customer_name_th || obj.name_th || customer.customer_name_th || customer.name_th || customer.name || ''),
+    customer_id: String(obj.customer_id || customer.customer_id || customer.id || ''),
+    customer_name: String(obj.customer_name || customer.customer_name_th || customer.customer_name || customer.name || customer.name_th || ''),
     customer_code: String(obj.customer_code || customer.customer_code || customer.code || ''),
     
-    status: String(obj.status || 'PENDING'),
-
-    base_currency_code: finalBCurrencyCode,
-    base_currency_id: Number(obj.base_currency_id || 1),
-    quote_currency_code: finalQCurrencyCode,
-    quote_currency_id: Number(obj.quote_currency_id || 1),
-    exchange_rate: finalRate,
-    isMulticurrency: Boolean((obj.is_multicurrency === true) || (finalBCurrencyCode !== 'THB') || (finalQCurrencyCode !== 'THB')),
-    exchange_rate_date: String(obj.exchange_rate_date || obj.so_date || obj.date || '').split('T')[0],
+    reservation_id: String(rawResId || ''),
+    reservation_no: String(obj.reservation_no || reservation.reservation_no || reservation.code || reservation.no || ''),
     
-    total_amount: Number(obj.total_amount || obj.quote_total_amount || 0),
-    base_total_amount: Number(obj.base_total_amount || 0),
-    quote_total_amount: Number(obj.quote_total_amount || 0),
-    vat_amount: Number(obj.vat_amount || 0),
-    base_tax_amount: Number(obj.base_tax_amount || 0),
-    quote_tax_amount: Number(obj.quote_tax_amount || 0),
+    payment_term_days: Number(obj.payment_term_days || obj.credit_term || obj.credit_days || 0),
+    ship_days: Number(obj.ship_days || 0),
+    ship_date: String(obj.ship_date || obj.delivery_date || obj.est_ship_date || obj.delivery_date_so || '').split('T')[0],
     
-    tax_code_id: (obj.tax_code_id || obj.tax_id || obj.id_tax || tax.id) ? (obj.tax_code_id || obj.tax_id || obj.id_tax || tax.id) as string | number : undefined,
-    tax_rate: Number(obj.tax_rate ?? obj.tax_pct ?? tax.tax_rate ?? tax.tax_pct ?? 0),
+    branch_id: String(rawBranchId || ''),
+    branch_name: String(obj.branch_name || branch.branch_name || branch.name || branch.name_th || ''),
+    
+    emp_dept_id: String(rawDeptId || ''),
+    emp_dept_name: String(obj.emp_dept_name || dept.dept_name || dept.name || dept.name_th || ''),
+    
+    emp_area_id: String(rawAreaId || ''),
+    emp_area_name: String(obj.emp_area_name || obj.area_name || (obj.sale_area as Record<string, unknown>)?.area_name || ''),
+    
+    job_id: String(rawJobId || ''),
+    job_name: String(obj.job_name || obj.project_name || (obj.project as Record<string, unknown>)?.project_name || ''),
+    
+    emp_sale_id: String(rawEmpId || ''),
+    emp_sale_name: String(obj.emp_sale_name || reservation.emp_sale_name || reservation.emp_name || (obj.sale_person as Record<string, unknown>)?.name || ''),
+    
+    tax_code_id: String(rawTaxId || ''),
+    tax_code: String(obj.tax_code || tax.tax_code || tax.code || tax.name || ''),
+    tax_rate: Number(obj.tax_rate || tax.tax_rate || 0),
+    
+    sub_total: subTotal,
+    discount_expression: String(obj.discount_expression || obj.discount_input || '0'),
+    discount_amount: Number(obj.discount_amount || 0),
+    tax_amount: Number(obj.tax_amount || obj.base_tax_amount || obj.vat_amount || 0),
+    net_total: Number(obj.net_total || obj.total_amount || obj.base_total_amount || 0),
+    
+    currency_code: String(obj.currency_code || obj.base_currency_code || 'THB'),
+    exchange_rate: Number(obj.exchange_rate || 1),
+    exchange_rate_date: String(obj.exchange_rate_date || obj.so_date || '').split('T')[0],
+    isMulticurrency: Boolean(obj.isMulticurrency || obj.is_multicurrency || obj.base_currency_code !== 'THB'),
     
     remarks: String(obj.remarks || ''),
-    payment_term_days: Number(obj.payment_term_days || 0),
-
-    branch_id: (obj.branch_id as string | number) || (branch.id as string | number) || (obj.id_branch as string | number) || 0,
-    emp_sale_id: (obj.emp_sale_id as string | number) || (obj.id_emp_sale as string | number) || (obj.sale_emp_id as string | number) || 0,
-    emp_sale_name: String(obj.emp_sale_name || obj.sale_person_name || ''),
-
-    discount_expression: String(obj.discount_expression || obj.discount_input || '0'),
-    discount_amount: Number(obj.discount_amount || obj.quote_discount_amount || 0),
-
-    reservation_no: String(obj.reservation_no || ''),
-    ship_days: Number(obj.ship_days || 0),
-    ship_date: String(obj.ship_date || '').split('T')[0],
-    emp_dept_id: (obj.emp_dept_id as string | number) || 0,
-    emp_dept_name: String(obj.emp_dept_name || ''),
-    emp_area_id: (obj.emp_area_id as string | number) || 0,
-    job_id: (obj.job_id as string | number) || 0,
-    onhold: (obj.onhold === 'Y' || obj.onhold === true) ? 'Y' : 'N',
-
+    status: (obj.status as SOForApproval['status']) || 'PENDING',
     lines,
-    sub_total: Number(obj.sub_total || lines.reduce((s, l) => s + (l.net_amount || 0), 0) || 0),
   };
 }
 
@@ -171,7 +173,9 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [activeId, setActiveId] = useState<string | number | undefined>(soId);
+  const [activeId, setActiveId] = useState<string | number | undefined>(
+    (typeof soId === 'number' && isNaN(soId)) ? undefined : soId
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -188,8 +192,11 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
     so_id: '',
     so_no: '',
     so_date: '',
+    customer_id: '',
     customer_name: '',
     customer_code: '',
+    reservation_id: '',
+    reservation_no: '',
     status: 'PENDING',
     reject_reason: '',
     approval_emp_id: '',
@@ -219,18 +226,22 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
     emp_sale_name: '',
     payment_term_days: 0,
     remarks: '',
-    reservation_no: '',
     ship_days: 0,
     ship_date: '',
     emp_dept_id: '',
     emp_dept_name: '',
     emp_area_id: '',
+    emp_area_name: '',
     job_id: '',
+    job_name: '',
     onhold: 'N',
     lines: [],
   }), []);
 
-  useEffect(() => { setActiveId(soId); }, [soId]);
+  useEffect(() => { 
+    if (typeof soId === 'number' && isNaN(soId)) return;
+    setActiveId(soId); 
+  }, [soId]);
 
   const showAlert = useCallback((msg: string) => toast(msg, 'error'), [toast]);
 
@@ -265,12 +276,17 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
   }, [toast]);
 
   const loadSOData = useCallback(async (id: string | number, aoItemArg?: SOForApproval | AOListItem) => {
+    if (!id || id === '0' || id === 'undefined') {
+      logger.warn('[useAOForm] Invalid SO ID:', id);
+      return;
+    }
+    
     setIsSubmitting(true);
     try {
       let raw = await AOService.getSOById(id);
       
       if ((!raw || Object.keys(raw as object).length < 5) && aoItemArg?.so_no) {
-        // Fallback global search
+        // Fallback global search if needed
       }
 
       if ((!raw || Object.keys(raw as object).length < 5) && aoItemArg) {
@@ -281,6 +297,161 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
       if (!so) {
         showAlert('ไม่พบข้อมูลใบสั่งขาย');
         return;
+      }
+
+      const obj = findObject(raw as Record<string, unknown>);
+
+      // 🚀 Header Enrichment: Fetch missing master data names (Only if ID is valid)
+      await Promise.all([
+        // 1. Branch Enrichment
+        (async () => {
+          const bid = String(so.branch_id || '');
+          if ((!so.branch_name || so.branch_name === '-' || so.branch_name === '') && bid && bid !== '0' && bid !== 'undefined') {
+            try {
+              const res = await api.get<Record<string, unknown>>(`/org-branches/${bid}`);
+              const data = (res?.data || res) as Record<string, unknown>;
+              if (data) {
+                const name = String(data.branch_name || data.name || data.name_th || data.branch_name_th || '');
+                if (name) so.branch_name = name;
+              }
+            } catch { /* ignore */ }
+          }
+        })(),
+
+        // 2. Department/Section Enrichment
+        (async () => {
+          const did = String(so.emp_dept_id || '');
+          if ((!so.emp_dept_name || so.emp_dept_name === '-' || so.emp_dept_name === '') && did && did !== '0' && did !== 'undefined') {
+            try {
+              const res = await api.get<Record<string, unknown>>(`/department/${did}`);
+              const data = (res?.data || res) as Record<string, unknown>;
+              if (data) {
+                const name = String(data.emp_dept_name || data.dept_name || data.department_name || data.section_name || data.name || data.name_th || '');
+                if (name) so.emp_dept_name = name;
+                else {
+                  // Fallback: try /org-departments if /department fails to give name
+                  const res2 = await api.get<Record<string, unknown>>(`/org-departments/${did}`);
+                  const data2 = (res2?.data || res2) as Record<string, unknown>;
+                  if (data2) {
+                    const name2 = String(data2.dept_name || data2.name || data2.name_th || data2.department_name || '');
+                    if (name2) so.emp_dept_name = name2;
+                  }
+                }
+              }
+            } catch { /* ignore */ }
+          }
+        })(),
+
+        // 3. Sales Area Enrichment
+        (async () => {
+          const aid = String(so.emp_area_id || '');
+          if ((!so.emp_area_name || so.emp_area_name === '-' || so.emp_area_name === '') && aid && aid !== '0' && aid !== 'undefined') {
+            try {
+              const res = await api.get<Record<string, unknown>>(`/employee-sale-area/${aid}`);
+              const data = (res?.data || res) as Record<string, unknown>;
+              if (data) {
+                const name = String(data.sale_area_name || data.area_name || data.name || data.name_th || '');
+                if (name) so.emp_area_name = name;
+              }
+            } catch { /* ignore */ }
+          }
+        })(),
+
+        // 4. Job/Project Enrichment
+        (async () => {
+          const jid = String(so.job_id || '');
+          if ((!so.job_name || so.job_name === '-' || so.job_name === '') && jid && jid !== '0' && jid !== 'undefined') {
+            try {
+              const res = await api.get<Record<string, unknown>>(`/project/${jid}`);
+              const data = (res?.data || res) as Record<string, unknown>;
+              if (data) {
+                const name = String(data.project_name || data.name || data.name_th || data.job_name || '');
+                if (name) so.job_name = name;
+              }
+            } catch { /* ignore */ }
+          }
+        })(),
+
+        // 5. Reservation Enrichment
+        (async () => {
+          const rid = String(so.reservation_id || '');
+          if ((!so.reservation_no || so.reservation_no === '-' || so.reservation_no === '' || so.reservation_no === rid) && rid && rid !== '0' && rid !== 'undefined') {
+            try {
+              const res = await api.get<Record<string, unknown>>(`/sale-reservation/${rid}`);
+              const data = (res?.data || res) as Record<string, unknown>;
+              if (data) {
+                const no = String(data.reservation_no || data.code || data.no || '');
+                if (no) so.reservation_no = no;
+              }
+            } catch { /* ignore */ }
+          }
+        })(),
+
+        // 6. Sales Person Enrichment
+        (async () => {
+          const sid = String(so.emp_sale_id || '');
+          if ((!so.emp_sale_name || so.emp_sale_name === '-' || so.emp_sale_name === '') && sid && sid !== '0' && sid !== 'undefined') {
+            try {
+              const res = await api.get<Record<string, unknown>>(`/employees/${sid}`);
+              const data = (res?.data || res) as Record<string, unknown>;
+              if (data) {
+                const name = String(data.employee_fullname || data.employee_name || data.name || data.name_th || 
+                  `${data.employee_firstname_th || ''} ${data.employee_lastname_th || ''}`.trim());
+                if (name) so.emp_sale_name = name;
+              }
+            } catch { /* ignore */ }
+          }
+        })(),
+
+        // 7. Tax Code Enrichment
+        (async () => {
+          const tid = String(so.tax_code_id || '');
+          if ((!so.tax_code || so.tax_code === '-' || so.tax_code === '') && tid && tid !== '0' && tid !== 'undefined') {
+            try {
+              const res = await api.get<Record<string, unknown>>(`/tax-code/${tid}`);
+              const data = (res?.data || res) as Record<string, unknown>;
+              if (data) so.tax_code = String(data.tax_code || data.code || data.name || '-');
+            } catch { /* ignore */ }
+          }
+        })(),
+      ]);
+
+      // 🚀 Final touch for Reservation No (Only if still missing after enrichment)
+      if (!so.reservation_no || so.reservation_no === '-' || so.reservation_no === '') {
+          so.reservation_no = String(obj.reservation_no || obj.reserve_no || '-');
+      }
+
+      if (!so.ship_date || so.ship_date === 'null' || so.ship_date === '') {
+          so.ship_date = String(obj.ship_date || obj.delivery_date || obj.est_ship_date || obj.delivery_date_so || '').split('T')[0];
+      }
+
+      if (!so.payment_term_days) {
+          so.payment_term_days = Number(obj.payment_term_days || obj.credit_term || obj.credit_days || 0);
+      }
+
+      // 🚀 Line Enrichment
+      if (so.lines && so.lines.length > 0) {
+        await Promise.all(so.lines.map(async (line) => {
+          if ((!line.item_name || line.item_name === '-' || line.item_name === '') && line.item_id) {
+            try {
+              const res = await api.get<Record<string, unknown>>(`/item-master/${line.item_id}`);
+              const item = (res?.data || res) as Record<string, unknown>;
+              if (item) {
+                line.item_name = String(item.item_name || item.item_name_th || item.name || item.name_th || line.item_name || '-');
+                line.item_code = String(item.item_code || item.code || line.item_code || '-');
+              }
+            } catch { /* ignore */ }
+          }
+          if ((!line.uom_name || line.uom_name === '-' || line.uom_name === '') && line.uom_id) {
+            try {
+              const res = await api.get<Record<string, unknown>>(`/uom/${line.uom_id}`);
+              const uom = (res?.data || res) as Record<string, unknown>;
+              if (uom) {
+                line.uom_name = String(uom.uom_name || uom.unit_name || uom.name || uom.name_th || line.uom_name || '-');
+              }
+            } catch { /* ignore */ }
+          }
+        }));
       }
 
       setActiveId(id);
@@ -363,6 +534,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
         so_id: so.so_id,
         so_no: so.so_no || String(aoItemArg?.so_no || ''),
         so_date: so.so_date || String(aoItemArg?.so_date || ''),
+        customer_id: so.customer_id || '',
         customer_name: so.customer_name || String(aoItemArg?.customer_name || ''),
         customer_code: so.customer_code || String(aoItemArg?.customer_code || ''),
         status: String((aoDetails as Record<string, unknown>)?.status || aoItemArg?.status || so.status) as AOFormData['status'],
@@ -380,6 +552,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
         base_total_amount: so.base_total_amount || 0,
         quote_total_amount: so.quote_total_amount || so.total_amount || 0,
         tax_code_id: so.tax_code_id ?? null,
+        tax_code: so.tax_code || '',
         tax_rate: so.tax_rate || 0,
         base_tax_amount: so.base_tax_amount || 0,
         quote_tax_amount: so.quote_tax_amount || so.vat_amount || 0,
@@ -393,15 +566,20 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
         branch_name: so.branch_name || String(aoItemArg?.branch_name || ''),
         emp_sale_id: so.emp_sale_id || '',
         emp_sale_name: so.emp_sale_name || String(aoItemArg?.emp_sale_name || ''),
+        reservation_id: so.reservation_id || '',
         reservation_no: so.reservation_no || '',
         ship_days: so.ship_days || 0,
         ship_date: so.ship_date || '',
         emp_dept_id: so.emp_dept_id || '',
         emp_dept_name: so.emp_dept_name || '',
         emp_area_id: so.emp_area_id || '',
+        emp_area_name: so.emp_area_name || '',
         job_id: so.job_id || '',
+        job_name: so.job_name || '',
         onhold: so.onhold || 'N',
-        isMulticurrency: Boolean(so.isMulticurrency),
+        isMulticurrency: aoDetails && 'isMulticurrency' in aoDetails 
+          ? Boolean(aoDetails.isMulticurrency) 
+          : true,
         lines: mappedLines,
       } as AOFormData);
     } catch (err) {
@@ -477,41 +655,57 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
     const data = formMethods.getValues();
 
     const payload: ApproveSalesOrderPayload = {
-      so_id: activeId,
-      ao_date: new Date().toISOString().split('T')[0],
+      so_id: Number(activeId),
+      customer_id: Number(data.customer_id || 0),
       status: 'APPROVED',
+      status_remark: data.remarks || '',
       remarks: data.remarks || '',
-      approval_emp_id: data.approval_emp_id || user?.employee_id || 1,
+      onhold: data.onhold || 'N',
+      sale_area_id: Number(data.emp_area_id || 0),
+      emp_dept_id: Number(data.emp_dept_id || 0),
+      project_id: Number(data.job_id || 0),
+      approval_emp_id: Number(data.approval_emp_id || user?.employee_id || 1),
       approval_emp_name: data.approval_emp_name || user?.employee?.employee_fullname || '',
-      base_currency_code: data.base_currency_code,
-      quote_currency_code: data.quote_currency_code,
-      exchange_rate: data.exchange_rate,
-      exchange_rate_date: data.exchange_rate_date,
-      tax_code_id: data.tax_code_id || undefined,
-      discount_expression: data.discount_expression,
-      branch_id: data.branch_id || undefined,
-      emp_sale_id: data.emp_sale_id || undefined,
-      ao_lines: data.lines.map(l => ({
-        so_line_id: l.so_line_id,
-        item_id: l.item_id,
-        qty_ordered: l.qty_ordered,
-        uom_id: l.uom_id,
-        approved_qty: l.is_approved ? l.approved_qty : 0,
-        remarks: l.remarks,
-        unit_price: l.unit_price,
-        discount_expression: l.discount_expression,
+      branch_id: data.branch_id ? Number(data.branch_id) : undefined,
+      emp_sale_id: data.emp_sale_id ? Number(data.emp_sale_id) : undefined,
+      base_currency_code: data.base_currency_code || 'THB',
+      quote_currency_code: data.quote_currency_code || 'THB',
+      exchange_rate: Number(data.exchange_rate || 1),
+      exchange_rate_date: data.exchange_rate_date || new Date().toISOString().split('T')[0],
+      tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : undefined,
+      discount_expression: data.discount_expression || '0',
+      CreateSaleOrderApprovalLineDtos: data.lines.filter(l => l.is_approved).map(l => ({
+        so_line_id: Number(l.so_line_id),
+        item_id: Number(l.item_id),
+        qty: Number(l.qty_ordered),
+        uom_id: Number(l.uom_id),
+        approved_qty: Number(l.approved_qty),
+        remarks: l.remarks || '',
+        unit_price: Number(l.unit_price),
+        discount_expression: l.discount_expression || '0',
       })),
     };
 
     try {
       setIsSubmitting(true);
       await AOService.createApproval(payload);
+      
+      try {
+        await AOService.updateSOStatus(Number(activeId), 'APPROVED');
+      } catch (err) {
+        logger.warn('[useAOForm] SO status sync failed:', err);
+      }
+
       toast('อนุมัติใบสั่งขายเรียบร้อยแล้ว', 'success');
       onSuccess?.();
       onClose();
-    } catch (e) {
-      logger.error('[useAOForm] Error approving SO:', e);
-      toast('เกิดข้อผิดพลาดในการอนุมัติ', 'error');
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string | string[] } }; message: string };
+      const errorMsg = Array.isArray(err.response?.data?.message) 
+        ? err.response.data.message.join(' ') 
+        : (err.response?.data?.message || err.message || 'เกิดข้อผิดพลาดในการอนุมัติ');
+      logger.error('[useAOForm] Error approving SO:', err.response?.data || err);
+      toast(errorMsg, 'error');
     } finally {
       setIsSubmitting(false);
       setIsConfirmModalOpen(false);
@@ -525,33 +719,57 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
     const data = formMethods.getValues();
     
     const payload: ApproveSalesOrderPayload = {
-      so_id: activeId,
-      ao_date: new Date().toISOString().split('T')[0],
+      so_id: Number(activeId),
+      customer_id: Number(data.customer_id || 0),
       status: 'REJECTED',
+      status_remark: reason,
       remarks: reason,
-      approval_emp_id: data.approval_emp_id || user?.employee_id || 1,
+      onhold: data.onhold || 'N',
+      sale_area_id: Number(data.emp_area_id || 0),
+      emp_dept_id: Number(data.emp_dept_id || 0),
+      project_id: Number(data.job_id || 0),
+      approval_emp_id: Number(data.approval_emp_id || user?.employee_id || 1),
       approval_emp_name: data.approval_emp_name || user?.employee?.employee_fullname || '',
-      ao_lines: data.lines.map(l => ({
-        so_line_id: l.so_line_id,
-        item_id: l.item_id,
-        qty_ordered: l.qty_ordered,
-        uom_id: l.uom_id,
+      branch_id: data.branch_id ? Number(data.branch_id) : undefined,
+      emp_sale_id: data.emp_sale_id ? Number(data.emp_sale_id) : undefined,
+      base_currency_code: data.base_currency_code || 'THB',
+      quote_currency_code: data.quote_currency_code || 'THB',
+      exchange_rate: Number(data.exchange_rate || 1),
+      exchange_rate_date: data.exchange_rate_date || new Date().toISOString().split('T')[0],
+      tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : undefined,
+      discount_expression: data.discount_expression || '0',
+      CreateSaleOrderApprovalLineDtos: data.lines.map(l => ({
+        so_line_id: Number(l.so_line_id),
+        item_id: Number(l.item_id),
+        qty: Number(l.qty_ordered),
+        uom_id: Number(l.uom_id),
         approved_qty: 0,
         remarks: reason,
-        unit_price: l.unit_price,
-        discount_expression: l.discount_expression,
+        unit_price: Number(l.unit_price),
+        discount_expression: l.discount_expression || '0',
       })),
     };
 
     try {
       setIsRejecting(true);
       await AOService.createApproval(payload);
+
+      try {
+        await AOService.updateSOStatus(Number(activeId), 'REJECTED');
+      } catch (err) {
+        logger.warn('[useAOForm] SO status sync failed:', err);
+      }
+
       toast('ไม่อนุมัติใบสั่งขายเรียบร้อยแล้ว', 'success');
       onSuccess?.();
       onClose();
-    } catch (e) {
-      logger.error('[useAOForm] Error rejecting SO:', e);
-      toast('เกิดข้อผิดพลาดในการไม่อนุมัติ', 'error');
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string | string[] } }; message: string };
+      const errorMsg = Array.isArray(err.response?.data?.message) 
+        ? err.response.data.message.join(' ') 
+        : (err.response?.data?.message || err.message || 'เกิดข้อผิดพลาดในการปฏิเสธ');
+      logger.error('[useAOForm] Error rejecting SO:', err.response?.data || err);
+      toast(errorMsg, 'error');
     } finally {
       setIsRejecting(false);
       setIsConfirmRejectOpen(false);
@@ -576,5 +794,6 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
     loadSOData,
     status: formMethods.watch('status'),
     isMulticurrency: formMethods.watch('isMulticurrency'),
+    currencies,
   };
 };

@@ -21,7 +21,7 @@ export interface SalesOrderHeader {
     customer_name: string;      // ชื่อลูกค้า (join)
     customer_id: string;        // ID ลูกค้า
     customer_code: string;      // รหัสลูกค้า (join)
-    status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'CONFIRMED' | 'CLOSED' | 'CANCELLED';
+    status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CONFIRMED' | 'CLOSED' | 'CANCELLED';
     total_amount: number;       // total_amount
     base_total_amount?: number; // base_total_amount
     currency_code: string;      // currency_code
@@ -89,10 +89,13 @@ export const SalesOrderService = {
             
             if (response) {
                 // 🕵️ Deep Data Discovery: Handle nested .data structures
-                let r = response as Record<string, unknown>;
-                if (r['data'] && typeof r['data'] === 'object' && !Array.isArray(r['data'])) {
-                    r = r['data'] as Record<string, unknown>;
+                let rRaw = response as Record<string, unknown>;
+                if (rRaw['data'] && typeof rRaw['data'] === 'object' && !Array.isArray(rRaw['data'])) {
+                    rRaw = rRaw['data'] as Record<string, unknown>;
                 }
+                
+                // Find the actual SO object (might be nested under sale_order, so_header, etc.)
+                const r = (rRaw['sale_order'] || rRaw['so_header'] || rRaw['order'] || rRaw['header'] || rRaw) as Record<string, unknown>;
                 
                 logger.debug('Sales Order Raw Detail:', r);
 
@@ -130,11 +133,12 @@ export const SalesOrderService = {
                 
                 // 🛠️ Line Mapping with Enrichment (Mirrors ReservationService for robustness)
                 r['lines'] = await Promise.all(rawLines.map(async (l: Record<string, unknown>) => {
-                    const item = (l['item'] || l['item_header'] || l['product'] || {}) as Record<string, unknown>;
+                    const item = (l['item'] || l['item_header'] || l['item_master'] || l['product'] || l['item_ref'] || {}) as Record<string, unknown>;
+                    const uom = (l['uom'] || l['unit'] || l['uom_header'] || l['uom_ref'] || {}) as Record<string, unknown>;
                     
                     const itemId = String(l['item_id'] || item['item_id'] || item['id'] || '');
-                    let itemCode = String(item['item_code'] || item['code'] || l['item_code'] || '');
-                    let itemName = String(item['item_name'] || item['item_name_th'] || item['name'] || l['item_name'] || '');
+                    let itemCode = String(l['item_code'] || item['item_code'] || item['code'] || '');
+                    let itemName = String(l['item_name'] || item['item_name'] || item['item_name_th'] || item['name'] || '');
 
                     // 🚀 Re-Enrich Items if missing (Essential fallback)
                     if ((!itemCode || !itemName) && itemId) {
@@ -142,8 +146,8 @@ export const SalesOrderService = {
                             const masterRes = await api.get<unknown>(`/item-master/${itemId}`);
                             const master = ((masterRes as Record<string, unknown>)?.data || masterRes) as Record<string, unknown>;
                             if (master) {
-                                itemCode = itemCode || String(master['item_code'] || master['code'] || '');
-                                itemName = itemName || String(master['item_name'] || master['name'] || master['item_name_th'] || '');
+                                itemCode = itemCode || String(master['item_code'] || master['code'] || master['item_master_code'] || '');
+                                itemName = itemName || String(master['item_name'] || master['name'] || master['item_name_th'] || master['item_master_name_th'] || '');
                             }
                         } catch { /* ignore */ }
                     }
@@ -173,7 +177,8 @@ export const SalesOrderService = {
                         item_id: itemId,
                         item_code: itemCode,
                         item_name: itemName,
-                        uom_id: String(l['uom_id'] || item['uom_id'] || l['uom_header_id'] || ''),
+                        uom_id: String(l['uom_id'] || item['uom_id'] || l['uom_header_id'] || uom['uom_id'] || uom['id'] || l['unit_id'] || ''),
+                        uom_name: String(l['uom_name'] || uom['uom_name'] || uom['unit_name'] || uom['name'] || uom['name_th'] || uom['unit_name_th'] || l['unit_name'] || ''),
                         warehouse_id: String(l['warehouse_id'] || l['wh_id'] || ''),
                         location_id: String(l['location_id'] || l['loc_id'] || ''),
                         qty_ordered: Number(l['qty'] || l['qty_ordered'] || l['quantity'] || 0),
@@ -191,76 +196,169 @@ export const SalesOrderService = {
                 }));
 
                 // Map header fields (Capture raw IDs first for enrichment)
-                const customerObj = (r['customer'] || r['customer_header'] || {}) as Record<string, unknown>;
-                const reservationObj = (r['reservation'] || r['reservation_header'] || r['res_header'] || {}) as Record<string, unknown>;
+                const customerObj = (r['customer'] || r['customer_header'] || r['customer_ref'] || r['cust'] || {}) as Record<string, unknown>;
+                const reservationObj = (r['reservation'] || r['reservation_header'] || r['res_header'] || r['reservation_ref'] || {}) as Record<string, unknown>;
+                const branchObj = (r['branch'] || r['branch_header'] || r['id_branch'] || r['branch_ref'] || {}) as Record<string, unknown>;
+                const deptObj = (r['dept'] || r['department'] || r['id_dept'] || r['dept_ref'] || r['emp_dept'] || {}) as Record<string, unknown>;
+                const taxObj = (r['tax_code'] || r['tax'] || r['taxCode'] || r['tax_ref'] || r['tax_id'] || {}) as Record<string, unknown>;
                 
-                const rawEmpId = r['emp_sale_id'] || r['sale_id'] || r['employee_id'] || r['sale_employee_id'];
-                const rawResId = r['reservation_id'] || r['reservation_header_id'] || r['res_id'];
-                const rawJobId = r['job_id'] || r['project_id'] || r['project_header_id'] || r['job_header_id'];
+                const rawEmpId = r['emp_sale_id'] || r['sale_id'] || r['employee_id'] || r['sale_employee_id'] || r['id_emp_sale'];
+                const rawResId = r['reservation_id'] || r['reservation_header_id'] || r['res_id'] || r['id_reservation'];
+                const rawJobId = r['job_id'] || r['project_id'] || r['project_header_id'] || r['job_header_id'] || r['id_project'] || r['id_job'];
+                const rawBranchId = r['branch_id'] || r['id_branch'] || branchObj['branch_id'] || branchObj['id'] || branchObj['id_branch'] || r['branch_header_id'] || r['id_branch_header'];
+                const rawDeptId = r['emp_dept_id'] || r['dept_id'] || r['department_id'] || r['id_dept'] || deptObj['id'] || deptObj['id_dept'] || r['emp_dept_id'] || r['id_dept_header'];
+                const rawTaxId = r['tax_code_id'] || r['tax_id'] || r['id_tax'] || r['tax_code_ref_id'] || taxObj['id'] || taxObj['id_tax'] || taxObj['tax_id'];
 
-                r['customer_id'] = String(r['customer_id'] || customerObj['customer_id'] || '');
-                r['customer_name'] = String(r['customer_name'] || customerObj['customer_name_th'] || customerObj['customer_name'] || customerObj['name'] || '');
+                r['customer_id'] = String(r['customer_id'] || customerObj['customer_id'] || customerObj['id'] || '');
+                r['customer_name'] = String(r['customer_name'] || customerObj['customer_name_th'] || customerObj['customer_name'] || customerObj['name'] || customerObj['name_th'] || '');
                 r['customer_code'] = String(r['customer_code'] || customerObj['customer_code'] || customerObj['code'] || '');
 
-                r['branch_id'] = String(r['branch_id'] || '');
-                r['emp_sale_id'] = rawEmpId ? String(rawEmpId) : '';
-                r['emp_dept_id'] = String(r['emp_dept_id'] || r['dept_id'] || r['department_id'] || '');
-                r['emp_area_id'] = String(r['emp_area_id'] || r['sale_area_id'] || r['area_id'] || '');
-                
-                r['reservation_id'] = rawResId ? String(rawResId) : '';
-                r['reservation_no'] = String(r['reservation_no'] || reservationObj['reservation_no'] || reservationObj['code'] || '');
+                r['branch_id'] = rawBranchId != null ? String(rawBranchId) : '';
+                r['branch_name'] = String(r['branch_name'] || branchObj['branch_name'] || branchObj['name'] || branchObj['name_th'] || '');
 
-                r['job_id'] = rawJobId ? String(rawJobId) : '';
+                r['emp_sale_id'] = rawEmpId != null ? String(rawEmpId) : '';
+                r['emp_dept_id'] = rawDeptId != null ? String(rawDeptId) : '';
+                r['emp_dept_name'] = String(r['emp_dept_name'] || deptObj['dept_name'] || deptObj['name'] || deptObj['name_th'] || '');
+
+                r['emp_area_id'] = String(r['emp_area_id'] || r['sale_area_id'] || r['area_id'] || r['id_area'] || '');
                 
-                r['sub_total'] = Number(r['sub_total'] || r['base_sub_total'] || r['base_total_amount'] || 0);
+                r['reservation_id'] = rawResId != null ? String(rawResId) : '';
+                r['reservation_no'] = String(r['reservation_no'] || reservationObj['reservation_no'] || reservationObj['code'] || reservationObj['no'] || '');
+
+                r['job_id'] = rawJobId != null ? String(rawJobId) : '';
+                
+                r['tax_code_id'] = rawTaxId != null ? String(rawTaxId) : '';
+                r['tax_code'] = String(r['tax_code'] || taxObj['tax_code'] || taxObj['code'] || taxObj['name'] || taxObj['tax_code_name'] || '');
+
+                // Multi-currency mapping
+                r['base_currency_code'] = String(r['base_currency_code'] || r['currency_code'] || r['currency'] || 'THB');
+                r['quote_currency_code'] = String(r['quote_currency_code'] || r['id_currency_code'] || r['currency_code'] || r['currency'] || 'THB');
+
+                // Enhanced Date Discovery
+                r['ship_date'] = r['ship_date'] || r['delivery_date'] || r['shipment_date'] || r['est_ship_date'] || r['scheduled_date'];
+                if (r['ship_date']) r['ship_date'] = String(r['ship_date']).split('T')[0];
+
+                r['sub_total'] = Number(r['sub_total'] || r['base_sub_total'] || 0);
                 r['discount_amount'] = Number(r['discount_amount'] || 0);
                 r['discount_input'] = String(r['discount_expression'] || r['discount_input'] || '0');
                 r['vat_amount'] = Number(r['vat_amount'] || 0);
                 r['total_amount'] = Number(r['total_amount'] || r['quote_total_amount'] || r['base_total_amount'] || 0);
+
                 // Multi-currency mapping (Aggressive Default to true)
                 const apiIsMulticurrency = r['is_multicurrency'];
-                // Default to true unless explicitly disabled (N, false, or 0)
                 r['isMulticurrency'] = !(apiIsMulticurrency === 'N' || apiIsMulticurrency === false || apiIsMulticurrency === 0 || apiIsMulticurrency === 'n');
 
-                // Override if currency is definitely not THB
                 if (!!r['base_currency_code'] && r['base_currency_code'] !== 'THB') {
                     r['isMulticurrency'] = true;
                 }
 
                 // 🔍 Enrichment: Fetch extra names if missing from primary response
-                // Fallback from reservation first
+                
+                // 1. Branch Enrichment
+                if (rawBranchId && !r['branch_name']) {
+                    try {
+                        const branchRes = await api.get<Record<string, unknown>>(`/org-branches/${rawBranchId}`);
+                        const branchData = (branchRes['data'] as Record<string, unknown>) || branchRes;
+                        if (branchData) {
+                            r['branch_name'] = String(branchData['branch_name'] || branchData['name'] || branchData['name_th'] || '');
+                        }
+                    } catch { /* ignore */ }
+                }
+
+                // 2. Employee/Sales Person Enrichment
                 if (!r['emp_sale_name']) {
                     r['emp_sale_name'] = String(reservationObj['emp_sale_name'] || reservationObj['emp_name'] || '');
                 }
-
                 if (rawEmpId && !r['emp_sale_name']) {
                     try {
                         const empRes = await api.get<Record<string, unknown>>(`/employees/${rawEmpId}`);
-                        const empData = empRes as Record<string, unknown>;
-                        const emp = (empData['data'] as Record<string, unknown>) || empData;
-                        if (emp) {
-                            r['emp_sale_name'] = String(emp['employee_fullname'] || emp['employee_name'] || 
-                                `${emp['employee_firstname_th'] || ''} ${emp['employee_lastname_th'] || ''}`.trim());
+                        const empData = (empRes['data'] as Record<string, unknown>) || empRes;
+                        if (empData) {
+                            r['emp_sale_name'] = String(empData['employee_fullname'] || empData['employee_name'] || 
+                                `${empData['employee_firstname_th'] || ''} ${empData['employee_lastname_th'] || ''}`.trim());
                         }
                     } catch (e) {
                         logger.warn(`Failed to enrich employee name for ID ${rawEmpId}`, e);
                     }
                 }
 
+                // 3. Department Enrichment
+                if (rawDeptId && !r['emp_dept_name']) {
+                    try {
+                        const deptRes = await api.get<Record<string, unknown>>(`/department/${rawDeptId}`);
+                        const deptData = (deptRes['data'] as Record<string, unknown>) || deptRes;
+                        if (deptData) {
+                            r['emp_dept_name'] = String(deptData['dept_name'] || deptData['name'] || deptData['name_th'] || '');
+                        }
+                    } catch { /* ignore */ }
+                }
+
+                // 4. Reservation Enrichment
                 if (rawResId && (!r['reservation_no'] || r['reservation_no'] === String(rawResId))) {
                     try {
                         const resRes = await api.get<Record<string, unknown>>(`/sale-reservation/${rawResId}`);
-                        const resData = resRes as Record<string, unknown>;
-                        const res = (resData['data'] as Record<string, unknown>) || resData;
-                        if (res) {
-                            r['reservation_no'] = String(res['reservation_no'] || res['code'] || '');
+                        const resData = (resRes['data'] as Record<string, unknown>) || resRes;
+                        if (resData) {
+                            r['reservation_no'] = String(resData['reservation_no'] || resData['code'] || '');
                         }
                     } catch (e) {
                         logger.warn(`Failed to enrich reservation number for ID ${rawResId}`, e);
                     }
                 }
+
+                // 5. Tax Code Enrichment
+                if (rawTaxId && !r['tax_code']) {
+                    try {
+                        const taxRes = await api.get<Record<string, unknown>>(`/tax-code/${rawTaxId}`);
+                        const taxData = (taxRes['data'] as Record<string, unknown>) || taxRes;
+                        if (taxData) {
+                            r['tax_code'] = String(taxData['tax_code'] || taxData['code'] || taxData['name'] || '');
+                        }
+                    } catch { /* ignore */ }
+                }
+
+                // 6. Project/Job Enrichment
+                if (rawJobId && !r['job_name']) {
+                    try {
+                        const jobRes = await api.get<Record<string, unknown>>(`/project/${rawJobId}`);
+                        const jobData = (jobRes['data'] as Record<string, unknown>) || jobRes;
+                        if (jobData) {
+                            r['job_name'] = String(jobData['project_name'] || jobData['name'] || jobData['name_th'] || '');
+                        }
+                    } catch { /* ignore */ }
+                }
+
+                // 7. Area Enrichment
+                const rawAreaId = r['emp_area_id'] || r['sale_area_id'] || r['area_id'];
+                if (rawAreaId && !r['emp_area_name']) {
+                    try {
+                        const areaRes = await api.get<Record<string, unknown>>(`/employee-sale-area/${rawAreaId}`);
+                        const areaData = (areaRes['data'] as Record<string, unknown>) || areaRes;
+                        if (areaData) {
+                            r['emp_area_name'] = String(areaData['area_name'] || areaData['name'] || areaData['sale_area_name'] || '');
+                        }
+                    } catch { /* ignore */ }
+                }
+
+                // 🚀 FINAL STEP: Mirror all enriched fields back to the root of the response
+                // This ensures that regardless of whether normalizeSO looks at the top level or nested object, it SEES the data.
+                if (r !== rRaw) {
+                    const criticalFields = [
+                        'branch_name', 'branch_id', 'emp_dept_name', 'emp_dept_id', 
+                        'emp_sale_name', 'emp_sale_id', 'tax_code', 'tax_code_id',
+                        'job_name', 'job_id', 'emp_area_name', 'emp_area_id',
+                        'reservation_no', 'reservation_id', 'ship_date', 
+                        'base_currency_code', 'quote_currency_code', 'lines',
+                        'customer_name', 'customer_code', 'customer_id'
+                    ];
+                    criticalFields.forEach(field => {
+                        if (r[field] !== undefined) rRaw[field] = r[field];
+                    });
+                }
+
+                return rRaw as unknown as SalesOrderFormData;
             }
-            return response as unknown as SalesOrderFormData;
+            return null;
         } catch (error) {
             logger.error(`Failed to fetch sales order ${id}:`, error);
             return null;
@@ -294,7 +392,7 @@ export const SalesOrderService = {
         logger.info(`🚀 [SalesOrderService] UPDATE PAYLOAD for ${id}:`, payload);
         
         try {
-            const response = await api.patch(`/sale-order/${id}`, payload);
+            const response = await api.patch(`/sale-order/${id}/pending`, payload);
             return { success: true, data: response };
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string | string[] } }; message: string };
@@ -313,7 +411,7 @@ export const SalesOrderService = {
     updateStatus: async (id: string, status: string) => {
         logger.info(`🚀 [SalesOrderService] UPDATE STATUS for ${id}:`, { status });
         try {
-            const response = await api.patch(`/sale-order/${id}`, { status, so_status: status });
+            const response = await api.patch(`/sale-order/${id}/pending`, { status, so_status: status });
             return { success: true, data: response };
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string | string[] } }; message: string };

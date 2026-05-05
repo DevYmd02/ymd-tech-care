@@ -300,7 +300,7 @@ export const ReservationService = {
      */
     getAvailableApprovals: async (): Promise<AvailableApproval[]> => {
         try {
-            const response = await api.get<unknown>('/sale-quotation-approval');
+            const response = await api.get<unknown>('/sale-reservation/available-approvals');
             // Handle both direct array and paginated { data: [...] } responses
             if (Array.isArray(response)) return response as AvailableApproval[];
             const r = response as Record<string, unknown>;
