@@ -8,3 +8,4 @@ export * from './estimate/EstimateListPage';
 export * from './quotation/QuotationListPage';
 export * from './reservation/ReservationListPage';
 export * from './sales-order/SalesOrderListPage';
+export * from './delivery/DeliveryListPage';

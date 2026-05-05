@@ -53,10 +53,10 @@ export const RSActionsCell: React.FC<RSActionsCellProps> = ({
             {/* 4. PRINT Button (For Non-Draft) */}
             {row.status !== 'DRAFT' && (
                 <button 
-                    className="flex items-center gap-1 px-2 py-1 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg transition-all font-bold text-[11px] shrink-0"
+                    className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded-lg transition-all shrink-0"
+                    title="พิมพ์"
                 >
-                    <Printer size={14} />
-                    พิมพ์
+                    <Printer size={18} />
                 </button>
             )}
         </div>

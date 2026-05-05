@@ -1,0 +1,371 @@
+import api from '@core/api/api';
+import { logger } from '@utils/logger';
+import type { DeliveryFormData } from '../types/delivery.types';
+
+// ============================================================
+// List Params & Header Interface
+// ============================================================
+export interface DeliveryListParams {
+    delivery_no?: string;
+    customer_name?: string;
+    so_no?: string;
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+    page?: number;
+    limit?: number;
+}
+
+/** แสดงในตาราง List Page */
+export interface DeliveryHeader {
+    delivery_id: string;
+    delivery_no: string;
+    delivery_date: string;
+    so_id: string;
+    so_no: string;
+    customer_id: string;
+    customer_name: string;
+    branch_id: string;
+    status: 'DRAFT' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+    tracking_no?: string;
+    carrier?: string;
+    ship_method?: string;
+    docu_date?: string;
+    rawData?: Record<string, unknown>;
+}
+
+// ============================================================
+// Service
+// ============================================================
+export const DeliveryService = {
+
+    /** ดึงรายการใบจัดส่งสินค้า */
+    getList: async (params: DeliveryListParams = {}) => {
+        logger.debug('[DeliveryService] getList params:', params);
+        try {
+            const response = await api.get<{ data: Record<string, unknown>[]; total: number } | Record<string, unknown>[]>(
+                '/delivery', { params }
+            );
+            const rawData = Array.isArray(response) ? response : (response as { data: Record<string, unknown>[]; total: number }).data || [];
+            const total = Array.isArray(response) ? response.length : (response as { data: unknown[]; total: number }).total || 0;
+
+            const mappedData = rawData.map((item) => {
+                const customerObj = (item.customer || {}) as Record<string, unknown>;
+                const soObj = (item.sale_order || item.so || {}) as Record<string, unknown>;
+
+                return {
+                    ...item,
+                    delivery_id: String(item.delivery_id || item.id || ''),
+                    delivery_no: String(item.delivery_no || ''),
+                    delivery_date: item.delivery_date ? String(item.delivery_date).split('T')[0] : '',
+                    so_id: String(item.so_id || soObj.so_id || soObj.id || ''),
+                    so_no: String(item.so_no || soObj.so_no || ''),
+                    customer_id: String(item.customer_id || customerObj.customer_id || customerObj.id || ''),
+                    customer_name: String(item.customer_name || customerObj.customer_name_th || customerObj.customer_name || customerObj.name || ''),
+                    branch_id: String(item.branch_id || ''),
+                    status: item.status || 'DRAFT',
+                    tracking_no: String(item.tracking_no || ''),
+                    carrier: String(item.carrier || ''),
+                    ship_method: String(item.ship_method || ''),
+                    docu_date: item.docu_date ? String(item.docu_date).split('T')[0] : '',
+                    rawData: item,
+                } as DeliveryHeader;
+            });
+
+            return { data: mappedData, total };
+        } catch (error) {
+            logger.error('[DeliveryService] getList failed:', error);
+            return { data: [], total: 0 };
+        }
+    },
+
+    /** ดึงข้อมูลใบจัดส่งรายตัว */
+    getById: async (id: string): Promise<DeliveryFormData | null> => {
+        logger.debug('[DeliveryService] getById:', id);
+        try {
+            const response = await api.get<Record<string, unknown>>(`/delivery/${id}`);
+            if (!response) return null;
+
+            let rRaw = response as Record<string, unknown>;
+            if (rRaw['data'] && typeof rRaw['data'] === 'object' && !Array.isArray(rRaw['data'])) {
+                rRaw = rRaw['data'] as Record<string, unknown>;
+            }
+
+            const r = (rRaw['delivery'] || rRaw['delivery_header'] || rRaw) as Record<string, unknown>;
+
+            // Format dates
+            if (r['delivery_date']) r['delivery_date'] = String(r['delivery_date']).split('T')[0];
+            if (r['docu_date']) r['docu_date'] = String(r['docu_date']).split('T')[0];
+            if (r['updated_at']) r['updated_at'] = String(r['updated_at']).split('T')[0];
+
+            // Nested objects
+            const customerObj = (r['customer'] || r['customer_header'] || {}) as Record<string, unknown>;
+            const soObj = (r['sale_order'] || r['so_header'] || r['so'] || {}) as Record<string, unknown>;
+            const branchObj = (r['branch'] || r['branch_header'] || {}) as Record<string, unknown>;
+            const warehouseObj = (r['warehouse'] || r['warehouse_header'] || {}) as Record<string, unknown>;
+            const empObj = (r['ship_by_employee'] || r['employee'] || r['emp'] || {}) as Record<string, unknown>;
+
+            r['customer_id'] = String(r['customer_id'] || customerObj['customer_id'] || customerObj['id'] || '');
+            r['customer_name'] = String(r['customer_name'] || customerObj['customer_name_th'] || customerObj['customer_name'] || customerObj['name'] || '');
+            r['so_id'] = String(r['so_id'] || soObj['so_id'] || soObj['id'] || '');
+            r['so_no'] = String(r['so_no'] || soObj['so_no'] || '');
+            r['branch_id'] = String(r['branch_id'] || branchObj['branch_id'] || branchObj['id'] || '');
+            r['warehouse_id'] = String(r['warehouse_id'] || warehouseObj['warehouse_id'] || warehouseObj['id'] || '');
+            r['ship_by_emp'] = String(r['ship_by_emp'] || empObj['id'] || empObj['employee_id'] || '');
+            r['ship_by_emp_name'] = String(
+                r['ship_by_emp_name'] || empObj['employee_fullname'] ||
+                `${empObj['employee_firstname_th'] || ''} ${empObj['employee_lastname_th'] || ''}`.trim() || ''
+            );
+
+            // Map lines
+            let rawLinesData = (
+                r['delivery_lines'] || r['deliveryLines'] || r['lines'] || r['items'] || r['delivery_line'] || []
+            ) as unknown;
+
+            if (!Array.isArray(rawLinesData) || (rawLinesData as unknown[]).length === 0) {
+                const potentialKey = Object.keys(r).find(key =>
+                    Array.isArray(r[key]) &&
+                    (key.toLowerCase().includes('line') || key.toLowerCase().includes('item') || key.toLowerCase().includes('detail'))
+                );
+                if (potentialKey) rawLinesData = r[potentialKey];
+            }
+
+            const rawLines = (Array.isArray(rawLinesData) ? rawLinesData : []) as Record<string, unknown>[];
+
+            r['lines'] = await Promise.all(rawLines.map(async (l: Record<string, unknown>) => {
+                const item = (l['item'] || l['item_master'] || l['item_header'] || {}) as Record<string, unknown>;
+                const uom = (l['uom'] || l['unit'] || {}) as Record<string, unknown>;
+                const warehouseLine = (l['warehouse'] || {}) as Record<string, unknown>;
+
+                const itemId = String(l['item_id'] || item['item_id'] || item['id'] || '');
+                let itemCode = String(l['item_code'] || item['item_code'] || item['code'] || '');
+                let itemName = String(l['item_name'] || item['item_name'] || item['item_name_th'] || item['name'] || '');
+
+                // Re-enrich item if missing
+                if ((!itemCode || !itemName) && itemId) {
+                    try {
+                        const masterRes = await api.get<unknown>(`/item-master/${itemId}`);
+                        const master = ((masterRes as Record<string, unknown>)?.data || masterRes) as Record<string, unknown>;
+                        if (master) {
+                            itemCode = itemCode || String(master['item_code'] || master['code'] || '');
+                            itemName = itemName || String(master['item_name'] || master['item_name_th'] || master['name'] || '');
+                        }
+                    } catch { /* ignore */ }
+                }
+
+                // Lot
+                const lotIdVal = l['lot_id'];
+                const lotObj = (typeof lotIdVal === 'object' && lotIdVal !== null)
+                    ? (lotIdVal as Record<string, unknown>)
+                    : ((l['lot'] || l['lot_header'] || {}) as Record<string, unknown>);
+                let lotNo = String(l['lot_no'] || l['lot_number'] || lotObj['lot_no'] || lotObj['code'] || '');
+
+                if (!lotNo && lotIdVal && (typeof lotIdVal === 'number' || typeof lotIdVal === 'string')) {
+                    try {
+                        const lotRes = await api.get<unknown>(`/item-lot/${lotIdVal}`);
+                        const lotData = (lotRes as Record<string, unknown>)?.data || lotRes;
+                        if (lotData && typeof lotData === 'object' && !Array.isArray(lotData)) {
+                            const lotItem = lotData as Record<string, unknown>;
+                            lotNo = String(lotItem['lot_no'] || lotItem['code'] || '');
+                        }
+                    } catch { /* ignore */ }
+                }
+
+                return {
+                    ...l,
+                    delivery_line_id: String(l['delivery_line_id'] || l['id'] || ''),
+                    delivery_id: String(l['delivery_id'] || ''),
+                    so_line_id: l['so_line_id'] ? String(l['so_line_id']) : undefined,
+                    item_id: itemId,
+                    item_code: itemCode,
+                    item_name: itemName,
+                    qty_shipped: Number(l['qty_shipped'] || l['qty'] || l['quantity'] || 0),
+                    uom_id: String(l['uom_id'] || uom['uom_id'] || uom['id'] || ''),
+                    uom_name: String(l['uom_name'] || uom['uom_name'] || uom['name'] || ''),
+                    warehouse_id: String(l['warehouse_id'] || warehouseLine['warehouse_id'] || warehouseLine['id'] || ''),
+                    location_id: l['location_id'] ? String(l['location_id']) : undefined,
+                    lot_id: lotIdVal ? String(
+                        (typeof lotIdVal === 'object' && lotIdVal !== null)
+                            ? ((lotIdVal as Record<string, unknown>).id || (lotIdVal as Record<string, unknown>).lot_id || '')
+                            : lotIdVal
+                    ) : undefined,
+                    lot_no: lotNo,
+                    serial_no: String(l['serial_no'] || ''),
+                    remarks: String(l['remarks'] || ''),
+                };
+            }));
+
+            // Enrich branch name if missing
+            const rawBranchId = r['branch_id'];
+            if (rawBranchId && !r['branch_name']) {
+                try {
+                    const branchRes = await api.get<Record<string, unknown>>(`/org-branches/${rawBranchId}`);
+                    const branchData = (branchRes['data'] as Record<string, unknown>) || branchRes;
+                    if (branchData) {
+                        r['branch_name'] = String(branchData['branch_name'] || branchData['name'] || '');
+                    }
+                } catch { /* ignore */ }
+            }
+
+            // Enrich ship_by_emp_name if missing
+            const rawEmpId = r['ship_by_emp'];
+            if (rawEmpId && !r['ship_by_emp_name']) {
+                try {
+                    const empRes = await api.get<Record<string, unknown>>(`/employees/${rawEmpId}`);
+                    const empData = (empRes['data'] as Record<string, unknown>) || empRes;
+                    if (empData) {
+                        r['ship_by_emp_name'] = String(
+                            empData['employee_fullname'] ||
+                            `${empData['employee_firstname_th'] || ''} ${empData['employee_lastname_th'] || ''}`.trim()
+                        );
+                    }
+                } catch { /* ignore */ }
+            }
+
+            if (r !== rRaw) {
+                const criticalFields = [
+                    'customer_id', 'customer_name', 'so_id', 'so_no', 'branch_id', 'branch_name',
+                    'warehouse_id', 'ship_by_emp', 'ship_by_emp_name', 'lines',
+                    'delivery_date', 'docu_date'
+                ];
+                criticalFields.forEach(field => {
+                    if (r[field] !== undefined) rRaw[field] = r[field];
+                });
+            }
+
+            return rRaw as unknown as DeliveryFormData;
+        } catch (error) {
+            logger.error(`[DeliveryService] getById ${id} failed:`, error);
+            return null;
+        }
+    },
+
+    /** สร้างใบจัดส่งใหม่ */
+    create: async (data: DeliveryFormData) => {
+        const payload = DeliveryService.sanitizeData(data, false);
+        logger.info('[DeliveryService] CREATE PAYLOAD:', payload);
+        try {
+            const response = await api.post('/delivery', payload);
+            return { success: true, data: response };
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string | string[] } }; message: string };
+            const errorData = err.response?.data;
+            if (errorData && Array.isArray(errorData.message)) {
+                errorData.message.forEach(m => logger.error('Validation Error:', m));
+            } else {
+                logger.error('[DeliveryService] create failed:', errorData || err.message);
+            }
+            throw error;
+        }
+    },
+
+    /** อัปเดตใบจัดส่ง */
+    update: async (id: string, data: Partial<DeliveryFormData>) => {
+        const payload = DeliveryService.sanitizeData(data, true);
+        logger.info(`[DeliveryService] UPDATE PAYLOAD for ${id}:`, payload);
+        try {
+            const response = await api.patch(`/delivery/${id}`, payload);
+            return { success: true, data: response };
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string | string[] } }; message: string };
+            const errorData = err.response?.data;
+            if (errorData && Array.isArray(errorData.message)) {
+                errorData.message.forEach(m => logger.error('Validation Error:', m));
+            } else {
+                logger.error(`[DeliveryService] update ${id} failed:`, errorData || err.message);
+            }
+            throw error;
+        }
+    },
+
+    /** อัปเดตสถานะใบจัดส่ง */
+    updateStatus: async (id: string, status: string) => {
+        logger.info(`[DeliveryService] UPDATE STATUS for ${id}:`, { status });
+        try {
+            const response = await api.patch(`/delivery/${id}/status`, { status });
+            return { success: true, data: response };
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string | string[] } }; message: string };
+            logger.error(`[DeliveryService] updateStatus ${id} failed:`, err.response?.data || err.message);
+            throw error;
+        }
+    },
+
+    /** ลบใบจัดส่ง */
+    delete: async (id: string) => {
+        logger.debug('[DeliveryService] delete:', id);
+        try {
+            await api.delete(`/delivery/${id}`);
+            return { success: true };
+        } catch (error) {
+            logger.error(`[DeliveryService] delete ${id} failed:`, error);
+            throw error;
+        }
+    },
+
+    /** Sanitize data before API call */
+    sanitizeData: (data: DeliveryFormData | Partial<DeliveryFormData>, isUpdate = false) => {
+        const raw = { ...data } as Record<string, unknown>;
+
+        const toISOString = (dateInput?: unknown) => {
+            if (!dateInput || dateInput === '') return undefined;
+            try {
+                const d = new Date(dateInput as string);
+                if (isNaN(d.getTime())) return undefined;
+                return d.toISOString();
+            } catch {
+                return undefined;
+            }
+        };
+
+        const isValidId = (id: unknown): boolean => {
+            if (id === null || id === undefined || id === '' || id === 0) return false;
+            const num = Number(id);
+            return !isNaN(num) && num > 0;
+        };
+
+        const payload: Record<string, unknown> = {
+            delivery_date: toISOString(raw['delivery_date']) || new Date().toISOString(),
+            docu_date: toISOString(raw['docu_date']) || new Date().toISOString(),
+            status: raw['status'] || 'DRAFT',
+            ship_to_address: raw['ship_to_address'] || '',
+            ship_method: raw['ship_method'] || '',
+            carrier: raw['carrier'] || '',
+            tracking_no: raw['tracking_no'] || '',
+            remarks: raw['remarks'] || '',
+        };
+
+        if (isValidId(raw['so_id'])) payload['so_id'] = Number(raw['so_id']);
+        if (isValidId(raw['customer_id'])) payload['customer_id'] = Number(raw['customer_id']);
+        if (isValidId(raw['branch_id'])) payload['branch_id'] = Number(raw['branch_id']);
+        if (isValidId(raw['warehouse_id'])) payload['warehouse_id'] = Number(raw['warehouse_id']);
+        if (isValidId(raw['ship_by_emp'])) payload['ship_by_emp'] = Number(raw['ship_by_emp']);
+
+        if (raw.lines && Array.isArray(raw.lines)) {
+            const headerDeliveryId = Number(raw['delivery_id'] || 0);
+            payload.deliveryLines = (raw.lines as Record<string, unknown>[]).map((line) => {
+                const l: Record<string, unknown> = {
+                    delivery_id: headerDeliveryId || Number(line['delivery_id'] || 0),
+                    item_id: Number(line['item_id']),
+                    qty_shipped: Number(line['qty_shipped'] || 0),
+                    uom_id: Number(line['uom_id']),
+                    remarks: line['remarks'] || '',
+                };
+
+                if (isValidId(line['so_line_id'])) l['so_line_id'] = Number(line['so_line_id']);
+                if (isValidId(line['warehouse_id'])) l['warehouse_id'] = Number(line['warehouse_id']);
+                if (isValidId(line['location_id'])) l['location_id'] = Number(line['location_id']);
+                if (isValidId(line['lot_id'])) l['lot_id'] = Number(line['lot_id']);
+                if (line['serial_no']) l['serial_no'] = String(line['serial_no']);
+
+                if (isUpdate && line.delivery_line_id && !isNaN(Number(line.delivery_line_id))) {
+                    l.delivery_line_id = Number(line.delivery_line_id);
+                }
+
+                return l;
+            });
+        }
+
+        return payload;
+    },
+};
