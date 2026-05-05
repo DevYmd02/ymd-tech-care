@@ -51,12 +51,51 @@ export interface EmployeeMaster extends BaseMasterData {
     };
 }
 
+/**
+ * Employee Form Data — covers all fields from M16 employee schema
+ */
 export interface EmployeeFormData {
-    employeeCode: string;
+    // ข้อมูลพื้นฐาน
+    employeeCode: string;           // emp_code varchar(25) yes
+    taxIdCard: string;              // tax_idcard varchar(25)
+    empTitle: string;               // emp_title varchar(50) yes  — คำนำหน้า (Thai)
+    empTitleEng: string;            // emp_titleeng varchar(255) — คำนำหน้า (Eng)
+    empName: string;                // emp_name varchar(255) yes — ชื่อพนักงาน (Thai)
+    empNameEng: string;             // emp_nameeng varchar(255) — ชื่อพนักงาน (Eng)
+    tel: string;                    // tel varchar(255)
+    email: string;                  // email varchar(255)
+
+    // ที่อยู่
+    address: string;                // address text
+    district: string;               // district varchar(100) — ตำบล
+    amphur: string;                 // amphur varchar(100) — อำเภอ
+    province: string;               // province varchar(100) — จังหวัด
+    postCode: string;               // post_code varchar(25) — รหัสไปรษณีย์
+
+    // ข้อมูลองค์กร
+    deptId: string;                 // dept_id uuid (FK) — ID แผนก
+    deptCode: string;               // dept_code varchar(25) — รหัสแผนก
+    postId: string;                 // post_id uuid (FK) — ID ตำแหน่ง
+    positionCode: string;           // position_code varchar(25) — รหัสตำแหน่ง
+    empGroupId: string;             // emp_group_id uuid (FK)
+    empGroupCode: string;           // emp_group_code varchar(25)
+    empHead: string;                // emp_head uuid — ID หัวหน้า
+    empHeadCode: string;            // emp_head_code varchar(25) — รหัสหัวหน้า
+    empType: string;                // emp_type boolean — S:พนักงานขาย, G:พนักงานปกติ
+    taxId: string;                  // tax_id varchar(25) — เลขประจำตัวผู้เสียภาษี
+
+    // วันที่สำคัญ
+    empStartDate: string;           // emp_startdate datetime(8)
+    empResignDate: string;          // emp_resigndate datetime(8)
+    empStatus: string;              // emp_status boolean — 1:ทำงาน 2:พักงาน 3:ลาออก 4:เกษียณ
+
+    // อื่นๆ
+    empSignature: string;           // emp_signature varchar(255) — Path ลายเซ็นต์
+    remark: string;                 // remark varchar(255)
+
+    // Legacy fields (kept for backward compat)
     firstName: string;
     lastName: string;
-    email: string;
-    phone: string;
     positionId: number;
     sideId: string | number;
     isActive: boolean;
