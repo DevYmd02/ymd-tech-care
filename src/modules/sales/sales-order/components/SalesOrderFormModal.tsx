@@ -55,6 +55,8 @@ const cardClass =
 // ============================================================
 // Component
 // ============================================================
+import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
+
 export function SalesOrderFormModal({
     isOpen,
     onClose,
@@ -168,6 +170,8 @@ export function SalesOrderFormModal({
         taxCodes,
         uoms,
     });
+
+    const { watch } = methods;
 
     const handleSelectEmployee = (emp: IEmployee) => {
         methods.setValue('emp_sale_id', emp.id, { shouldDirty: true });
@@ -288,7 +292,6 @@ export function SalesOrderFormModal({
         <WindowFormLayout
             isOpen={isOpen}
             onClose={onClose}
-            isLoading={isFetchingDetail}
             title={
                 isViewOnly 
                     ? 'รายละเอียดใบสั่งขาย (Sales Order)'
@@ -305,85 +308,89 @@ export function SalesOrderFormModal({
             }
         >
             <FormProvider {...methods}>
-                <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
-                    <form
-                        id="so-form"
-                        onSubmit={handleSubmit(onFormSubmit)}
-                        className={`max-w-[1400px] mx-auto space-y-6 ${isViewOnly ? 'pointer-events-none opacity-90' : ''}`}
-                    >
-                        {/* 1. Header */}
-                        <div className={cardClass}>
-                            <div className="p-6">
-                                <SalesOrderHeaderForm
-                                    branches={branches}
-                                    currencies={currencies}
-                                    customers={customers}
-                                    taxCodes={taxCodes}
-                                    departments={departments}
-                                    projects={projects}
-                                    saleAreas={saleAreas}
-                                    onSearchCustomer={() => setIsCustomerSearchOpen(true)}
-                                    onSearchReservation={() => setIsReservationSearchOpen(true)}
-                                    onSearchEmployee={() => setIsEmployeeSearchOpen(true)}
-                                />
+                {isFetchingDetail && !watch('so_no') ? (
+                    <SalesFormSkeleton />
+                ) : (
+                    <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
+                        <form
+                            id="so-form"
+                            onSubmit={handleSubmit(onFormSubmit)}
+                            className={`max-w-[1400px] mx-auto space-y-6 ${isViewOnly ? 'pointer-events-none opacity-90' : ''}`}
+                        >
+                            {/* 1. Header */}
+                            <div className={cardClass}>
+                                <div className="p-6">
+                                    <SalesOrderHeaderForm
+                                        branches={branches}
+                                        currencies={currencies}
+                                        customers={customers}
+                                        taxCodes={taxCodes}
+                                        departments={departments}
+                                        projects={projects}
+                                        saleAreas={saleAreas}
+                                        onSearchCustomer={() => setIsCustomerSearchOpen(true)}
+                                        onSearchReservation={() => setIsReservationSearchOpen(true)}
+                                        onSearchEmployee={() => setIsEmployeeSearchOpen(true)}
+                                    />
+                                </div>
                             </div>
-                        </div>
 
-                        {/* 2. Lines */}
-                        <div className={cardClass}>
-                            <div className="p-6">
-                                <SalesOrderLineTable
-                                    lines={formData.lines}
-                                    uoms={uoms}
-                                    warehouses={warehouses}
-                                    locations={locations}
-                                    onAddLine={handleAddLine}
-                                    onRemoveLine={handleRemoveLine}
-                                    onLineChange={handleLineChange}
-                                    onSearchProduct={(index: number) => {
-                                        setActiveLineIndex(index);
-                                        setIsProductSearchOpen(true);
-                                    }}
-                                    onSearchLocation={(index: number) => {
-                                        setActiveLineIndex(index);
-                                        setIsLocationSearchOpen(true);
-                                    }}
-                                    onSearchWarehouse={(index: number) => {
-                                        setActiveLineIndex(index);
-                                        setIsWarehouseSearchOpen(true);
-                                    }}
-                                    onSearchLot={(index: number) => {
-                                        setActiveLineIndex(index);
-                                        setIsLotSearchOpen(true);
-                                    }}
-                                />
+                            {/* 2. Lines */}
+                            <div className={cardClass}>
+                                <div className="p-6">
+                                    <SalesOrderLineTable
+                                        lines={formData.lines}
+                                        uoms={uoms}
+                                        warehouses={warehouses}
+                                        locations={locations}
+                                        onAddLine={handleAddLine}
+                                        onRemoveLine={handleRemoveLine}
+                                        onLineChange={handleLineChange}
+                                        onSearchProduct={(index: number) => {
+                                            setActiveLineIndex(index);
+                                            setIsProductSearchOpen(true);
+                                        }}
+                                        onSearchLocation={(index: number) => {
+                                            setActiveLineIndex(index);
+                                            setIsLocationSearchOpen(true);
+                                        }}
+                                        onSearchWarehouse={(index: number) => {
+                                            setActiveLineIndex(index);
+                                            setIsWarehouseSearchOpen(true);
+                                        }}
+                                        onSearchLot={(index: number) => {
+                                            setActiveLineIndex(index);
+                                            setIsLotSearchOpen(true);
+                                        }}
+                                    />
+                                </div>
                             </div>
-                        </div>
 
-                        {/* 3. Summary */}
-                        <div className={cardClass}>
-                            <div className="p-6">
-                                <SalesOrderSummary
-                                    subTotal={totals.subTotal}
-                                    discountInput={formData.discount_input}
-                                    discountAmount={formData.discount_amount}
-                                    taxRate={totals.taxRate}
-                                    vatAmount={totals.vatAmount}
-                                    totalAmount={totals.totalAmount}
-                                    currencySymbol={
-                                        formData.isMulticurrency
-                                            ? formData.base_currency_code || 'บาท'
-                                            : 'บาท'
-                                    }
-                                    lineCount={formData.lines.length}
-                                    onDiscountChange={(val: string) =>
-                                        methods.setValue('discount_input', val, { shouldDirty: true })
-                                    }
-                                />
+                            {/* 3. Summary */}
+                            <div className={cardClass}>
+                                <div className="p-6">
+                                    <SalesOrderSummary
+                                        subTotal={totals.subTotal}
+                                        discountInput={formData.discount_input}
+                                        discountAmount={formData.discount_amount}
+                                        taxRate={totals.taxRate}
+                                        vatAmount={totals.vatAmount}
+                                        totalAmount={totals.totalAmount}
+                                        currencySymbol={
+                                            formData.isMulticurrency
+                                                ? formData.base_currency_code || 'บาท'
+                                                : 'บาท'
+                                        }
+                                        lineCount={formData.lines.length}
+                                        onDiscountChange={(val: string) =>
+                                            methods.setValue('discount_input', val, { shouldDirty: true })
+                                        }
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    </form>
-                </div>
+                        </form>
+                    </div>
+                )}
             </FormProvider>
 
             {/* Search Modals */}

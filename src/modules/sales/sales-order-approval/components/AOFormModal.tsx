@@ -14,6 +14,7 @@ import { AOFormSummary } from './AOFormSummary';
 import { AOHistoryModal } from '../../shared/components/AOHistoryModal';
 import type { AOListItem, SOForApproval } from '../types/sales-order-approval.types';
 import type { AOLineFormData } from '../schemas/ao.schema';
+import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
 import { SOSearchModal } from './SOSearchModal';
 
 interface Props {
@@ -30,34 +31,6 @@ const formatDisplayDate = (val?: string) => {
   const [y, m, d] = cleaned.split('-');
   return y && m && d ? `${d}/${m}/${y}` : cleaned;
 };
-
-const FormSkeleton = () => (
-  <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
-    <div className="max-w-[1400px] mx-auto space-y-6 animate-pulse">
-      {/* Header Skeleton */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg p-6 space-y-4">
-        <div className="h-6 w-1/4 bg-gray-200 dark:bg-gray-800 rounded mb-6" />
-        <div className="grid grid-cols-4 gap-6">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-            <div key={i} className="space-y-2">
-              <div className="h-3 w-2/3 bg-gray-200 dark:bg-gray-800 rounded" />
-              <div className="h-9 w-full bg-gray-100 dark:bg-gray-800 rounded" />
-            </div>
-          ))}
-        </div>
-      </div>
-      {/* Lines Skeleton */}
-      <div className="bg-white dark:bg-gray-900 rounded-lg p-6 space-y-4">
-        <div className="h-6 w-1/4 bg-gray-200 dark:bg-gray-800 rounded mb-4" />
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-10 w-full bg-gray-100 dark:bg-gray-800 rounded" />
-          ))}
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 export const AOFormModal: React.FC<Props> = ({
   isOpen, onClose, soId, approvalItem, onSuccess,
@@ -168,7 +141,7 @@ export const AOFormModal: React.FC<Props> = ({
       >
         <FormProvider {...formMethods}>
           {isSubmitting && !watch('so_no') ? (
-            <FormSkeleton />
+            <SalesFormSkeleton />
           ) : (
             <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
               <div className="max-w-[1400px] mx-auto space-y-6">

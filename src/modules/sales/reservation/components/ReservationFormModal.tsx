@@ -20,6 +20,8 @@ import type { ReservationFormData } from '../types/reservation.types';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@utils/logger';
 
+import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
+
 interface ReservationFormModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -104,7 +106,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
     const [searchType, setSearchType] = useState<'SQ' | 'AQ'>('AQ');
 
 
-    const { setValue } = methods;
+    const { setValue, watch } = methods;
 
     // Helper for search modals to avoid index errors
     const activeLotLine = activeLotLineIndex !== null ? (formData.lines || [])[activeLotLineIndex] : null;
@@ -187,18 +189,13 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
             }
         >
             <FormProvider {...methods}>
-                <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 relative">
-                    {isLoading && (
-                        <div className="absolute inset-0 bg-white/50 dark:bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-                            <div className="flex flex-col items-center gap-3">
-                                <Loader2 className="animate-spin text-purple-600" size={48} />
-                                <p className="font-bold text-gray-600 dark:text-gray-300">กำลังโหลดข้อมูล...</p>
-                            </div>
-                        </div>
-                    )}
-                    <form 
-                        id="reservation-form" 
-                        onSubmit={handleSubmit(onFormSubmit, (errors) => {
+                {isLoading && !watch('reservation_no') ? (
+                    <SalesFormSkeleton />
+                ) : (
+                    <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 relative">
+                        <form 
+                            id="reservation-form" 
+                            onSubmit={handleSubmit(onFormSubmit, (errors) => {
                             logger.debug('Validation Errors:', errors);
                             const errorFields = Object.keys(errors)
                                 .map(key => FIELD_LABELS[key] || key)
@@ -284,6 +281,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                         </div>
                     </form>
                 </div>
+                )}
             {/* Confirmation Modal */}
             <ConfirmationModal 
                 isOpen={isConfirmOpen}

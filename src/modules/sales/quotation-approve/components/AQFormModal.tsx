@@ -19,6 +19,7 @@ import { AQFormLines } from './AQFormLines';
 import { AQFormSummary } from './AQFormSummary';
 import { AQSQSearchModal } from './AQSQSearchModal';
 import { AQHistoryModal } from '@sales/shared/components/AQHistoryModal';
+import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
 import type { AQListItem, SQForApproval } from '../types/quotation-approve.types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -146,20 +147,23 @@ export const AQFormModal: React.FC<Props> = ({
         }
       >
         <FormProvider {...formMethods}>
-          <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
-            <div className="max-w-[1400px] mx-auto space-y-6">
+          {isSubmitting && !watch('sq_no') ? (
+            <SalesFormSkeleton />
+          ) : (
+            <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
+              <div className="max-w-[1400px] mx-auto space-y-6">
 
-              {/* ── SQ Header Info ───────────────────────────────────────── */}
-              <div className={cardClass}>
-                <div className="p-6">
-                  <AQHeader
-                    onSearch={() => setIsSQSearchOpen(true)}
-                    showSearch={!isAlreadyProcessed && (!sqId || !activeId)}
-                    currencies={currencies}
-                    readOnly={isAlreadyProcessed}
-                  />
+                {/* ── SQ Header Info ───────────────────────────────────────── */}
+                <div className={cardClass}>
+                  <div className="p-6">
+                    <AQHeader
+                      onSearch={() => setIsSQSearchOpen(true)}
+                      showSearch={!isAlreadyProcessed && (!sqId || !activeId)}
+                      currencies={currencies}
+                      readOnly={isAlreadyProcessed}
+                    />
+                  </div>
                 </div>
-              </div>
 
               {/* ── AQ Document Section ──────────────────────────────────── */}
               <div className={`${cardClass} p-6`}>
@@ -254,8 +258,9 @@ export const AQFormModal: React.FC<Props> = ({
                 </div>
               </div>
 
+              </div>
             </div>
-          </div>
+          )}
         </FormProvider>
       </WindowFormLayout>
 
