@@ -154,30 +154,45 @@ export const ReservationService = {
                 const aqId = (r.aq_id || r.aq_header_id || r.approval_id || r.sale_quotation_approval_id) as string | number | undefined;
                 if (!r.aq_no && aqId) {
                     try {
+                        // 1. Try Available Approvals (Fastest)
                         const aqs = await ReservationService.getAvailableApprovals();
                         const match = aqs.find((a) => String(a.aq_id) === String(aqId));
                         if (match) response.aq_no = match.aq_no;
                         else {
-                            const aqRes = await api.get<unknown>(`/sale-quotation-approval/${aqId}`);
-                            const aqStr = JSON.stringify(aqRes);
-                            const aqMatch = aqStr.match(/AQ-?\d{4,}-\d{4,}/i) || aqStr.match(/"aq_no":"(.*?)"/i) || aqStr.match(/"aqNo":"(.*?)"/i);
-                            if (aqMatch) response.aq_no = aqMatch[1] || aqMatch[0];
+                            // 2. Try searching in general AQ list (Avoids 404 because list endpoint usually exists)
+                            const aqsRes = await api.get<unknown>('/sale-quotation-approval', { params: { limit: 1000 } });
+                            const aqsData = ((aqsRes as Record<string, unknown>)?.data || (aqsRes as Record<string, unknown>)?.items || aqsRes || []) as Record<string, unknown>[];
+                            const matchInList = aqsData.find(a => String(a.aq_id || a.id || a.sale_quotation_approval_id) === String(aqId));
+                            
+                            if (matchInList) {
+                                response.aq_no = String(matchInList.aq_no || matchInList.sale_quotation_approval_no || matchInList.code || matchInList.no || '');
+                            } else {
+                                // 3. Last resort: Direct fetch (might 404 if ID endpoint not supported)
+                                try {
+                                    const aqRes = await api.get<unknown>(`/sale-quotation-approval/${aqId}`);
+                                    const aqStr = JSON.stringify(aqRes);
+                                    const aqMatch = aqStr.match(/AQ-?\d{4,}-\d{4,}/i) || aqStr.match(/"aq_no":"(.*?)"/i) || aqStr.match(/"aqNo":"(.*?)"/i);
+                                    if (aqMatch) response.aq_no = aqMatch[1] || aqMatch[0];
+                                } catch { /* ignore 404 */ }
+                            }
                         }
                     } catch { /* ignore */ }
                 }
 
-                if (!response.sq_no) {
+                if (!response.sq_no || response.sq_no === 'undefined' || response.sq_no === 'null') {
                     const sqObj = (r.sq || r.sale_quotation || r.quotation || r.header || {}) as Record<string, unknown>;
                     const fullStr = JSON.stringify(response);
                     const fallbackMatch = fullStr.match(/SQ-?\d{4,}-\d{4,}/i);
-                    response.sq_no = String(r.sq_no || r.sqNo || sqObj.sq_no || sqObj.sqNo || sqObj.code || sqObj.no || r.sale_quotation_no || (fallbackMatch ? fallbackMatch[0] : ''));
+                    const resolvedSq = r.sq_no || r.sqNo || sqObj.sq_no || sqObj.sqNo || sqObj.code || sqObj.no || r.sale_quotation_no || (fallbackMatch ? fallbackMatch[0] : '');
+                    response.sq_no = resolvedSq ? String(resolvedSq) : '';
                 }
                 
-                if (!response.aq_no) {
+                if (!response.aq_no || response.aq_no === 'undefined' || response.aq_no === 'null') {
                     const aqObj = (r.aq || r.aq_header || r.sale_quotation_approval || r.quotation_approval || {}) as Record<string, unknown>;
                     const aqStr = JSON.stringify(response);
                     const aqFallback = aqStr.match(/AQ-?\d{4,}-\d{4,}/i);
-                    response.aq_no = String(r.aq_no || r.aqNo || aqObj.aq_no || aqObj.aqNo || aqObj.code || aqObj.no || (aqFallback ? aqFallback[0] : ''));
+                    const resolvedAq = r.aq_no || r.aqNo || aqObj.aq_no || aqObj.aqNo || aqObj.code || aqObj.no || (aqFallback ? aqFallback[0] : '');
+                    response.aq_no = resolvedAq ? String(resolvedAq) : '';
                 }
                 
                 // 📅 Date Formatting
