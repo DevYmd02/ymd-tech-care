@@ -149,6 +149,11 @@ export function SalesOrderFormModal({
         enabled: isOpen && !!id,
     });
 
+    // 🛡️ Safety: Force view-only if status is not editable (e.g., APPROVED, CONFIRMED)
+    const currentStatus = (soDetail?.status || '').toUpperCase();
+    const isStatusEditable = !id || currentStatus === 'DRAFT' || currentStatus === 'REJECTED' || currentStatus === 'PENDING';
+    const effectiveIsViewOnly = isViewOnly || !isStatusEditable;
+
     // --------------------------------------------------------
     // Hooks
     // --------------------------------------------------------
@@ -263,7 +268,7 @@ export function SalesOrderFormModal({
                 >
                     ยกเลิก
                 </button>
-                {!isViewOnly && (
+                {!effectiveIsViewOnly && (
                     <button
                         type="button"
                         onClick={handleSaveClick}
@@ -299,7 +304,7 @@ export function SalesOrderFormModal({
                         ? 'แก้ไขใบสั่งขาย (Edit Sales Order)'
                         : 'สร้างใบสั่งขายใหม่ (Create Sales Order)'
             }
-            headerColor={isViewOnly ? "bg-slate-700" : "bg-indigo-600"}
+            headerColor={effectiveIsViewOnly ? "bg-slate-700" : "bg-indigo-600"}
             footer={ModalFooter}
             titleIcon={
                 <div className="bg-white/20 p-1.5 rounded shadow-sm">
@@ -315,7 +320,7 @@ export function SalesOrderFormModal({
                         <form
                             id="so-form"
                             onSubmit={handleSubmit(onFormSubmit)}
-                            className={`max-w-[1400px] mx-auto space-y-6 ${isViewOnly ? 'pointer-events-none opacity-90' : ''}`}
+                            className={`max-w-[1400px] mx-auto space-y-6 ${effectiveIsViewOnly ? 'pointer-events-none opacity-90' : ''}`}
                         >
                             {/* 1. Header */}
                             <div className={cardClass}>

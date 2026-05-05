@@ -116,6 +116,11 @@ export default function SalesOrderListPage() {
     };
 
     // Handlers
+    const isStatusEditable = (status?: string) => {
+        const s = (status || '').toUpperCase();
+        return s === 'DRAFT' || s === 'REJECTED' || s === 'PENDING';
+    };
+
     const handleCreateNew = () => {
         setSelectedSoId(undefined);
         setIsViewOnly(false);
@@ -170,14 +175,24 @@ export default function SalesOrderListPage() {
             }),
             columnHelper.accessor('so_no', {
                 header: 'เลขที่ใบสั่งขาย',
-                cell: (info) => (
-                    <span
-                        onClick={() => handleEdit(info.row.original.so_id)}
-                        className="text-indigo-600 font-bold cursor-pointer hover:underline transition-all"
-                    >
-                        {info.getValue()}
-                    </span>
-                ),
+                cell: (info) => {
+                    const status = info.row.original.status;
+                    const canEdit = isStatusEditable(status);
+                    return (
+                        <span
+                            onClick={() => {
+                                if (status !== 'DRAFT') {
+                                    handleViewHistory(info.row.original.so_id, info.row.original.so_no);
+                                } else {
+                                    handleEdit(info.row.original.so_id, !canEdit);
+                                }
+                            }}
+                            className="text-indigo-600 font-bold cursor-pointer hover:underline transition-all"
+                        >
+                            {info.getValue()}
+                        </span>
+                    );
+                },
                 size: 160,
             }),
             columnHelper.accessor('so_date', {
@@ -243,7 +258,7 @@ export default function SalesOrderListPage() {
                         >
                             <Eye size={16} />
                         </button>
-                        {info.row.original.status !== 'DRAFT' && (
+                        {info.row.original.status === 'APPROVED' && (
                             <button
                                 onClick={() => handleViewHistory(info.row.original.so_id, info.row.original.so_no)}
                                 className="text-emerald-500 hover:text-emerald-600 transition-colors"
@@ -252,24 +267,27 @@ export default function SalesOrderListPage() {
                                 <Clock size={18} />
                             </button>
                         )}
-                        {info.row.original.status === 'REJECTED' ? (
-                            <button
-                                onClick={() => handleEdit(info.row.original.so_id, false)}
-                                className="h-7 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1.5 shadow-sm transition-all active:scale-95 whitespace-nowrap flex-shrink-0"
-                                title="แก้ไขและส่งอนุมัติใหม่"
-                            >
-                                <Edit size={12} />
-                                <span>แก้ไขและส่งอนุมัติใหม่</span>
-                            </button>
-                        ) : (
-                            <button
-                                onClick={() => handleEdit(info.row.original.so_id, false)}
-                                className="flex items-center gap-1.5 text-amber-500 hover:text-amber-600 font-bold text-[12px] transition-colors"
-                                title="แก้ไข"
-                            >
-                                <Edit size={14} />
-                                <span>แก้ไข</span>
-                            </button>
+
+                        {isStatusEditable(info.row.original.status) && (
+                            info.row.original.status === 'REJECTED' ? (
+                                <button
+                                    onClick={() => handleEdit(info.row.original.so_id, false)}
+                                    className="h-7 px-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1.5 shadow-sm transition-all active:scale-95 whitespace-nowrap flex-shrink-0"
+                                    title="แก้ไขและส่งอนุมัติใหม่"
+                                >
+                                    <Edit size={12} />
+                                    <span>แก้ไขและส่งอนุมัติใหม่</span>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => handleEdit(info.row.original.so_id, false)}
+                                    className="flex items-center gap-1.5 text-amber-500 hover:text-amber-600 font-bold text-[12px] transition-colors"
+                                    title="แก้ไข"
+                                >
+                                    <Edit size={14} />
+                                    <span>แก้ไข</span>
+                                </button>
+                            )
                         )}
                         {info.row.original.status === 'DRAFT' && (
                             <button
@@ -393,7 +411,7 @@ export default function SalesOrderListPage() {
                                         >
                                             <Eye size={14} /> รายละเอียด
                                         </button>
-                                        {item.status !== 'DRAFT' && (
+                                        {item.status === 'APPROVED' && (
                                             <button 
                                                 onClick={() => handleViewHistory(item.so_id, item.so_no)}
                                                 className="flex-1 h-9 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900/20 text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-800 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"
@@ -401,16 +419,19 @@ export default function SalesOrderListPage() {
                                                 <Clock size={14} /> ประวัติ
                                             </button>
                                         )}
-                                        <button 
-                                            onClick={() => handleEdit(item.so_id, false)}
-                                            className={`flex-1 h-9 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 whitespace-nowrap ${
-                                                item.status === 'REJECTED' 
-                                                ? "bg-amber-600 hover:bg-amber-700 text-white shadow-sm" 
-                                                : "bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
-                                            }`}
-                                        >
-                                            <Edit size={14} /> {item.status === 'REJECTED' ? "แก้ไขและส่งอนุมัติใหม่" : "แก้ไข"}
-                                        </button>
+
+                                        {isStatusEditable(item.status) && (
+                                            <button 
+                                                onClick={() => handleEdit(item.so_id, false)}
+                                                className={`flex-1 h-9 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95 whitespace-nowrap ${
+                                                    item.status === 'REJECTED' 
+                                                    ? "bg-amber-600 hover:bg-amber-700 text-white shadow-sm" 
+                                                    : "bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800"
+                                                }`}
+                                            >
+                                                <Edit size={14} /> {item.status === 'REJECTED' ? "แก้ไขและส่งอนุมัติใหม่" : "แก้ไข"}
+                                            </button>
+                                        )}
                                     </div>
                                 }
                             />

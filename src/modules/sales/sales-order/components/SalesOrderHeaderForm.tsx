@@ -5,6 +5,7 @@
  */
 
 import { ShoppingCart, Search, User } from 'lucide-react';
+import { logger } from '@utils/logger';
 import { useFormContext, Controller, type FieldErrors } from 'react-hook-form';
 import { MulticurrencyWrapper } from '@components/forms/MulticurrencyWrapper';
 import { CustomDateInput, StatusCheckbox } from '@ui';
@@ -64,6 +65,13 @@ export function SalesOrderHeaderForm({
 
     const formData = watch();
     const isLocked = readOnly;
+
+    // 🔍 Debug: Track ship_date value
+    const shipDate = watch('ship_date');
+    const soNo = watch('so_no');
+    if (soNo) {
+        logger.debug(`[SalesOrderHeaderForm] SO ${soNo} - ship_date:`, shipDate);
+    }
 
     // Indigo theme styles
     const inputClass =
