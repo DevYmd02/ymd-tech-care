@@ -97,7 +97,11 @@ export const SalesOrderService = {
                 // Find the actual SO object (might be nested under sale_order, so_header, etc.)
                 const r = (rRaw['sale_order'] || rRaw['so_header'] || rRaw['order'] || rRaw['header'] || rRaw) as Record<string, unknown>;
                 
-                logger.debug('Sales Order Raw Detail:', r);
+                logger.info(`🔍 [SalesOrderService] Fetched SO Detail ID ${id}:`, {
+                    hasShipDate: !!r['ship_date'],
+                    shipDateVal: r['ship_date'],
+                    allKeys: Object.keys(r)
+                });
 
                 // Date formatting (Convert ISO to YYYY-MM-DD for HTML date inputs)
                 if (r['so_date']) r['so_date'] = String(r['so_date']).split('T')[0];
@@ -235,7 +239,7 @@ export const SalesOrderService = {
                 r['quote_currency_code'] = String(r['quote_currency_code'] || r['id_currency_code'] || r['currency_code'] || r['currency'] || 'THB');
 
                 // Enhanced Date Discovery
-                r['ship_date'] = r['ship_date'] || r['delivery_date'] || r['shipment_date'] || r['est_ship_date'] || r['scheduled_date'];
+                r['ship_date'] = r['ship_date'] || r['delivery_date'] || r['shipment_date'] || r['est_ship_date'] || r['scheduled_date'] || r['shipDate'] || r['ship_date_actual'];
                 if (r['ship_date']) r['ship_date'] = String(r['ship_date']).split('T')[0];
 
                 r['sub_total'] = Number(r['sub_total'] || r['base_sub_total'] || 0);
@@ -392,7 +396,7 @@ export const SalesOrderService = {
         logger.info(`🚀 [SalesOrderService] UPDATE PAYLOAD for ${id}:`, payload);
         
         try {
-            const response = await api.patch(`/sale-order/${id}/pending`, payload);
+            const response = await api.patch(`/sale-order/${id}`, payload);
             return { success: true, data: response };
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string | string[] } }; message: string };
@@ -478,6 +482,7 @@ export const SalesOrderService = {
             onhold: raw['onhold'] === true || raw['onhold'] === 'Y' ? 'Y' : 'N',
             remarks: raw['remarks'] || '',
             discount_expression: raw['discount_input'] || raw['discount_expression'] || '0',
+            ship_date: toISOString(raw['ship_date']),
             // Financial fields OMITTED as per backend "should not exist" error
         };
 
@@ -496,11 +501,10 @@ export const SalesOrderService = {
         if (isValidId(project_id)) payload['project_id'] = Number(project_id);
 
         if (raw.lines && Array.isArray(raw.lines)) {
-            // 🚨 CRITICAL: Backend error says 'saleOrderLines' should not exist 
-            // but 'saleReservationLines' is mandatory.
-            payload.saleReservationLines = raw.lines.map((line: Record<string, unknown>) => {
+            const headerSoId = Number(raw['so_id'] || 0);
+            payload.saleOrderLines = raw.lines.map((line: Record<string, unknown>) => {
                 const l: Record<string, unknown> = {
-                    so_id: 0, // 🧪 Workaround: Backend Error 2: so_id must be a number
+                    so_id: headerSoId || Number(line['so_id'] || 0),
                     item_id: Number(line['item_id']),
                     qty: Number(line['qty_ordered'] || line['qty'] || 0),
                     uom_id: Number(line['uom_id']),
