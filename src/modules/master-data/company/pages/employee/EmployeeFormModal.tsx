@@ -1,10 +1,10 @@
 /**
  * @file EmployeeFormModal.tsx
- * @description Modal for creating/editing Employee data (Standarized)
+ * @description Modal for creating/editing Employee data — full field set matching M16 schema
  */
 
 import { useWatch } from 'react-hook-form';
-import { Save, X, User } from 'lucide-react';
+import { Save, X, User, MapPin, Building2, CalendarDays, FileText } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 import { useEmployeeForm } from './hooks/useEmployeeForm';
@@ -15,6 +15,40 @@ interface EmployeeFormModalProps {
     onSuccess: () => void;
     editId?: number | null;
 }
+
+// ─── Options ────────────────────────────────────────────────────────────────
+
+const THAI_TITLE_OPTIONS = ['นาย', 'นาง', 'นางสาว', 'ดร.', 'อื่นๆ'];
+const ENG_TITLE_OPTIONS  = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Other'];
+
+const EMP_TYPE_OPTIONS = [
+    { value: 'S', label: 'S - พนักงานขาย' },
+    { value: 'G', label: 'G - พนักงานปกติ' },
+];
+
+const EMP_STATUS_OPTIONS = [
+    { value: '1', label: '1 - ทำงาน' },
+    { value: '2', label: '2 - พักงาน' },
+    { value: '3', label: '3 - ลาออก' },
+    { value: '4', label: '4 - เกษียณ' },
+];
+
+// ─── Sub-components ─────────────────────────────────────────────────────────
+
+/** Section header with icon and divider */
+const SectionHeader = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
+    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+        <span className="text-blue-600 dark:text-blue-400">{icon}</span>
+        <h3 className="text-base font-semibold text-gray-800 dark:text-gray-200">{title}</h3>
+    </div>
+);
+
+/** Hint text shown below an input */
+const Hint = ({ text }: { text: string }) => (
+    <p className="text-gray-400 text-xs mt-1">{text}</p>
+);
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 
 export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: EmployeeFormModalProps) => {
     const isEdit = !!editId;
@@ -27,20 +61,18 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
         isSubmitting,
         handleSave,
         setValue,
-        control
+        control,
     } = useEmployeeForm(editId ?? null, isOpen, onSuccess);
 
     const isActive = useWatch({ control, name: 'isActive' });
+    const empSignature = useWatch({ control, name: 'empSignature' });
 
-    // Header Icon
-    const TitleIcon = <User className="w-5 h-5 text-white" />;
-
-    // Footer Actions
+    // ── Footer ──────────────────────────────────────────────────────────────
     const FormFooter = (
-        <div className="flex justify-end gap-3 p-4">
+        <div className="flex justify-end gap-3 px-6 py-4">
             <button
                 type="button"
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg flex items-center gap-2 transition-colors border border-gray-300"
+                className="px-5 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg flex items-center gap-2 transition-colors border border-gray-300 dark:border-gray-600 font-medium"
                 onClick={onClose}
             >
                 <X className="w-4 h-4" />
@@ -48,12 +80,12 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
             </button>
             <button
                 type="button"
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50 font-medium"
                 onClick={handleSave}
                 disabled={isSubmitting}
             >
                 {isSubmitting ? (
-                    <span className="loading loading-spinner loading-xs"></span>
+                    <span className="loading loading-spinner loading-xs" />
                 ) : (
                     <Save className="w-4 h-4" />
                 )}
@@ -67,155 +99,482 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
             isOpen={isOpen}
             onClose={onClose}
             title={isEdit ? 'แก้ไขข้อมูลพนักงาน' : 'เพิ่มรหัสพนักงานใหม่'}
-            titleIcon={TitleIcon}
+            titleIcon={<User className="w-5 h-5 text-white" />}
             footer={FormFooter}
         >
-            <div className="p-6 space-y-6">
-                {/* Employee Code */}
-                <div>
-                    <label className={styles.label}>
-                        รหัสพนักงาน <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        {...register('employeeCode')}
-                        type="text"
-                        placeholder="กรอกรหัสพนักงาน"
-                        className={`${styles.input} ${errors.employeeCode ? 'border-red-500 focus:ring-red-200' : ''}`}
-                        disabled={isEdit}
-                    />
-                    {errors.employeeCode ? (
-                        <p className="text-red-500 text-xs mt-1">{errors.employeeCode.message}</p>
-                    ) : (
-                        <p className="text-gray-400 text-xs mt-1">varchar(20) - รหัสพนักงาน</p>
-                    )}
-                </div>
+            <div className="p-6 space-y-8">
 
-                {/* Name Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* First Name */}
-                    <div>
-                        <label className={styles.label}>
-                            ชื่อ <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            {...register('firstName')}
-                            type="text"
-                            placeholder="ชื่อ"
-                            className={`${styles.input} ${errors.firstName ? 'border-red-500 focus:ring-red-200' : ''}`}
-                        />
-                        {errors.firstName && (
-                            <p className="text-red-500 text-xs mt-1">{errors.firstName.message}</p>
-                        )}
+                {/* ════════════════════════════════════════
+                    SECTION 1 — ข้อมูลพื้นฐาน
+                ════════════════════════════════════════ */}
+                <section>
+                    <SectionHeader icon={<User className="w-4 h-4" />} title="ข้อมูลพื้นฐาน" />
+
+                    {/* Row 1: รหัสพนักงาน + เลขบัตรประชาชน */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label className={styles.label}>
+                                รหัสพนักงาน <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                {...register('employeeCode')}
+                                type="text"
+                                placeholder="EMP-001"
+                                className={`${styles.input} ${errors.employeeCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                                disabled={isEdit}
+                            />
+                            {errors.employeeCode ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.employeeCode.message}</p>
+                            ) : (
+                                <Hint text="varchar(25) - รหัสพนักงาน (ไม่ซ้ำ)" />
+                            )}
+                        </div>
+
+                        <div>
+                            <label className={styles.label}>เลขประจำตัวประชาชน</label>
+                            <input
+                                {...register('taxIdCard')}
+                                type="text"
+                                placeholder="1234567890123"
+                                className={styles.input}
+                            />
+                            <Hint text="varchar(25) - เลขประจำตัวประชาชน" />
+                        </div>
                     </div>
 
-                    {/* Last Name */}
-                    <div>
-                        <label className={styles.label}>
-                            นามสกุล <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            {...register('lastName')}
-                            type="text"
-                            placeholder="นามสกุล"
-                            className={`${styles.input} ${errors.lastName ? 'border-red-500 focus:ring-red-200' : ''}`}
-                        />
-                        {errors.lastName && (
-                            <p className="text-red-500 text-xs mt-1">{errors.lastName.message}</p>
-                        )}
+                    {/* Row 2: คำนำหน้า Thai + Eng */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label className={styles.label}>
+                                คำนำหน้า (ไทย) <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                                {...register('empTitle')}
+                                className={`${styles.input} cursor-pointer ${errors.empTitle ? 'border-red-500' : ''}`}
+                            >
+                                <option value="">-- เลือกคำนำหน้า --</option>
+                                {THAI_TITLE_OPTIONS.map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                ))}
+                            </select>
+                            {errors.empTitle ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.empTitle.message}</p>
+                            ) : (
+                                <Hint text="varchar(50) - คำนำหน้า" />
+                            )}
+                        </div>
+
+                        <div>
+                            <label className={styles.label}>คำนำหน้า (Eng)</label>
+                            <select
+                                {...register('empTitleEng')}
+                                className={`${styles.input} cursor-pointer`}
+                            >
+                                <option value="">-- Select Title --</option>
+                                {ENG_TITLE_OPTIONS.map(t => (
+                                    <option key={t} value={t}>{t}</option>
+                                ))}
+                            </select>
+                            <Hint text="varchar(255) - คำนำหน้า (Eng)" />
+                        </div>
                     </div>
-                </div>
 
-                {/* Contact Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Email */}
-                    <div>
-                        <label className={styles.label}>
-                            อีเมล
-                        </label>
-                        <input
-                            {...register('email')}
-                            type="email"
-                            placeholder="example@company.com"
-                            className={`${styles.input} ${errors.email ? 'border-red-500 focus:ring-red-200' : ''}`}
-                        />
-                        {errors.email && (
-                            <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
-                        )}
+                    {/* Row 3: ชื่อพนักงาน Thai + Eng */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label className={styles.label}>
+                                ชื่อพนักงาน (ไทย) <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                {...register('empName')}
+                                type="text"
+                                placeholder="สมชาย ใจดี"
+                                className={`${styles.input} ${errors.empName ? 'border-red-500' : ''}`}
+                            />
+                            {errors.empName ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.empName.message}</p>
+                            ) : (
+                                <Hint text="varchar(255) - ชื่อพนักงาน (Required)" />
+                            )}
+                        </div>
+
+                        <div>
+                            <label className={styles.label}>ชื่อพนักงาน (Eng)</label>
+                            <input
+                                {...register('empNameEng')}
+                                type="text"
+                                placeholder="Somchai Jaidee"
+                                className={styles.input}
+                            />
+                            <Hint text="varchar(255) - ชื่อพนักงาน (Eng)" />
+                        </div>
                     </div>
 
-                    {/* Phone */}
-                    <div>
-                        <label className={styles.label}>
-                            เบอร์โทรศัพท์
-                        </label>
-                        <input
-                            {...register('phone')}
-                            type="text"
-                            placeholder="08x-xxx-xxxx"
-                            className={`${styles.input} ${errors.phone ? 'border-red-500 focus:ring-red-200' : ''}`}
-                        />
+                    {/* Row 4: โทรศัพท์ + Email */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className={styles.label}>โทรศัพท์</label>
+                            <input
+                                {...register('tel')}
+                                type="text"
+                                placeholder="081-234-5678"
+                                className={styles.input}
+                            />
+                            <Hint text="varchar(255) - โทรศัพท์" />
+                        </div>
+
+                        <div>
+                            <label className={styles.label}>E-Mail</label>
+                            <input
+                                {...register('email')}
+                                type="email"
+                                placeholder="employee@company.com"
+                                className={`${styles.input} ${errors.email ? 'border-red-500' : ''}`}
+                            />
+                            {errors.email ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
+                            ) : (
+                                <Hint text="varchar(255) - E-Mail" />
+                            )}
+                        </div>
                     </div>
-                </div>
+                </section>
 
-                {/* Department & Position Row */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Side Dropdown */}
-                <div>
-                    <label className={styles.label}>
-                        ฝ่าย <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                        className={`${styles.input} cursor-pointer ${errors.sideId ? 'border-red-500 focus:ring-red-200' : ''}`}
-                        {...register('sideId')}
-                    >
-                        <option value={0}>-- เลือกฝ่าย --</option>
-                        {sides.map(side => (
-                            <option key={side.side_id || side.department_id || side.emp_side_id} value={side.side_id || side.department_id || side.emp_side_id}>
-                                {(side.emp_side_code || side.side_code || side.department_code || '-')} - {(side.emp_side_name || side.side_name || side.department_name || '-')}
-                            </option>
-                        ))}
-                    </select>
-                    {errors.sideId && (
-                        <p className="text-red-500 text-xs mt-1">{errors.sideId.message}</p>
-                    )}
-                </div>
+                {/* ════════════════════════════════════════
+                    SECTION 2 — ที่อยู่
+                ════════════════════════════════════════ */}
+                <section>
+                    <SectionHeader icon={<MapPin className="w-4 h-4" />} title="ที่อยู่" />
 
-                    {/* Position Dropdown */}
+                    {/* Address full width */}
+                    <div className="mb-4">
+                        <label className={styles.label}>ที่อยู่</label>
+                        <textarea
+                            {...register('address')}
+                            rows={3}
+                            placeholder="123 ถนน..."
+                            className={`${styles.input} resize-y`}
+                        />
+                        <Hint text="text - ที่อยู่" />
+                    </div>
+
+                    {/* ตำบล อำเภอ จังหวัด รหัสไปรษณีย์ */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div>
+                            <label className={styles.label}>ตำบล</label>
+                            <input
+                                {...register('district')}
+                                type="text"
+                                placeholder="คลองเดย"
+                                className={styles.input}
+                            />
+                            <Hint text="varchar(100) - ตำบล" />
+                        </div>
+
+                        <div>
+                            <label className={styles.label}>อำเภอ</label>
+                            <input
+                                {...register('amphur')}
+                                type="text"
+                                placeholder="คลองเดย"
+                                className={styles.input}
+                            />
+                            <Hint text="varchar(100) - อำเภอ" />
+                        </div>
+
+                        <div>
+                            <label className={styles.label}>จังหวัด</label>
+                            <input
+                                {...register('province')}
+                                type="text"
+                                placeholder="กรุงเทพมหานคร"
+                                className={styles.input}
+                            />
+                            <Hint text="varchar(100) - จังหวัด" />
+                        </div>
+
+                        <div>
+                            <label className={styles.label}>รหัสไปรษณีย์</label>
+                            <input
+                                {...register('postCode')}
+                                type="text"
+                                placeholder="10110"
+                                className={styles.input}
+                            />
+                            <Hint text="varchar(25) - รหัสไปรษณีย์" />
+                        </div>
+                    </div>
+                </section>
+
+                {/* ════════════════════════════════════════
+                    SECTION 3 — ข้อมูลองค์กร
+                ════════════════════════════════════════ */}
+                <section>
+                    <SectionHeader icon={<Building2 className="w-4 h-4" />} title="ข้อมูลองค์กร" />
+
+                    {/* Row 1: แผนก (dept) + ตำแหน่ง (position) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        {/* แผนก */}
+                        <div>
+                            <label className={styles.label}>แผนก</label>
+                            <select
+                                {...register('deptId')}
+                                className={`${styles.input} cursor-pointer`}
+                            >
+                                <option value="">-- เลือกแผนก --</option>
+                                {sides.map(side => (
+                                    <option
+                                        key={side.side_id || side.department_id || side.emp_side_id}
+                                        value={String(side.side_id || side.department_id || side.emp_side_id || '')}
+                                    >
+                                        {side.emp_side_code || side.side_code || side.department_code || '-'} -{' '}
+                                        {side.emp_side_name || side.side_name || side.department_name || '-'}
+                                    </option>
+                                ))}
+                            </select>
+                            <Hint text="varchar(25) dept_code / uuid dept_id (FK)" />
+                        </div>
+
+                        {/* ตำแหน่ง */}
+                        <div>
+                            <label className={styles.label}>ตำแหน่ง</label>
+                            <select
+                                {...register('postId')}
+                                className={`${styles.input} cursor-pointer`}
+                                onChange={(e) => {
+                                    const pos = positions.find(p => String(p.position_id) === e.target.value);
+                                    setValue('postId', e.target.value);
+                                    setValue('positionCode', pos?.position_code || '');
+                                    setValue('positionId', Number(e.target.value) || 0);
+                                }}
+                            >
+                                <option value="">-- เลือกตำแหน่ง --</option>
+                                {positions.map(pos => (
+                                    <option key={pos.position_id} value={String(pos.position_id)}>
+                                        {pos.position_code} - {pos.position_name}
+                                    </option>
+                                ))}
+                            </select>
+                            <Hint text="varchar(25) position_code / uuid post_id (FK)" />
+                        </div>
+                    </div>
+
+                    {/* Row 2: กลุ่มพนักงาน + รหัสหัวหน้า */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label className={styles.label}>กลุ่มพนักงาน</label>
+                            <select
+                                {...register('empGroupId')}
+                                className={`${styles.input} cursor-pointer`}
+                            >
+                                <option value="">-- เลือกกลุ่มพนักงาน --</option>
+                                {/* TODO: populate from emp-group API */}
+                            </select>
+                            <Hint text="varchar(25) emp_group_code / uuid emp_group_id (FK)" />
+                        </div>
+
+                        <div>
+                            <label className={styles.label}>รหัสหัวหน้า</label>
+                            <input
+                                {...register('empHeadCode')}
+                                type="text"
+                                placeholder="EMP-001"
+                                className={styles.input}
+                            />
+                            <Hint text="varchar(25) emp_head_code / uuid emp_head" />
+                        </div>
+                    </div>
+
+                    {/* Row 3: ประเภทพนักงาน + เลขผู้เสียภาษี */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className={styles.label}>ประเภทพนักงาน</label>
+                            <select
+                                {...register('empType')}
+                                className={`${styles.input} cursor-pointer`}
+                            >
+                                {EMP_TYPE_OPTIONS.map(o => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                            </select>
+                            <Hint text="boolean - ประเภทพนักงาน" />
+                        </div>
+
+                        <div>
+                            <label className={styles.label}>เลขประจำตัวผู้เสียภาษี</label>
+                            <input
+                                {...register('taxId')}
+                                type="text"
+                                placeholder="TAX-001"
+                                className={styles.input}
+                            />
+                            <Hint text="varchar(25) - เลขประจำตัวผู้เสียภาษี" />
+                        </div>
+                    </div>
+                </section>
+
+                {/* ════════════════════════════════════════
+                    SECTION 4 — วันที่สำคัญ
+                ════════════════════════════════════════ */}
+                <section>
+                    <SectionHeader icon={<CalendarDays className="w-4 h-4" />} title="วันที่สำคัญ" />
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label className={styles.label}>วันที่เข้างาน</label>
+                            <input
+                                {...register('empStartDate')}
+                                type="date"
+                                className={styles.input}
+                            />
+                            <Hint text="datetime(8) - วันที่เข้างาน" />
+                        </div>
+
+                        <div>
+                            <label className={styles.label}>วันที่ลาออก</label>
+                            <input
+                                {...register('empResignDate')}
+                                type="date"
+                                className={styles.input}
+                            />
+                            <Hint text="datetime(8) - วันที่ลาออก" />
+                        </div>
+
+                        <div>
+                            <label className={styles.label}>สถานะ</label>
+                            <select
+                                {...register('empStatus')}
+                                className={`${styles.input} cursor-pointer`}
+                            >
+                                {EMP_STATUS_OPTIONS.map(o => (
+                                    <option key={o.value} value={o.value}>{o.label}</option>
+                                ))}
+                            </select>
+                            <Hint text="boolean - สถานะ" />
+                        </div>
+                    </div>
+                </section>
+
+                {/* ════════════════════════════════════════
+                    SECTION 5 — อื่นๆ
+                ════════════════════════════════════════ */}
+                <section>
+                    <SectionHeader icon={<FileText className="w-4 h-4" />} title="อื่นๆ" />
+
+                    {/* Path ลายเซ็นต์ - Visual Upload UI */}
+                    <div className="mb-4">
+                        <label className={styles.label}>ลายเซ็นต์พนักงาน</label>
+                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-800/30">
+                            
+                            {/* ส่วนแสดง Preview */}
+                            <div className="flex flex-col gap-2">
+                                <div className="w-40 h-20 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 flex items-center justify-center overflow-hidden shadow-inner group relative">
+                                    {empSignature ? (
+                                        <img 
+                                            src={empSignature} 
+                                            alt="Signature Preview" 
+                                            className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).src = 'https://placehold.co/160x80?text=Invalid+Path';
+                                            }}
+                                        />
+                                    ) : (
+                                        <div className="text-center">
+                                            <FileText className="w-6 h-6 text-gray-300 dark:text-gray-600 mx-auto mb-1" />
+                                            <span className="text-[10px] text-gray-400 italic">ยังไม่มีลายเซ็นต์</span>
+                                        </div>
+                                    )}
+                                </div>
+                                {empSignature && (
+                                    <div className="w-40 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+                                        <p className="text-[9px] font-mono text-gray-500 dark:text-gray-400 truncate" title={empSignature}>
+                                            {empSignature}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* ส่วนปุ่มจัดการ */}
+                            <div className="flex-1 space-y-2">
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-md transition-all shadow-sm active:scale-95 flex items-center gap-1.5"
+                                        onClick={() => {
+                                            // TODO: เรียก API อัปโหลดไฟล์จริง
+                                            const input = document.getElementById('signature-upload') as HTMLInputElement;
+                                            input?.click();
+                                        }}
+                                    >
+                                        <Save className="w-3.5 h-3.5" />
+                                        อัปโหลดรูปภาพ
+                                    </button>
+                                    
+                                    {empSignature && (
+                                        <button
+                                            type="button"
+                                            className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 text-xs font-semibold rounded-md transition-colors border border-gray-200 dark:border-gray-600 flex items-center gap-1.5"
+                                            onClick={() => setValue('empSignature', '')}
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                            ลบออก
+                                        </button>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                                    รองรับ PNG, JPG (พื้นหลังโปร่งใสจะดีที่สุด)
+                                </p>
+                                
+                                {/* Hidden inputs */}
+                                <input 
+                                    id="signature-upload"
+                                    type="file" 
+                                    className="hidden" 
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            // Mock การอัปโหลด: ในอนาคตเปลี่ยนเป็น API call
+                                            console.log('Selected file:', file.name);
+                                            // setValue('empSignature', URL.createObjectURL(file)); // สำหรับ Preview ทันที
+                                            alert('ระบบจำลอง: ไฟล์ ' + file.name + ' ถูกเลือกแล้ว (คุณต้องเชื่อมต่อ API Upload เพื่อรับ Path จริง)');
+                                        }
+                                    }}
+                                />
+                                <input type="hidden" {...register('empSignature')} />
+                            </div>
+                        </div>
+                        <Hint text="varchar(255) - Path ลายเซ็นต์ (จะถูกเก็บเป็น String ไปยังฐานข้อมูล)" />
+                    </div>
+
+                    {/* หมายเหตุ */}
+                    <div className="mb-4">
+                        <label className={styles.label}>หมายเหตุ</label>
+                        <textarea
+                            {...register('remark')}
+                            rows={3}
+                            placeholder="หมายเหตุ..."
+                            className={`${styles.input} resize-y`}
+                        />
+                        <Hint text="varchar(255) - หมายเหตุ" />
+                    </div>
+
+                    {/* Active status toggle */}
                     <div>
                         <label className={styles.label}>
-                            ตำแหน่ง <span className="text-red-500">*</span>
+                            สถานะการใช้งาน <span className="text-red-500">*</span>
                         </label>
                         <select
-                            className={`${styles.input} cursor-pointer ${errors.positionId ? 'border-red-500 focus:ring-red-200' : ''}`}
-                            {...register('positionId', { valueAsNumber: true })}
+                            className={`${styles.input} cursor-pointer`}
+                            value={isActive ? 'true' : 'false'}
+                            onChange={(e) => setValue('isActive', e.target.value === 'true')}
                         >
-                            <option value={0}>-- เลือกตำแหน่ง --</option>
-                            {positions.map(pos => (
-                                <option key={pos.position_id} value={pos.position_id}>
-                                    {pos.position_code} - {pos.position_name}
-                                </option>
-                            ))}
+                            <option value="true">ใช้งาน (Active)</option>
+                            <option value="false">ไม่ใช้งาน (Inactive)</option>
                         </select>
-                        {errors.positionId && (
-                            <p className="text-red-500 text-xs mt-1">{errors.positionId.message}</p>
-                        )}
                     </div>
-                </div>
+                </section>
 
-                {/* Status - Dropdown Select */}
-                <div>
-                    <label className={styles.label}>
-                        สถานะ <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                        className={`${styles.input} cursor-pointer`}
-                        value={isActive ? 'true' : 'false'}
-                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
-                    >
-                        <option value="true">ใช้งาน (Active)</option>
-                        <option value="false">ไม่ใช้งาน (Inactive)</option>
-                    </select>
-                </div>
             </div>
         </DialogFormLayout>
     );

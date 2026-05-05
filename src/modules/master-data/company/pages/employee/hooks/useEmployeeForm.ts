@@ -15,22 +15,84 @@ import type { EmployeeFormData } from '@company/types/employee.types';
 import { logger } from '@/shared/utils/logger';
 
 export const employeeSchema = z.object({
-    employeeCode: z.string().min(1, 'กรุณากรอกรหัสพนักงาน').max(20, 'รหัสพนักงานต้องไม่เกิน 20 ตัวอักษร'),
-    firstName: z.string().min(1, 'กรุณากรอกชื่อ'),
-    lastName: z.string().min(1, 'กรุณากรอกนามสกุล'),
-    email: z.string().email('รูปแบบอีเมลไม่ถูกต้อง').or(z.literal('')),
-    phone: z.string().max(20).or(z.literal('')),
-    positionId: z.number().min(1, 'กรุณาเลือกตำแหน่ง'),
-    sideId: z.union([z.string(), z.number()]).refine(val => val !== 0 && val !== '', 'กรุณาเลือกฝ่าย'),
-    isActive: z.boolean(),
+    // ข้อมูลพื้นฐาน
+    employeeCode:   z.string().min(1, 'กรุณากรอกรหัสพนักงาน').max(25, 'รหัสพนักงานต้องไม่เกิน 25 ตัวอักษร'),
+    taxIdCard:      z.string().max(25).or(z.literal('')),
+    empTitle:       z.string().min(1, 'กรุณาเลือกคำนำหน้า').max(50),
+    empTitleEng:    z.string().max(255).or(z.literal('')),
+    empName:        z.string().min(1, 'กรุณากรอกชื่อพนักงาน').max(255),
+    empNameEng:     z.string().max(255).or(z.literal('')),
+    tel:            z.string().max(255).or(z.literal('')),
+    email:          z.string().email('รูปแบบอีเมลไม่ถูกต้อง').or(z.literal('')),
+
+    // ที่อยู่
+    address:        z.string().max(5000).or(z.literal('')),
+    district:       z.string().max(100).or(z.literal('')),
+    amphur:         z.string().max(100).or(z.literal('')),
+    province:       z.string().max(100).or(z.literal('')),
+    postCode:       z.string().max(25).or(z.literal('')),
+
+    // ข้อมูลองค์กร
+    deptId:         z.string().or(z.literal('')),
+    deptCode:       z.string().max(25).or(z.literal('')),
+    postId:         z.string().or(z.literal('')),
+    positionCode:   z.string().max(25).or(z.literal('')),
+    empGroupId:     z.string().or(z.literal('')),
+    empGroupCode:   z.string().max(25).or(z.literal('')),
+    empHead:        z.string().or(z.literal('')),
+    empHeadCode:    z.string().max(25).or(z.literal('')),
+    empType:        z.string().or(z.literal('')),
+    taxId:          z.string().max(25).or(z.literal('')),
+
+    // วันที่สำคัญ
+    empStartDate:   z.string().or(z.literal('')),
+    empResignDate:  z.string().or(z.literal('')),
+    empStatus:      z.string().or(z.literal('')),
+
+    // อื่นๆ
+    empSignature:   z.string().max(255).or(z.literal('')),
+    remark:         z.string().max(255).or(z.literal('')),
+
+    // Legacy (compat)
+    firstName:      z.string().or(z.literal('')),
+    lastName:       z.string().or(z.literal('')),
+    positionId:     z.number(),
+    sideId:         z.union([z.string(), z.number()]),
+    isActive:       z.boolean(),
 });
 
 export const initialEmployeeData: EmployeeFormData = {
     employeeCode: '',
+    taxIdCard: '',
+    empTitle: '',
+    empTitleEng: '',
+    empName: '',
+    empNameEng: '',
+    tel: '',
+    email: '',
+    address: '',
+    district: '',
+    amphur: '',
+    province: '',
+    postCode: '',
+    deptId: '',
+    deptCode: '',
+    postId: '',
+    positionCode: '',
+    empGroupId: '',
+    empGroupCode: '',
+    empHead: '',
+    empHeadCode: '',
+    empType: 'G',
+    taxId: '',
+    empStartDate: '',
+    empResignDate: '',
+    empStatus: '1',
+    empSignature: '',
+    remark: '',
+    // Legacy
     firstName: '',
     lastName: '',
-    email: '',
-    phone: '',
     positionId: 0,
     sideId: 0,
     isActive: true,
@@ -78,15 +140,43 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
     // Hydrate form when data is fetched
     useEffect(() => {
         if (isOpen && isEdit && initialData) {
+            // หลีกเลี่ยง any โดยใช้ unknown cast ก่อนแปลงเป็น Record
+            const d = initialData as unknown as Record<string, unknown>;
             reset({
-                employeeCode: initialData.employee_code,
-                firstName: initialData.first_name || '',
-                lastName: initialData.last_name || '',
-                email: initialData.email || '',
-                phone: initialData.phone || '',
-                positionId: initialData.position_id || 0,
-                sideId: initialData.side_id || initialData.department_id || 0,
-                isActive: initialData.is_active ?? true,
+                employeeCode:  (d['emp_code'] as string)         || (d['employee_code'] as string) || '',
+                taxIdCard:     (d['tax_idcard'] as string)        || '',
+                empTitle:      (d['emp_title'] as string)         || '',
+                empTitleEng:   (d['emp_titleeng'] as string)      || '',
+                empName:       (d['emp_name'] as string)          || (d['employee_name'] as string) || '',
+                empNameEng:    (d['emp_nameeng'] as string)       || '',
+                tel:           (d['tel'] as string)               || (d['phone'] as string) || '',
+                email:         (d['email'] as string)             || '',
+                address:       (d['address'] as string)           || '',
+                district:      (d['district'] as string)          || '',
+                amphur:        (d['amphur'] as string)            || '',
+                province:      (d['province'] as string)          || '',
+                postCode:      (d['post_code'] as string)         || '',
+                deptId:        String(d['dept_id'] || ''),
+                deptCode:      (d['dept_code'] as string)         || '',
+                postId:        String(d['post_id'] || ''),
+                positionCode:  (d['position_code'] as string)     || '',
+                empGroupId:    String(d['emp_group_id'] || ''),
+                empGroupCode:  (d['emp_group_code'] as string)    || '',
+                empHead:       String(d['emp_head'] || ''),
+                empHeadCode:   (d['emp_head_code'] as string)     || '',
+                empType:       (d['emp_type'] as string)          || 'G',
+                taxId:         (d['tax_id'] as string)            || '',
+                empStartDate:  (d['emp_startdate'] as string)     || '',
+                empResignDate: (d['emp_resigndate'] as string)    || '',
+                empStatus:     String(d['emp_status'] ?? '1'),
+                empSignature:  (d['emp_signature'] as string)     || '',
+                remark:        (d['remark'] as string)            || '',
+                // Legacy
+                firstName:     (d['first_name'] as string)        || '',
+                lastName:      (d['last_name'] as string)         || '',
+                positionId:    Number(d['position_id'] || 0),
+                sideId:        (d['side_id'] || d['department_id'] || 0) as string | number,
+                isActive:      d['is_active'] !== undefined ? Boolean(d['is_active']) : true,
             });
         } else if (isOpen && !isEdit) {
             reset(initialEmployeeData);
