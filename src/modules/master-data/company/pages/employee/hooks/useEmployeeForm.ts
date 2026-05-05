@@ -4,14 +4,14 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useForm, type SubmitHandler, type Resolver } from 'react-hook-form';
+import { useForm, useFieldArray, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { OrgEmployeeService } from '@company/services/employee.service';
 import { EmployeeSideService } from '@company/services/employee-side.service';
 import { PositionService } from '@company/services/org-position.service';
-import type { EmployeeFormData } from '@company/types/employee.types';
+import type { EmployeeFormData, EmployeeSignature } from '@company/types/employee.types';
 import { logger } from '@/shared/utils/logger';
 
 export const employeeSchema = z.object({
@@ -51,6 +51,12 @@ export const employeeSchema = z.object({
 
     // อื่นๆ
     empSignature:   z.string().max(255).or(z.literal('')),
+    signatures:     z.array(z.object({
+        id:             z.number().optional(),
+        signature_path: z.string(),
+        file:           z.any().optional(),
+        previewUrl:     z.string().optional(),
+    })).optional(),
     remark:         z.string().max(255).or(z.literal('')),
 
     // Legacy (compat)
@@ -89,6 +95,7 @@ export const initialEmployeeData: EmployeeFormData = {
     empResignDate: '',
     empStatus: '1',
     empSignature: '',
+    signatures: [],
     remark: '',
     // Legacy
     firstName: '',
@@ -114,6 +121,11 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         defaultValues: initialEmployeeData,
     });
 
+    const { fields: signatureFields, append: appendSignature, remove: removeSignature } = useFieldArray({
+        control,
+        name: 'signatures'
+    });
+
     // Fetch dependencies
     const { data: sidesData } = useQuery({
         queryKey: ['employee-sides-dropdown'],
@@ -131,7 +143,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
     const positions = useMemo(() => positionsData?.items || [], [positionsData]);
 
     // Fetch data for edit
-    const { data: initialData, isLoading: isLoadingInitial } = useQuery({
+    const { data: initialData } = useQuery({
         queryKey: ['employee', editId],
         queryFn: () => (editId ? OrgEmployeeService.get(editId) : null),
         enabled: isOpen && isEdit && !!editId,
@@ -170,6 +182,10 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
                 empResignDate: (d['emp_resigndate'] as string)    || '',
                 empStatus:     String(d['emp_status'] ?? '1'),
                 empSignature:  (d['emp_signature'] as string)     || '',
+                signatures:    ((d['signatures'] as EmployeeSignature[]) || []).map(s => ({
+                    ...s,
+                    previewUrl: s.signature_path // ใช้ path เป็น preview เบื้องต้น
+                })),
                 remark:        (d['remark'] as string)            || '',
                 // Legacy
                 firstName:     (d['first_name'] as string)        || '',
@@ -203,8 +219,44 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         }
     });
 
-    const handleSave: SubmitHandler<EmployeeFormData> = (data) => {
-        saveMutation.mutate(data);
+    // --- Signature Mutations (Immediate Upload/Delete) ---
+    const uploadSignatureMutation = useMutation({
+        mutationFn: async ({ file }: { file: File }) => {
+            if (!editId) throw new Error('พนักงานต้องถูกบันทึกก่อนจัดการลายเซ็นต์');
+            return OrgEmployeeService.uploadSignature(editId, file);
+        },
+        onSuccess: (res) => {
+            if (res.success && res.data) {
+                appendSignature({
+                    id: res.data.id,
+                    signature_path: res.data.signature_path,
+                    previewUrl: res.data.signature_path
+                });
+                queryClient.invalidateQueries({ queryKey: ['employee', editId] });
+            }
+        }
+    });
+
+    const deleteSignatureMutation = useMutation({
+        mutationFn: async ({ signatureId }: { signatureId: number }) => {
+            if (!editId) return;
+            return OrgEmployeeService.deleteSignature(editId, signatureId);
+        },
+        onSuccess: (res, variables) => {
+            if (res?.success) {
+                const index = signatureFields.findIndex(f => f.id === variables.signatureId);
+                if (index !== -1) removeSignature(index);
+                queryClient.invalidateQueries({ queryKey: ['employee', editId] });
+            }
+        }
+    });
+
+    const handleSave: SubmitHandler<EmployeeFormData> = async (data) => {
+        // บันทึกเฉพาะข้อมูลพนักงานหลัก (ตามคำแนะนำ Backend)
+        // ลายเซ็นต์จะถูกจัดการแยกต่างหากผ่านปุ่ม Upload ในโหมดแก้ไข
+        const { signatures: _signatures, ...employeeData } = data;
+        void _signatures; // Destructured to exclude from employeeData payload
+        saveMutation.mutate(employeeData as EmployeeFormData);
     };
 
     return {
@@ -212,9 +264,14 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         errors,
         sides,
         positions,
+        signatureFields,
         isSubmitting: saveMutation.isPending,
-        isLoadingInitial,
+        isUploading: uploadSignatureMutation.isPending,
+        isDeleting: deleteSignatureMutation.isPending,
         handleSave: rhfHandleSubmit(handleSave),
+        handleUploadSignature: (file: File) => uploadSignatureMutation.mutate({ file }),
+        handleDeleteSignature: (signatureId: number) => deleteSignatureMutation.mutate({ signatureId }),
+        removeSignature, // เก็บไว้สำหรับเคสลบ local (ถ้ามี)
         setValue,
         reset,
         control

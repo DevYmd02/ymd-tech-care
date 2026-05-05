@@ -4,7 +4,7 @@
  */
 
 import { useWatch } from 'react-hook-form';
-import { Save, X, User, MapPin, Building2, CalendarDays, FileText } from 'lucide-react';
+import { Save, X, User, MapPin, Building2, CalendarDays, FileText, Plus, Trash2 } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 import { useEmployeeForm } from './hooks/useEmployeeForm';
@@ -58,14 +58,18 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
         errors,
         sides,
         positions,
+        signatureFields,
         isSubmitting,
+        isUploading,
+        isDeleting,
         handleSave,
+        handleUploadSignature,
+        handleDeleteSignature,
         setValue,
         control,
     } = useEmployeeForm(editId ?? null, isOpen, onSuccess);
 
     const isActive = useWatch({ control, name: 'isActive' });
-    const empSignature = useWatch({ control, name: 'empSignature' });
 
     // ── Footer ──────────────────────────────────────────────────────────────
     const FormFooter = (
@@ -461,90 +465,85 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                 <section>
                     <SectionHeader icon={<FileText className="w-4 h-4" />} title="อื่นๆ" />
 
-                    {/* Path ลายเซ็นต์ - Visual Upload UI */}
+                    {/* ลายเซ็นต์พนักงาน - Multiple Management UI */}
                     <div className="mb-4">
-                        <label className={styles.label}>ลายเซ็นต์พนักงาน</label>
-                        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center p-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-800/30">
-                            
-                            {/* ส่วนแสดง Preview */}
-                            <div className="flex flex-col gap-2">
-                                <div className="w-40 h-20 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 flex items-center justify-center overflow-hidden shadow-inner group relative">
-                                    {empSignature ? (
-                                        <img 
-                                            src={empSignature} 
-                                            alt="Signature Preview" 
-                                            className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105"
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).src = 'https://placehold.co/160x80?text=Invalid+Path';
-                                            }}
-                                        />
-                                    ) : (
-                                        <div className="text-center">
-                                            <FileText className="w-6 h-6 text-gray-300 dark:text-gray-600 mx-auto mb-1" />
-                                            <span className="text-[10px] text-gray-400 italic">ยังไม่มีลายเซ็นต์</span>
-                                        </div>
-                                    )}
-                                </div>
-                                {empSignature && (
-                                    <div className="w-40 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-                                        <p className="text-[9px] font-mono text-gray-500 dark:text-gray-400 truncate" title={empSignature}>
-                                            {empSignature}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* ส่วนปุ่มจัดการ */}
-                            <div className="flex-1 space-y-2">
-                                <div className="flex flex-wrap gap-2">
-                                    <button
-                                        type="button"
-                                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-md transition-all shadow-sm active:scale-95 flex items-center gap-1.5"
-                                        onClick={() => {
-                                            // TODO: เรียก API อัปโหลดไฟล์จริง
-                                            const input = document.getElementById('signature-upload') as HTMLInputElement;
-                                            input?.click();
-                                        }}
-                                    >
-                                        <Save className="w-3.5 h-3.5" />
-                                        อัปโหลดรูปภาพ
-                                    </button>
-                                    
-                                    {empSignature && (
-                                        <button
-                                            type="button"
-                                            className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 text-xs font-semibold rounded-md transition-colors border border-gray-200 dark:border-gray-600 flex items-center gap-1.5"
-                                            onClick={() => setValue('empSignature', '')}
-                                        >
-                                            <X className="w-3.5 h-3.5" />
-                                            ลบออก
-                                        </button>
-                                    )}
-                                </div>
-                                <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                                    รองรับ PNG, JPG (พื้นหลังโปร่งใสจะดีที่สุด)
-                                </p>
-                                
-                                {/* Hidden inputs */}
-                                <input 
-                                    id="signature-upload"
-                                    type="file" 
-                                    className="hidden" 
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            // Mock การอัปโหลด: ในอนาคตเปลี่ยนเป็น API call
-                                            console.log('Selected file:', file.name);
-                                            // setValue('empSignature', URL.createObjectURL(file)); // สำหรับ Preview ทันที
-                                            alert('ระบบจำลอง: ไฟล์ ' + file.name + ' ถูกเลือกแล้ว (คุณต้องเชื่อมต่อ API Upload เพื่อรับ Path จริง)');
-                                        }
+                        <div className="flex items-center justify-between mb-2">
+                            <label className={styles.label}>ลายเซ็นต์พนักงาน</label>
+                            {isEdit && (
+                                <button
+                                    type="button"
+                                    className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1 hover:underline disabled:opacity-50"
+                                    disabled={isUploading}
+                                    onClick={() => {
+                                        const input = document.createElement('input');
+                                        input.type = 'file';
+                                        input.accept = 'image/*';
+                                        input.onchange = (e) => {
+                                            const file = (e.target as HTMLInputElement).files?.[0];
+                                            if (file) handleUploadSignature(file);
+                                        };
+                                        input.click();
                                     }}
-                                />
-                                <input type="hidden" {...register('empSignature')} />
-                            </div>
+                                >
+                                    {isUploading ? (
+                                        <span className="loading loading-spinner loading-[10px]" />
+                                    ) : (
+                                        <Plus className="w-3 h-3" />
+                                    )}
+                                    เพิ่มลายเซ็นต์
+                                </button>
+                            )}
                         </div>
-                        <Hint text="varchar(255) - Path ลายเซ็นต์ (จะถูกเก็บเป็น String ไปยังฐานข้อมูล)" />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50/50 dark:bg-gray-800/30">
+                            {!isEdit ? (
+                                <div className="col-span-full py-6 text-center">
+                                    <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-400 italic">กรุณาบันทึกข้อมูลพนักงานก่อนจัดการลายเซ็นต์</p>
+                                </div>
+                            ) : signatureFields.length === 0 ? (
+                                <div className="col-span-full py-8 text-center">
+                                    <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                                    <p className="text-sm text-gray-400 italic">ยังไม่มีลายเซ็นต์ กดปุ่ม "เพิ่มลายเซ็นต์" เพื่อเริ่มอัปโหลด</p>
+                                </div>
+                            ) : (
+                                signatureFields.map((field, index) => (
+                                    <div key={field.id} className="relative group bg-white dark:bg-gray-700 p-2 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm transition-all hover:shadow-md">
+                                        {/* Preview Area */}
+                                        <div className="w-full h-24 rounded-md bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden mb-2">
+                                            {field.previewUrl ? (
+                                                <img 
+                                                    src={field.previewUrl} 
+                                                    alt={`Signature ${index + 1}`} 
+                                                    className="max-h-full max-w-full object-contain"
+                                                />
+                                            ) : (
+                                                <FileText className="w-6 h-6 text-gray-300" />
+                                            )}
+                                        </div>
+
+                                        {/* Info & Actions */}
+                                        <div className="flex items-center justify-between px-1">
+                                            <span className="text-[10px] font-medium text-gray-500 truncate max-w-[100px]">
+                                                {`ลายเซ็นต์ #${index + 1}`}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                className="p-1.5 bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-500 hover:text-white rounded-md transition-colors disabled:opacity-50"
+                                                disabled={isDeleting}
+                                                onClick={() => {
+                                                    if (field.id) handleDeleteSignature(field.id);
+                                                }}
+                                                title="ลบลายเซ็นต์"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        <Hint text={isEdit ? "จัดการหลายลายเซ็นต์ได้ทันที (ระบบจะบันทึกแยกจากข้อมูลหลัก)" : "ระบบรองรับหลายลายเซ็นต์ แต่ต้องสร้างพนักงานก่อน"} />
                     </div>
 
                     {/* หมายเหตุ */}

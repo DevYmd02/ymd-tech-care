@@ -14,4 +14,17 @@ export const OrgEmployeeService = {
   create: (data: EmployeeFormData) => api.post<{ success: boolean; data?: EmployeeMaster; message?: string }>('/employees', data),
   update: (id: number, data: Partial<EmployeeFormData>) => api.put<{ success: boolean; data?: EmployeeMaster; message?: string }>(`/employees/${id}`, data),
   delete: (id: number) => api.delete<boolean>(`/employees/${id}`),
+
+  // Signature Management (แยก Endpoint ตามคำแนะนำ Backend)
+  uploadSignature: (employeeId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<{ success: boolean; data?: { id: number; signature_path: string }; message?: string }>(
+      `/employees/${employeeId}/signatures`, 
+      formData, 
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+  },
+  deleteSignature: (employeeId: number, signatureId: number) => 
+    api.delete<{ success: boolean; message?: string }>(`/employees/${employeeId}/signatures/${signatureId}`),
 };

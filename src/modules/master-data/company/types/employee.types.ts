@@ -90,7 +90,8 @@ export interface EmployeeFormData {
     empStatus: string;              // emp_status boolean — 1:ทำงาน 2:พักงาน 3:ลาออก 4:เกษียณ
 
     // อื่นๆ
-    empSignature: string;           // emp_signature varchar(255) — Path ลายเซ็นต์
+    empSignature: string;           // emp_signature varchar(255) — Path ลายเซ็นต์ (Legacy/Main)
+    signatures?: EmployeeSignature[]; // รองรับหลายลายเซ็นต์ (แยกตาราง/แยก Endpoint)
     remark: string;                 // remark varchar(255)
 
     // Legacy fields (kept for backward compat)
@@ -99,6 +100,18 @@ export interface EmployeeFormData {
     positionId: number;
     sideId: string | number;
     isActive: boolean;
+}
+
+/**
+ * โครงสร้างข้อมูลลายเซ็นต์พนักงาน
+ */
+export interface EmployeeSignature {
+    id?: number;
+    employee_id?: number;
+    signature_path: string;         // Path หรือ URL ของรูป
+    signature_name?: string;        // ชื่อเรียก (ถ้ามี)
+    file?: File;                    // สำหรับเก็บไฟล์ที่จะอัปโหลด (Client-side only)
+    previewUrl?: string;            // สำหรับแสดง Preview (Client-side only)
 }
 
 export type EmployeeListItem = EmployeeMaster;
