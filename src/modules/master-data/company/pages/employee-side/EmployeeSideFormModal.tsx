@@ -26,10 +26,11 @@ export const EmployeeSideFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
         isSubmitting,
         handleSave,
         setValue,
-        control
+        control,
+        isLoadingInitial
     } = useEmployeeSideForm(editId ?? null, isOpen, onSuccess);
 
-    const isActive = useWatch({ control, name: 'is_active' });
+    const isActive = !!useWatch({ control, name: 'is_active' });
 
     // Header Icon
     const TitleIcon = <Building className="w-5 h-5 text-white" />;
@@ -49,7 +50,7 @@ export const EmployeeSideFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
                 type="button"
                 className="px-8 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center gap-2 transition-all shadow-md shadow-blue-200 dark:shadow-none font-medium disabled:opacity-50 active:scale-[0.98]"
                 onClick={handleSave}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isLoadingInitial}
             >
                 {isSubmitting ? (
                     <span className="loading loading-spinner loading-xs"></span>
@@ -70,7 +71,16 @@ export const EmployeeSideFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
             footer={FormFooter}
             headerColor="bg-blue-600"
         >
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 relative min-h-[300px]">
+                {isLoadingInitial && (
+                    <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 z-10 flex items-center justify-center backdrop-blur-[1px]">
+                        <div className="flex flex-col items-center gap-2">
+                            <span className="loading loading-spinner loading-md text-blue-600"></span>
+                            <span className="text-sm font-medium text-gray-500">กำลังโหลดข้อมูล...</span>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header Row: Title & Status Checkbox */}
                 <div className="flex justify-between items-start">
                     <div className="flex-1 space-y-2">
@@ -82,6 +92,7 @@ export const EmployeeSideFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
                             type="text"
                             placeholder="กรอกรหัสฝ่าย (เช่น FIN, HR, IT)"
                             className={`${styles.input} ${errors.emp_side_code ? 'border-red-500 focus:ring-red-200' : ''}`}
+                            disabled={isLoadingInitial}
                         />
                         {errors.emp_side_code && (
                             <p className="text-red-500 text-xs mt-1">{errors.emp_side_code.message}</p>
@@ -92,11 +103,12 @@ export const EmployeeSideFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
                         <input
                             id="is_active"
                             type="checkbox"
-                            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+                            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer disabled:opacity-50"
                             checked={isActive}
                             onChange={(e) => setValue('is_active', e.target.checked)}
+                            disabled={isLoadingInitial}
                         />
-                        <label htmlFor="is_active" className="text-sm font-medium text-gray-700 dark:text-gray-200 cursor-pointer">
+                        <label htmlFor="is_active" className={`text-sm font-medium text-gray-700 dark:text-gray-200 cursor-pointer ${isLoadingInitial ? 'opacity-50' : ''}`}>
                             ใช้งาน (Active)
                         </label>
                     </div>
@@ -112,6 +124,7 @@ export const EmployeeSideFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
                         type="text"
                         placeholder="กรอกชื่อฝ่าย"
                         className={`${styles.input} ${errors.emp_side_name ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        disabled={isLoadingInitial}
                     />
                     {errors.emp_side_name && (
                         <p className="text-red-500 text-xs mt-1">{errors.emp_side_name.message}</p>
@@ -128,6 +141,7 @@ export const EmployeeSideFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
                         type="text"
                         placeholder="Enter department name in English"
                         className={`${styles.input} ${errors.emp_side_nameeng ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        disabled={isLoadingInitial}
                     />
                 </div>
             </div>

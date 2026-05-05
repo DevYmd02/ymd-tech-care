@@ -4,8 +4,8 @@ import { z } from 'zod';
  * Schema สำหรับข้อมูลแต่ละรายการในใบสั่งขาย (Line Item)
  */
 export const SalesOrderLineSchema = z.object({
-    so_line_id: z.string().optional(),
-    so_id: z.string().optional(),
+    so_line_id: z.union([z.string(), z.number()]).optional(),
+    so_id: z.union([z.string(), z.number()]).optional(),
     item_id: z.string().min(1, 'กรุณาเลือกสินค้า'),
     item_code: z.string().default(''),
     item_name: z.string().default(''),
@@ -28,7 +28,7 @@ export const SalesOrderLineSchema = z.object({
  * Schema สำหรับข้อมูล Header ของใบสั่งขาย
  */
 export const SalesOrderFormSchema = z.object({
-    so_id: z.string().optional(),
+    so_id: z.union([z.string(), z.number()]).optional(),
     so_no: z.string().optional(),
     so_date: z.string().min(1, 'กรุณาระบุวันที่สั่งขาย'),
     customer_id: z.string().min(1, 'กรุณาเลือกลูกค้า'),
@@ -42,7 +42,7 @@ export const SalesOrderFormSchema = z.object({
     exchange_rate: z.coerce.number().default(1),
     exchange_rate_date: z.string().optional(),
     ship_days: z.coerce.number().default(0),
-    status: z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CONFIRMED', 'CLOSED', 'CANCELLED']).default('APPROVED'),
+    status: z.enum(['DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'CONFIRMED', 'CLOSED', 'CANCELLED']).default('DRAFT'),
     remarks: z.string().optional(),
     payment_term_days: z.coerce.number().default(0),
     sub_total: z.coerce.number().default(0),
@@ -80,7 +80,7 @@ export const getSalesOrderDefaultValues = (): Partial<SalesOrderFormValues> => (
     exchange_rate: 1,
     exchange_rate_date: new Date().toISOString().split('T')[0],
     ship_days: 0,
-    status: 'APPROVED',
+    status: 'DRAFT',
     onhold: 'N',
     payment_term_days: 0,
     sub_total: 0,

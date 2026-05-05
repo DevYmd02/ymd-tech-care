@@ -218,13 +218,14 @@ export const ReservationService = {
                 if (Array.isArray(rawLines)) {
                     response.lines = await Promise.all(rawLines.map(async (l: Record<string, unknown>) => {
                         const itemObj = (l.item || l.item_master || l.master_item || l.product || {}) as Record<string, unknown>;
+                        const itemId = String(l.item_id || itemObj.item_id || itemObj.id || '');
                         let itemCode = String(l.item_code || l.code || itemObj.item_code || itemObj.code || itemObj.sku || '');
                         let itemName = String(l.item_name || l.name || itemObj.item_name || itemObj.name || itemObj.description || '');
                         
                         // 🚀 Re-Enrich Items if missing (Essential fallback)
-                        if ((!itemCode || !itemName) && l.item_id) {
+                        if ((!itemCode || !itemName) && itemId) {
                             try {
-                                const masterRes = await api.get<unknown>(`/item-master/${l.item_id}`);
+                                const masterRes = await api.get<unknown>(`/item-master/${itemId}`);
                                 const master = ((masterRes as Record<string, unknown>)?.data || masterRes) as Record<string, unknown>;
                                 if (master) {
                                     itemCode = itemCode || String(master.item_code || master.code || '');
@@ -233,27 +234,42 @@ export const ReservationService = {
                             } catch { /* ignore */ }
                         }
 
+                        // Final fallback for name
+                        if (!itemName && itemId) itemName = `[Item ID: ${itemId}]`;
+
                         const lotIdVal = l.lot_id;
                         const lotObj = (typeof lotIdVal === 'object' && lotIdVal !== null) ? (lotIdVal as Record<string, unknown>) : ((l.lot || l.item_lot || {}) as Record<string, unknown>);
                         let lotNo = String(l.lot_no || l.lot_number || lotObj.lot_no || lotObj.code || '');
                         
-                        // 🚀 Re-Enrich Lots if missing (Essential fallback)
-                        if (!lotNo && typeof lotIdVal === 'number') {
+                        // 🚀 Re-Enrich Lots if missing or if lotNo looks like an ID (Essential fallback)
+                        const isLotNoNumericId = /^\d+$/.test(lotNo) && lotNo.length < 10 && lotNo === String(lotIdVal);
+                        
+                        if ((!lotNo || isLotNoNumericId) && lotIdVal && (typeof lotIdVal === 'number' || typeof lotIdVal === 'string')) {
                             try {
-                                const lotRes = await api.get<unknown>('/item-lot', { params: { lot_id: lotIdVal, limit: 1 } });
-                                const lotData = (lotRes as Record<string, unknown>)?.data || (lotRes as Record<string, unknown>)?.items || lotRes;
-                                const lotItems = Array.isArray(lotData) ? lotData : [];
-                                if (lotItems.length > 0) {
-                                    const firstLot = lotItems[0] as Record<string, unknown>;
-                                    lotNo = String(firstLot.lot_no || firstLot.code || '');
+                                const lotRes = await api.get<unknown>(`/item-lot/${lotIdVal}`);
+                                const lotData = (lotRes as Record<string, unknown>)?.data || lotRes;
+                                if (lotData && typeof lotData === 'object' && !Array.isArray(lotData)) {
+                                    const lotItem = lotData as Record<string, unknown>;
+                                    lotNo = String(lotItem.lot_no || lotItem.code || lotNo);
                                 }
-                            } catch { /* ignore */ }
+                            } catch {
+                                // Fallback to list search if direct ID access fails
+                                try {
+                                    const lotRes = await api.get<unknown>('/item-lot', { params: { lot_id: lotIdVal, limit: 1 } });
+                                    const lotData = (lotRes as Record<string, unknown>)?.data || (lotRes as Record<string, unknown>)?.items || lotRes;
+                                    const lotItems = Array.isArray(lotData) ? lotData : [];
+                                    if (lotItems.length > 0) {
+                                        const firstLot = lotItems[0] as Record<string, unknown>;
+                                        lotNo = String(firstLot.lot_no || firstLot.code || lotNo);
+                                    }
+                                } catch { /* ignore */ }
+                            }
                         }
 
                         return {
                             ...l,
                             id: String(l.reservation_line_id || l.id || ''),
-                            item_id: String(l.item_id || ''),
+                            item_id: itemId,
                             item_code: itemCode,
                             item_name: itemName,
                             qty_reserved: Number(l.qty || l.qty_reserved || 0),
@@ -284,7 +300,7 @@ export const ReservationService = {
      */
     getAvailableApprovals: async (): Promise<AvailableApproval[]> => {
         try {
-            const response = await api.get<unknown>('/sale-quotation-approval');
+            const response = await api.get<unknown>('/sale-reservation/available-approvals');
             // Handle both direct array and paginated { data: [...] } responses
             if (Array.isArray(response)) return response as AvailableApproval[];
             const r = response as Record<string, unknown>;

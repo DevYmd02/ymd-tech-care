@@ -198,12 +198,17 @@ export interface AOLineFormData {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface ApproveSalesOrderPayload {
-  so_id: string | number;
-  branch_id?: string | number;
-  ao_date: string;
+  so_id: number;
+  customer_id: number;
+  branch_id?: number;
   status: 'APPROVED' | 'REJECTED';
+  status_remark: string;
   remarks: string;
-  approval_emp_id: string | number;
+  onhold: string;
+  sale_area_id: number;
+  emp_dept_id: number;
+  project_id: number;
+  approval_emp_id: number;
   approval_emp_name: string;
 
   base_currency_code?: string;
@@ -211,18 +216,18 @@ export interface ApproveSalesOrderPayload {
   exchange_rate?: number;
   exchange_rate_date?: string;
 
-  tax_code_id?: number | string;
+  tax_code_id?: number;
   discount_expression?: string;
 
-  ao_lines: ApproveSalesOrderLine[];
-  emp_sale_id?: string | number;
+  CreateSaleOrderApprovalLineDtos: ApproveSalesOrderLine[];
+  emp_sale_id?: number;
 }
 
 export interface ApproveSalesOrderLine {
-  so_line_id: string | number;
-  item_id?: string | number;
-  qty_ordered?: number;
-  uom_id?: string | number;
+  so_line_id: number;
+  item_id?: number;
+  qty?: number;
+  uom_id?: number;
   approved_qty: number;
   remarks?: string;
   unit_price?: number;

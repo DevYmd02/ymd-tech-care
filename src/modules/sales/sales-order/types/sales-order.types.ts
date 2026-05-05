@@ -8,8 +8,8 @@
 // sale_order_line (D10)
 // ============================================================
 export interface SalesOrderLineData {
-    so_line_id?: string;                              // PK (uuid)
-    so_id?: string;                                   // FK→sale_order_header
+    so_line_id?: string | number;                              // PK (uuid)
+    so_id?: string | number;                                   // FK→sale_order_header
     item_id: string;                                  // FK→item_master
     item_code: string;                                // display only
     item_name: string;                                // display only
@@ -31,7 +31,7 @@ export interface SalesOrderLineData {
 // sale_order_header (D9)
 // ============================================================
 export interface SalesOrderFormData {
-    so_id?: string;                                   // PK (uuid)
+    so_id?: string | number;                                   // PK (uuid)
     so_no?: string;                                   // UNIQUE varchar(30)
     so_date: string;                                  // date
     customer_id: string;                              // FK→customer
@@ -41,7 +41,7 @@ export interface SalesOrderFormData {
     currency_code: string;                            // FK→currency default 'THB'
     payment_term_days: number;                        // int default 0
     onhold: 'Y' | 'N';                               // char(1) default 'N'
-    status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CONFIRMED' | 'CLOSED' | 'CANCELLED';
+    status: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CONFIRMED' | 'CLOSED' | 'CANCELLED';
     sub_total: number;                                // numeric(18,2)
     discount_amount: number;                          // numeric(18,2)
     discount_input?: string;                          // UI helper

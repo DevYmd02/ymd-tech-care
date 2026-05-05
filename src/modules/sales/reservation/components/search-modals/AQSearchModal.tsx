@@ -23,7 +23,7 @@ export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
     isOpen,
     onClose,
     onSelect,
-    title = 'ค้นหาใบเสนอราคา (SQ) - Find Sales Quotation (SQ)'
+    title = 'ค้นหาใบเสนอราคาอนุมัติ (AQ) - Find Approved Quotation (AQ)'
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearch = useDebounce(searchTerm, 400);
@@ -103,7 +103,7 @@ export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="ค้นหาเลขที่ SQ หรือ AQ..."
+                            placeholder="ค้นหาเลขที่ AQ หรือ SQ..."
                             className="w-full pl-12 pr-4 h-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-base text-gray-900 dark:text-white shadow-sm group-hover:border-gray-300 dark:group-hover:border-gray-600 transition-all font-medium placeholder-gray-400 dark:placeholder-gray-500"
                             autoFocus
                         />
@@ -129,10 +129,10 @@ export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
                         <table className="w-full text-left border-separate border-spacing-0">
                             <thead className="sticky top-0 z-10 bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md">
                                 <tr>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขที่ใบเสนอราคา (SQ)</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">วันที่ SQ</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">อ้างอิงใบอนุมัติ (AQ)</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">วันที่ AQ</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขที่ใบเสนอราคา (SQ)</th>
+                                    <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">วันที่ SQ</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">จัดการ</th>
                                 </tr>
                             </thead>
@@ -146,17 +146,17 @@ export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
                                         >
                                             <td className="px-6 py-4">
                                                 <span className="font-bold text-purple-600 dark:text-purple-400 group-hover:scale-105 transition-transform inline-block">
-                                                    {getSqNo(aq) || <span className="text-gray-400 dark:text-gray-600 font-normal italic text-sm">-</span>}
+                                                    {aq.aq_no || <span className="text-gray-400 dark:text-gray-600 font-normal italic text-sm">-</span>}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                                {formatThaiDate(getSqDate(aq))}
+                                                {formatThaiDate(aq.aq_date)}
                                             </td>
                                             <td className="px-6 py-4 font-semibold text-gray-800 dark:text-gray-200">
-                                                {aq.aq_no}
+                                                {getSqNo(aq) || <span className="text-gray-400 dark:text-gray-600 font-normal italic text-sm">-</span>}
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                                {formatThaiDate(aq.aq_date)}
+                                                {formatThaiDate(getSqDate(aq))}
                                             </td>
 
                                             <td className="px-6 py-4 text-center">
@@ -178,7 +178,7 @@ export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
                                         <td colSpan={5} className="px-6 py-20 text-center">
                                             <div className="flex flex-col items-center text-gray-400 dark:text-gray-500">
                                                 <Search size={64} className="mb-4 opacity-20" />
-                                                <p className="text-xl font-bold">ไม่พบข้อมูลใบเสนอราคา</p>
+                                                <p className="text-xl font-bold">ไม่พบข้อมูลใบเสนอราคาอนุมัติ</p>
                                                 <p className="text-sm opacity-80">ลองเปลี่ยนคำค้นหาอีกครั้ง</p>
                                             </div>
                                         </td>

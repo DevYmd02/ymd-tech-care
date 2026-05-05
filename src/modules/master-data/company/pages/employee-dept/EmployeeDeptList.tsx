@@ -289,7 +289,8 @@ export default function EmployeeDeptList() {
             </div>
 
             {/* Modal */}
-            <EmployeeDeptFormModal 
+            <EmployeeDeptFormModal
+                key={editingId || 'new'}
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}

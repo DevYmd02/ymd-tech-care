@@ -26,10 +26,11 @@ export const EmployeeDeptFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
         sides,
         isSubmitting,
         handleSave,
-        control
+        control,
+        isLoadingInitial
     } = useEmployeeDeptForm(editId ?? null, isOpen, onSuccess);
 
-    const isActive = useWatch({ control, name: 'is_active' });
+    const isActive = !!useWatch({ control, name: 'is_active' });
 
     // Header Icon
     const TitleIcon = <Layers className="w-5 h-5 text-white" />;
@@ -49,7 +50,7 @@ export const EmployeeDeptFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
                 type="button"
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50"
                 onClick={handleSave}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isLoadingInitial}
             >
                 {isSubmitting ? (
                     <span className="loading loading-spinner loading-xs"></span>
@@ -69,19 +70,29 @@ export const EmployeeDeptFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
             titleIcon={TitleIcon}
             footer={FormFooter}
         >
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 relative min-h-[400px]">
+                {isLoadingInitial && (
+                    <div className="absolute inset-0 bg-white/50 dark:bg-gray-900/50 z-10 flex items-center justify-center backdrop-blur-[1px]">
+                        <div className="flex flex-col items-center gap-2">
+                            <span className="loading loading-spinner loading-md text-indigo-600"></span>
+                            <span className="text-sm font-medium text-gray-500">กำลังโหลดข้อมูล...</span>
+                        </div>
+                    </div>
+                )}
+
                 {/* 1. Select Side & Status Row */}
                 <div className="space-y-1">
                     <div className="flex justify-between items-center mb-1">
                         <label className={styles.label}>
                             เลือกฝ่าย <span className="text-red-500">*</span>
                         </label>
-                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <label className={`flex items-center gap-2 cursor-pointer select-none ${isLoadingInitial ? 'opacity-50' : ''}`}>
                             <input
                                 {...register('is_active')}
                                 type="checkbox"
                                 checked={isActive}
                                 className="checkbox checkbox-sm checkbox-primary border-indigo-400 checked:bg-indigo-600"
+                                disabled={isLoadingInitial}
                             />
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                 ใช้งาน (Active)
@@ -91,6 +102,7 @@ export const EmployeeDeptFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
                     <select 
                         className={`${styles.input} cursor-pointer ${errors.emp_side_id ? 'border-red-500 focus:ring-red-200' : ''}`}
                         {...register('emp_side_id')}
+                        disabled={isLoadingInitial}
                     >
                         <option value="">-- เลือกฝ่าย --</option>
                         {sides.map(side => (
@@ -114,6 +126,7 @@ export const EmployeeDeptFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
                         type="text"
                         placeholder="กรอกรหัสแผนก (เช่น FIN-TRS, ACC-GL)"
                         className={`${styles.input} ${errors.emp_dept_code ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        disabled={isLoadingInitial}
                     />
                     {errors.emp_dept_code && (
                         <p className="text-red-500 text-xs mt-1">{errors.emp_dept_code.message}</p>
@@ -130,6 +143,7 @@ export const EmployeeDeptFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
                         type="text"
                         placeholder="กรอกชื่อแผนก"
                         className={`${styles.input} ${errors.emp_dept_name ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        disabled={isLoadingInitial}
                     />
                     {errors.emp_dept_name && (
                         <p className="text-red-500 text-xs mt-1">{errors.emp_dept_name.message}</p>
@@ -146,6 +160,7 @@ export const EmployeeDeptFormModal = ({ isOpen, onClose, onSuccess, editId }: Em
                         type="text"
                         placeholder="Enter department name in English"
                         className={`${styles.input} ${errors.emp_dept_nameeng ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        disabled={isLoadingInitial}
                     />
                     {errors.emp_dept_nameeng && (
                         <p className="text-red-500 text-xs mt-1">{errors.emp_dept_nameeng.message}</p>

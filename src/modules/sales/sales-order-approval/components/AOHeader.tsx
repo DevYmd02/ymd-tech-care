@@ -37,11 +37,18 @@ export function AOHeader({ currencies = [], readOnly = false, onSearchSO }: AOHe
   const taxCode = watch('tax_code');
 
   const reservationNo = watch('reservation_no');
+  const reservationId = watch('reservation_id');
   const shipDays = watch('ship_days');
   const shipDate = watch('ship_date');
   const empDeptName = watch('emp_dept_name');
+  const empAreaName = watch('emp_area_name');
+  const jobName = watch('job_name');
   const empAreaId = watch('emp_area_id');
   const jobId = watch('job_id');
+  const branchId = watch('branch_id');
+  const empDeptId = watch('emp_dept_id');
+  const empSaleId = watch('emp_sale_id');
+  const taxCodeId = watch('tax_code_id');
 
   const inputClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md text-gray-900 dark:text-white placeholder-gray-400 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm italic cursor-not-allowed";
   const labelClass = "block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider";
@@ -109,7 +116,7 @@ export function AOHeader({ currencies = [], readOnly = false, onSearchSO }: AOHe
           <label className={labelClass}>อ้างอิงใบจอง</label>
           <input
             type="text"
-            value={reservationNo || '-'}
+            value={reservationNo || (reservationId && reservationId !== '0' ? String(reservationId) : '-')}
             readOnly
             className={`${inputClass} italic`}
             placeholder="RS-xxxx"
@@ -120,7 +127,7 @@ export function AOHeader({ currencies = [], readOnly = false, onSearchSO }: AOHe
           <label className={labelClass}>สาขา (BRANCH_ID)</label>
           <input
             type="text"
-            value={branchName || '-'}
+            value={branchName || (branchId ? String(branchId) : '-')}
             readOnly
             className={inputClass}
           />
@@ -174,7 +181,7 @@ export function AOHeader({ currencies = [], readOnly = false, onSearchSO }: AOHe
           <label className={labelClass}>แผนกขาย (EMP_DEPT_ID)</label>
           <input
             type="text"
-            value={empDeptName || '-'}
+            value={empDeptName || (empDeptId && empDeptId !== '0' ? String(empDeptId) : '-')}
             readOnly
             className={inputClass}
           />
@@ -184,7 +191,7 @@ export function AOHeader({ currencies = [], readOnly = false, onSearchSO }: AOHe
           <label className={labelClass}>เขตการขาย (EMP_AREA_ID)</label>
           <input
             type="text"
-            value={empAreaId || '-'}
+            value={empAreaName || (empAreaId && empAreaId !== '0' ? String(empAreaId) : '-')}
             readOnly
             className={inputClass}
           />
@@ -194,7 +201,7 @@ export function AOHeader({ currencies = [], readOnly = false, onSearchSO }: AOHe
           <label className={labelClass}>โครงการ/งาน (JOB_ID)</label>
           <input
             type="text"
-            value={jobId || '-'}
+            value={jobName || (jobId && jobId !== '0' ? String(jobId) : '-')}
             readOnly
             className={inputClass}
           />
@@ -204,7 +211,7 @@ export function AOHeader({ currencies = [], readOnly = false, onSearchSO }: AOHe
           <label className={labelClass}>พนักงานขาย (SALES PERSON)</label>
           <input
             type="text"
-            value={empSaleName || '-'}
+            value={empSaleName || (empSaleId && empSaleId !== '0' ? String(empSaleId) : '-')}
             readOnly
             className={inputClass}
           />
@@ -214,7 +221,7 @@ export function AOHeader({ currencies = [], readOnly = false, onSearchSO }: AOHe
           <label className={labelClass}>ประเภทภาษี (TAX_CODE)</label>
           <input
             type="text"
-            value={taxCode || '-'}
+            value={taxCode || (taxCodeId && taxCodeId !== '0' ? String(taxCodeId) : '-')}
             readOnly
             className={inputClass}
           />

@@ -95,17 +95,34 @@ export function useEmployeeSideForm(editId: string | number | null, isOpen: bool
 
     // Hydrate form when data is fetched
     useEffect(() => {
-        if (isOpen && isEdit && initialData) {
-            reset({
-                emp_side_code: initialData.emp_side_code || initialData.side_code || initialData.department_code || '',
-                emp_side_name: initialData.emp_side_name || initialData.side_name || initialData.department_name || '',
-                emp_side_nameeng: initialData.emp_side_nameeng || initialData.side_nameeng || initialData.department_name_en || '',
-                is_active: initialData.is_active ?? true,
-            });
-        } else if (isOpen && !isEdit) {
+        if (!isOpen) return;
+
+        if (isEdit) {
+            if (initialData) {
+                // Determine active status from various possible field names/formats
+                const rawData = initialData as unknown as Record<string, unknown>;
+                const isActive = 
+                    rawData.is_active === true || 
+                    rawData.is_active === 1 || 
+                    rawData.is_active === '1' || 
+                    rawData.is_active === 'Y' || 
+                    rawData.is_active === 'ACTIVE' ||
+                    rawData.active === true;
+
+                reset({
+                    emp_side_code: initialData.emp_side_code || initialData.side_code || initialData.department_code || '',
+                    emp_side_name: initialData.emp_side_name || initialData.side_name || initialData.department_name || '',
+                    emp_side_nameeng: initialData.emp_side_nameeng || initialData.side_nameeng || initialData.department_name_en || '',
+                    is_active: isActive,
+                });
+            } else if (isLoadingInitial) {
+                // While loading, reset to initial to clear stale data from previous edit
+                reset(initialEmployeeSideData);
+            }
+        } else {
             reset(initialEmployeeSideData);
         }
-    }, [isOpen, isEdit, initialData, reset]);
+    }, [isOpen, isEdit, initialData, isLoadingInitial, reset]);
 
     const saveMutation = useMutation({
         mutationFn: async (data: EmployeeSideFormData) => {
@@ -116,7 +133,11 @@ export function useEmployeeSideForm(editId: string | number | null, isOpen: bool
         },
         onSuccess: (res) => {
             if (res.success) {
+                // Invalidate both the list and the specific detail record
                 queryClient.invalidateQueries({ queryKey: ['employee-sides'] });
+                if (editId) {
+                    queryClient.invalidateQueries({ queryKey: ['employee-side', editId] });
+                }
                 if (onSuccess) onSuccess();
             } else {
                 throw new Error(res.message || 'บันทึกไม่สำเร็จ');

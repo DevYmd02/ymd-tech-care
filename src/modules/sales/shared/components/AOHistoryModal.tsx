@@ -1,8 +1,11 @@
 import React from 'react';
-import { Clock, CheckCircle, XCircle, AlertCircle, User, Calendar } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import api from '@core/api/api';
+import { Clock } from 'lucide-react';
+import { createColumnHelper } from '@tanstack/react-table';
+import { AOService } from '@sales/sales-order-approval/services/ao.service';
+import type { AOListItem } from '@sales/sales-order-approval/types/sales-order-approval.types';
 import { ModalLayout } from '@ui';
+import { SmartTable } from '@ui/data-display/SmartTable';
 import { SOStatusBadge } from './SOStatusBadge';
 
 interface Props {
@@ -12,113 +15,140 @@ interface Props {
   soNo?: string;
 }
 
+const columnHelper = createColumnHelper<AOListItem>();
+
 const formatDate = (val?: string) => {
   if (!val) return '-';
   const [y, m, d] = val.split('T')[0].split('-');
   return y && m && d ? `${d}/${m}/${y}` : val;
 };
 
-const formatTime = (val?: string) => {
-  if (!val) return '';
-  const date = new Date(val);
-  return date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-};
-
 export const AOHistoryModal: React.FC<Props> = ({ isOpen, onClose, soId, soNo }) => {
-  const { data: history, isLoading } = useQuery({
+  const { data: historyData, isLoading } = useQuery({
     queryKey: ['so-approval-history', soId],
-    queryFn: async () => {
+    queryFn: () => {
       if (!soId) return [];
-      const res = await api.get<any[]>(`/sale-order-approval`, {
-        params: { so_id: soId }
-      });
-      return Array.isArray(res) ? res : (res as any).data || [];
+      return AOService.getApprovalList({ so_id: soId });
     },
     enabled: isOpen && !!soId,
   });
+
+  const displayData = React.useMemo((): AOListItem[] => {
+    if (!historyData) return [];
+    
+    // Defensive client-side filtering by soId to ensure each record shows its own history
+    if (soId) {
+      return historyData.filter((item) => String(item.so_id) === String(soId));
+    }
+    return historyData;
+  }, [historyData, soId]);
+
+  // Table Columns
+  const columns = React.useMemo(() => [
+    columnHelper.display({
+      id: 'index',
+      header: () => <div className="text-center w-full">ลำดับ</div>,
+      cell: (info) => <div className="text-center">{info.row.index + 1}</div>,
+      size: 50,
+    }),
+    columnHelper.accessor('ao_no', {
+      header: 'เลขที่อนุมัติ AO',
+      cell: (info) => <span className="font-bold text-emerald-600 dark:text-emerald-400">{info.getValue() || '-'}</span>,
+      size: 140,
+    }),
+    columnHelper.accessor('ao_date', {
+      header: 'วันที่อนุมัติ',
+      cell: (info) => formatDate(info.getValue()),
+      size: 100,
+    }),
+    columnHelper.accessor('approval_emp_name', {
+      header: 'ผู้อนุมัติ',
+      cell: (info) => <span className="font-semibold">{info.getValue() || '-'}</span>,
+      size: 140,
+    }),
+    columnHelper.accessor('base_total_amount', {
+      header: () => <div className="text-right w-full">ยอดรวม (บาท)</div>,
+      cell: (info) => {
+        const amount = Number(info.getValue()) || 0;
+        return (
+          <div className="text-right font-bold text-emerald-600 dark:text-emerald-400">
+            {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2 }).format(amount)}
+          </div>
+        );
+      },
+      size: 120,
+    }),
+    columnHelper.accessor('status', {
+      header: () => <div className="text-center w-full">สถานะ</div>,
+      cell: (info) => (
+        <div className="flex flex-col items-center gap-1">
+          <SOStatusBadge status={info.getValue()} />
+          {(() => {
+            const raw = info.row.original.raw as Record<string, unknown> | undefined;
+            const remarks = raw?.remarks || raw?.status_remark || '';
+            if (remarks) {
+              return (
+                <span className="text-[10px] text-gray-500 italic max-w-[150px] truncate" title={String(remarks)}>
+                  หมายเหตุ: {String(remarks)}
+                </span>
+              );
+            }
+            return null;
+          })()}
+        </div>
+      ),
+      size: 130,
+    }),
+  ], []);
 
   return (
     <ModalLayout
       isOpen={isOpen}
       onClose={onClose}
-      title="ประวัติการพิจารณาอนุมัติ (Approval History)"
+      variant="dialog"
+      title={`ประวัติการอนุมัติเอกสาร (${soNo || 'N/A'})`}
+      titleIcon={<Clock className="text-emerald-500" />}
       size="lg"
-    >
-      <div className="space-y-6 p-1">
-        <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 p-4 rounded-lg border border-slate-200 dark:border-slate-800">
-          <div>
-            <div className="text-xs text-slate-500 uppercase font-bold tracking-wider mb-1">เลขที่ใบสั่งขาย</div>
-            <div className="text-lg font-bold text-slate-900 dark:text-white">{soNo || '-'}</div>
-          </div>
-          <Clock size={24} className="text-slate-400" />
+      headerColor="bg-slate-800"
+      zIndex={60}
+      footer={
+        <div className="flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-6 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md font-bold transition-all"
+          >
+            ปิด
+          </button>
         </div>
-
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-slate-500 font-medium">กำลังโหลดประวัติ...</p>
-          </div>
-        ) : !history || history.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 bg-slate-50/50 dark:bg-slate-900/20 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800">
-            <AlertCircle size={40} className="text-slate-300 mb-2" />
-            <p className="text-slate-500 font-medium">ไม่พบประวัติการอนุมัติ</p>
+      }
+    >
+      <div className="p-1">
+        {displayData.length === 0 && !isLoading ? (
+          <div className="py-12 flex flex-col items-center justify-center text-gray-400 gap-3 bg-gray-50/50 dark:bg-gray-900/20 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-800">
+            <Clock size={48} strokeWidth={1} />
+            <p className="font-medium">ยังไม่มีประวัติการอนุมัติสำหรับใบสั่งขายนี้</p>
           </div>
         ) : (
-          <div className="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent dark:before:via-slate-800">
-            {history.map((item: any, index: number) => {
-              const isApproved = item.status === 'APPROVED';
-              const isRejected = item.status === 'REJECTED';
-              
-              return (
-                <div key={item.ao_id || index} className="relative flex items-start gap-6 group">
-                  <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white dark:border-slate-950 shadow-sm z-10 transition-transform group-hover:scale-110 ${
-                    isApproved ? 'bg-emerald-500 text-white' : 
-                    isRejected ? 'bg-red-500 text-white' : 
-                    'bg-slate-400 text-white'
-                  }`}>
-                    {isApproved ? <CheckCircle size={18} /> : isRejected ? <XCircle size={18} /> : <Clock size={18} />}
-                  </div>
-                  
-                  <div className="flex-1 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                      <div className="flex items-center gap-3">
-                        <SOStatusBadge status={item.status} />
-                        <span className="text-sm font-bold text-slate-900 dark:text-white">
-                          {item.ao_no}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-md">
-                        <Calendar size={12} />
-                        {formatDate(item.ao_date)} {formatTime(item.created_at)}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500">
-                          <User size={14} />
-                        </div>
-                        <div>
-                          <div className="text-[10px] text-slate-400 uppercase font-bold">ผู้อนุมัติ</div>
-                          <div className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                            {item.approval_emp_name || '-'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {item.remarks && (
-                      <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
-                        <div className="text-[10px] text-slate-400 uppercase font-bold mb-1">ความคิดเห็น / เหตุผล</div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed italic">
-                          "{item.remarks}"
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/10 border-b border-emerald-100 dark:border-emerald-900/30 flex justify-between items-center text-sm">
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400">จำนวนที่อนุมัติแล้ว:</span>
+              <span className="font-black text-emerald-600 dark:text-emerald-400">
+                {displayData.filter(h => h.status === 'APPROVED').length} ชุด (AO)
+              </span>
+            </div>
+            <SmartTable
+              data={displayData}
+              columns={columns}
+              isLoading={isLoading}
+              showPagination={false}
+              pagination={{
+                pageIndex: 1,
+                pageSize: 10,
+                totalCount: displayData.length,
+                onPageChange: () => {},
+                onPageSizeChange: () => {},
+              }}
+            />
           </div>
         )}
       </div>

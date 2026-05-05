@@ -23,22 +23,30 @@ export interface EmployeeMaster extends BaseMasterData {
     position_id?: number;
     position_name?: string;
     department_id?: number;
+    department_code?: string;
     department_name?: string;
     side_id?: string | number;
+    emp_side_code?: string;
+    emp_side_name?: string;
+    side_code?: string;
     side_name?: string;
     status: 'ACTIVE' | 'RESIGNED' | 'SUSPENDED';
     is_active: boolean;
     // Relationship Objects (found in nested responses)
     position?: {
+        position_code?: string;
         position_name: string;
     };
     department?: {
+        department_code?: string;
         department_name: string;
     };
     side?: {
+        side_code?: string;
         side_name: string;
     };
     branch?: {
+        branch_code?: string;
         branch_name: string;
     };
 }

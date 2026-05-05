@@ -46,6 +46,7 @@ export const AOFormSchema = z.object({
   so_date: z.string().default(''),
 
   // Customer (readonly display)
+  customer_id: z.union([z.string(), z.number()]).optional().default(''),
   customer_name: z.string().default(''),
   customer_code: z.string().default(''),
 
@@ -89,13 +90,16 @@ export const AOFormSchema = z.object({
   payment_term_days: z.coerce.number().default(0),
   remarks: z.string().optional().default(''),
 
+  reservation_id: z.union([z.string(), z.number()]).optional().default(''),
   reservation_no: z.string().optional().default(''),
   ship_days: z.coerce.number().optional().default(0),
   ship_date: z.string().optional().default(''),
   emp_dept_id: z.union([z.string(), z.number()]).optional().default(''),
   emp_dept_name: z.string().optional().default(''),
   emp_area_id: z.union([z.string(), z.number()]).optional().default(''),
+  emp_area_name: z.string().optional().default(''),
   job_id: z.union([z.string(), z.number()]).optional().default(''),
+  job_name: z.string().optional().default(''),
   onhold: z.enum(['Y', 'N']).default('N'),
 
   lines: z.array(AOLineSchema).default([]),
