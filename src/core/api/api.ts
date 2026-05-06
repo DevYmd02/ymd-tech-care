@@ -63,7 +63,7 @@ api.interceptors.response.use(
     // Centralized Logging for Success
     const method = response.config.method?.toUpperCase() || 'UNKNOWN';
     const url = response.config.url;
-    logger.info(`✅ [API] [${method}] ${url}`, response.data);
+    logger.debug(`✅ [API] [${method}] ${url}`);
 
     // Standardized Response Unwrapping
     // Handles BOTH Mock ({ success: true, data: ... }) and Real NestJS (raw { ... })

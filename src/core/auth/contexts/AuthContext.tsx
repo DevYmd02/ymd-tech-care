@@ -67,8 +67,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   //   }
   // }, [isAuthenticated, resetInactivityTimer]);
 
+  const hasInitialized = React.useRef(false);
+
   useEffect(() => {
     const initializeAuth = async () => {
+      if (hasInitialized.current) return;
+      
       const token = localStorage.getItem('token') || localStorage.getItem('access_token');
       
       // Register API unauthorized handler (Perfection Point #2)
@@ -102,6 +106,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       setIsLoading(false);
+      hasInitialized.current = true;
     };
 
     initializeAuth();
