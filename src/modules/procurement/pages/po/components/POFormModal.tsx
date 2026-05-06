@@ -7,7 +7,8 @@
  *  Business logic extracted to usePOForm hook.
  */
 import { useMemo, useState } from 'react';
-import { FormProvider, useWatch, Controller, type Control } from 'react-hook-form';
+import { FormProvider, useWatch, Controller, useFieldArray, type Control } from 'react-hook-form';
+import { SavingOverlay } from '@/shared/components/ui/feedback/SavingOverlay';
 import { 
     Save, Search, Trash2, FileText,
     Loader2, Plus, X as XIcon, Printer
@@ -46,7 +47,7 @@ const ui = {
     inputRO:    'w-full h-8 px-3 text-sm bg-slate-50 dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-800 rounded-lg cursor-not-allowed font-medium',
     select:     'w-full h-8 px-3 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed',
     searchBtn:  'px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shrink-0 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1',
-    error:      'text-red-500 text-[10px] mt-0.5 font-medium',
+    error:      'text-red-500 text-[11px] mt-1 font-semibold flex items-center gap-1',
     hint:       'text-xs text-gray-400 dark:text-gray-500 mt-1',
 };
 
@@ -68,11 +69,24 @@ const RowTotal = ({ control, index }: { control: Control<POFormData>; index: num
 // ====================================================================================
 
 const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; taxCodes: TaxCode[] }) => {
-    const poLines = useWatch({ control, name: 'po_lines' });
+    // 🎯 Optimization: Use fieldArray to get stable references (only changes on add/remove)
+    const { fields } = useFieldArray({ control, name: 'po_lines' });
+    
+    // 🎯 Optimization: Only watch fields that affect totals
+    const watchedLineTotals = useWatch({
+        control,
+        name: fields.map((_, i) => `po_lines.${i}.line_total`) as any
+    });
     const taxCodeId = useWatch({ control, name: 'tax_code_id' });
 
     const { taxAmount, totalAmount, taxRate, totalDiscount, grossTotal } = useMemo(() => {
-        const items = (poLines ?? []).map((l: POLine) => {
+        // 🎯 Ensure reactivity from watchedLineTotals and satisfy ESLint/TS
+        const lineCount = (watchedLineTotals || []).length;
+        if (lineCount < 0) return { taxAmount: 0, totalAmount: 0, taxRate: 0, totalDiscount: 0, grossTotal: 0 };
+
+        // Use getValues for the actual data to avoid watching everything
+        const currentLines = (control._formValues.po_lines || []);
+        const items = currentLines.map((l: POLine) => {
             const qty = Number(l.qty_ordered ?? l.qty ?? 0);
             const price = Number(l.unit_price ?? 0);
             const disc = parseDiscountAmount(l.discount_expression ?? '0', qty * price);
@@ -83,13 +97,12 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
             };
         });
 
-        // Safe Math: Find tax rate with default 0 fallback
         const selectedTax = (Array.isArray(taxCodes) ? taxCodes : []).find(t => Number(t.tax_code_id) === Number(taxCodeId));
         const taxRate = selectedTax ? Number(selectedTax.tax_rate) : 0;
 
         const summary = calculatePricingSummary(items, taxRate, false);
-        const totalDiscount = items.reduce((sum, item) => sum + (item.discount || 0), 0);
-        const grossTotal = items.reduce((sum, item) => sum + (item.qty * item.unit_price), 0);
+        const totalDiscount = items.reduce((sum: number, item: any) => sum + (item.discount || 0), 0);
+        const grossTotal = items.reduce((sum: number, item: any) => sum + (item.qty * item.unit_price), 0);
 
         return {
             ...summary,
@@ -97,7 +110,7 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
             totalDiscount,
             grossTotal
         };
-    }, [poLines, taxCodeId, taxCodes]);
+    }, [watchedLineTotals, taxCodeId, taxCodes, control._formValues.po_lines]);
 
     return (
         <div className="w-80 space-y-2 bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm transition-all">
@@ -128,6 +141,173 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
                 </span>
             </div>
         </div>
+    );
+};
+
+// ====================================================================================
+// SUB-COMPONENT: Line Row (isolated watch for performance)
+// ====================================================================================
+
+const POFormLineRow = ({ 
+    idx, 
+    field, 
+    isView, 
+    isLockedByQC, 
+    isLoadingUnits, 
+    units, 
+    handleOpenProductSearch, 
+    remove, 
+    handleAddLine,
+    register,
+    errors,
+    setValue,
+    control
+}: any) => {
+    const line = useWatch({ control, name: `po_lines.${idx}` });
+    
+    return (
+        <tr className="border-b border-gray-100 dark:border-gray-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+            <td className="px-3 py-2 text-center text-[13px] text-gray-600 font-medium border-r border-gray-200 dark:border-gray-700">{idx + 1}</td>
+            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                <div className="relative w-full flex items-center">
+                    <input
+                        value={line?.item_code || line?.code || field.code || field.item_code || ''}
+                        className={cn(
+                            "w-full pr-10 border rounded px-3 !h-9 text-[13px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 shadow-sm",
+                            errors.po_lines?.[idx]?.item_id ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300 dark:border-slate-700 focus:ring-blue-500"
+                        )}
+                        placeholder="ค้นหารหัส..."
+                        readOnly
+                    />
+                    <input type="hidden" {...register(`po_lines.${idx}.item_code`)} />
+                    <input type="hidden" {...register(`po_lines.${idx}.id`)} />
+                    <input type="hidden" {...register(`po_lines.${idx}.item_id`)} />
+                    <input type="hidden" {...register(`po_lines.${idx}.item_name`)} />
+                    {!isView && !isLockedByQC && (
+                        <button
+                            type="button"
+                            className="absolute right-1.5 z-10 p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-100 rounded-md cursor-pointer transition-colors"
+                            title="ค้นหาสินค้า"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleOpenProductSearch(idx);
+                            }}
+                        >
+                            <Search size={16} className="pointer-events-none" />
+                        </button>
+                    )}
+                </div>
+                {errors?.po_lines?.[idx]?.item_id && (
+                    <p className={ui.error}>{errors.po_lines[idx]?.item_id?.message}</p>
+                )}
+            </td>
+            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                <input
+                    {...register(`po_lines.${idx}.description`)}
+                    className={cn(
+                        `${ui.input} !h-9 text-[13px] shadow-sm`,
+                        errors.po_lines?.[idx]?.description ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
+                    )}
+                    placeholder="รายละเอียดเพิ่มเติม"
+                    readOnly={isView}
+                />
+            </td>
+            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                <input
+                    type="number" step="any"
+                    {...register(`po_lines.${idx}.qty_ordered`, { valueAsNumber: true })}
+                    className={cn(
+                        `${ui.input} !h-9 text-center text-[13px] shadow-sm`,
+                        errors.po_lines?.[idx]?.qty_ordered ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
+                    )}
+                    placeholder="0.000"
+                    readOnly={isView || isLockedByQC}
+                />
+            </td>
+            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                <select
+                    {...register(`po_lines.${idx}.uom_id`, { valueAsNumber: true })}
+                    value={line?.uom_id || ''}
+                    onChange={(e) => {
+                        const val = e.target.value === '' ? 0 : Number(e.target.value);
+                        setValue(`po_lines.${idx}.uom_id`, val, { shouldValidate: true });
+                    }}
+                    className={cn(
+                        `${ui.select} !h-9 text-center px-1 text-[13px] shadow-sm`,
+                        errors.po_lines?.[idx]?.uom_id ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
+                    )}
+                    disabled={isView || isLockedByQC || isLoadingUnits}
+                >
+                    <option value="">{isLoadingUnits ? 'โหลด...' : 'หน่วย'}</option>
+                    {Array.isArray(units) && units.map((u: UnitListItem) => <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.unit_name}</option>)}
+                </select>
+            </td>
+            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                <input
+                    type="number" step="any"
+                    {...register(`po_lines.${idx}.unit_price`, { valueAsNumber: true })}
+                    className={cn(
+                        `${ui.input} !h-9 text-right text-[13px] shadow-sm`,
+                        errors.po_lines?.[idx]?.unit_price ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
+                    )}
+                    placeholder="0.0000"
+                    readOnly={isView || isLockedByQC}
+                />
+            </td>
+            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                <input
+                    type="text"
+                    {...register(`po_lines.${idx}.discount_expression`)}
+                    className={cn(
+                        `${ui.input} !h-9 text-right text-[13px] shadow-sm`,
+                        errors.po_lines?.[idx]?.discount_expression ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
+                    )}
+                    placeholder="0 หรือ 5%"
+                    readOnly={isView || isLockedByQC}
+                />
+            </td>
+            <td className="px-3 py-2 text-right font-semibold text-slate-800 dark:text-slate-200 border-r border-gray-200 dark:border-gray-700 text-[13px] bg-slate-50/50 dark:bg-slate-900/50">
+                <RowTotal control={control} index={idx} />
+            </td>
+            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
+                <select
+                    {...register(`po_lines.${idx}.receipt_type`)}
+                    className={cn(
+                        `${ui.select} !h-9 text-center px-1 text-[13px] shadow-sm bg-white dark:bg-slate-800`,
+                        errors.po_lines?.[idx]?.receipt_type ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
+                    )}
+                    disabled={isView}
+                >
+                    <option value="GOODS">GOODS</option>
+                    <option value="SERVICE">SERVICE</option>
+                </select>
+            </td>
+            {!isView && !isLockedByQC && (
+                <td className="px-1 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handleAddLine}
+                            className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 p-1.5 rounded-full transition-colors"
+                            title="แทรกรายการใหม่"
+                            aria-label={`แทรกรายการใหม่ ถัดจากแถวที่ ${idx + 1}`}
+                        >
+                            <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => remove(idx)}
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-full transition-colors"
+                            title="ลบรายการนี้"
+                            aria-label={`ลบรายการ แถวที่ ${idx + 1}`}
+                        >
+                            <Trash2 size={16} aria-hidden="true" />
+                        </button>
+                    </div>
+                </td>
+            )}
+        </tr>
     );
 };
 
@@ -202,7 +382,7 @@ export default function POFormModal({
     } = usePOForm({ isOpen, onClose, onSuccess, poId, initialValues, isViewMode });
 
     const watchQcNo = useWatch({ control, name: 'qc_no' });
-    const watchedLines = useWatch({ control, name: 'po_lines' });
+    // const watchedLines = useWatch({ control, name: 'po_lines' }); // 🚀 Optimization: Removed global watch
 
     // 🔒 Audit Lock: Lock prices & quantity if this PO is associated with a winning QC
     const isLockedByQC = !!watchQcNo && watchQcNo !== 'ไม่ได้ผ่าน QC';
@@ -285,7 +465,9 @@ export default function POFormModal({
                     </div>
                 }
             >
-                <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
+                <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 relative">
+                    {/* 🧊 Saving Overlay */}
+                    <SavingOverlay isVisible={isSubmitting} />
 
                     {/* ════════════════════════════════════════════════════════
                         CARD 1 — PO Header
@@ -614,147 +796,22 @@ export default function POFormModal({
                                             </tr>
                                         )}
                                         {fields.map((field: POLine & { id: string }, idx: number) => (
-                                            <tr key={field.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                <td className="px-3 py-2 text-center text-[13px] text-gray-600 font-medium border-r border-gray-200 dark:border-gray-700">{idx + 1}</td>
-                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                    <div className="relative w-full flex items-center">
-                                                        <input
-                                                            value={watchedLines?.[idx]?.item_code || watchedLines?.[idx]?.code || field.code || field.item_code || ''}
-                                                            className={cn(
-                                                                "w-full pr-10 border rounded px-3 !h-9 text-[13px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 shadow-sm",
-                                                                errors.po_lines?.[idx]?.item_id ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300 dark:border-slate-700 focus:ring-blue-500"
-                                                            )}
-                                                            placeholder="ค้นหารหัส..."
-                                                            readOnly
-                                                        />
-                                                        {/* Hidden fields needed for form submission/State sync */}
-                                                        <input type="hidden" {...register(`po_lines.${idx}.item_code`)} />
-                                                        <input type="hidden" {...register(`po_lines.${idx}.id`)} />
-                                                        <input type="hidden" {...register(`po_lines.${idx}.item_id`)} />
-                                                        <input type="hidden" {...register(`po_lines.${idx}.item_name`)} />
-                                                        {!isView && !isLockedByQC && (
-                                                            <button
-                                                                type="button"
-                                                                className="absolute right-1.5 z-10 p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-100 rounded-md cursor-pointer transition-colors"
-                                                                title="ค้นหาสินค้า"
-                                                                onClick={(e) => {
-                                                                    e.preventDefault();
-                                                                    e.stopPropagation();
-                                                                    handleOpenProductSearch(idx);
-                                                                }}
-                                                            >
-                                                                <Search size={16} className="pointer-events-none" />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    {errors?.po_lines?.[idx]?.item_id && (
-                                                        <p className={ui.error}>{errors.po_lines[idx]?.item_id?.message}</p>
-                                                    )}
-                                                </td>
-                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                    <input
-                                                        {...register(`po_lines.${idx}.description`)}
-                                                        className={cn(
-                                                            `${ui.input} !h-9 text-[13px] shadow-sm`,
-                                                            errors.po_lines?.[idx]?.description ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
-                                                        )}
-                                                        placeholder="รายละเอียดเพิ่มเติม"
-                                                        readOnly={isView}
-                                                    />
-                                                </td>
-                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                    <input
-                                                        type="number" step="any"
-                                                        {...register(`po_lines.${idx}.qty_ordered`, { valueAsNumber: true })}
-                                                        className={cn(
-                                                            `${ui.input} !h-9 text-center text-[13px] shadow-sm`,
-                                                            errors.po_lines?.[idx]?.qty_ordered ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
-                                                        )}
-                                                        placeholder="0.000"
-                                                        readOnly={isView || isLockedByQC}
-                                                    />
-                                                </td>
-                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                    <select
-                                                        {...register(`po_lines.${idx}.uom_id`, { valueAsNumber: true })}
-                                                        value={watchedLines?.[idx]?.uom_id || ''}
-                                                        onChange={(e) => {
-                                                            const val = e.target.value === '' ? 0 : Number(e.target.value);
-                                                            setValue(`po_lines.${idx}.uom_id`, val, { shouldValidate: true });
-                                                        }}
-                                                        className={cn(
-                                                            `${ui.select} !h-9 text-center px-1 text-[13px] shadow-sm`,
-                                                            errors.po_lines?.[idx]?.uom_id ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
-                                                        )}
-                                                        disabled={isView || isLockedByQC || isLoadingUnits}
-                                                    >
-                                                        <option value="">{isLoadingUnits ? 'โหลด...' : 'หน่วย'}</option>
-                                                        {Array.isArray(units) && units.map((u: UnitListItem) => <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.unit_name}</option>)}
-                                                    </select>
-                                                </td>
-                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                    <input
-                                                        type="number" step="any"
-                                                        {...register(`po_lines.${idx}.unit_price`, { valueAsNumber: true })}
-                                                        className={cn(
-                                                            `${ui.input} !h-9 text-right text-[13px] shadow-sm`,
-                                                            errors.po_lines?.[idx]?.unit_price ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
-                                                        )}
-                                                        placeholder="0.0000"
-                                                        readOnly={isView || isLockedByQC}
-                                                    />
-                                                </td>
-                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                    <input
-                                                        type="text"
-                                                        {...register(`po_lines.${idx}.discount_expression`)}
-                                                        className={cn(
-                                                            `${ui.input} !h-9 text-right text-[13px] shadow-sm`,
-                                                            errors.po_lines?.[idx]?.discount_expression ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
-                                                        )}
-                                                        placeholder="0 หรือ 5%"
-                                                        readOnly={isView || isLockedByQC}
-                                                    />
-                                                </td>
-                                                <td className="px-3 py-2 text-right font-semibold text-slate-800 dark:text-slate-200 border-r border-gray-200 dark:border-gray-700 text-[13px] bg-slate-50/50 dark:bg-slate-900/50">
-                                                    <RowTotal control={control} index={idx} />
-                                                </td>
-                                                <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                    <select
-                                                        {...register(`po_lines.${idx}.receipt_type`)}
-                                                        className={cn(
-                                                            `${ui.select} !h-9 text-center px-1 text-[13px] shadow-sm bg-white dark:bg-slate-800`,
-                                                            errors.po_lines?.[idx]?.receipt_type ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
-                                                        )}
-                                                        disabled={isView}
-                                                    >
-                                                        <option value="GOODS">GOODS</option>
-                                                        <option value="SERVICE">SERVICE</option>
-                                                    </select>
-                                                </td>
-                                                {!isView && !isLockedByQC && (
-                                                    <td className="px-1 text-center">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleAddLine}
-                                                                className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 p-1.5 rounded-full transition-colors"
-                                                                title="เพิ่มรายการ"
-                                                            >
-                                                                <Plus size={16} strokeWidth={2.5} />
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => remove(idx)}
-                                                                className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-full transition-colors"
-                                                                title="ลบรายการ"
-                                                            >
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                )}
-                                            </tr>
+                                            <POFormLineRow
+                                                key={field.id}
+                                                idx={idx}
+                                                field={field}
+                                                isView={isView}
+                                                isLockedByQC={isLockedByQC}
+                                                isLoadingUnits={isLoadingUnits}
+                                                units={units}
+                                                handleOpenProductSearch={handleOpenProductSearch}
+                                                remove={remove}
+                                                handleAddLine={handleAddLine}
+                                                register={register}
+                                                errors={errors}
+                                                setValue={setValue}
+                                                control={control}
+                                            />
                                         ))}
                                     </tbody>
                                 </table>

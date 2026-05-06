@@ -15,6 +15,7 @@ import type {
 } from '@/modules/master-data/vendor/types/vendor-types';
 
 import { DialogFormLayout } from '@ui';
+import { SavingOverlay } from '@/shared/components/ui/feedback/SavingOverlay';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 
 import { VendorGeneralInfo } from './components/VendorGeneralInfo';
@@ -121,8 +122,8 @@ export function VendorFormModal(props: VendorFormModalProps) {
             footer={FormFooter}
             isLoading={isLoading}
         >
-             <form id="vendor-form" onSubmit={handleSubmit} className="space-y-8">
-                
+             <form id="vendor-form" onSubmit={handleSubmit} className="space-y-8 relative">
+                <SavingOverlay isVisible={isSubmitting} />
                 <VendorGeneralInfo 
                     formData={formData} 
                     onChange={handleChange} 

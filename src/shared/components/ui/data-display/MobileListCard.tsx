@@ -136,8 +136,10 @@ export function MobileListContainer({
   return (
     <div className="md:hidden flex-1 overflow-y-auto p-2 space-y-3 pb-20">
       {isLoading ? (
-        <div className="text-center py-4 text-gray-500 dark:text-slate-400">
-          กำลังโหลด...
+        <div className="space-y-4 animate-pulse">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-gray-100 dark:bg-slate-800/50 rounded-lg h-32 w-full border border-gray-200 dark:border-slate-700" />
+          ))}
         </div>
       ) : isEmpty ? (
         <div className="text-center py-8 text-gray-500 dark:text-slate-400 bg-white dark:bg-slate-800 rounded-lg border border-dashed border-gray-300 dark:border-slate-600">

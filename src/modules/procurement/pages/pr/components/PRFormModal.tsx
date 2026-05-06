@@ -11,7 +11,7 @@ import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import { usePRForm } from '@/modules/procurement/pages/pr/hooks';
 import { WarehouseSearchModal } from '@/modules/procurement/shared/components/WarehouseSearchModal';
 import { LocationSearchModal } from '@/modules/procurement/shared/components/LocationSearchModal';
-
+import { SavingOverlay } from '@/shared/components/ui/feedback/SavingOverlay';
 
 const SHIPPING_OPTIONS = [
   { label: 'รถยนต์', value: 'Car' },
@@ -136,7 +136,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
             onSelect={selectLocation}
           />
 
-          <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1">
+          <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1 relative">
+            <SavingOverlay isVisible={isSubmitting} />
             <div className={cardClass}>
                 <PRHeader 
                     costCenters={costCenters}
@@ -366,11 +367,24 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                                 />
                             )}
                         />
-                        {watch('pr_base_currency_code') && watch('pr_base_currency_code') !== 'THB' && (
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
-                            1 {watch('pr_base_currency_code')} ≈ {Number(watch('pr_exchange_rate') || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
-                        </div>
-                        )}
+                        <Controller
+                            name="pr_base_currency_code"
+                            control={control}
+                            render={({ field: { value: baseCurrency } }) => {
+                                if (!baseCurrency || baseCurrency === 'THB') return <></>;
+                                return (
+                                    <Controller
+                                        name="pr_exchange_rate"
+                                        control={control}
+                                        render={({ field: { value: rate } }) => (
+                                            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
+                                                1 {baseCurrency} ≈ {Number(rate || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
+                                            </div>
+                                        )}
+                                    />
+                                );
+                            }}
+                        />
                     </div>
                 </div>
             </div>

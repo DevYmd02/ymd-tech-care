@@ -3,10 +3,11 @@
  * @description Modal for creating/editing Employee data — full field set matching M16 schema
  */
 
-import { useWatch, Controller } from 'react-hook-form';
+import { Controller } from 'react-hook-form';
 import { Save, X, User, MapPin, Building2, CalendarDays, FileText, Plus, Trash2 } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout, CustomDateInput } from '@ui';
+import { SavingOverlay } from '@/shared/components/ui/feedback/SavingOverlay';
 import { useEmployeeForm } from './hooks/useEmployeeForm';
 
 interface EmployeeFormModalProps {
@@ -50,6 +51,8 @@ const Hint = ({ text }: { text: string }) => (
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
+
+
 export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: EmployeeFormModalProps) => {
     const isEdit = !!editId;
 
@@ -71,25 +74,37 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
         control,
     } = useEmployeeForm(editId ?? null, isOpen, onSuccess);
 
-    const isActive = useWatch({ control, name: 'isActive' });
-
     // ── Footer ──────────────────────────────────────────────────────────────
     const FormFooter = (
         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
             {/* Status Toggle on the left */}
             <div className="flex items-center gap-3">
                 <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                        type="checkbox" 
-                        className="sr-only peer" 
-                        checked={isActive}
-                        onChange={(e) => setValue('isActive', e.target.checked)}
+                    <Controller
+                        control={control}
+                        name="isActive"
+                        render={({ field }) => (
+                            <>
+                                <input 
+                                    type="checkbox" 
+                                    className="sr-only peer" 
+                                    checked={field.value}
+                                    onChange={(e) => field.onChange(e.target.checked)}
+                                />
+                                <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                            </>
+                        )}
                     />
-                    <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
                 </label>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    สถานะการใช้งาน {isActive ? '(Active)' : '(Inactive)'}
-                </span>
+                <Controller
+                    control={control}
+                    name="isActive"
+                    render={({ field }) => (
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            สถานะการใช้งาน {field.value ? '(Active)' : '(Inactive)'}
+                        </span>
+                    )}
+                />
             </div>
 
             <div className="flex gap-3">
@@ -126,7 +141,8 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
             titleIcon={<User className="w-5 h-5 text-white" />}
             footer={FormFooter}
         >
-            <div className="p-6 space-y-8">
+            <div className="p-6 space-y-8 relative">
+                <SavingOverlay isVisible={isSubmitting} />
 
                 {/* ════════════════════════════════════════
                     SECTION 1 — ข้อมูลพื้นฐาน
@@ -587,9 +603,9 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                     }}
                                 >
                                     {isUploading ? (
-                                        <span className="loading loading-spinner loading-[10px]" />
+                                        <span className="loading loading-spinner loading-[10px]" aria-hidden="true" />
                                     ) : (
-                                        <Plus className="w-3 h-3" />
+                                        <Plus className="w-3 h-3" aria-hidden="true" />
                                     )}
                                     เพิ่มลายเซ็นต์
                                 </button>
@@ -636,8 +652,9 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                                     if (field.emp_signature_id) handleDeleteSignature(field.emp_signature_id);
                                                 }}
                                                 title="ลบลายเซ็นต์"
+                                                aria-label={`ลบลายเซ็นต์ที่ ${index + 1}`}
                                             >
-                                                <Trash2 className="w-3.5 h-3.5" />
+                                                <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
                                             </button>
                                         </div>
                                     </div>

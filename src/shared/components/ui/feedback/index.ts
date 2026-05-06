@@ -12,3 +12,4 @@ export {
 } from './StatusBadge';
 export { Toast, ToastProvider, useToast } from './Toast';
 export { SearchModal, type ColumnDef, type SearchModalProps } from './SearchModal';
+export { TableSkeleton } from './TableSkeleton';

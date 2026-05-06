@@ -34,7 +34,8 @@ export const LeadSearchModal: React.FC<LeadSearchModalProps> = React.memo(({
             limit: 100
         }),
         enabled: isOpen,
-        staleTime: 0, 
+        staleTime: 30 * 1000, // 30 seconds - good for lead lookup
+        gcTime: 5 * 60 * 1000, // 5 minutes
     });
 
     const estimates = useMemo<EstimateHeader[]>(() => response?.data || [], [response]);

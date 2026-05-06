@@ -11,10 +11,8 @@ import { FormProvider } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';
 import { WindowFormLayout } from '@ui';
-import { MasterDataService } from '@master-data';
-import { UnitService } from '@inventory/services/unit.service';
-import { WarehouseService } from '@inventory/services/warehouse.service';
-import { LocationService } from '@inventory/services/inventory-master.service';
+import { extractErrorMessage } from '@/core/api/api';
+import { useBranches, useUnits, useWarehouses, useLocations } from '@master-data/hooks/useMasterData';
 import { EmployeeSearchModal } from '@master-data/employee/components/EmployeeSearchModal';
 import { ProductSearchModal } from '@sales/quotation/components/ProductSearchModal';
 import { WarehouseSearchModal } from '@sales/shared/components/search-modals/WarehouseSearchModal';
@@ -74,31 +72,14 @@ export function DeliveryFormModal({
     // --------------------------------------------------------
     // Master Data
     // --------------------------------------------------------
-    const { data: branches = [] } = useQuery({
-        queryKey: ['master-branches'],
-        queryFn: MasterDataService.getBranches,
-        enabled: isOpen,
-    });
-
-    const { data: uomResponse } = useQuery({
-        queryKey: ['master-units'],
-        queryFn: () => UnitService.getAll({ limit: 1000 }),
-        enabled: isOpen,
-    });
+    const { data: branches = [] } = useBranches(isOpen);
+    const { data: uomResponse } = useUnits(isOpen);
     const uoms = uomResponse?.items || [];
 
-    const { data: warehouseResponse } = useQuery({
-        queryKey: ['master-warehouses'],
-        queryFn: () => WarehouseService.getAll(),
-        enabled: isOpen,
-    });
+    const { data: warehouseResponse } = useWarehouses(isOpen);
     const warehouses = warehouseResponse?.items || [];
 
-    const { data: locationResponse } = useQuery({
-        queryKey: ['master-locations'],
-        queryFn: () => LocationService.getAll({ limit: 1000 }),
-        enabled: isOpen,
-    });
+    const { data: locationResponse } = useLocations(isOpen);
     const locations = locationResponse?.items || [];
 
     // --------------------------------------------------------
@@ -115,7 +96,7 @@ export function DeliveryFormModal({
     // --------------------------------------------------------
     const {
         methods,
-        formData,
+        lines,
         handleAddLine,
         handleRemoveLine,
         handleLineChange,
@@ -159,7 +140,7 @@ export function DeliveryFormModal({
             onClose();
         } catch (error) {
             logger.error('[DeliveryFormModal] Submit failed:', error);
-            toast('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+            toast(extractErrorMessage(error), 'error');
         } finally {
             setIsSubmitting(false);
         }
@@ -271,7 +252,7 @@ export function DeliveryFormModal({
                             <div className={cardClass}>
                                 <div className="p-6">
                                     <DeliveryLineTable
-                                        lines={formData.lines || []}
+                                        lines={lines}
                                         uoms={uoms}
                                         onAddLine={handleAddLine}
                                         onRemoveLine={handleRemoveLine}
@@ -339,7 +320,7 @@ export function DeliveryFormModal({
                 isOpen={isWarehouseSearchOpen}
                 onClose={() => setIsWarehouseSearchOpen(false)}
                 warehouses={warehouses}
-                itemId={activeLineIndex !== null ? formData.lines?.[activeLineIndex]?.item_id || null : null}
+                itemId={activeLineIndex !== null ? lines[activeLineIndex]?.item_id || null : null}
                 onSelect={(warehouse) => {
                     if (activeLineIndex !== null) {
                         handleLineChange(activeLineIndex, 'warehouse_id', String(warehouse.warehouse_id));
@@ -359,10 +340,10 @@ export function DeliveryFormModal({
                 onClose={() => setIsLocationSearchOpen(false)}
                 warehouseId={
                     activeLineIndex !== null
-                        ? String(formData.lines?.[activeLineIndex]?.warehouse_id || '')
+                        ? String(lines[activeLineIndex]?.warehouse_id || '')
                         : null
                 }
-                itemId={activeLineIndex !== null ? formData.lines?.[activeLineIndex]?.item_id || null : null}
+                itemId={activeLineIndex !== null ? lines[activeLineIndex]?.item_id || null : null}
                 locations={locations}
                 onSelect={(location) => {
                     if (activeLineIndex !== null) {
@@ -390,17 +371,17 @@ export function DeliveryFormModal({
                 }}
                 warehouseId={
                     activeLineIndex !== null
-                        ? String(formData.lines?.[activeLineIndex]?.warehouse_id || '')
+                        ? String(lines[activeLineIndex]?.warehouse_id || '')
                         : undefined
                 }
                 locationId={
                     activeLineIndex !== null
-                        ? String(formData.lines?.[activeLineIndex]?.location_id || '')
+                        ? String(lines[activeLineIndex]?.location_id || '')
                         : undefined
                 }
                 itemId={
                     activeLineIndex !== null
-                        ? String(formData.lines?.[activeLineIndex]?.item_id || '')
+                        ? String(lines[activeLineIndex]?.item_id || '')
                         : undefined
                 }
             />

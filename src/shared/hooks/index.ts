@@ -17,3 +17,6 @@ export { useConfirmation } from './useConfirmation';
 
 // Window Manager Hook
 export { useWindowManager } from './useWindowManager';
+
+// Keyboard Navigation Hook
+export { useSearchKeyboardNavigation } from './useSearchKeyboardNavigation';

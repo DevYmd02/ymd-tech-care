@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useForm, useWatch, type Resolver } from 'react-hook-form';
+import { useForm, useWatch, type Resolver, type Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
 import { MasterDataService } from '@master-data';
@@ -49,7 +49,34 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     });
 
     const { setValue, reset, control, getValues, handleSubmit } = methods;
-    const formData = useWatch({ control });
+    // 📺 Performance Optimization: Granular Watch instead of Global Watch
+    const watchedSummary = useWatch({
+        control,
+        name: [
+            'sq_no',
+            'status',
+            'sub_total',
+            'discount_expression',
+            'discount_amount',
+            'vat_amount',
+            'total_amount',
+            'currency_code',
+            'base_currency_code',
+            'tax_code_id'
+        ]
+    });
+
+    const [
+        sq_no, status, sub_total, discount_expression, 
+        discount_amount, vat_amount, total_amount, 
+        currency_code, base_currency_code, tax_code_id
+    ] = watchedSummary;
+
+    const formData = {
+        sq_no, status, sub_total, discount_expression,
+        discount_amount, vat_amount, total_amount,
+        currency_code, base_currency_code, tax_code_id
+    };
 
     // 🏗️ Check if we already have sufficient data to skip fetching
     const hasInitialLines = !!(isOpen && initialData && initialData.lines && (initialData.lines as QuotationLineValues[]).length > 0);
@@ -524,18 +551,20 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     }, [currencies, sourceCurrency, targetCurrency, setValue, isMulti, getValues]);
 
     // 2. Automated Calculations (Subtotal, VAT, Discount, Total)
-    const watchedLines = useWatch({ control, name: 'lines' });
-    const lines = useMemo(() => watchedLines || [], [watchedLines]);
+    const lineIndices = (getValues('lines') || []).map((_, i) => i);
+    const watchedLineTotals = useWatch({
+        control,
+        name: lineIndices.map(i => `lines.${i}.line_total` as Path<QuotationFormValues>)
+    });
     
-    const watchedDiscountExpression = useWatch({ control, name: 'discount_expression' });
-    const discountExpression = useMemo(() => watchedDiscountExpression || '', [watchedDiscountExpression]);
-    
-    const taxCodeId = useWatch({ control, name: 'tax_code_id' });
+    const discountExpression = useMemo(() => discount_expression || '', [discount_expression]);
+    const taxCodeId = useMemo(() => tax_code_id, [tax_code_id]);
 
     useEffect(() => {
         // Line Totals & Header Subtotal
         const currentSubTotal = getValues('sub_total');
-        const calculatedSubTotal = lines.reduce((sum, line) => sum + (line.line_total || 0), 0);
+        const calculatedSubTotal = (watchedLineTotals as (string | number | undefined)[] || []).reduce<number>((sum, val) => sum + (Number(val) || 0), 0);
+        
         if (currentSubTotal !== calculatedSubTotal) {
             setValue('sub_total', calculatedSubTotal, { shouldValidate: true });
         }
@@ -564,7 +593,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             setValue('total_amount', totalAmountValue, { shouldValidate: true });
         }
 
-    }, [lines, discountExpression, taxCodeId, taxCodes, setValue, getValues]);
+    }, [watchedLineTotals, discountExpression, taxCodeId, taxCodes, setValue, getValues]);
 
     // --------------------------------------------------------
     // Tax Propagation Logic

@@ -1,4 +1,5 @@
 import api, { USE_MOCK } from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import type {
   VendorMaster,
   VendorListItem,
@@ -130,7 +131,7 @@ function mapVendorToApi(data: any): any {
 // Define Union Type for Legacy and Standard Responses - REMOVED (Trust Interceptor)
 
 export const VendorService = {
-  getList: async (): Promise<VendorListResponse> => {
+  getList: async (config?: AxiosRequestConfig): Promise<VendorListResponse> => {
     if (USE_MOCK) {
        logger.info('🎭 [Mock Mode] Serving Vendor List from Local Store');
        return {
@@ -142,7 +143,7 @@ export const VendorService = {
     }
     try {
       // Trust Global Interceptor - it unwraps { success, data } -> data
-      const response = await api.get<VendorListResponse | VendorListItem[]>('/vendors');
+      const response = await api.get<VendorListResponse | VendorListItem[]>('/vendors', config);
       
       // Handle raw array response (Real API) or standard paginated response
       if (Array.isArray(response)) {
@@ -166,7 +167,7 @@ export const VendorService = {
     }
   },
 
-  getById: async (vendorId: number): Promise<VendorMaster | null> => {
+  getById: async (vendorId: number, config?: AxiosRequestConfig): Promise<VendorMaster | null> => {
     if (USE_MOCK) {
       const mockVendor = localVendorData.find((v: VendorMaster) => v.vendor_id === vendorId);
       if (mockVendor) {
@@ -176,7 +177,7 @@ export const VendorService = {
       return null;
     }
     try {
-      return await api.get<VendorMaster>(`/vendors/${vendorId}`);
+      return await api.get<VendorMaster>(`/vendors/${vendorId}`, config);
     } catch (error) {
       logger.error('[VendorService] getById error:', error);
       return null;

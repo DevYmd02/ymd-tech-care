@@ -9,16 +9,15 @@
  * - Deep clone on selection to prevent mutation
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Check, Building2 } from 'lucide-react';
 import { DialogFormLayout } from '@ui';
-import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
+import { useSearchKeyboardNavigation } from '@/shared/hooks';
 import { VendorStatusBadge } from '@/modules/master-data/vendor/components/VendorStatusBadge';
 import type { 
     VendorListItem, 
     VendorSearchItem 
 } from '@/modules/master-data/vendor/types/vendor-types';
-import { logger } from '@/shared/utils';
 
 // Re-export for backward compatibility
 export type Vendor = VendorSearchItem;
@@ -91,10 +90,10 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
     const [searchCode, setSearchCode] = useState('');
     const [searchName, setSearchName] = useState('');
     const [searchTaxId, setSearchTaxId] = useState('');
-    const [filteredData, setFilteredData] = useState<VendorSearchItem[]>(data);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // Update filtered data when data or filters change
-    useEffect(() => {
+    // Optimized Filtering: Use useMemo instead of useEffect + useState
+    const filteredData = useMemo(() => {
         let result = [...data];
 
         if (searchCode.trim()) {
@@ -115,23 +114,32 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
             result = result.filter(v => v.taxId?.toLowerCase().includes(term));
         }
 
-        setFilteredData(result);
+        return result;
     }, [data, searchCode, searchName, searchTaxId]);
-
-    // Reset filters when modal opens
-    useEffect(() => {
-        if (isOpen) {
-            setSearchCode('');
-            setSearchName('');
-            setSearchTaxId('');
-        }
-    }, [isOpen]);
 
     // Handle selection
     const handleSelect = useCallback((vendor: VendorSearchItem) => {
         onSelect(vendor);
         onClose();
     }, [onSelect, onClose]);
+
+    // ✨ Centralized Keyboard Navigation
+    const { selectedIndex, handleKeyDown } = useSearchKeyboardNavigation({
+        items: filteredData,
+        onSelect: handleSelect,
+        isOpen
+    });
+
+    // Reset filters and focus search when modal opens
+    useEffect(() => {
+        if (isOpen) {
+            setSearchCode('');
+            setSearchName('');
+            setSearchTaxId('');
+            // 🎯 Auto-focus search input for zero-mouse experience
+            setTimeout(() => searchInputRef.current?.focus(), 50);
+        }
+    }, [isOpen]);
 
     return (
         <DialogFormLayout
@@ -151,9 +159,11 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                 รหัสผู้ขาย / เลขผู้เสียภาษี
                             </label>
                             <input
+                                ref={searchInputRef}
                                 type="text"
                                 value={searchCode}
                                 onChange={(e) => setSearchCode(e.target.value)}
+                                onKeyDown={handleKeyDown}
                                 placeholder="V001 หรือ 0105562012345"
                                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
                             />
@@ -168,6 +178,7 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                 type="text"
                                 value={searchName}
                                 onChange={(e) => setSearchName(e.target.value)}
+                                onKeyDown={handleKeyDown}
                                 placeholder="ค้นหาชื่อผู้ขาย..."
                                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
                             />
@@ -182,6 +193,7 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                 type="text"
                                 value={searchTaxId}
                                 onChange={(e) => setSearchTaxId(e.target.value)}
+                                onKeyDown={handleKeyDown}
                                 placeholder="0105562012345"
                                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
                             />
@@ -227,7 +239,16 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
                                         return (
                                             <tr 
                                                 key={`${vendor.vendor_id || vendor.code}-${index}`} 
-                                                className={`transition-colors group ${!isSelectable ? 'bg-gray-50 dark:bg-gray-800/50 opacity-60' : 'hover:bg-purple-50 dark:hover:bg-gray-700/50'}`}
+                                                className={`
+                                                    transition-colors group cursor-pointer border-b border-gray-100 dark:border-gray-700
+                                                    ${index === selectedIndex 
+                                                        ? 'bg-purple-100 dark:bg-purple-900/40 ring-1 ring-inset ring-purple-500' 
+                                                        : !isSelectable 
+                                                            ? 'bg-gray-50 dark:bg-gray-800/50 opacity-60' 
+                                                            : 'hover:bg-purple-50 dark:hover:bg-gray-700/50'
+                                                    }
+                                                `}
+                                                onClick={() => isSelectable && handleSelect(vendor)}
                                             >
                                                 <td className="px-4 py-3 text-center">
                                                     <button
@@ -302,56 +323,20 @@ export const VendorSearchModalBase: React.FC<VendorSearchModalBaseProps> = ({
     );
 };
 
-// ====================================================================================
-// SMART WRAPPER - Handles data fetching (Backward Compatible)
-// ====================================================================================
+import { useVendors } from '@/modules/master-data/hooks/useMasterData';
 
 /**
  * VendorSearchModal - Smart Component (Handles fetching)
  * 
- * @description Wrapper ที่ fetch data แล้วส่งต่อให้ VendorSearchModalBase
- * @usage ใช้เมื่อต้องการให้ component จัดการ fetch เอง (backward compatible)
+ * @description Wrapper ที่ใช้ useVendors hook เพื่อดึงข้อมูลพร้อมระบบ Caching
  */
 export const VendorSearchModal: React.FC<VendorSearchModalProps> = ({ isOpen, onClose, onSelect, excludeIds = [] }) => {
-    const [vendors, setVendors] = useState<VendorSearchItem[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-
-    // Fetch vendors when modal opens
-    useEffect(() => {
-        if (!isOpen) return;
-
-        let isMounted = true;
-
-        const fetchVendors = async () => {
-            setIsLoading(true);
-            try {
-                const response = await VendorService.getList();
-                if (!isMounted) return;
-
-                if (response.items && response.items.length > 0) {
-                    const items: VendorSearchItem[] = response.items.map(transformVendor);
-                    setVendors(items);
-                } else {
-                    setVendors([]);
-                }
-            } catch (error) {
-                logger.error('[VendorSearchModal] fetchVendors error:', error);
-                if (isMounted) {
-                    setVendors([]);
-                }
-            } finally {
-                if (isMounted) {
-                    setIsLoading(false);
-                }
-            }
-        };
-
-        fetchVendors();
-
-        return () => {
-            isMounted = false;
-        };
-    }, [isOpen]);
+    const { data: response, isLoading } = useVendors(isOpen);
+    
+    const vendors = useMemo(() => {
+        if (!response?.items) return [];
+        return response.items.map(transformVendor);
+    }, [response]);
 
     return (
         <VendorSearchModalBase

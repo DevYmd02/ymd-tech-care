@@ -387,7 +387,6 @@ export default function PRListPage() {
                 icon={FileText}
                 accentColor="blue"
                 totalCount={data?.total}
-                totalCountLoading={isLoading}
                 searchForm={
                     <form onSubmit={(e) => { e.preventDefault(); handleApplyFilters(); }} className="w-full">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">

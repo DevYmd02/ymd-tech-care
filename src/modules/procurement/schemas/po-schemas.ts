@@ -130,7 +130,7 @@ export const POLineSchema = z.object({
     po_line_id:      optionalIdSchema,
     code:            z.string().optional(), // Dual mapping for UI compatibility (matches item_code)
     line_no: z.coerce.number().min(1),
-    item_id: z.coerce.number().min(1, "กรุณาเลือกรหัสสินค้าจากตาราง"),
+    item_id: z.coerce.number().min(1, "กรุณาเลือกสินค้า"),
     item_code:       z.string().optional(),
     item_name:       z.string().optional(),
     description:     z.string().optional().default(''),
@@ -198,20 +198,22 @@ export const CreatePOSchema = z.object({
     po_date: z.string().min(1, 'กรุณาระบุวันที่ PO'),
     pr_id: optionalIdSchema,
     rfq_id: optionalIdSchema,
-    vendor_id: z.preprocess((val) => (val === "" || val === null || Number(val) === 0 ? undefined : Number(val)), z.number({ message: 'กรุณาเลือกผู้ขาย' }).min(1, 'กรุณาเลือกผู้ขาย')),
-    branch_id: optionalIdSchema,
+    vendor_id: z.preprocess((val) => (val === "" || val === null || Number(val) === 0 ? undefined : Number(val)), z.number({ 
+        message: 'กรุณาเลือกผู้ขาย'
+    }).min(1, 'กรุณาเลือกผู้ขาย')),
+    branch_id: z.number({ message: 'กรุณาเลือกสาขา' }).min(1, 'กรุณาเลือกสาขา'),
     warehouse_id: optionalIdSchema,
     base_currency_code: z.string().min(1, 'กรุณาระบุสกุลเงินหลัก'),
     quote_currency_code: z.string().min(1, 'กรุณาระบุสกุลเงินที่เสนอ'),
     exchange_rate: optionalNumberSchema,
-    exchange_rate_date: z.string().min(1, 'กรุณาระบุวันที่อัตราแลกเปลียน'),
-    tax_code_id: optionalIdSchema,
+    exchange_rate_date: z.string().min(1, 'กรุณาระบุวันที่อัตราแลกเปลี่ยน'),
+    tax_code_id: z.number({ message: 'กรุณาเลือกประเภทภาษี' }).min(1, 'กรุณาเลือกประเภทภาษี'),
     discount_expression: z.string().optional().default('0'),
-    payment_term_days: optionalNumberSchema,
+    payment_term_days: z.number().min(0, 'เครดิตเทอมต้องไม่ติดลบ').default(30),
     credit_days: optionalNumberSchema,
     vendor_quote_no: z.string().optional().default(''),
     shipping_method: z.string().optional().default(''),
-    delivery_date: z.string().optional().nullable(),
+    delivery_date: z.string().min(1, 'กรุณาระบุกำหนดส่งของ'),
     remark: z.string().optional().default(''),
     status: z.string().default('DRAFT'),
     created_at:     z.string(),
@@ -246,13 +248,15 @@ export const POFormSchema = z.object({
     pr_no:    z.string().optional(),
     approval_no: z.string().optional(),
     po_date:  z.string().min(1, 'กรุณาระบุวันที่ PO'),
-    vendor_id: z.preprocess((val) => (val === "" || val === null || Number(val) === 0 ? undefined : Number(val)), z.number({ message: 'กรุณาเลือกผู้ขาย' }).min(1, 'กรุณาเลือกผู้ขาย')),
+    vendor_id: z.preprocess((val) => (val === "" || val === null || Number(val) === 0 ? undefined : Number(val)), z.number({ 
+        message: 'กรุณาเลือกผู้ขาย'
+    }).min(1, 'กรุณาเลือกผู้ขาย')),
     vendor_name:            z.string().optional(),
-    branch_id: optionalIdSchema,
+    branch_id: z.number({ message: 'กรุณาเลือกสาขา' }).min(1, 'กรุณาเลือกสาขา'),
     ship_to_warehouse_id: optionalIdSchema,
 
     // Terms
-    tax_code_id: optionalIdSchema,
+    tax_code_id: z.number({ message: 'กรุณาเลือกประเภทภาษี' }).min(1, 'กรุณาเลือกประเภทภาษี'),
     is_multicurrency:   z.boolean().default(false),
     currency_code: z.string().min(1, 'กรุณาระบุสกุลเงิน'),
     base_currency_code: z.string().default('THB'),
@@ -260,7 +264,7 @@ export const POFormSchema = z.object({
     target_currency: z.string().optional().nullable(),
     exchange_rate_date: z.string().optional(),
     exchange_rate: optionalNumberSchema,
-    payment_term_days: optionalNumberSchema,
+    payment_term_days: z.number().min(0, 'เครดิตเทอมต้องไม่ติดลบ').default(30),
     credit_days: optionalNumberSchema,
     delivery_date:      z.string().min(1, 'กรุณาระบุกำหนดส่งของ'),
     remarks:  z.string().optional(),
@@ -268,7 +272,7 @@ export const POFormSchema = z.object({
     created_by: optionalIdSchema,
     created_by_name: z.string().optional(),
     approve_pr_id: optionalIdSchema,
-    po_lines: z.array(POLineSchema).min(1, 'ต้องมีรายการสินค้าอย่างน้อย 1 รายการ'),
+    po_lines: z.array(POLineSchema).min(1, 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'),
 });
 
 export type POFormData = z.infer<typeof POFormSchema>;

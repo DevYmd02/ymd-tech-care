@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm, useWatch, type Path, type SubmitHandler, type FieldErrors, type FieldError } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { VendorService } from '../services/vendor.service';
@@ -428,18 +428,51 @@ export function useVendorForm({
         
         await rhfHandleSubmit(onSubmit as any, (invalidErrors) => {
             logger.error('Validation Errors:', invalidErrors);
-            toast('กรุณาตรวจสอบข้อมูลสีแดงในแบบฟอร์ม', 'error');
-            
-            setTimeout(() => {
-                const firstErrorKey = Object.keys(invalidErrors)[0];
-                if (firstErrorKey) {
-                    const element = document.querySelector(`[name="${firstErrorKey}"]`);
-                    if (element) {
-                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        (element as HTMLElement).focus();
+
+            // 1. 🎯 Auto-Scroll to first error field
+            const firstErrorKey = Object.keys(invalidErrors)[0];
+            if (firstErrorKey) {
+                // Try to find element by name attribute
+                const errorElement = document.getElementsByName(firstErrorKey)[0] || 
+                                   document.querySelector(`[name="${firstErrorKey}"]`);
+                
+                if (errorElement) {
+                    errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if ('focus' in errorElement) (errorElement as any).focus();
+                } else if (firstErrorKey.includes('.')) {
+                    // Handle nested fields (e.g., addresses[0].address)
+                    const nestedElement = document.querySelector(`[name="${firstErrorKey}"]`);
+                    nestedElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+
+            // 2. 📝 Human-friendly Error Summary
+            const extractMessages = (errs: any): string[] => {
+                let messages: string[] = [];
+                for (const key in errs) {
+                    const error = errs[key];
+                    if (error?.message && typeof error.message === 'string') {
+                        messages.push(error.message);
+                    } else if (typeof error === 'object' && error !== null) {
+                        messages = messages.concat(extractMessages(error));
                     }
                 }
-            }, 100);
+                return Array.from(new Set(messages));
+            };
+
+            const errorMessages = extractMessages(invalidErrors);
+
+            if (errorMessages.length > 0) {
+                const ErrorToastUI = () => React.createElement('div', { className: 'flex flex-col gap-1 text-left' },
+                    React.createElement('span', { className: 'font-semibold text-sm' }, 'พบข้อมูลไม่ถูกต้อง:'),
+                    React.createElement('ul', { className: 'list-disc pl-4 text-xs' },
+                        errorMessages.map((msg: string, i: number) => React.createElement('li', { key: i }, msg))
+                    )
+                );
+                toast(React.createElement(ErrorToastUI) as any, 'error');
+            } else {
+                toast('กรุณาตรวจสอบข้อมูลที่ระบุให้ครบถ้วน', 'error');
+            }
         })(e);
     };
 

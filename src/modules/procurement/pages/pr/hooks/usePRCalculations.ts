@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
+import { calculatePricingSummary, parseDiscountAmount, calculateLineTotal } from '@/modules/procurement/utils/pricing.utils';
 
 interface UsePRCalculationsProps {
   lines?: PRLineFormData[];
@@ -27,7 +28,6 @@ export const usePRCalculations = (props?: UsePRCalculationsProps): PRCalculation
 
   // Watch values or use props
   const watchedLines = context?.watch('lines');
-  // const watchedTaxCodeId = context?.watch('pr_tax_code_id');
   const watchedDiscountInput = context?.watch('pr_discount_raw');
 
   const lines = useMemo(() => props?.lines ?? watchedLines ?? [], [props?.lines, watchedLines]);
@@ -37,23 +37,17 @@ export const usePRCalculations = (props?: UsePRCalculationsProps): PRCalculation
   
   // 1. Calculate Line-Level Totals
   const { subtotal, totalGross, totalLineDiscount } = useMemo(() => {
-    return (lines || []).reduce((acc: { subtotal: number, totalGross: number, totalLineDiscount: number }, line: PRLineFormData) => {
-      const qty = Number(line?.qty);
-      const safeQty = isNaN(qty) ? 0 : qty;
+    return (lines || []).reduce((acc, line) => {
+      const qty = Number(line?.qty) || 0;
+      const price = Number(line?.est_unit_price) || 0;
+      const gross = qty * price;
       
-      const price = Number(line?.est_unit_price);
-      const safePrice = isNaN(price) ? 0 : price;
-      
-      const gross = safeQty * safePrice;
-      
-      const lineDiscount = Number(line?.discount);
-      const safeLineDiscount = isNaN(lineDiscount) ? 0 : lineDiscount;
-      
-      const lineTotal = Math.max(0, gross - safeLineDiscount);
+      const lineDiscount = Number(line?.discount) || 0;
+      const lineTotal = calculateLineTotal(qty, price, lineDiscount);
 
       acc.totalGross += gross;
       acc.subtotal += lineTotal;
-      acc.totalLineDiscount += safeLineDiscount;
+      acc.totalLineDiscount += lineDiscount;
       
       return acc;
     }, { subtotal: 0, totalGross: 0, totalLineDiscount: 0 });
@@ -61,39 +55,35 @@ export const usePRCalculations = (props?: UsePRCalculationsProps): PRCalculation
 
   // 2. Calculate Global Discount
   const globalDiscountAmount = useMemo(() => {
-    let discount = 0;
-    const input = String(globalDiscountInput || '').trim();
-
-    if (input.endsWith('%')) {
-      const percent = parseFloat(input.replace('%', ''));
-      if (!isNaN(percent)) {
-        discount = subtotal * (percent / 100);
-      }
-    } else {
-      const fixed = parseFloat(input);
-      if (!isNaN(fixed)) {
-        discount = fixed;
-      }
-    }
-
+    const discount = parseDiscountAmount(globalDiscountInput, subtotal);
     // Cap discount at subtotal
-    const safeDiscount = isNaN(discount) ? 0 : discount;
-    return safeDiscount > subtotal ? subtotal : safeDiscount;
+    return discount > subtotal ? subtotal : discount;
   }, [globalDiscountInput, subtotal]);
 
   // 3. Final Totals
-  const safeVatRate = isNaN(Number(vatRate)) ? 0 : Number(vatRate);
-  const afterDiscount = subtotal - globalDiscountAmount;
-  const vatAmount = afterDiscount * (safeVatRate / 100);
-  const grandTotal = afterDiscount + vatAmount;
+  const summary = useMemo(() => {
+    // Map items to PricingItem interface for the utility
+    const pricingItems = lines.map(l => ({
+        qty: Number(l.qty) || 0,
+        unit_price: Number(l.est_unit_price) || 0,
+        discount: Number(l.discount) || 0
+    }));
+
+    return calculatePricingSummary(
+        pricingItems,
+        Number(vatRate),
+        false, // PR is usually exclusive VAT in this UI
+        globalDiscountAmount
+    );
+  }, [lines, vatRate, globalDiscountAmount]);
 
   return {
-    subtotal: isNaN(subtotal) ? 0 : subtotal,
-    totalLineDiscount: isNaN(totalLineDiscount) ? 0 : totalLineDiscount,
-    globalDiscountAmount: isNaN(globalDiscountAmount) ? 0 : globalDiscountAmount,
-    afterDiscount: isNaN(afterDiscount) ? 0 : afterDiscount,
-    vatAmount: isNaN(vatAmount) ? 0 : vatAmount,
-    grandTotal: isNaN(grandTotal) ? 0 : grandTotal,
-    totalGross: isNaN(totalGross) ? 0 : totalGross
+    subtotal: summary.subtotal,
+    totalLineDiscount: totalLineDiscount,
+    globalDiscountAmount: globalDiscountAmount,
+    afterDiscount: summary.beforeTax,
+    vatAmount: summary.taxAmount,
+    grandTotal: summary.totalAmount,
+    totalGross: totalGross
   };
 };
