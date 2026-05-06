@@ -1,4 +1,5 @@
 import api from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import { USE_MOCK } from '@/core/api/api';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { VendorListResponse, VendorListItem } from '@/modules/master-data/vendor/types/vendor-types';
@@ -74,13 +75,13 @@ const AV_STATUS_CACHE_TTL = 30 * 1000; // 30 seconds (shorter TTL to catch recen
  * will have their status overridden here, since the PR header table may lag
  * behind (e.g., still showing PENDING after a partial approval).
  */
-async function buildAVStatusMap(): Promise<Map<number, { status: string; av_no?: string }>> {
+async function buildAVStatusMap(config?: AxiosRequestConfig): Promise<Map<number, { status: string; av_no?: string }>> {
   const now = Date.now();
   if (cachedAVStatusMap && (now - lastAVStatusFetchTime < AV_STATUS_CACHE_TTL)) {
     return cachedAVStatusMap as Map<number, { status: string; av_no?: string }>;
   }
   try {
-    const avRes: ApprovalListResponse = await api.get<ApprovalListResponse>('/pr-approval', { params: { limit: 1000, page: 1 } });
+    const avRes: ApprovalListResponse = await api.get<ApprovalListResponse>('/pr-approval', { ...config, params: { limit: 1000, page: 1 } });
     const tempMap = new Map<number, { status: string; id: number; no?: string }>();
     const records = avRes?.data || [];
     for (const rec of records) {
@@ -157,7 +158,7 @@ function overlayAVStatus(items: PRHeader[], avStatusMap: Map<number, { status: s
 
 export const PRService = {
   clearAVCache: clearPRServiceAVCache,
-  getList: async (params?: PRListParams): Promise<PRListResponse> => {
+  getList: async (params?: PRListParams, config?: AxiosRequestConfig): Promise<PRListResponse> => {
     logger.info('[PRService] Fetching PR List', params);
 
     // 1. Prepare API Params
@@ -186,7 +187,7 @@ export const PRService = {
         delete apiParams.q;
     }
 
-    const response = await api.get<PRListResponse>(ENDPOINTS.list, { params: apiParams });
+    const response = await api.get<PRListResponse>(ENDPOINTS.list, { ...config, params: apiParams });
 
     // 2. Hydrate Items (Same for BOTH mock and real API)
     const allItems = extractArrayFromResponse<PRHeader>(response as PRListResponse | PRHeader[]);
@@ -212,7 +213,7 @@ export const PRService = {
             const now = Date.now();
             if (!cachedVendors || (now - lastVendorFetchTime > VENDOR_CACHE_TTL)) {
                 logger.debug('🚀 [PRService] Cache miss for Vendors inside list fetcher, syncing...');
-                cachedVendors = await VendorService.getList();
+                cachedVendors = await VendorService.getList(config);
                 lastVendorFetchTime = now;
             }
             const vendorsRes = cachedVendors;
@@ -261,7 +262,7 @@ export const PRService = {
         // (like PARTIAL or APPROVED) are properly captured by the filter logic.
         try {
             if (!USE_MOCK) {
-                const avStatusMap = await buildAVStatusMap();
+                const avStatusMap = await buildAVStatusMap(config);
                 hydratedItems = overlayAVStatus(hydratedItems, avStatusMap);
                 logger.debug(`🚀 [PRService] AV Status Overlay completed for ${hydratedItems.length} items`);
             }
@@ -285,7 +286,7 @@ export const PRService = {
         try {
             const now = Date.now();
             if (!cachedVendors || (now - lastVendorFetchTime > VENDOR_CACHE_TTL)) {
-                cachedVendors = await VendorService.getList();
+                cachedVendors = await VendorService.getList(config);
                 lastVendorFetchTime = now;
             }
             const vendorsRes = cachedVendors;
@@ -316,7 +317,7 @@ export const PRService = {
 
             // 🎯 AV STATUS HYDRATION: Overlay correct status from AV approval records
             try {
-                const avStatusMap = await buildAVStatusMap();
+                const avStatusMap = await buildAVStatusMap(config);
                 hydratedItems = overlayAVStatus(hydratedItems, avStatusMap);
             } catch (err) {
                 logger.warn('[PRService] AV status hydration failed (non-critical):', err);
@@ -338,9 +339,9 @@ export const PRService = {
     return applyClientPagination<PRHeader>(allItems, page, limit, response.total);
   },
 
-  getDetail: async (id: number): Promise<PRHeaderExtended> => {
+  getDetail: async (id: number, config?: AxiosRequestConfig): Promise<PRHeaderExtended> => {
     logger.info(`[PRService] Fetching PR Detail: ${id}`);
-    const response = await api.get<unknown>(ENDPOINTS.detail(id));
+    const response = await api.get<unknown>(ENDPOINTS.detail(id), config);
     
     // 🔍 DIAGNOSTIC: Log the raw response structure to identify unwrap issues
     logger.debug('[PRService.getDetail] RAW response keys:', Object.keys(response as object || {}));
@@ -415,7 +416,7 @@ export const PRService = {
     // 🎯 AV STATUS HYDRATION (Detail): Overlay correct status from AV module
     if (!USE_MOCK) {
         try {
-            const avStatusMap = await buildAVStatusMap();
+            const avStatusMap = await buildAVStatusMap(config);
             const hydrated = overlayAVStatus([finalResult as unknown as PRHeader], avStatusMap);
             finalResult = hydrated[0] as unknown as PRHeaderExtended;
         } catch (err) {

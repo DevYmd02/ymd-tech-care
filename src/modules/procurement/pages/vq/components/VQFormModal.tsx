@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Pencil, FileText, Plus } from 'lucide-react';
 import { FormProvider } from 'react-hook-form';
 import { WindowFormLayout } from '@ui';
-import { MasterDataService } from '@/modules/master-data';
-import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { ProductSearchModal, type Product } from '@/modules/master-data/inventory/components/ProductSearchModal';
 import { useVQForm } from '../hooks/useVQForm';
@@ -15,6 +13,7 @@ import { VQFormLines } from './VQFormLines';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { logger } from '@/shared/utils';
+import { useUnits } from '@/modules/master-data/hooks/useMasterData';
 import type { RFQHeader } from '@/modules/procurement/types';
 
 interface Props {
@@ -56,8 +55,9 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
   const watchVendorName = watch('vendor_name');
   const watchRfqNo = watch('rfq_no');
 
-  // -- UI State --
-  const [units, setUnits] = useState<UnitListItem[]>([]);
+  const { data: unitsResponse } = useUnits(isOpen);
+  const units = useMemo(() => unitsResponse?.items || [], [unitsResponse]);
+
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
   const [isRFQVendorModalOpen, setIsRFQVendorModalOpen] = useState(false);
@@ -65,13 +65,6 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
   const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState('detail');
   const [showConfirm, setShowConfirm] = useState(false);
-
-  // -- Effects --
-  useEffect(() => {
-    if (isOpen) {
-      MasterDataService.getUnits().then(setUnits);
-    }
-  }, [isOpen]);
 
   // -- Handlers --
   const handleConfirmSave = () => {
@@ -89,7 +82,7 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
 
       // 🧩 Fallback matching by Name string since Backend might omit ID fields
       const anyProd = product as any;
-      const matchedUnit = units?.find(u => {
+      const matchedUnit = units?.find((u: any) => {
         const prodName = anyProd.uom_name || anyProd.unit_name || anyProd.base_uom_name || anyProd.sale_uom_name || '';
         if (!prodName) return false;
         return (u.uom_name === prodName) || (u.unit_name === prodName);

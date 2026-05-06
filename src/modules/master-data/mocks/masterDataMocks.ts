@@ -133,8 +133,8 @@ export const mockEmployeeGroups: EmployeeGroupListItem[] = [
 ];
 
 export const mockPositions: PositionListItem[] = [
-    { id: 1, position_id: 1, position_code: 'SE', position_name: 'Software Engineer', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { id: 2, position_id: 2, position_code: 'SSR', position_name: 'Senior Sales Key Account', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { position_id: 1, position_code: 'SE', position_name: 'Software Engineer', position_nameeng: 'Software Engineer', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { position_id: 2, position_code: 'SSR', position_name: 'Senior Sales Key Account', position_nameeng: 'Senior Sales Key Account', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
 ];
 
 export const mockSalesZones: SalesZoneListItem[] = [

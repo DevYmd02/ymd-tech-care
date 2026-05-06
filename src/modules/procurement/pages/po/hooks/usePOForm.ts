@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useBranches, useUnits, useCurrencies, useTaxCodes } from '@/modules/master-data/hooks/useMasterData';
 import { useSearchParams } from 'react-router-dom';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import type { Resolver, SubmitHandler, FieldErrors } from 'react-hook-form';
@@ -12,9 +13,7 @@ import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor
 import { PRService } from '@/modules/procurement/services/pr.service';
 import type { PRHeader, PRLine } from '@/modules/procurement/types/pr-types';
 import type { QuotationHeader, QuotationLine } from '@/modules/procurement/types/vq-types'; 
-import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
-import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { logger } from '@/shared/utils';
@@ -22,6 +21,10 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
 import { unwrapResponseData, extractLinesArray } from '@/shared/utils/apiUtils';
 import type { Currency } from '@/modules/master-data/types/master-data-types';
+import { 
+  parseDiscountAmount,
+  calculateLineTotal 
+} from '@/modules/procurement/utils/pricing.utils';
 
 // ====================================================================================
 // CONFIG
@@ -65,11 +68,16 @@ export const usePOForm = ({
     // ── Helper ──────────────────────────────────────────────────────────────
     const cleanD = (d: any) => (typeof d === 'string' && d.includes('T')) ? d.split('T')[0] : d;
     
-    // ── Master Data Queries ──────────────────────────────────────────────────
-    const { data: branches = [],   isLoading: isLoadingBranches }   = useQuery({ queryKey: ['master-branches'],   queryFn: MasterDataService.getBranches,   enabled: isOpen });
-    const { data: taxCodes = [],   isLoading: isLoadingTaxCodes }   = useQuery({ queryKey: ['master-tax-codes'], queryFn: TaxCodeService.getTaxCodes,     enabled: isOpen });
-    const { data: units = [],      isLoading: isLoadingUnits }      = useQuery({ queryKey: ['master-units'],      queryFn: MasterDataService.getUnits,        enabled: isOpen });
-    const { data: currencies = [], isLoading: isLoadingCurrencies } = useQuery({ queryKey: ['master-currencies'], queryFn: MasterDataService.getCurrencies,   enabled: isOpen });
+    // ── Master Data Queries (Shared Hooks) ──────────────────────────────────
+    const { data: branches = [],   isLoading: isLoadingBranches }   = useBranches(isOpen);
+    const { data: taxCodesData = [], isLoading: isLoadingTaxCodes } = useTaxCodes(isOpen);
+    const taxCodes = (taxCodesData as any)?.data || taxCodesData; // Handle both direct array and wrapped response
+    
+    const { data: unitsResponse,   isLoading: isLoadingUnits }      = useUnits(isOpen);
+    const units = useMemo(() => unitsResponse?.items || [], [unitsResponse]);
+    
+    const { data: currenciesResponse, isLoading: isLoadingCurrencies } = useCurrencies(isOpen);
+    const currencies = useMemo(() => (currenciesResponse as any)?.data || (currenciesResponse as any)?.items || currenciesResponse || [], [currenciesResponse]);
 
 
     // ── Form ──────────────────────────────────────────────────────────────────
@@ -754,27 +762,10 @@ export const usePOForm = ({
                             }
                             
                             const usedQty = Number(vqLine?.qty ?? safeL.qty ?? 0);
-                            const rawTotal = usedQty * finalUnitPrice;
+                            const amountBeforeDiscount = usedQty * finalUnitPrice;
+                            const discount = parseDiscountAmount(discExpr, amountBeforeDiscount);
                             
-                            if (discExpr && discExpr !== '0' && discExpr !== '') {
-                                if (discExpr.includes('%')) {
-                                    const rate = parseFloat(discExpr) || 0;
-                                    return Number((rawTotal * (1 - rate / 100)).toFixed(2));
-                                } else {
-                                    // Sometimes discount is just a fixed number string
-                                    const fixedDisc = parseFloat(discExpr);
-                                    if (!isNaN(fixedDisc) && fixedDisc > 0) {
-                                        return Number((rawTotal - fixedDisc).toFixed(2));
-                                    }
-                                }
-                            }
-                            
-                            // If discount_amount exists but wasn't caught by discExpr logic
-                            if (discAmount > 0) {
-                                return Number((rawTotal - discAmount).toFixed(2));
-                            }
-                            
-                            return Number(rawTotal.toFixed(2));
+                            return Number(calculateLineTotal(usedQty, finalUnitPrice, discount).toFixed(2));
                         })(),
                     };
                 }));
@@ -1093,26 +1084,32 @@ export const usePOForm = ({
     const onInvalidSubmit = (errors: FieldErrors<POFormData>) => {
         logger.error("Form Validation Errors:", errors);
 
-        // Helper สำหรับดึง message จาก Object ลึกๆ
+        // 1. 🎯 Auto-Scroll to first error field
+        const firstErrorKey = Object.keys(errors)[0] as keyof POFormData;
+        if (firstErrorKey) {
+            // Find the element by name attribute (standard react-hook-form behavior)
+            const errorElement = document.getElementsByName(firstErrorKey)[0] || 
+                               document.querySelector(`[name="${firstErrorKey}"]`);
+            
+            if (errorElement) {
+                errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Optional: Focus it if it's an input
+                if ('focus' in errorElement) (errorElement as any).focus();
+            } else if (firstErrorKey === 'po_lines') {
+                // Special case for table errors
+                const tableElement = document.querySelector('table');
+                tableElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // 2. 📝 Extract human-friendly messages
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const extractErrorMessages = (errs: any): string[] => {
             let messages: string[] = [];
             for (const key in errs) {
                 const error = errs[key];
                 if (error?.message && typeof error.message === 'string') {
-                    // 🛡️ เพิ่มชื่อ Field เพื่อให้ Debug ง่ายขึ้น (เฉพาะตอน dev หรือ สำหรับ Admin)
-                    const fieldName = key;
-                    let msg = error.message;
-                    
-                    if (fieldName && !msg.includes(fieldName)) {
-                        msg = `[${fieldName}] ${msg}`;
-                    }
-
-                    const lowerMsg = msg.toLowerCase();
-                    if (lowerMsg.includes('invalid input') || lowerMsg.includes('expected number') || lowerMsg.includes('received string') || lowerMsg.includes('received nan')) {
-                        msg = `[${fieldName}] กรุณาระบุข้อมูลตัวเลขให้ถูกต้อง`;
-                    }
-                    messages.push(msg);
+                    messages.push(error.message);
                 } else if (typeof error === 'object' && error !== null) {
                     messages = messages.concat(extractErrorMessages(error));
                 }
@@ -1124,14 +1121,14 @@ export const usePOForm = ({
 
         if (errorMessages.length > 0) {
             const ErrorToastUI = () => React.createElement('div', { className: 'flex flex-col gap-1' },
-                React.createElement('span', { className: 'font-semibold text-sm' }, 'ตรวจสอบข้อมูลไม่ผ่าน:'),
+                React.createElement('span', { className: 'font-semibold text-sm' }, 'พบข้อมูลไม่ถูกต้อง:'),
                 React.createElement('ul', { className: 'list-disc pl-4 text-xs' },
                     errorMessages.map((msg: string, i: number) => React.createElement('li', { key: i }, msg))
                 )
             );
             toast(React.createElement(ErrorToastUI), 'error');
         } else {
-            toast("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน", 'error');
+            toast("กรุณาตรวจสอบข้อมูลที่ระบุให้ครบถ้วน", 'error');
         }
     };
 

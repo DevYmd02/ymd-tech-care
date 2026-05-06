@@ -128,7 +128,7 @@ export default function PositionList() {
             header: 'ชื่อตำแหน่ง (ไทย)',
         },
         {
-            accessorKey: 'position_name_en',
+            accessorKey: 'position_nameeng',
             header: 'ชื่อตำแหน่ง (Eng)',
             cell: ({ getValue }) => getValue() || '-',
         },
@@ -138,11 +138,7 @@ export default function PositionList() {
             cell: ({ getValue }) => <ActiveStatusBadge isActive={getValue() as boolean} />,
             size: 100,
         },
-        {
-            accessorKey: 'created_at',
-            header: 'วันที่สร้าง',
-            cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleDateString('th-TH') : '-',
-        },
+
         {
             id: 'actions',
             header: 'จัดการ',
@@ -150,14 +146,14 @@ export default function PositionList() {
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.id)}
+                        onClick={() => handleEdit(row.original.position_id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.id)}
+                        onClick={() => handleDelete(row.original.position_id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -218,7 +214,7 @@ export default function PositionList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
-                    rowIdField="id"
+                    rowIdField="position_id"
                     className="shadow-sm"
                 />
             </div>
@@ -228,7 +224,10 @@ export default function PositionList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={refetch}
+                onSuccess={() => {
+                    refetch();
+                    handleModalClose();
+                }}
             />
         </div>
     );

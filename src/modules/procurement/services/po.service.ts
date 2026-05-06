@@ -1,4 +1,5 @@
 import api, { USE_MOCK } from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import type { POListParams, POListResponse, POListItem } from '@/modules/procurement/types';
 import { CreatePOSchema, type POStatus } from '@/modules/procurement/schemas/po-schemas';
 import type { CreatePOPayload } from '@/modules/procurement/types';
@@ -59,7 +60,7 @@ export const POService = {
      * Fetch PO List with full data hydration (Vendors, PRs, QCs).
      * Applies normalization layer for status consistency.
      */
-    getList: async (params?: POListParams): Promise<POListResponse> => {
+    getList: async (params?: POListParams, config?: AxiosRequestConfig): Promise<POListResponse> => {
         logger.info('[POService] Fetching PO List', params);
 
         // 🎯 SEARCH WINDOW OPTIMIZATION (Hybrid Fallback)
@@ -85,7 +86,7 @@ export const POService = {
             delete apiParams.date_to;
         }
 
-        const response = await api.get<POListResponse>(ENDPOINTS.list, { params: apiParams });
+        const response = await api.get<POListResponse>(ENDPOINTS.list, { ...config, params: apiParams });
         const rawItems = extractArrayFromResponse<POListItem>(response);
         
         logger.debug(`[POService] RAW BACKEND RESULT: total=${response.total}, items_returned=${rawItems.length}, api_status_used="${(apiParams as any).status || 'NONE'}"`);
@@ -93,7 +94,7 @@ export const POService = {
         // 1. Hydrate Vendors
         const vendorMap: Record<number, string> = {};
         try {
-            const vendorsRes = await VendorService.getList();
+            const vendorsRes = await VendorService.getList(config);
             const vendors = Array.isArray(vendorsRes) ? vendorsRes : vendorsRes.items || [];
             vendors.forEach((v) => {
                 const vendorObj = v as Record<string, unknown>;
@@ -117,7 +118,7 @@ export const POService = {
             // Inflate pr_no
             if (mappedItem.pr_id && !mappedItem.pr_no) {
                 try {
-                    const pr = await PRService.getDetail(mappedItem.pr_id);
+                    const pr = await PRService.getDetail(mappedItem.pr_id, config);
                     if (pr?.pr_no) mappedItem.pr_no = pr.pr_no;
                 } catch (err) {
                     logger.debug(`[POService] Failed to inflate pr_no for PR ${mappedItem.pr_id}`, err);
@@ -128,7 +129,7 @@ export const POService = {
             const qcId = mappedItem.qc_id || (mappedItem as Record<string, unknown>).qc_header_id as number | undefined;
             if (qcId && !mappedItem.qc_no) {
                 try {
-                    const qc = await QCService.getById(qcId);
+                    const qc = await QCService.getById(qcId, config);
                     if (qc?.qc_no) mappedItem.qc_no = qc.qc_no;
                 } catch (err) {
                     logger.debug(`[POService] Failed to inflate qc_no for QC ${qcId}`, err);
@@ -138,7 +139,7 @@ export const POService = {
             // Backup QC lookup
             if (!mappedItem.qc_no && mappedItem.pr_no) {
                 try {
-                    const qcsRes = await QCService.getList({ pr_no: mappedItem.pr_no });
+                    const qcsRes = await QCService.getList({ pr_no: mappedItem.pr_no }, config);
                     let qcs: Record<string, any>[] = [];
                     
                     if (Array.isArray(qcsRes)) {
@@ -191,9 +192,9 @@ export const POService = {
         };
     },
 
-    getById: async (id: number): Promise<POListItem> => {
+    getById: async (id: number, config?: AxiosRequestConfig): Promise<POListItem> => {
         logger.info(`[POService] Fetching PO Detail: ${id}`);
-        const res = await api.get<POListItem>(ENDPOINTS.detail(id));
+        const res = await api.get<POListItem>(ENDPOINTS.detail(id), config);
         const mappedItem = {
             ...res,
             po_id: res.po_id ?? (res as unknown as { po_header_id?: number }).po_header_id as number,
@@ -205,7 +206,7 @@ export const POService = {
 
         if (mappedItem.vendor_id && !mappedItem.vendor_name) {
             try {
-                const vendorRes = await VendorService.getById(mappedItem.vendor_id);
+                const vendorRes = await VendorService.getById(mappedItem.vendor_id, config);
                 if (vendorRes?.vendor_name) mappedItem.vendor_name = vendorRes.vendor_name;
             } catch (error) {
                 logger.error('[POService] Vendor hydration failed', error);
@@ -215,7 +216,7 @@ export const POService = {
         if (mappedItem.pr_id) {
             const itemWithDelivery = mappedItem as unknown as { delivery_date?: string };
             try {
-                const prDetail = await PRService.getDetail(mappedItem.pr_id);
+                const prDetail = await PRService.getDetail(mappedItem.pr_id, config);
                 if (prDetail?.pr_no && !mappedItem.pr_no) mappedItem.pr_no = prDetail.pr_no;
                 if (!itemWithDelivery.delivery_date && prDetail?.delivery_date) {
                     itemWithDelivery.delivery_date = prDetail.delivery_date;
@@ -236,7 +237,7 @@ export const POService = {
         const qcId = mappedItem.qc_id || (mappedItem as any).qc_header_id || (mappedItem as any).qc_id || (mappedItem as any).id as number | undefined;
         if (qcId && !mappedItem.qc_no) {
             try {
-                const qcDetail = await QCService.getById(Number(qcId));
+                const qcDetail = await QCService.getById(Number(qcId), config);
                 if (qcDetail?.qc_no) mappedItem.qc_no = qcDetail.qc_no;
             } catch (error) {
                 logger.error('[POService] QC hydration failed', error);
@@ -246,7 +247,7 @@ export const POService = {
         // Backup QC lookup (if po record missing qc_id but has pr_no)
         if (!mappedItem.qc_no && mappedItem.pr_no) {
             try {
-                const qcsRes = await QCService.getList({ pr_no: mappedItem.pr_no });
+                const qcsRes = await QCService.getList({ pr_no: mappedItem.pr_no }, config);
                 let qcs: Record<string, any>[] = [];
                 
                 if (Array.isArray(qcsRes)) {
@@ -294,7 +295,7 @@ export const POService = {
                     
                     if (needsHydration) {
                         try {
-                            const item = await ItemMasterService.getById(Number(l.item_id));
+                            const item = await ItemMasterService.getById(Number(l.item_id), config);
                             if (item) {
                                 return {
                                     ...l,
@@ -351,7 +352,7 @@ export const POService = {
         return await api.post<SuccessResponse>(ENDPOINTS.complete(id));
     },
 
-    getWaitingForQC: async (params?: { q?: string }): Promise<PRWaitingForQC[]> => {
-        return await api.get<PRWaitingForQC[]>(ENDPOINTS.waitingForQC, { params });
+    getWaitingForQC: async (params?: { q?: string }, config?: AxiosRequestConfig): Promise<PRWaitingForQC[]> => {
+        return await api.get<PRWaitingForQC[]>(ENDPOINTS.waitingForQC, { ...config, params });
     },
 };

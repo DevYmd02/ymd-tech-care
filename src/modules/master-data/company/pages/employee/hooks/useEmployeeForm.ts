@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useForm, useFieldArray, type SubmitHandler, type Resolver } from 'react-hook-form';
+import { useForm, useFieldArray, type SubmitHandler, type Resolver, useWatch, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -13,9 +13,10 @@ import { EmployeeDeptService } from '@company/services/employee-dept.service';
 import { PositionService } from '@company/services/org-position.service';
 import { EmployeeGroupService } from '@company/services/employee-group.service';
 import type { EmployeeFormData, EmployeeSignature } from '@company/types/employee.types';
-import { useWatch } from 'react-hook-form';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { logger } from '@/shared/utils';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
+import React from 'react';
 
 export const employeeSchema = z.object({
     // ข้อมูลพื้นฐาน
@@ -114,6 +115,7 @@ export const initialEmployeeData: EmployeeFormData = {
 
 export function useEmployeeForm(editId: number | null, isOpen: boolean, onSuccess?: () => void) {
     const queryClient = useQueryClient();
+    const { toast } = useToast();
     const isEdit = !!editId;
 
     const {
@@ -161,7 +163,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
     });
 
     const departments = useMemo(() => (deptsData?.items || []).filter(item => item.is_active !== false), [deptsData]);
-    const positions = useMemo(() => (positionsData?.items || []).filter(item => item.is_active !== false), [positionsData]);
+    const positions = useMemo(() => (positionsData || []).filter(item => item.is_active !== false), [positionsData]);
     const employeeGroups = useMemo(() => (empGroupsData?.items || []).filter(item => item.is_active !== false), [empGroupsData]);
     const heads = useMemo(() => (headsData?.items || []).filter(item => item.is_active !== false), [headsData]);
     
@@ -319,6 +321,54 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         saveMutation.mutate(employeeData as EmployeeFormData);
     };
 
+    const onInvalidSubmit = (invalidErrors: FieldErrors<EmployeeFormData>) => {
+        logger.error('Validation Errors:', invalidErrors);
+
+        // 1. 🎯 Auto-Scroll to first error field
+        const firstErrorKey = Object.keys(invalidErrors)[0];
+        if (firstErrorKey) {
+            // Try to find element by name attribute
+            const errorElement = document.getElementsByName(firstErrorKey)[0] || 
+                               document.querySelector(`[name="${firstErrorKey}"]`);
+            
+            if (errorElement) {
+                errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if ('focus' in errorElement) (errorElement as HTMLElement).focus();
+            }
+        }
+
+        // 2. 📝 Human-friendly Error Summary
+        const extractMessages = (errs: Record<string, unknown>): string[] => {
+            let messages: string[] = [];
+            for (const key in errs) {
+                const error = errs[key];
+                if (error && typeof error === 'object') {
+                    const errObj = error as Record<string, unknown>;
+                    if (typeof errObj.message === 'string') {
+                        messages.push(errObj.message);
+                    } else {
+                        messages = messages.concat(extractMessages(errObj));
+                    }
+                }
+            }
+            return Array.from(new Set(messages));
+        };
+
+        const errorMessages = extractMessages(invalidErrors as unknown as Record<string, unknown>);
+
+        if (errorMessages.length > 0) {
+            const ErrorToastUI = () => React.createElement('div', { className: 'flex flex-col gap-1 text-left' },
+                React.createElement('span', { className: 'font-semibold text-sm' }, 'พบข้อมูลไม่ถูกต้อง:'),
+                React.createElement('ul', { className: 'list-disc pl-4 text-xs' },
+                    errorMessages.map((msg: string, i: number) => React.createElement('li', { key: i }, msg))
+                )
+            );
+            toast(React.createElement(ErrorToastUI) as React.ReactNode, 'error');
+        } else {
+            toast('กรุณาตรวจสอบข้อมูลที่ระบุให้ครบถ้วน', 'error');
+        }
+    };
+
     return {
         register,
         errors,
@@ -330,7 +380,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         isSubmitting: saveMutation.isPending,
         isUploading: uploadSignatureMutation.isPending,
         isDeleting: deleteSignatureMutation.isPending,
-        handleSave: rhfHandleSubmit(handleSave),
+        handleSave: rhfHandleSubmit(handleSave, onInvalidSubmit),
         handleUploadSignature: (file: File) => uploadSignatureMutation.mutate({ file }),
         handleDeleteSignature: (signatureId: number) => deleteSignatureMutation.mutate({ signatureId }),
         removeSignature, // เก็บไว้สำหรับเคสลบ local (ถ้ามี)

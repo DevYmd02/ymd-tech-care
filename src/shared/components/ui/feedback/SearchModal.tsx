@@ -18,10 +18,11 @@
  * />
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Search } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
+import { useSearchKeyboardNavigation } from '@/shared/hooks';
 
 // ====================================================================================
 // TYPE DEFINITIONS
@@ -94,12 +95,19 @@ function SearchModalInner<T>({
     // กรองข้อมูลตามคำค้นหา
     // BUG FIX: ถ้ามี onSearchChange (Server-side) เราจะไม่ทำการกรองซ้ำที่ Client เพราะข้อมูลที่ได้รับมาคือผลลัพธ์จากการกรองที่ Server แล้ว
     // หากกรองซ้ำที่นี่ จะทำให้ข้อมูล "หายไป" ชั่วขณะขณะที่กำลังรอ API (เพราะ searchTerm เปลี่ยนแต่ data ยังเป็นชุดเก่า)
-    const filteredData = React.useMemo(() => {
+    const filteredData = useMemo(() => {
         if (onSearchChange) return data;
         return data.filter(item =>
             filterFn(item, searchTerm.toLowerCase())
         );
     }, [data, filterFn, searchTerm, onSearchChange]);
+
+    // ✨ Centralized Keyboard Navigation
+    const { selectedIndex, handleKeyDown } = useSearchKeyboardNavigation({
+        items: filteredData,
+        onSelect: (item) => onSelect(item),
+        isOpen
+    });
 
     // Generate color classes based on accent color
     const colorClasses = React.useMemo(() => ({
@@ -172,6 +180,7 @@ function SearchModalInner<T>({
                             setSearchTerm(val);
                             onSearchChange?.(val);
                         }}
+                        onKeyDown={handleKeyDown}
                         autoFocus
                     />
                 </div>
@@ -202,11 +211,19 @@ function SearchModalInner<T>({
                         </div>
 
                         {/* Data Rows */}
-                        {!isLoading && filteredData.map((item) => (
+                        {!isLoading && filteredData.map((item, index) => (
                             <div
                                 key={getKey(item)}
-                                className={`grid gap-4 items-center px-2 py-3 border-b border-gray-100 dark:border-gray-700 ${colorClasses.hover} dark:hover:bg-gray-700/50 transition-colors rounded-md`}
+                                className={`grid gap-4 items-center px-2 py-3 border-b border-gray-100 dark:border-gray-700 transition-colors rounded-md cursor-pointer
+                                    ${index === selectedIndex 
+                                        ? `${accentColor === 'emerald' ? 'bg-emerald-100 dark:bg-emerald-900/30 ring-1 ring-inset ring-emerald-500' : 
+                                           accentColor === 'blue' ? 'bg-blue-100 dark:bg-blue-900/30 ring-1 ring-inset ring-blue-500' : 
+                                           'bg-purple-100 dark:bg-purple-900/30 ring-1 ring-inset ring-purple-500'}`
+                                        : `${colorClasses.hover} dark:hover:bg-gray-700/50`
+                                    }
+                                `}
                                 style={{ gridTemplateColumns: gridCols }}
+                                onClick={() => onSelect(item)}
                             >
                                 {columns.map((col) => {
                                     // Action column (select button)

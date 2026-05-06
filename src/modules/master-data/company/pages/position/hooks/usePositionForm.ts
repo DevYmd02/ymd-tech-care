@@ -9,7 +9,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PositionService } from '@company/services/org-position.service';
-import type { PositionFormData } from '@company/types/position.types';
+import type { PositionFormData, PositionPayload } from '@company/types/position.types';
 import { logger } from '@/shared/utils';
 
 export const positionSchema = z.object({
@@ -55,8 +55,8 @@ export function usePositionForm(editId: number | null, isOpen: boolean, onSucces
             reset({
                 positionCode: initialData.position_code,
                 positionName: initialData.position_name,
-                positionNameEn: initialData.position_name_en || '',
-                isActive: initialData.is_active ?? true,
+                positionNameEn: initialData.position_nameeng || '',
+                isActive: initialData.is_active === true || String(initialData.is_active) === '1' || String(initialData.is_active) === 'true',
             });
         } else if (isOpen && !isEdit) {
             reset(initialPositionData);
@@ -65,17 +65,28 @@ export function usePositionForm(editId: number | null, isOpen: boolean, onSucces
 
     const saveMutation = useMutation({
         mutationFn: async (data: PositionFormData) => {
+            const payload: PositionPayload = {
+                position_code: data.positionCode,
+                position_name: data.positionName,
+                position_nameeng: data.positionNameEn,
+                is_active: data.isActive
+            };
+
             if (isEdit && editId) {
-                return PositionService.update(editId, data);
+                return PositionService.update(editId, payload);
             }
-            return PositionService.create(data);
+            return PositionService.create(payload);
         },
-        onSuccess: (res) => {
-            if (res.success) {
+        onSuccess: (res: unknown) => {
+            const result = res as Record<string, unknown>;
+            if (result && result.success !== false) {
                 queryClient.invalidateQueries({ queryKey: ['positions'] });
+                if (editId) {
+                    queryClient.invalidateQueries({ queryKey: ['position', editId] });
+                }
                 if (onSuccess) onSuccess();
             } else {
-                throw new Error(res.message || 'บันทึกไม่สำเร็จ');
+                throw new Error((result?.message as string) || 'บันทึกไม่สำเร็จ');
             }
         },
         onError: (error: Error) => {

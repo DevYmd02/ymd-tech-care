@@ -42,6 +42,8 @@ export const PRSearchModal: React.FC<PRSearchModalProps> = ({
       return items;
     },
     enabled: isOpen,
+    staleTime: 60 * 1000, // 1 minute
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 
   const allItems = prResults || [];

@@ -269,12 +269,11 @@ export default function QuotationApproveListPage() {
   return (
     <>
       <PageListLayout
-        title="อนุมัติใบเสนอราคาขาย (Quotation Approval)"
-        subtitle="พิจารณาและอนุมัติใบเสนอราคาที่อยู่ในสถานะรออนุมัติ"
-        icon={ShieldCheck}
+        title="อนุมัติใบเสนอราคา"
+        subtitle="Sales Quotation Approval (AQ)"
+        icon={FileText}
         accentColor="emerald"
         totalCount={filteredData.length}
-        isLoading={isLoading}
         searchForm={
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
             <FilterField

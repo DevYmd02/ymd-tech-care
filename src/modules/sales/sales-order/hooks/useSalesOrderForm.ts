@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { useForm, useWatch, type Resolver } from 'react-hook-form';
+import { useForm, useWatch, type Resolver, type Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { 
     SalesOrderFormSchema, 
@@ -48,7 +48,28 @@ export function useSalesOrderForm({
     });
 
     const { setValue, control, reset, getValues } = methods;
-    const formData = useWatch({ control }) as SalesOrderFormValues;
+    
+    // 💡 Performance Optimization:
+    // We use selective watches for calculation.
+    const discount_input = useWatch({ control, name: 'discount_input' }) || '0';
+    const tax_code_id = useWatch({ control, name: 'tax_code_id' });
+    const isMulticurrency = useWatch({ control, name: 'isMulticurrency' });
+    const base_currency_code = useWatch({ control, name: 'base_currency_code' });
+    const quote_currency_code = useWatch({ control, name: 'quote_currency_code' });
+    const status = useWatch({ control, name: 'status' });
+    const discount_amount_watched = useWatch({ control, name: 'discount_amount' });
+
+    // 🎯 Watch only fields that affect totals
+    // We use a memoized array of names to avoid re-subscribing on every render
+    const lineCount = (getValues('lines') || []).length;
+    const lineTotalNames = useMemo(() => 
+        Array.from({ length: lineCount }, (_, i) => `lines.${i}.line_total`),
+    [lineCount]);
+
+    const watchedLineTotals = useWatch({ 
+        control, 
+        name: lineTotalNames as Path<SalesOrderFormValues>[]
+    }) as (string | number | undefined)[];
 
     // Guard for initial reset
     const isInitializedRef = useRef(false);
@@ -78,9 +99,8 @@ export function useSalesOrderForm({
     // --------------------------------------------------------
     // Currency & Exchange Rate Logic
     // --------------------------------------------------------
-    const sourceCurrency = useWatch({ control, name: 'base_currency_code' });
-    const targetCurrency = useWatch({ control, name: 'quote_currency_code' });
-    const isMulticurrency = useWatch({ control, name: 'isMulticurrency' });
+    const sourceCurrency = base_currency_code;
+    const targetCurrency = quote_currency_code;
 
     useEffect(() => {
         if (!sourceCurrency || !isMulticurrency) return;
@@ -103,11 +123,11 @@ export function useSalesOrderForm({
     // Totals Calculation
     // --------------------------------------------------------
     const totals = useMemo(() => {
-        const lines = formData.lines || [];
         const isExisting = !!id;
-        const hasLines = lines.length > 0;
+        const currentLines = getValues('lines') || [];
+        const hasLines = currentLines.length > 0;
 
-        // 🛑 Fix Loop: Use initialData (stable) for fallback, NOT formData (which we update)
+        // 🛑 Fix Loop: Use initialData (stable) for fallback
         if (isExisting && !hasLines && initialData) {
             return {
                 subTotal: Number((initialData as Record<string, unknown>).sub_total || 0),
@@ -119,12 +139,12 @@ export function useSalesOrderForm({
             };
         }
 
-        const subTotal = lines.reduce((sum, line) => sum + (line.line_total || 0), 0);
+        const subTotal = (watchedLineTotals || []).reduce((sum: number, val: number | string | undefined | null) => sum + (Number(val) || 0), 0);
         
-        const calculatedDiscount = calculateDiscountAmount(subTotal, formData.discount_input || '0');
+        const calculatedDiscount = calculateDiscountAmount(subTotal, discount_input);
 
         const selectedTaxCode = taxCodes.find(
-            (t) => String(t.tax_code_id) === String(formData.tax_code_id)
+            (t) => String(t.tax_code_id) === String(tax_code_id)
         );
         const taxRate = selectedTaxCode ? Number(selectedTaxCode.tax_rate) || 0 : 0;
         const vatAmount = calculateVatAmount(subTotal - calculatedDiscount, taxRate);
@@ -138,7 +158,7 @@ export function useSalesOrderForm({
             taxRate,
             isStatic: false
         };
-    }, [formData.lines, formData.discount_input, formData.tax_code_id, taxCodes, id, initialData]);
+    }, [watchedLineTotals, discount_input, tax_code_id, taxCodes, id, initialData, getValues]);
 
     // Update form values when totals change (ONLY if calculated from lines)
     useEffect(() => {
@@ -163,7 +183,7 @@ export function useSalesOrderForm({
     // --------------------------------------------------------
     // Tax Propagation Logic
     // --------------------------------------------------------
-    const watchHeaderTaxCodeId = useWatch({ control, name: 'tax_code_id' });
+    const watchHeaderTaxCodeId = tax_code_id;
     useEffect(() => {
         if (watchHeaderTaxCodeId !== undefined) {
              const currentLines = getValues('lines') || [];
@@ -370,7 +390,12 @@ export function useSalesOrderForm({
 
     return {
         methods,
-        formData,
+        discount_input,
+        discount_amount: discount_amount_watched,
+        tax_code_id,
+        isMulticurrency,
+        base_currency_code,
+        status,
         totals,
         handleAddLine,
         handleRemoveLine,

@@ -11,22 +11,23 @@ import { FormProvider } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';
 import { WindowFormLayout } from '@ui';
-import { MasterDataService } from '@master-data';
+import { useBranches, useUnits, useWarehouses, useLocations, useCurrencies, useTaxCodes, useDepartments, useProjects, useSaleAreas } from '@master-data/hooks/useMasterData';
+import { extractErrorMessage } from '@/core/api/api';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
-import { UnitService } from '@inventory/services/unit.service';
-import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
-import { WarehouseService } from '@inventory/services/warehouse.service';
-import { LocationService } from '@inventory/services/inventory-master.service';
 import { useSalesOrderForm } from '../hooks';
 import { SalesOrderService } from '../services/sales-order.service';
 import type { SalesOrderFormValues } from '../schemas/sales-order.schemas';
 import type { SalesOrderFormData } from '../types/sales-order.types';
+import type { Currency, UnitListItem } from '@master-data/types/master-data-types';
+import type { TaxCode } from '@master-data/tax/types/tax-types';
+import type { EmployeeDeptMaster } from '@master-data/company/types/employee-dept.types';
+import type { Project } from '@master-data/project/types/project-types';
+import type { SaleAreaMaster } from '@sales-master/pages/area/types/area.types';
 import { SalesOrderHeaderForm } from './SalesOrderHeaderForm';
 import { SalesOrderLineTable } from './SalesOrderLineTable';
 import { SalesOrderSummary } from './SalesOrderSummary';
 import { CustomerSearchModal } from '@sales/quotation/components/CustomerSearchModal';
 import { ProductSearchModal } from '@sales/quotation/components/ProductSearchModal';
-import { SaleAreaService } from '@sales-master/pages/area/services/area.service';
 import type { ItemListItem } from '@inventory/types/product-types';
 import { ReservationSearchModal } from './ReservationSearchModal';
 import { EmployeeSearchModal } from '@master-data/employee/components/EmployeeSearchModal';
@@ -82,16 +83,8 @@ export function SalesOrderFormModal({
     // --------------------------------------------------------
     // Data Fetching
     // --------------------------------------------------------
-    const { data: branches = [] } = useQuery({
-        queryKey: ['master-branches'],
-        queryFn: MasterDataService.getBranches,
-        enabled: isOpen,
-    });
-    const { data: currencies = [] } = useQuery({
-        queryKey: ['master-currencies'],
-        queryFn: MasterDataService.getCurrencies,
-        enabled: isOpen,
-    });
+    const { data: branches = [] } = useBranches(isOpen);
+    const { data: currencies = [] } = useCurrencies(isOpen) as { data: Currency[] | undefined };
     const { data: customerResponse } = useQuery({
         queryKey: ['master-customers'],
         queryFn: () => CustomerService.getList({ limit: 100 }),
@@ -99,47 +92,19 @@ export function SalesOrderFormModal({
     });
     const customers = customerResponse?.data || [];
 
-    const { data: taxCodes = [] } = useQuery({
-        queryKey: ['master-tax-codes'],
-        queryFn: TaxCodeService.getTaxCodes,
-        enabled: isOpen,
-    });
-    const { data: departments = [] } = useQuery({
-        queryKey: ['master-departments'],
-        queryFn: MasterDataService.getDepartments,
-        enabled: isOpen,
-    });
-    const { data: projects = [] } = useQuery({
-        queryKey: ['master-projects'],
-        queryFn: MasterDataService.getProjects,
-        enabled: isOpen,
-    });
+    const { data: taxCodes = [] } = useTaxCodes(isOpen) as { data: TaxCode[] | undefined };
+    const { data: departments = [] } = useDepartments(isOpen) as { data: EmployeeDeptMaster[] | undefined };
+    const { data: projects = [] } = useProjects(isOpen) as { data: Project[] | undefined };
+    const { data: saleAreasResponse } = useSaleAreas(isOpen) as { data: { items: SaleAreaMaster[] } | undefined };
+    const saleAreas = saleAreasResponse?.items || [];
 
-    const { data: saleAreas = [] } = useQuery({
-        queryKey: ['master-sale-areas'],
-        queryFn: () => SaleAreaService.getList(),
-        enabled: isOpen,
-    });
-
-    const { data: uomResponse } = useQuery({
-        queryKey: ['master-units'],
-        queryFn: () => UnitService.getAll({ limit: 1000 }),
-        enabled: isOpen,
-    });
+    const { data: uomResponse } = useUnits(isOpen);
     const uoms = uomResponse?.items || [];
 
-    const { data: warehouseResponse } = useQuery({
-        queryKey: ['master-warehouses'],
-        queryFn: () => WarehouseService.getAll(),
-        enabled: isOpen,
-    });
+    const { data: warehouseResponse } = useWarehouses(isOpen);
     const warehouses = warehouseResponse?.items || [];
 
-    const { data: locationResponse } = useQuery({
-        queryKey: ['master-locations'],
-        queryFn: () => LocationService.getAll({ limit: 1000 }),
-        enabled: isOpen,
-    });
+    const { data: locationResponse } = useLocations(isOpen);
     const locations = locationResponse?.items || [];
 
     // 💡 Load Sales Order Detail when editing
@@ -159,7 +124,11 @@ export function SalesOrderFormModal({
     // --------------------------------------------------------
     const {
         methods,
-        formData,
+        discount_input,
+        discount_amount,
+        status,
+        base_currency_code,
+        isMulticurrency,
         totals,
         handleAddLine,
         handleRemoveLine,
@@ -171,9 +140,9 @@ export function SalesOrderFormModal({
         isOpen,
         id,
         initialData: (soDetail || initialData) as Partial<SalesOrderFormValues>,
-        currencies,
-        taxCodes,
-        uoms,
+        currencies: (currencies || []) as Currency[],
+        taxCodes: (taxCodes || []) as TaxCode[],
+        uoms: (uoms || []) as UnitListItem[],
     });
 
     const { watch } = methods;
@@ -215,14 +184,14 @@ export function SalesOrderFormModal({
             onClose();
         } catch (error) {
             logger.error('Failed to submit sales order:', error);
-            toast('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+            toast(extractErrorMessage(error), 'error');
         } finally {
             setIsSubmitting(false);
         }
     };
 
     const handleSaveClick = async () => {
-        const isResubmit = isEdit && formData.status === 'REJECTED';
+        const isResubmit = isEdit && status === 'REJECTED';
         const isConfirmed = await confirm({
             title: isResubmit ? 'ยืนยันการแก้ไขและส่งอนุมัติใหม่' : (isEdit ? 'ยืนยันการแก้ไข' : 'ยืนยันการสร้างใบสั่งขาย'),
             description: isResubmit
@@ -281,7 +250,7 @@ export function SalesOrderFormModal({
                             <Save size={18} />
                         )}
                         {isEdit 
-                            ? (formData.status === 'REJECTED' ? 'บันทึกและส่งอนุมัติใหม่' : 'บันทึกการแก้ไข') 
+                            ? (status === 'REJECTED' ? 'บันทึกและส่งอนุมัติใหม่' : 'บันทึกการแก้ไข') 
                             : 'ยืนยันสร้างใบสั่งขาย'
                         }
                     </button>
@@ -327,11 +296,11 @@ export function SalesOrderFormModal({
                                 <div className="p-6">
                                     <SalesOrderHeaderForm
                                         branches={branches}
-                                        currencies={currencies}
+                                        currencies={(currencies || []) as Currency[]}
                                         customers={customers}
-                                        taxCodes={taxCodes}
-                                        departments={departments}
-                                        projects={projects}
+                                        taxCodes={(taxCodes || []) as TaxCode[]}
+                                        departments={(departments || []) as EmployeeDeptMaster[]}
+                                        projects={(projects || []) as Project[]}
                                         saleAreas={saleAreas}
                                         onSearchCustomer={() => setIsCustomerSearchOpen(true)}
                                         onSearchReservation={() => setIsReservationSearchOpen(true)}
@@ -344,7 +313,6 @@ export function SalesOrderFormModal({
                             <div className={cardClass}>
                                 <div className="p-6">
                                     <SalesOrderLineTable
-                                        lines={formData.lines}
                                         uoms={uoms}
                                         warehouses={warehouses}
                                         locations={locations}
@@ -376,17 +344,17 @@ export function SalesOrderFormModal({
                                 <div className="p-6">
                                     <SalesOrderSummary
                                         subTotal={totals.subTotal}
-                                        discountInput={formData.discount_input}
-                                        discountAmount={formData.discount_amount}
+                                        discountInput={discount_input}
+                                        discountAmount={discount_amount}
                                         taxRate={totals.taxRate}
                                         vatAmount={totals.vatAmount}
                                         totalAmount={totals.totalAmount}
                                         currencySymbol={
-                                            formData.isMulticurrency
-                                                ? formData.base_currency_code || 'บาท'
+                                            isMulticurrency
+                                                ? base_currency_code || 'บาท'
                                                 : 'บาท'
                                         }
-                                        lineCount={formData.lines.length}
+                                        lineCount={watch('lines')?.length || 0}
                                         onDiscountChange={(val: string) =>
                                             methods.setValue('discount_input', val, { shouldDirty: true })
                                         }
@@ -428,7 +396,7 @@ export function SalesOrderFormModal({
                 isOpen={isWarehouseSearchOpen}
                 onClose={() => setIsWarehouseSearchOpen(false)}
                 warehouses={warehouses}
-                itemId={activeLineIndex !== null ? formData.lines?.[activeLineIndex]?.item_id || null : null}
+                itemId={activeLineIndex !== null ? methods.getValues(`lines.${activeLineIndex}.item_id`) || null : null}
                 onSelect={(warehouse) => {
                     if (activeLineIndex !== null) {
                         handleLineChange(activeLineIndex, 'warehouse_id', String(warehouse.warehouse_id));
@@ -445,8 +413,8 @@ export function SalesOrderFormModal({
             <LocationSearchModal
                 isOpen={isLocationSearchOpen}
                 onClose={() => setIsLocationSearchOpen(false)}
-                warehouseId={activeLineIndex !== null ? String(formData.lines?.[activeLineIndex]?.warehouse_id || '') : null}
-                itemId={activeLineIndex !== null ? formData.lines?.[activeLineIndex]?.item_id || null : null}
+                warehouseId={activeLineIndex !== null ? String(methods.getValues(`lines.${activeLineIndex}.warehouse_id`) || '') : null}
+                itemId={activeLineIndex !== null ? methods.getValues(`lines.${activeLineIndex}.item_id`) || null : null}
                 locations={locations}
                 onSelect={(location) => {
                     if (activeLineIndex !== null) {
@@ -474,9 +442,9 @@ export function SalesOrderFormModal({
                         setIsLotSearchOpen(false);
                     }
                 }}
-                warehouseId={activeLineIndex !== null ? String(formData.lines?.[activeLineIndex]?.warehouse_id || '') : undefined}
-                locationId={activeLineIndex !== null ? String(formData.lines?.[activeLineIndex]?.location_id || '') : undefined}
-                itemId={activeLineIndex !== null ? String(formData.lines?.[activeLineIndex]?.item_id || '') : undefined}
+                warehouseId={activeLineIndex !== null ? String(methods.getValues(`lines.${activeLineIndex}.warehouse_id`) || '') : undefined}
+                locationId={activeLineIndex !== null ? String(methods.getValues(`lines.${activeLineIndex}.location_id`) || '') : undefined}
+                itemId={activeLineIndex !== null ? String(methods.getValues(`lines.${activeLineIndex}.item_id`) || '') : undefined}
             />
         </WindowFormLayout>
     );

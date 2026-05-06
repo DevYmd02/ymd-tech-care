@@ -233,12 +233,11 @@ export default function ReservationListPage() {
     return (
         <>
             <PageListLayout
-                title="ใบสั่งจอง - Reservation (RS)"
-                subtitle="จัดการข้อมูลการจองสินค้าให้ลูกค้า"
+                title="รายการจองสินค้า"
+                subtitle="Stock Reservation"
                 icon={Package}
                 accentColor="purple"
                 totalCount={apiData?.total || 0}
-                isLoading={isLoading}
                 searchForm={
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                         <FilterField

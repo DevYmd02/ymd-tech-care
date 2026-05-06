@@ -243,12 +243,11 @@ export default function SalesOrderApproveListPage() {
   return (
     <>
       <PageListLayout
-        title="อนุมัติใบสั่งขาย (Sales Order Approval)"
-        subtitle="พิจารณาและอนุมัติใบสั่งขายที่อยู่ในสถานะรออนุมัติ"
-        icon={ShieldCheck}
+        title="อนุมัติใบสั่งขาย"
+        subtitle="Sales Order Approval (AO)"
+        icon={FileText}
         accentColor="emerald"
         totalCount={filteredData.length}
-        isLoading={isLoading}
         searchForm={
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
             <FilterField

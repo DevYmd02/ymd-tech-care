@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import type { FieldErrors, Path, FieldPathValue, SubmitHandler } from 'react-hook-form';
 import {
@@ -92,9 +92,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     resolver: zodResolver(PRFormSchema) as any,
     mode: 'onBlur',
   });
-  
-  const { handleSubmit, setValue, reset, watch, setFocus, control, getFieldState, formState: { isSubmitting, errors } } = formMethods;
-
+  const { handleSubmit, setValue, reset, watch, control, getFieldState, formState: { isSubmitting, errors } } = formMethods;
 
 
   // 🎯 FIX: Sync requester_name from Auth User if it's currently empty (New PR)
@@ -117,38 +115,57 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
   // Omniscient Error Handler: Aggregates all validation errors into one Toast
   const handleFormError = useCallback((fieldErrors: FieldErrors<PRFormData>) => {
-    const errorMessages: string[] = [];
+    logger.error('Validation Errors:', fieldErrors);
 
-    // Recursive helper to extract all messages
-    const extractMessages = (errs: object) => {
-      Object.values(errs).forEach((val) => {
-        if (!val) return;
-        if (typeof val.message === 'string') {
-          errorMessages.push(val.message);
-        } else if (typeof val === 'object') {
-          extractMessages(val);
+    // 1. 🎯 Auto-Scroll to first error field
+    const firstErrorKey = Object.keys(fieldErrors)[0] as keyof PRFormData;
+    if (firstErrorKey) {
+        // Try to find element by name attribute
+        const errorElement = document.getElementsByName(firstErrorKey)[0] || 
+                           document.querySelector(`[name="${firstErrorKey}"]`);
+        
+        if (errorElement) {
+            errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if ('focus' in errorElement) (errorElement as any).focus();
+        } else if (firstErrorKey === 'lines') {
+            // Special case for table errors
+            const tableElement = document.querySelector('table');
+            tableElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else if (String(firstErrorKey).includes('.')) {
+            // Handle nested fields (e.g., lines[0].qty)
+            const nestedElement = document.querySelector(`[name="${firstErrorKey}"]`);
+            nestedElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      });
+    }
+
+    // 2. 📝 Human-friendly Error Summary
+    const extractMessages = (errs: any): string[] => {
+        let messages: string[] = [];
+        for (const key in errs) {
+            const error = errs[key];
+            if (error?.message && typeof error.message === 'string') {
+                messages.push(error.message);
+            } else if (typeof error === 'object' && error !== null) {
+                messages = messages.concat(extractMessages(error));
+            }
+        }
+        return Array.from(new Set(messages));
     };
 
-    extractMessages(fieldErrors);
+    const errorMessages = extractMessages(fieldErrors);
 
-    // Deduplicate and format
-    const uniqueErrors = Array.from(new Set(errorMessages));
-    
-    if (uniqueErrors.length > 0) {
-      const formattedMessage = uniqueErrors.map(msg => `• ${msg}`).join('\n');
-      toast(formattedMessage, 'error', 'ตรวจสอบข้อมูลไม่ผ่าน');
-      
-      // Focus first error field for UX
-      const firstKey = Object.keys(fieldErrors)[0] as Path<PRFormData>;
-      if (firstKey) {
-        try {
-          setFocus(firstKey);
-        } catch { /* ignore */ }
-      }
+    if (errorMessages.length > 0) {
+        const ErrorToastUI = () => React.createElement('div', { className: 'flex flex-col gap-1 text-left' },
+            React.createElement('span', { className: 'font-semibold text-sm' }, 'พบข้อมูลไม่ถูกต้อง:'),
+            React.createElement('ul', { className: 'list-disc pl-4 text-xs' },
+                errorMessages.map((msg: string, i: number) => React.createElement('li', { key: i }, msg))
+            )
+        );
+        toast(React.createElement(ErrorToastUI) as any, 'error');
+    } else {
+        toast('กรุณาตรวจสอบข้อมูลที่ระบุให้ครบถ้วน', 'error');
     }
-  }, [setFocus, toast]);
+  }, [toast]);
 
 
 

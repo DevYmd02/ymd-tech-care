@@ -4,14 +4,13 @@
  */
 
 import api from '@/core/api/api';
-import type { PositionMaster, PositionFormData } from '@/modules/master-data/company/types/position.types';
-import { type PaginatedListResponse } from '@/shared/types/api.types';
+import type { PositionMaster, PositionPayload } from '@/modules/master-data/company/types/position.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 export const PositionService = {
-  getList: (params?: Partial<TableFilters>) => api.get<PaginatedListResponse<PositionMaster>>('/org-positions', { params }),
-  get: (id: number) => api.get<PositionMaster>(`/org-positions/${id}`),
-  create: (data: PositionFormData) => api.post<{ success: boolean; data?: PositionMaster; message?: string }>('/org-positions', data),
-  update: (id: number, data: Partial<PositionFormData>) => api.put<{ success: boolean; data?: PositionMaster; message?: string }>(`/org-positions/${id}`, data),
-  delete: (id: number) => api.delete<boolean>(`/org-positions/${id}`),
+  getList: (params?: Partial<TableFilters>) => api.get<PositionMaster[]>('/org-position', { params }),
+  get: (id: number) => api.get<PositionMaster>(`/org-position/${id}`),
+  create: (data: PositionPayload) => api.post<unknown>('/org-position', data),
+  update: (id: number, data: Partial<PositionPayload>) => api.put<unknown>(`/org-position/${id}`, data),
+  delete: (id: number) => api.delete<boolean>(`/org-position/${id}`),
 };

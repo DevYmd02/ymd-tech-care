@@ -314,7 +314,6 @@ export default function SalesOrderListPage() {
                 icon={ShoppingCart}
                 accentColor="indigo"
                 totalCount={apiData?.total || 0}
-                isLoading={isLoading}
                 searchForm={
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                         <FilterField

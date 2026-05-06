@@ -1,4 +1,5 @@
 import api, { USE_MOCK } from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import { logger } from '@/shared/utils';
 import { mockItems } from '@/modules/master-data/mocks/masterDataMocks';
 import type { ItemListItem, ItemMasterFormData, ItemMaster } from '@/modules/master-data/types/master-data-types';
@@ -136,7 +137,7 @@ function mapItemDetailFields(raw: Record<string, unknown>): ItemMaster {
 }
 
 export const ItemMasterService = {
-  getAll: async (params?: { q?: string; vendor_id?: string; limit?: number }): Promise<ListResponse<ItemListItem>> => {
+  getAll: async (params?: { q?: string; vendor_id?: string; limit?: number }, config?: AxiosRequestConfig): Promise<ListResponse<ItemListItem>> => {
     if (USE_MOCK) {
       logger.info('🎭 [Mock Mode] Serving Item List', params);
       let items = [...mockItems];
@@ -171,7 +172,7 @@ export const ItemMasterService = {
         page?: number;
         pageSize?: number;
         limit?: number;
-      }>('/item-master', { params });
+      }>('/item-master', { ...config, params });
 
       // Handle direct array from Axios (api.ts usually returns response.data directly)
       const rawArray = Array.isArray(response) ? response : (response.data || response.items || []);
@@ -191,14 +192,14 @@ export const ItemMasterService = {
     }
   },
 
-  getById: async (id: number): Promise<ItemMaster | null> => {
+  getById: async (id: number, config?: AxiosRequestConfig): Promise<ItemMaster | null> => {
     if (USE_MOCK) {
       const item = mockItems.find(i => i.item_id === id);
       // Map to full detail safe defaults
       return item ? mapItemDetailFields(item as unknown as Record<string, unknown>) : null;
     }
     try {
-      const raw = await api.get<Record<string, unknown>>(`/item-master/${id}`);
+      const raw = await api.get<Record<string, unknown>>(`/item-master/${id}`, config);
       if (!raw) return null;
       return mapItemDetailFields(raw);
     } catch (error) {

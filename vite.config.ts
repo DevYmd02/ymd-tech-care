@@ -64,28 +64,39 @@ export default defineConfig(({ mode }) => {
           manualChunks(id) {
             if (id.includes('node_modules')) {
               // ============================================================
-              // VENDOR CHUNKING STRATEGY
+              // VENDOR CHUNKING STRATEGY - Optimized for ERP Scale
               // ============================================================
-              if (id.includes('lucide')) return 'vendor-icons';
               
+              // 1. Core Framework & Visuals (Merged to prevent circular chunks)
               if (
-                id.includes('node_modules/react/') || 
-                id.includes('node_modules/react-dom/') || 
-                id.includes('node_modules/react-router/') ||
-                id.includes('node_modules/react-router-dom/') ||
-                id.includes('node_modules/scheduler/') ||
+                id.includes('react') || 
+                id.includes('react-dom') || 
+                id.includes('react-router') ||
                 id.includes('recharts')
               ) {
-                return 'vendor-react';
+                return 'vendor-main';
+              }
+              
+              // 2. Icons
+              if (id.includes('lucide')) return 'vendor-icons';
+              
+              // 3. Forms & Validation
+              if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
+                return 'vendor-forms';
               }
 
-              if (
-                id.includes('axios') ||
-                id.includes('zod') ||
-                id.includes('@tanstack') ||
-                id.includes('sweetalert2')
-              ) {
+              // 4. Data Fetching & Table
+              if (id.includes('@tanstack/react-query')) return 'vendor-query';
+              if (id.includes('@tanstack/react-table')) return 'vendor-table';
+
+              // 5. Utilities
+              if (id.includes('axios') || id.includes('date-fns')) {
                 return 'vendor-utils';
+              }
+              
+              // 6. Other large libs
+              if (id.includes('sweetalert2') || id.includes('react-hot-toast')) {
+                return 'vendor-ui-extra';
               }
             }
           },

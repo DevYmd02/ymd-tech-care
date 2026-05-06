@@ -29,7 +29,10 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms }: UseDeliveryFo
     });
 
     const { setValue, control, reset, getValues } = methods;
-    const formData = useWatch({ control }) as DeliveryFormValues;
+
+    // 💡 Performance Optimization: Watch only 'lines' instead of the entire form object.
+    // This prevents the entire modal from re-rendering when typing in header fields.
+    const lines = useWatch({ control, name: 'lines' }) || [];
 
     const isInitializedRef = useRef(false);
 
@@ -132,7 +135,7 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms }: UseDeliveryFo
 
     return {
         methods,
-        formData,
+        lines,
         handleAddLine,
         handleRemoveLine,
         handleLineChange,

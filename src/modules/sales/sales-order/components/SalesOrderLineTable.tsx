@@ -1,35 +1,278 @@
-/**
- * @file SalesOrderLineTable.tsx
- * @description ตารางรายการสินค้าในใบสั่งขาย (sale_order_line D10) - รุ่นอัปเกรด High-Density & Sticky
- */
-
-import { useRef } from 'react';
 import { Plus, Trash2, ShoppingBag, Search, AlertCircle } from 'lucide-react';
-import { useFormContext } from 'react-hook-form';
-import { useToast } from '@ui/feedback/Toast';
+import { useFormContext, useFieldArray, useWatch } from 'react-hook-form';
 import type { SalesOrderLineValues, SalesOrderFormValues } from '../schemas/sales-order.schemas';
-import type { SalesOrderLineData } from '../types/sales-order.types';
 import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
 import { formatNumber } from '@/shared/utils';
 
 interface SalesOrderLineTableProps {
-    lines: SalesOrderLineData[];
     onAddLine: () => void;
     onRemoveLine: (index: number) => void;
-    onLineChange: (index: number, field: keyof SalesOrderLineData, value: string | number) => void;
+    onLineChange: (index: number, field: keyof SalesOrderLineValues, value: string | number) => void;
     onSearchProduct?: (index: number) => void;
     onSearchWarehouse?: (index: number) => void;
     onSearchLocation?: (index: number) => void;
     onSearchLot?: (index: number) => void;
-    uoms?: UnitListItem[];
-    warehouses?: WarehouseListItem[];
-    locations?: Location[];
+    uoms: UnitListItem[];
+    warehouses: WarehouseListItem[];
+    locations: Location[];
     readOnly?: boolean;
 }
 
+interface SalesOrderLineRowProps {
+    index: number;
+    isLocked: boolean;
+    onLineChange: (index: number, field: keyof SalesOrderLineValues, value: string | number) => void;
+    onSearchProduct?: (index: number) => void;
+    onSearchWarehouse?: (index: number) => void;
+    onSearchLocation?: (index: number) => void;
+    onSearchLot?: (index: number) => void;
+    onRemoveLine: (index: number) => void;
+    uoms: UnitListItem[];
+    warehouses: WarehouseListItem[];
+    locations: Location[];
+    getFieldClass: (index: number, fieldName: keyof SalesOrderLineValues, baseClass: string) => string;
+    hasLineFieldError: (index: number, fieldName: keyof SalesOrderLineValues) => boolean;
+}
+
+// Aesthetic classes matching Reservation but themed Indigo
+const compactInputClass =
+    "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm rounded";
+
+const headerThClass = 
+    "px-3 py-3 font-bold uppercase text-xs tracking-tighter border-b border-gray-200 dark:border-gray-700 whitespace-nowrap";
+
+/**
+ * 💡 Optimized Row Component: Watches only its own index
+ */
+const SalesOrderLineRow = ({ 
+    index, 
+    isLocked, 
+    onLineChange, 
+    onSearchProduct, 
+    onSearchWarehouse, 
+    onSearchLocation, 
+    onSearchLot,
+    onRemoveLine,
+    uoms,
+    warehouses,
+    locations,
+    getFieldClass,
+    hasLineFieldError
+}: SalesOrderLineRowProps) => {
+    const { control } = useFormContext<SalesOrderFormValues>();
+    const line = useWatch({
+        control,
+        name: `lines.${index}`
+    }) as SalesOrderLineValues;
+
+    if (!line) return null;
+
+    return (
+        <tr className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors group">
+            {/* Sticky Left: Index */}
+            <td className="px-2 py-2 text-center text-indigo-400 dark:text-indigo-500/70 font-bold sticky left-0 bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-100 dark:after:bg-gray-800/40">
+                {index + 1}
+            </td>
+
+            {/* Sticky Left: Item Code */}
+            <td className="px-2 py-2 sticky left-[60px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-indigo-50 dark:after:bg-indigo-800/20">
+                <div className="flex gap-1 items-center">
+                    <input
+                        value={line.item_code || ''}
+                        readOnly
+                        className={`${getFieldClass(index, 'item_id', compactInputClass)} bg-gray-50/50 dark:bg-gray-800 italic cursor-not-allowed text-indigo-700 dark:text-white/70 border-gray-200 dark:border-gray-700`}
+                        placeholder="รหัส"
+                    />
+                    {!isLocked && (
+                        <button
+                            type="button"
+                            onClick={() => onSearchProduct?.(index)}
+                            className={`p-1.5 ${hasLineFieldError(index, 'item_id') ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'} text-white rounded transition-all shadow-sm active:scale-95 shrink-0 h-8 w-8 flex items-center justify-center font-bold`}
+                        >
+                            <Search size={14} />
+                        </button>
+                    )}
+                </div>
+            </td>
+
+            {/* Item Name (Now scrollable) */}
+            <td className="px-2 py-2">
+                <input
+                    value={line.item_name || ''}
+                    readOnly
+                    className={`${compactInputClass} bg-gray-50/50 dark:bg-gray-800 cursor-not-allowed truncate text-gray-600 dark:text-white/80 border-gray-200 dark:border-gray-700`}
+                    placeholder="ชื่อสินค้า"
+                />
+            </td>
+
+            {/* Warehouse */}
+            <td className="px-2 py-2">
+                <div className="flex gap-1 items-center">
+                    <input 
+                        value={warehouses.find((w: WarehouseListItem) => String(w.warehouse_id) === String(line.warehouse_id))?.warehouse_name || ''}
+                        readOnly
+                        onClick={!isLocked ? () => onSearchWarehouse?.(index) : undefined}
+                        className={`${getFieldClass(index, 'warehouse_id', compactInputClass)} ${!isLocked ? 'cursor-pointer hover:border-indigo-400 focus:border-indigo-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
+                        placeholder="เลือกคลัง..."
+                    />
+                </div>
+            </td>
+
+            {/* Location */}
+            <td className="px-2 py-2">
+                <div className="flex gap-1 items-center">
+                    <input 
+                        value={locations.find((l: Location) => String(l.location_id) === String(line.location_id))?.name_th || locations.find((l: Location) => String(l.location_id) === String(line.location_id))?.code || ''}
+                        readOnly
+                        onClick={!isLocked ? () => onSearchLocation?.(index) : undefined}
+                        className={`${getFieldClass(index, 'location_id', compactInputClass)} ${!isLocked ? 'cursor-pointer hover:border-indigo-400 focus:border-indigo-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
+                        placeholder="เลือกที่เก็บ..."
+                    />
+                </div>
+            </td>
+
+            {/* Quantity */}
+            <td className="px-2 py-2">
+                <input
+                    type="text"
+                    value={line.qty_ordered || ''}
+                    disabled={isLocked}
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                            onLineChange(index, 'qty_ordered', val === '' ? 0 : parseFloat(val));
+                        }
+                    }}
+                    onFocus={(e) => e.target.select()}
+                    placeholder="0"
+                    maxLength={12}
+                    className={`${getFieldClass(index, 'qty_ordered', compactInputClass)} text-right font-bold text-indigo-600 dark:text-white bg-white dark:bg-gray-800 border-indigo-100 dark:border-gray-700`}
+                />
+            </td>
+
+            {/* UOM */}
+            <td className="px-2 py-2">
+                <select
+                    value={line.uom_id || ''}
+                    disabled={isLocked}
+                    onChange={(e) => onLineChange(index, 'uom_id', e.target.value)}
+                    className={`${getFieldClass(index, 'uom_id', compactInputClass)} text-center bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
+                    style={{ colorScheme: 'dark' }}
+                >
+                    <option value="">-- หน่วย --</option>
+                    {uoms.map((u: UnitListItem) => (
+                        <option key={String(u.id || u.unit_id)} value={String(u.id || u.unit_id)}>
+                            {u.unit_name || u.uom_name}
+                        </option>
+                    ))}
+                </select>
+            </td>
+
+            {/* Lot No */}
+            <td className="px-2 py-2">
+                <div className="relative group/lot">
+                    <div 
+                        onClick={!isLocked ? () => {
+                            if (line.item_id) {
+                                onSearchLot?.(index);
+                            }
+                        } : undefined}
+                        className={`absolute left-0 top-0 bottom-0 flex items-center pl-2 ${!isLocked ? 'cursor-pointer group-hover/lot:text-orange-500 text-gray-400' : 'text-gray-300'}`}
+                    >
+                        <Search size={14} />
+                    </div>
+                    <input 
+                        type="text" 
+                        value={line.lot_no || ''} 
+                        readOnly
+                        disabled={isLocked}
+                        onClick={!isLocked ? () => {
+                            if (line.item_id) {
+                                onSearchLot?.(index);
+                            }
+                        } : undefined}
+                        placeholder="เลือกล็อต..."
+                        className={`${compactInputClass} pl-7 cursor-pointer font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-gray-800 border-orange-100 dark:border-gray-700 focus:ring-orange-500`}
+                    />
+                </div>
+            </td>
+
+            {/* Unit Price */}
+            <td className="px-2 py-2">
+                <input
+                    type="text"
+                    value={line.unit_price || ''}
+                    disabled={isLocked}
+                    onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                            onLineChange(index, 'unit_price', val === '' ? 0 : parseFloat(val));
+                        }
+                    }}
+                    onFocus={(e) => e.target.select()}
+                    placeholder="0.00"
+                    maxLength={12}
+                    className={`${getFieldClass(index, 'unit_price', compactInputClass)} text-right font-medium bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
+                />
+            </td>
+
+            {/* Line Discount */}
+            <td className="px-2 py-2">
+                <input
+                    type="text"
+                    value={line.line_discount_input ?? ''}
+                    disabled={isLocked}
+                    onChange={(e) => onLineChange(index, 'line_discount_input', e.target.value)}
+                    onFocus={(e) => e.target.select()}
+                    placeholder="0"
+                    maxLength={20}
+                    className={`${compactInputClass} text-right bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
+                />
+            </td>
+
+            {/* Line Total */}
+            <td className="px-2 py-2">
+                <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner overflow-hidden max-w-[150px] ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-700'}`}>
+                    <span className="truncate w-full text-right overflow-hidden">{formatNumber(line.line_total || 0)}</span>
+                    {hasLineFieldError(index, 'line_total') && (
+                        <div className="flex items-center gap-0.5 text-[8px] font-medium text-red-500 mt-[-2px]">
+                            <AlertCircle size={8} />
+                            <span>ส่วนลดเกิน</span>
+                        </div>
+                    )}
+                </div>
+            </td>
+
+            {/* Note */}
+            <td className="px-2 py-2">
+                <input
+                    type="text"
+                    value={line.note || ''}
+                    disabled={isLocked}
+                    onChange={(e) => onLineChange(index, 'note', e.target.value)}
+                    placeholder="หมายเหตุ..."
+                    className={`${compactInputClass} italic text-gray-400 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-700 bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700`}
+                />
+            </td>
+
+            {/* Sticky Right: Actions */}
+            {!isLocked && (
+                <td className="px-2 py-2 text-center sticky right-[-1px] pr-[9px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-[30] transition-colors border-l border-gray-100 dark:border-gray-700 shadow-[-12px_0_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[-20px_0_30px_-15px_rgba(0,0,0,0.8)] isolate">
+                    <button
+                        type="button"
+                        onClick={() => onRemoveLine(index)}
+                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                    >
+                        <Trash2 size={18} />
+                    </button>
+                </td>
+            )}
+        </tr>
+    );
+};
+
 export function SalesOrderLineTable({
-    lines,
     onAddLine,
     onRemoveLine,
     onLineChange,
@@ -42,18 +285,13 @@ export function SalesOrderLineTable({
     locations = [],
     readOnly = false,
 }: SalesOrderLineTableProps) {
-    const { formState: { errors } } = useFormContext<SalesOrderFormValues>();
-    const { toast } = useToast();
+    const { control, formState: { errors } } = useFormContext<SalesOrderFormValues>();
+    const { fields } = useFieldArray({
+        control,
+        name: 'lines'
+    });
+    
     const isLocked = readOnly;
-
-    // Toast Throttle (Prevent double toast)
-    const toastThrottleRef = useRef(false);
-    const showNoItemToast = () => {
-        if (toastThrottleRef.current) return;
-        toastThrottleRef.current = true;
-        toast('กรุณาเลือกสินค้าก่อนเลือกล็อต', 'warning');
-        setTimeout(() => { toastThrottleRef.current = false; }, 1500);
-    };
 
     const getLineError = (index: number) => {
         if (!errors.lines || !Array.isArray(errors.lines)) return undefined;
@@ -65,9 +303,6 @@ export function SalesOrderLineTable({
         return !!(lineError as Record<string, unknown> | undefined)?.[fieldName];
     };
 
-    /**
-     * Helper to get conditional classes based on error state for lines
-     */
     const getFieldClass = (index: number, fieldName: keyof SalesOrderLineValues, baseClass: string) => {
         const hasError = hasLineFieldError(index, fieldName);
         if (!hasError) return baseClass;
@@ -81,16 +316,8 @@ export function SalesOrderLineTable({
             .replace('border-gray-200', 'border-red-500');
     };
     
-    // Aesthetic classes matching Reservation but themed Indigo
-    const compactInputClass =
-        "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm rounded";
-    
-    const headerThClass = 
-        "px-3 py-3 font-bold uppercase text-xs tracking-tighter border-b border-gray-200 dark:border-gray-700 whitespace-nowrap";
-
     return (
         <section className="space-y-6">
-            {/* Header section with icon and Add button */}
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
                     <ShoppingBag size={20} strokeWidth={2.5} />
@@ -108,7 +335,6 @@ export function SalesOrderLineTable({
                 )}
             </div>
 
-            {/* Table Container with Premium Styling */}
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900">
                 <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-indigo-200 dark:scrollbar-thumb-indigo-500/20 scrollbar-track-transparent bg-white dark:bg-gray-900">
                     <table className="table-fixed text-sm text-left border-separate border-spacing-0 w-full min-w-[2130px]">
@@ -133,218 +359,28 @@ export function SalesOrderLineTable({
                         </thead>
 
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
-                            {lines.map((line, index) => {
-                                return (
-                                    <tr key={index} className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors group">
-                                        {/* Sticky Left: Index */}
-                                        <td className="px-2 py-2 text-center text-indigo-400 dark:text-indigo-500/70 font-bold sticky left-0 bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-100 dark:after:bg-gray-800/40">
-                                            {index + 1}
-                                        </td>
-
-                                        {/* Sticky Left: Item Code */}
-                                        <td className="px-2 py-2 sticky left-[60px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-indigo-50 dark:after:bg-indigo-800/20">
-                                            <div className="flex gap-1 items-center">
-                                                <input
-                                                    value={line.item_code || ''}
-                                                    readOnly
-                                                    className={`${getFieldClass(index, 'item_id', compactInputClass)} bg-gray-50/50 dark:bg-gray-800 italic cursor-not-allowed text-indigo-700 dark:text-white/70 border-gray-200 dark:border-gray-700`}
-                                                    placeholder="รหัส"
-                                                />
-                                                {!isLocked && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => onSearchProduct?.(index)}
-                                                        className={`p-1.5 ${hasLineFieldError(index, 'item_id') ? 'bg-red-500 hover:bg-red-600' : 'bg-indigo-600 hover:bg-indigo-700'} text-white rounded transition-all shadow-sm active:scale-95 shrink-0 h-8 w-8 flex items-center justify-center font-bold`}
-                                                    >
-                                                        <Search size={14} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
-
-                                        {/* Item Name (Now scrollable) */}
-                                        <td className="px-2 py-2">
-                                            <input
-                                                value={line.item_name || ''}
-                                                readOnly
-                                                className={`${compactInputClass} bg-gray-50/50 dark:bg-gray-800 cursor-not-allowed truncate text-gray-600 dark:text-white/80 border-gray-200 dark:border-gray-700`}
-                                                placeholder="ชื่อสินค้า"
-                                            />
-                                        </td>
-
-                                        {/* Warehouse */}
-                                        <td className="px-2 py-2">
-                                            <div className="flex gap-1 items-center">
-                                                <input 
-                                                    value={warehouses.find(w => String(w.warehouse_id) === String(line.warehouse_id))?.warehouse_name || ''}
-                                                    readOnly
-                                                    onClick={!isLocked ? () => onSearchWarehouse?.(index) : undefined}
-                                                    className={`${getFieldClass(index, 'warehouse_id', compactInputClass)} ${!isLocked ? 'cursor-pointer hover:border-indigo-400 focus:border-indigo-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
-                                                    placeholder="เลือกคลัง..."
-                                                />
-                                            </div>
-                                        </td>
-
-                                        {/* Location */}
-                                        <td className="px-2 py-2">
-                                            <div className="flex gap-1 items-center">
-                                                <input 
-                                                    value={locations.find(l => String(l.location_id) === String(line.location_id))?.name_th || locations.find(l => String(l.location_id) === String(line.location_id))?.code || ''}
-                                                    readOnly
-                                                    onClick={!isLocked ? () => onSearchLocation?.(index) : undefined}
-                                                    className={`${getFieldClass(index, 'location_id', compactInputClass)} ${!isLocked ? 'cursor-pointer hover:border-indigo-400 focus:border-indigo-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors`}
-                                                    placeholder="เลือกที่เก็บ..."
-                                                />
-                                            </div>
-                                        </td>
-
-                                        {/* Quantity */}
-                                        <td className="px-2 py-2">
-                                            <input
-                                                type="text"
-                                                value={line.qty_ordered || ''}
-                                                disabled={isLocked}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                        onLineChange(index, 'qty_ordered', val === '' ? 0 : parseFloat(val));
-                                                    }
-                                                }}
-                                                onFocus={(e) => e.target.select()}
-                                                placeholder="0"
-                                                maxLength={12}
-                                                className={`${getFieldClass(index, 'qty_ordered', compactInputClass)} text-right font-bold text-indigo-600 dark:text-white bg-white dark:bg-gray-800 border-indigo-100 dark:border-gray-700`}
-                                            />
-                                        </td>
-
-                                        {/* UOM */}
-                                        <td className="px-2 py-2">
-                                            <select
-                                                value={line.uom_id || ''}
-                                                disabled={isLocked}
-                                                onChange={(e) => onLineChange(index, 'uom_id', e.target.value)}
-                                                className={`${getFieldClass(index, 'uom_id', compactInputClass)} text-center bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
-                                                style={{ colorScheme: 'dark' }}
-                                            >
-                                                <option value="">-- หน่วย --</option>
-                                                {uoms.map((u) => (
-                                                    <option key={String(u.id || u.unit_id)} value={String(u.id || u.unit_id)}>
-                                                        {u.unit_name || u.uom_name}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </td>
-
-                                        {/* Lot No */}
-                                        <td className="px-2 py-2">
-                                            <div className="relative group/lot">
-                                                <div 
-                                                    onClick={!isLocked ? () => {
-                                                        if (line.item_id) {
-                                                            onSearchLot?.(index);
-                                                        } else {
-                                                            showNoItemToast();
-                                                        }
-                                                    } : undefined}
-                                                    className={`absolute left-0 top-0 bottom-0 flex items-center pl-2 ${!isLocked ? 'cursor-pointer group-hover/lot:text-orange-500 text-gray-400' : 'text-gray-300'}`}
-                                                >
-                                                    <Search size={14} />
-                                                </div>
-                                                <input 
-                                                    type="text" 
-                                                    value={line.lot_no || ''} 
-                                                    readOnly
-                                                    disabled={isLocked}
-                                                    onClick={!isLocked ? () => {
-                                                        if (line.item_id) {
-                                                            onSearchLot?.(index);
-                                                        } else {
-                                                            showNoItemToast();
-                                                        }
-                                                    } : undefined}
-                                                    placeholder="เลือกล็อต..."
-                                                    className={`${compactInputClass} pl-7 cursor-pointer font-bold text-orange-600 dark:text-orange-400 bg-white dark:bg-gray-800 border-orange-100 dark:border-gray-700 focus:ring-orange-500`}
-                                                />
-                                            </div>
-                                        </td>
-
-                                        {/* Unit Price */}
-                                        <td className="px-2 py-2">
-                                            <input
-                                                type="text"
-                                                value={line.unit_price || ''}
-                                                disabled={isLocked}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                        onLineChange(index, 'unit_price', val === '' ? 0 : parseFloat(val));
-                                                    }
-                                                }}
-                                                onFocus={(e) => e.target.select()}
-                                                placeholder="0.00"
-                                                maxLength={12}
-                                                className={`${getFieldClass(index, 'unit_price', compactInputClass)} text-right font-medium bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
-                                            />
-                                        </td>
-
-                                        {/* Line Discount */}
-                                        <td className="px-2 py-2">
-                                            <input
-                                                type="text"
-                                                value={line.line_discount_input ?? ''}
-                                                disabled={isLocked}
-                                                onChange={(e) => onLineChange(index, 'line_discount_input', e.target.value)}
-                                                onFocus={(e) => e.target.select()}
-                                                placeholder="0"
-                                                maxLength={20}
-                                                className={`${compactInputClass} text-right bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
-                                            />
-                                        </td>
-
-                                        {/* Line Total */}
-                                        <td className="px-2 py-2">
-                                            <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner overflow-hidden max-w-[150px] ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-700'}`}>
-                                                <span className="truncate w-full text-right overflow-hidden">{formatNumber(line.line_total || 0)}</span>
-                                                {hasLineFieldError(index, 'line_total') && (
-                                                    <div className="flex items-center gap-0.5 text-[8px] font-medium text-red-500 mt-[-2px]">
-                                                        <AlertCircle size={8} />
-                                                        <span>ส่วนลดเกิน</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-
-                                        {/* Note */}
-                                        <td className="px-2 py-2">
-                                            <input
-                                                type="text"
-                                                value={line.note || ''}
-                                                disabled={isLocked}
-                                                onChange={(e) => onLineChange(index, 'note', e.target.value)}
-                                                placeholder="หมายเหตุ..."
-                                                className={`${compactInputClass} italic text-gray-400 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-700 bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700`}
-                                            />
-                                        </td>
-
-                                        {/* Sticky Right: Actions */}
-                                        {!isLocked && (
-                                            <td className="px-2 py-2 text-center sticky right-[-1px] pr-[9px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-[30] transition-colors border-l border-gray-100 dark:border-gray-700 shadow-[-12px_0_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[-20px_0_30px_-15px_rgba(0,0,0,0.8)] isolate">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => onRemoveLine(index)}
-                                                    className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </td>
-                                        )}
-                                    </tr>
-                                );
-                            })}
+                            {fields.map((field, index) => (
+                                <SalesOrderLineRow 
+                                    key={field.id}
+                                    index={index}
+                                    isLocked={isLocked}
+                                    onLineChange={onLineChange}
+                                    onSearchProduct={onSearchProduct}
+                                    onSearchWarehouse={onSearchWarehouse}
+                                    onSearchLocation={onSearchLocation}
+                                    onSearchLot={onSearchLot}
+                                    onRemoveLine={onRemoveLine}
+                                    uoms={uoms}
+                                    warehouses={warehouses}
+                                    locations={locations}
+                                    getFieldClass={getFieldClass}
+                                    hasLineFieldError={hasLineFieldError}
+                                />
+                            ))}
                         </tbody>
                     </table>
 
-                    {lines.length === 0 && (
+                    {fields.length === 0 && (
                         <div className="sticky left-0 w-full flex flex-col items-center justify-center py-16 text-gray-400 dark:text-indigo-300/40 bg-gray-50/50 dark:bg-gray-900/50">
                             <ShoppingBag className="w-16 h-16 mb-4 text-indigo-200 dark:text-indigo-500/30 opacity-40" />
                             <p className="text-base font-medium">ยังไม่มีรายการสินค้า</p>

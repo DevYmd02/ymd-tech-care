@@ -113,12 +113,11 @@ export default function InquiryListPage() {
 
     return (
         <PageListLayout
-            title="สำรวจความต้องการ (Inquiry)"
-            subtitle="จัดการข้อมูลการสำรวจความต้องการของลูกค้า"
+            title="รายการสอบถามราคา"
+            subtitle="Sales Inquiry"
             icon={ClipboardList}
             accentColor="blue"
             totalCount={apiData?.total || 0}
-            isLoading={isLoading}
             searchForm={
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <FilterField

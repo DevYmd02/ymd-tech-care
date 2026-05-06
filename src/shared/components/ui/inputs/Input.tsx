@@ -12,6 +12,9 @@ interface InputProps<T extends FieldValues> extends React.InputHTMLAttributes<HT
 export const Input = <T extends FieldValues>({ register, name, className, error, ...props }: InputProps<T>) => (
   <input 
     {...register(name)} 
+    id={props.id || String(name)}
+    aria-invalid={error ? "true" : "false"}
+    aria-describedby={error ? `${String(name)}-error` : undefined}
     className={`${error ? styles.inputError : styles.input} ${className || ''}`}
     {...props}
   />

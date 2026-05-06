@@ -73,8 +73,9 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                     onClick={handleClearLines} 
                                     className="text-white hover:text-red-200 transition-colors"
                                     title="ล้างค่าทั้งหมด"
+                                    aria-label="ล้างข้อมูลทุกรายการ"
                                 >
-                                    <Eraser size={14} />
+                                    <Eraser size={14} aria-hidden="true" />
                                 </button>
                             </th>
                             )}
@@ -250,9 +251,9 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                     {!readOnly && (
                                     <td className="p-1">
                                         <div className="flex justify-center items-center space-x-2 h-8">
-                                            <button type="button" className="text-blue-600 hover:text-blue-800 transition-colors" title="ค้นหา" onClick={() => openProductSearch(index)}><Search size={16} /></button>
-                                            <button type="button" className="text-orange-500 hover:text-orange-700 transition-colors" onClick={() => clearLine(index)} title="ล้างค่า"><Eraser size={16} /></button>
-                                            <button type="button" className="text-red-500 hover:text-red-700 transition-colors" onClick={() => removeLine(index)} title="ลบ"><Trash2 size={16} /></button>
+                                            <button type="button" className="text-blue-600 hover:text-blue-800 transition-colors" title="ค้นหาสินค้า" aria-label={`ค้นหาสินค้า แถวที่ ${index + 1}`} onClick={() => openProductSearch(index)}><Search size={16} aria-hidden="true" /></button>
+                                            <button type="button" className="text-orange-500 hover:text-orange-700 transition-colors" onClick={() => clearLine(index)} title="ล้างค่าข้อมูลแถวนี้" aria-label={`ล้างค่าข้อมูลแถวที่ ${index + 1}`}><Eraser size={16} aria-hidden="true" /></button>
+                                            <button type="button" className="text-red-500 hover:text-red-700 transition-colors" onClick={() => removeLine(index)} title="ลบรายการนี้" aria-label={`ลบรายการ แถวที่ ${index + 1}`}><Trash2 size={16} aria-hidden="true" /></button>
                                         </div>
                                     </td>
                                     )}

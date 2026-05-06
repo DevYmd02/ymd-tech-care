@@ -125,12 +125,11 @@ export default function EstimateListPage() {
 
     return (
         <PageListLayout
-            title="ประมาณการราคา (Estimate)"
-            subtitle="จัดการข้อมูลการประมาณการราคาให้ลูกค้า"
+            title="รายการประมาณการ"
+            subtitle="Sales Estimate"
             icon={Calculator}
             accentColor="blue"
             totalCount={apiData?.total || 0}
-            isLoading={isLoading}
             searchForm={
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                     <FilterField

@@ -1,4 +1,5 @@
 import api from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import { USE_MOCK } from '@/core/api/api';
 import type { QCListParams, QCListResponse, CreateQCPayload, SubmitQCWinnerData, IReadyForPOPR } from '@/modules/procurement/schemas/qc-schemas';
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
@@ -35,12 +36,12 @@ export const cleanParams = (params: object = {}): Record<string, string | number
 };
 
 export const QCService = {
-  getList: async (params?: QCListParams): Promise<QCListResponse> => {
+  getList: async (params?: QCListParams, config?: AxiosRequestConfig): Promise<QCListResponse> => {
     logger.info('[QCService] Fetching QC List', params);
     
     // 🧹 Clean Parameters to prevent "undefined" in URL
     const cleanedParams = cleanParams(params || {});
-    const response = await api.get<QCListResponse>(ENDPOINTS.list, { params: cleanedParams });
+    const response = await api.get<QCListResponse>(ENDPOINTS.list, { ...config, params: cleanedParams });
 
     // ⚡ PHASE 2: Server-Side Pagination & Filtering (Real API)
     if (!USE_MOCK) {
@@ -75,9 +76,9 @@ export const QCService = {
     return applyClientPagination<QCListItem>(allItems, page, limit, response.total);
   },
 
-  getById: async (id: number): Promise<QCListItem> => {
+  getById: async (id: number, config?: AxiosRequestConfig): Promise<QCListItem> => {
     logger.info(`[QCService] Fetching QC Detail: ${id}`);
-    return await api.get<QCListItem>(ENDPOINTS.detail(id));
+    return await api.get<QCListItem>(ENDPOINTS.detail(id), config);
   },
 
   getReadyForPO: async (): Promise<IReadyForPOPR[]> => {
@@ -135,16 +136,16 @@ export const QCService = {
    * 2. Draft QCs (Discovery)
    * 3. Approved PRs (Authority)
    */
-  getAdvancedReadyPRs: async (): Promise<IReadyForPOPR[]> => {
+  getAdvancedReadyPRs: async (config?: AxiosRequestConfig): Promise<IReadyForPOPR[]> => {
     const PRService = (await import('./pr.service')).PRService;
     logger.info('🚀 [QCService] Executing Advanced Triple-Scan Discovery');
     
     try {
         // 📡 Parallel Fetch (Authority + Discovery)
         const [items1, items2Res, items3Res] = await Promise.all([
-            api.get<IReadyForPOPR[]>('/po/pr/waiting-for-qc'), // Ready for PO
-            api.get<QCListResponse>('/qc/qc-all', { params: { status: 'DRAFT', limit: 100 } }), // Draft QCs
-            PRService.getList({ status: 'APPROVED', limit: 100 }) // Approved PRs
+            api.get<IReadyForPOPR[]>('/po/pr/waiting-for-qc', config), // Ready for PO
+            api.get<QCListResponse>('/qc/qc-all', { ...config, params: { status: 'DRAFT', limit: 100 } }), // Draft QCs
+            PRService.getList({ status: 'APPROVED', limit: 100 }, config) // Approved PRs
         ]);
 
         const items2 = extractArrayFromResponse<QCListItem>(items2Res);
@@ -235,7 +236,7 @@ export const QCService = {
         return mergedResult;
     } catch (err) {
         logger.error('[QCService] Triple-Scan Critical Failure, falling back to basic API', err);
-        return await api.get<IReadyForPOPR[]>('/po/pr/waiting-for-qc');
+        return await api.get<IReadyForPOPR[]>('/po/pr/waiting-for-qc', config);
     }
   }
 };

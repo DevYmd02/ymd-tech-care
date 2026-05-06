@@ -78,7 +78,7 @@ export const usePOList = () => {
     // Main PO list
     const { data, isLoading } = useQuery({
         queryKey: ['purchase-orders', apiFilters],
-        queryFn: () => POService.getList(apiFilters),
+        queryFn: ({ signal }) => POService.getList(apiFilters, { signal }),
         placeholderData: keepPreviousData,
     });
 

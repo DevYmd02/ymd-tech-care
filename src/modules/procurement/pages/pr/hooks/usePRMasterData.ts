@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
-import { MasterDataService } from '@/modules/master-data';
+import { useMemo, useCallback, useState } from 'react';
+import { useWarehouses, useProjects, useTaxCodes, useCurrencies, useUnits } from '@/modules/master-data/hooks/useMasterData';
+import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 import type { ItemListItem, CostCenter, Project, WarehouseListItem, UnitListItem, Currency } from '@/modules/master-data/types/master-data-types';
-import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import { logger } from '@/shared/utils';
+import { useQuery } from '@tanstack/react-query';
 
 export interface MappedOption<T> {
     value: number | string;
@@ -11,103 +12,69 @@ export interface MappedOption<T> {
     original?: T;
 }
 
-export const usePRMasterData = () => {
-     const [products, setProducts] = useState<ItemListItem[]>([]);
-     const [warehouses, setWarehouses] = useState<MappedOption<WarehouseListItem>[]>([]);
-     const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
-     const [projects, setProjects] = useState<Project[]>([]);
-     const [purchaseTaxOptions, setPurchaseTaxOptions] = useState<MappedOption<TaxCode>[]>([]);
-     const [currencies, setCurrencies] = useState<Currency[]>([]);
-    
-    const [isLoading, setIsLoading] = useState(true);
+export const usePRMasterData = (enabled = true) => {
+    // 1. Core Shared Hooks (Cached)
+    const { data: warehouseRes, isLoading: isLoadingWH } = useWarehouses(enabled);
+    const { data: projectsRes,  isLoading: isLoadingPrj } = useProjects(enabled);
+    const { data: taxCodesRes,  isLoading: isLoadingTax } = useTaxCodes(enabled);
+    const { data: unitsRes,     isLoading: isLoadingUnits } = useUnits(enabled);
+    const { data: currenciesRes,isLoading: isLoadingCurr } = useCurrencies(enabled);
+
+    // 2. Specialized Master Data
+    const { data: costCentersRes, isLoading: isLoadingCC } = useQuery({
+        queryKey: ['master-cost-centers'],
+        queryFn: MasterDataService.getCostCenters,
+        enabled
+    });
+
+    // 3. Items (We use a simple query for initial items, search function for dynamic)
+    const { data: itemsRes, isLoading: isLoadingItems } = useQuery({
+        queryKey: ['master-items-initial'],
+        queryFn: () => MasterDataService.getItems(),
+        enabled
+    });
+
+    const [products, setProducts] = useState<ItemListItem[]>([]);
     const [isSearchingProducts, setIsSearchingProducts] = useState(false);
-    
-    // Add master arrays for hydration
-    const [masterItems, setMasterItems] = useState<ItemListItem[]>([]);
-    const [masterUnits, setMasterUnits] = useState<UnitListItem[]>([]);
-    
-    const [error, setError] = useState<Error | null>(null);
 
-    // Initial Fetch (Excluding Products)
-    useEffect(() => {
-        const fetchMasterData = async () => {
-          try {
-            setIsLoading(true);
-            
-            // INDEPENDENT FETCHING - Failures won't chain-react!
-            const results = await Promise.allSettled([
-              MasterDataService.getWarehouses(),
-              MasterDataService.getCostCenters(),
-              MasterDataService.getProjects(),
-              TaxCodeService.getTaxCodes(),
-              MasterDataService.getItems(),
-              MasterDataService.getUnits(),
-              MasterDataService.getCurrencies()
-            ]);
+    // Extraction Helper
+    const extractArray = <T>(res: any): T[] => {
+        if (Array.isArray(res)) return res;
+        if (res?.data && Array.isArray(res.data)) return res.data;
+        if (res?.items && Array.isArray(res.items)) return res.items;
+        return [];
+    };
 
-            const wh = results[0].status === 'fulfilled' ? results[0].value : [];
-            const cc = results[1].status === 'fulfilled' ? results[1].value : [];
-            const prj = results[2].status === 'fulfilled' ? results[2].value : [];
-            const taxCodes = results[3].status === 'fulfilled' ? results[3].value : [];
-            const itemsResult = results[4].status === 'fulfilled' ? results[4].value : [];
-            const unitsResult = results[5].status === 'fulfilled' ? results[5].value : [];
-            const currencyResult = results[6].status === 'fulfilled' ? results[6].value : [];
+    // Mapped Results
+    const warehouses = useMemo(() => {
+        const whArray = extractArray<WarehouseListItem>(warehouseRes);
+        return whArray.map(w => ({
+            value: Number(w.warehouse_id),
+            label: `${w.warehouse_code} - ${w.warehouse_name}`,
+            original: w
+        }));
+    }, [warehouseRes]);
 
-            if (results[3].status === 'rejected') {
-              logger.error('[usePRMasterData] Tax fetch error:', results[3].reason);
-            }
+    const costCenters = useMemo(() => extractArray<CostCenter>(costCentersRes), [costCentersRes]);
+    const projects = useMemo(() => extractArray<Project>(projectsRes), [projectsRes]);
+    const masterItems = useMemo(() => extractArray<ItemListItem>(itemsRes), [itemsRes]);
+    const masterUnits = useMemo(() => extractArray<UnitListItem>(unitsRes), [unitsRes]);
+    const currencies = useMemo(() => extractArray<Currency>(currenciesRes), [currenciesRes]);
 
-            logger.info('[usePRMasterData] Unwrapped Cost Centers count:', Array.isArray(cc) ? cc.length : 0);
-            logger.info('[usePRMasterData] Unwrapped Projects count:', Array.isArray(prj) ? prj.length : 0);
+    const purchaseTaxOptions = useMemo(() => {
+        const taxArray = extractArray<TaxCode>(taxCodesRes);
+        const filtered = taxArray.filter((t: TaxCode) => {
+            if (t.is_active === undefined || t.is_active === null) return true;
+            if (typeof t.is_active === 'boolean') return t.is_active;
+            return String(t.is_active).toUpperCase() === 'Y' || String(t.is_active) === '1' || String(t.is_active).toLowerCase() === 'true';
+        });
+        return filtered.map((t: TaxCode) => ({
+            value: Number(t.tax_code_id || t.tax_id),
+            label: t.tax_code,
+            original: t
+        }));
+    }, [taxCodesRes]);
 
-             setWarehouses((wh || []).map(w => ({
-               value: Number(w.warehouse_id),
-               label: `${w.warehouse_code} - ${w.warehouse_name}`,
-               original: w
-             })));
-             
-             // Extract array cleanly if the API returned an object wrapped in { data: [] }
-             const extractArray = <T>(res: T[] | { data?: T[]; items?: T[] } | undefined | null): T[] => {
-               if (Array.isArray(res)) return res;
-               if (res !== null && typeof res === 'object') {
-                 if ('data' in res && Array.isArray(res.data)) return res.data;
-                 if ('items' in res && Array.isArray(res.items)) return res.items;
-               }
-               return [];
-             };
-             
-             setCostCenters(extractArray(cc));
-             setProjects(extractArray(prj));
-             setMasterItems(extractArray(itemsResult));
-             setMasterUnits(extractArray(unitsResult));
-             setCurrencies(extractArray(currencyResult));
-             
-             // Tax Filter: Default to active when is_active is not provided by API
-             const taxArray = extractArray(taxCodes);
-             const filtered = taxArray.filter(
-               (t: TaxCode) => {
-                 // If is_active is not provided by the API, default to active
-                 if (t.is_active === undefined || t.is_active === null) return true;
-                 if (typeof t.is_active === 'boolean') return t.is_active;
-                 return String(t.is_active).toUpperCase() === 'Y' || String(t.is_active) === '1' || String(t.is_active).toLowerCase() === 'true';
-               }
-             );
-               setPurchaseTaxOptions(filtered.map((t: TaxCode) => ({
-                 value: Number(t.tax_code_id || t.tax_id),
-                 label: t.tax_code,
-                 original: t
-               })));
-          } catch (err) {
-            logger.error('[usePRMasterData] Failed to fetch master data:', err);
-            setError(err instanceof Error ? err : new Error('Failed to fetch master data'));
-          } finally {
-            setIsLoading(false);
-          }
-        };
-        fetchMasterData();
-      }, []);
-
-    // Product Search Function
     const searchProducts = useCallback(async (query: string, vendorId?: number | string) => {
         try {
             setIsSearchingProducts(true);
@@ -129,9 +96,9 @@ export const usePRMasterData = () => {
         currencies,
         masterItems,
         masterUnits,
-        isLoading,
+        isLoading: isLoadingWH || isLoadingPrj || isLoadingTax || isLoadingUnits || isLoadingCurr || isLoadingCC || isLoadingItems,
         isSearchingProducts,
         searchProducts,
-        error
+        error: null
     };
 };

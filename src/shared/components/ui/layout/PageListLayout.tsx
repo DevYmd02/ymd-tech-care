@@ -112,7 +112,6 @@ export const PageListLayout: React.FC<PageListLayoutProps> = ({
     showSearchForm = true,
     searchFormTitle = 'ฟอร์มค้นหาข้อมูล',
     children,
-    isLoading = false,
     totalCount,
     totalCountLoading = false,
 }) => {
@@ -163,16 +162,6 @@ export const PageListLayout: React.FC<PageListLayoutProps> = ({
                     <p className="text-lg font-bold text-gray-700 dark:text-gray-200">
                         พบข้อมูล <span className="text-blue-600 dark:text-blue-400 mx-1">{totalCount.toLocaleString()}</span> รายการ
                     </p>
-                </div>
-            )}
-
-            {/* ==================== LOADING OVERLAY ==================== */}
-            {isLoading && (
-                <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-xl flex items-center gap-3">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
-                        <span className="text-gray-700 dark:text-gray-200">กำลังโหลด...</span>
-                    </div>
                 </div>
             )}
 
