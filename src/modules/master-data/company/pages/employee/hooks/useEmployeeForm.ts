@@ -11,6 +11,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { OrgEmployeeService } from '@company/services/employee.service';
 import { EmployeeSideService } from '@company/services/employee-side.service';
 import { PositionService } from '@company/services/org-position.service';
+import { EmployeeGroupService } from '@company/services/employee-group.service';
 import type { EmployeeFormData, EmployeeSignature } from '@company/types/employee.types';
 import { logger } from '@/shared/utils/logger';
 
@@ -139,8 +140,22 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         enabled: isOpen,
     });
 
+    const { data: empGroupsData } = useQuery({
+        queryKey: ['employee-groups-dropdown'],
+        queryFn: () => EmployeeGroupService.getList({ page: 1, limit: 1000 }),
+        enabled: isOpen,
+    });
+
+    const { data: headsData } = useQuery({
+        queryKey: ['employees-head-dropdown'],
+        queryFn: () => OrgEmployeeService.getList({ page: 1, limit: 1000 }),
+        enabled: isOpen,
+    });
+
     const sides = useMemo(() => sidesData?.items || [], [sidesData]);
     const positions = useMemo(() => positionsData?.items || [], [positionsData]);
+    const employeeGroups = useMemo(() => empGroupsData?.items || [], [empGroupsData]);
+    const heads = useMemo(() => headsData?.items || [], [headsData]);
 
     // Fetch data for edit
     const { data: initialData } = useQuery({
@@ -264,6 +279,8 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         errors,
         sides,
         positions,
+        employeeGroups,
+        heads,
         signatureFields,
         isSubmitting: saveMutation.isPending,
         isUploading: uploadSignatureMutation.isPending,

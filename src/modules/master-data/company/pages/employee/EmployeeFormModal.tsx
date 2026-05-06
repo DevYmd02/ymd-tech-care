@@ -3,10 +3,10 @@
  * @description Modal for creating/editing Employee data — full field set matching M16 schema
  */
 
-import { useWatch } from 'react-hook-form';
+import { useWatch, Controller } from 'react-hook-form';
 import { Save, X, User, MapPin, Building2, CalendarDays, FileText, Plus, Trash2 } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@ui';
+import { DialogFormLayout, CustomDateInput } from '@ui';
 import { useEmployeeForm } from './hooks/useEmployeeForm';
 
 interface EmployeeFormModalProps {
@@ -18,8 +18,8 @@ interface EmployeeFormModalProps {
 
 // ─── Options ────────────────────────────────────────────────────────────────
 
-const THAI_TITLE_OPTIONS = ['นาย', 'นาง', 'นางสาว', 'ดร.', 'อื่นๆ'];
-const ENG_TITLE_OPTIONS  = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Other'];
+const THAI_TITLE_OPTIONS = ['นาย', 'นาง', 'นางสาว'];
+const ENG_TITLE_OPTIONS  = ['Mr.', 'Mrs.', 'Ms.'];
 
 const EMP_TYPE_OPTIONS = [
     { value: 'S', label: 'S - พนักงานขาย' },
@@ -58,6 +58,8 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
         errors,
         sides,
         positions,
+        employeeGroups,
+        heads,
         signatureFields,
         isSubmitting,
         isUploading,
@@ -372,19 +374,28 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                 className={`${styles.input} cursor-pointer`}
                             >
                                 <option value="">-- เลือกกลุ่มพนักงาน --</option>
-                                {/* TODO: populate from emp-group API */}
+                                {employeeGroups.map(group => (
+                                    <option key={group.employee_group_id} value={String(group.employee_group_id)}>
+                                        {group.employee_group_code} - {group.employee_group_name}
+                                    </option>
+                                ))}
                             </select>
                             <Hint text="varchar(25) emp_group_code / uuid emp_group_id (FK)" />
                         </div>
 
                         <div>
                             <label className={styles.label}>รหัสหัวหน้า</label>
-                            <input
-                                {...register('empHeadCode')}
-                                type="text"
-                                placeholder="EMP-001"
-                                className={styles.input}
-                            />
+                            <select
+                                {...register('empHead')}
+                                className={`${styles.input} cursor-pointer`}
+                            >
+                                <option value="">-- เลือกหัวหน้างาน --</option>
+                                {heads.map(head => (
+                                    <option key={head.employee_id || head.id} value={String(head.employee_id || head.id)}>
+                                        {head.employee_code || '-'} - {head.employee_name || '-'}
+                                    </option>
+                                ))}
+                            </select>
                             <Hint text="varchar(25) emp_head_code / uuid emp_head" />
                         </div>
                     </div>
@@ -426,20 +437,32 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label className={styles.label}>วันที่เข้างาน</label>
-                            <input
-                                {...register('empStartDate')}
-                                type="date"
-                                className={styles.input}
+                            <Controller
+                                control={control}
+                                name="empStartDate"
+                                render={({ field }) => (
+                                    <CustomDateInput
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        className={styles.input}
+                                    />
+                                )}
                             />
                             <Hint text="datetime(8) - วันที่เข้างาน" />
                         </div>
 
                         <div>
                             <label className={styles.label}>วันที่ลาออก</label>
-                            <input
-                                {...register('empResignDate')}
-                                type="date"
-                                className={styles.input}
+                            <Controller
+                                control={control}
+                                name="empResignDate"
+                                render={({ field }) => (
+                                    <CustomDateInput
+                                        value={field.value}
+                                        onChange={field.onChange}
+                                        className={styles.input}
+                                    />
+                                )}
                             />
                             <Hint text="datetime(8) - วันที่ลาออก" />
                         </div>
