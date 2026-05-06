@@ -14,7 +14,7 @@ import { VQFormHeader } from './VQFormHeader';
 import { VQFormLines } from './VQFormLines';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { RFQHeader } from '@/modules/procurement/types';
 
 interface Props {

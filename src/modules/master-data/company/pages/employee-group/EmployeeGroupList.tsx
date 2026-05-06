@@ -11,7 +11,7 @@ import {
     UsersRound
 } from 'lucide-react';
 import { EmployeeGroupFormModal } from './EmployeeGroupFormModal';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { useEmployeeGroupList } from './hooks/useEmployeeGroupList';
 import type { EmployeeGroupListItem } from '@company/types/employee-group.types';
 import { ActiveStatusBadge } from '@ui';

@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';

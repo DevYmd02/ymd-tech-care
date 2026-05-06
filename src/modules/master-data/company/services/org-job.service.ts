@@ -5,7 +5,7 @@
 
 import api from '@/core/api/api';
 import type { JobMaster, JobFormData } from '@/modules/master-data/company/types/job.types';
-import { type PaginatedListResponse } from '@/shared/types/api-response.types';
+import { type PaginatedListResponse } from '@/shared/types/api.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 export const JobService = {

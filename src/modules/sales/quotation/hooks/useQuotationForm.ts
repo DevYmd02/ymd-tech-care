@@ -16,7 +16,7 @@ import { PricingService } from '@sales/quotation/services/pricing.service';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
 import type { QuotationFormData, QuotationHeader, RawQuotationLine } from '@sales/quotation/types/quotation.types';
 import { ItemMasterService } from '@inventory/services/item-master.service';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 import { useAuth } from '@core/auth/contexts/AuthContext';
 import { 
     calculateDiscountAmount, 

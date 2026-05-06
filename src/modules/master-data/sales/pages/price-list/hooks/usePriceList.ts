@@ -9,7 +9,7 @@ import { CustomerService } from '@customer/customer-master/services/customer.ser
 import type { PriceListHeader } from '@master-data/sales/pages/price-list/types/price-list.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import toast from 'react-hot-toast';
 
 export function usePriceList() {

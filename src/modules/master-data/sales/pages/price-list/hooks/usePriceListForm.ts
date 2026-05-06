@@ -17,7 +17,7 @@ import { ItemMasterService } from '@inventory/services/item-master.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 import type { FieldErrors } from 'react-hook-form';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 const priceListItemSchema = z.object({
     priceListItemId: z.string().optional(),

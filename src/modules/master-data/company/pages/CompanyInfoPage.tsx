@@ -21,7 +21,7 @@ import { CompanyInfoService } from '../services/company-info.service';
 import { type CompanyInfo, type CompanyInfoFormData } from '../types/company-info.types';
 import toast from 'react-hot-toast';
 import { extractErrorMessage } from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 /**
  * @file CompanyInfoPage.tsx

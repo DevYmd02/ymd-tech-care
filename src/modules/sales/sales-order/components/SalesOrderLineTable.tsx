@@ -11,7 +11,7 @@ import type { SalesOrderLineValues, SalesOrderFormValues } from '../schemas/sale
 import type { SalesOrderLineData } from '../types/sales-order.types';
 import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 interface SalesOrderLineTableProps {
     lines: SalesOrderLineData[];

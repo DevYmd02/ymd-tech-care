@@ -13,7 +13,7 @@ import {
   mockEmployees 
 } from '@/modules/master-data/mocks/masterDataMocks';
 import { applyMockFilters } from '@/core/api/mockUtils';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { FilterValue } from '@/core/api/mockUtils';
 import type { 
   EmployeeGroupListItem, 

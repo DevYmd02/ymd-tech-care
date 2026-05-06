@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { SaleAreaService } from '../services/area.service';
 import type { SaleAreaListItem } from '../types/area.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export function useSalesAreaList() {
     const { 

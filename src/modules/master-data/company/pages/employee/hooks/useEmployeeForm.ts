@@ -9,36 +9,38 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { OrgEmployeeService } from '@company/services/employee.service';
-import { EmployeeSideService } from '@company/services/employee-side.service';
+import { EmployeeDeptService } from '@company/services/employee-dept.service';
 import { PositionService } from '@company/services/org-position.service';
 import { EmployeeGroupService } from '@company/services/employee-group.service';
 import type { EmployeeFormData, EmployeeSignature } from '@company/types/employee.types';
-import { logger } from '@/shared/utils/logger';
+import { useWatch } from 'react-hook-form';
+import { useDebounce } from '@/shared/hooks/useDebounce';
+import { logger } from '@/shared/utils';
 
 export const employeeSchema = z.object({
     // ข้อมูลพื้นฐาน
     employeeCode:   z.string().min(1, 'กรุณากรอกรหัสพนักงาน').max(25, 'รหัสพนักงานต้องไม่เกิน 25 ตัวอักษร'),
-    taxIdCard:      z.string().max(25).or(z.literal('')),
+    taxIdCard:      z.string().min(1, 'กรุณากรอกเลขประจำตัวประชาชน').max(25).regex(/^\d+$/, 'กรุณากรอกเฉพาะตัวเลข'),
     empTitle:       z.string().min(1, 'กรุณาเลือกคำนำหน้า').max(50),
     empTitleEng:    z.string().max(255).or(z.literal('')),
     empName:        z.string().min(1, 'กรุณากรอกชื่อพนักงาน').max(255),
     empNameEng:     z.string().max(255).or(z.literal('')),
-    tel:            z.string().max(255).or(z.literal('')),
+    tel:            z.string().min(1, 'กรุณากรอกเบอร์โทรศัพท์').max(255).regex(/^\d+$/, 'กรุณากรอกเฉพาะตัวเลข'),
     email:          z.string().email('รูปแบบอีเมลไม่ถูกต้อง').or(z.literal('')),
 
     // ที่อยู่
-    address:        z.string().max(5000).or(z.literal('')),
-    district:       z.string().max(100).or(z.literal('')),
-    amphur:         z.string().max(100).or(z.literal('')),
-    province:       z.string().max(100).or(z.literal('')),
-    postCode:       z.string().max(25).or(z.literal('')),
+    address:        z.string().min(1, 'กรุณากรอกที่อยู่').max(5000),
+    district:       z.string().min(1, 'กรุณากรอกตำบล').max(100),
+    amphur:         z.string().min(1, 'กรุณากรอกอำเภอ').max(100),
+    province:       z.string().min(1, 'กรุณากรอกจังหวัด').max(100),
+    postCode:       z.string().min(1, 'กรุณากรอกรหัสไปรษณีย์').max(25).regex(/^\d+$/, 'กรุณากรอกเฉพาะตัวเลข'),
 
     // ข้อมูลองค์กร
-    deptId:         z.string().or(z.literal('')),
+    deptId:         z.string().min(1, 'กรุณาเลือกแผนก'),
     deptCode:       z.string().max(25).or(z.literal('')),
-    postId:         z.string().or(z.literal('')),
+    postId:         z.string().min(1, 'กรุณาเลือกตำแหน่ง'),
     positionCode:   z.string().max(25).or(z.literal('')),
-    empGroupId:     z.string().or(z.literal('')),
+    empGroupId:     z.string().min(1, 'กรุณาเลือกกลุ่มพนักงาน'),
     empGroupCode:   z.string().max(25).or(z.literal('')),
     empHead:        z.string().or(z.literal('')),
     empHeadCode:    z.string().max(25).or(z.literal('')),
@@ -53,8 +55,12 @@ export const employeeSchema = z.object({
     // อื่นๆ
     empSignature:   z.string().max(255).or(z.literal('')),
     signatures:     z.array(z.object({
-        id:             z.number().optional(),
-        signature_path: z.string(),
+        emp_signature_id: z.number().optional(),
+        emp_id:         z.number().optional(),
+        signature_url:  z.string(),
+        signature_name: z.string().optional(),
+        is_active:      z.boolean().default(true),
+        is_deleted:     z.boolean().default(false),
         file:           z.any().optional(),
         previewUrl:     z.string().optional(),
     })).optional(),
@@ -116,6 +122,8 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         reset,
         setValue,
         control,
+        setError,
+        clearErrors,
         formState: { errors }
     } = useForm<EmployeeFormData>({
         resolver: zodResolver(employeeSchema) as Resolver<EmployeeFormData>,
@@ -128,9 +136,9 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
     });
 
     // Fetch dependencies
-    const { data: sidesData } = useQuery({
-        queryKey: ['employee-sides-dropdown'],
-        queryFn: () => EmployeeSideService.getList({ page: 1, limit: 1000 }),
+    const { data: deptsData } = useQuery({
+        queryKey: ['employee-departments-dropdown'],
+        queryFn: () => EmployeeDeptService.getList({ page: 1, limit: 1000 }),
         enabled: isOpen,
     });
 
@@ -152,10 +160,45 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         enabled: isOpen,
     });
 
-    const sides = useMemo(() => sidesData?.items || [], [sidesData]);
-    const positions = useMemo(() => positionsData?.items || [], [positionsData]);
-    const employeeGroups = useMemo(() => empGroupsData?.items || [], [empGroupsData]);
-    const heads = useMemo(() => headsData?.items || [], [headsData]);
+    const departments = useMemo(() => (deptsData?.items || []).filter(item => item.is_active !== false), [deptsData]);
+    const positions = useMemo(() => (positionsData?.items || []).filter(item => item.is_active !== false), [positionsData]);
+    const employeeGroups = useMemo(() => (empGroupsData?.items || []).filter(item => item.is_active !== false), [empGroupsData]);
+    const heads = useMemo(() => (headsData?.items || []).filter(item => item.is_active !== false), [headsData]);
+    
+    // Real-time Duplicate Check
+    const codeValue = useWatch({ control, name: 'employeeCode' });
+    const debouncedCode = useDebounce(codeValue, 500);
+
+    useEffect(() => {
+        const checkDuplicate = async () => {
+            if (!debouncedCode || isEdit) {
+                if (!isEdit) clearErrors('employeeCode');
+                return;
+            }
+            
+            try {
+                // ค้นหาพนักงานที่มีรหัสตรงกัน
+                const res = await OrgEmployeeService.getList({ search: debouncedCode });
+                const isDuplicate = res.items.some(emp => emp.employee_code === debouncedCode);
+                
+                if (isDuplicate) {
+                    setError('employeeCode', { 
+                        type: 'manual', 
+                        message: 'รหัสพนักงานนี้มีอยู่ในระบบแล้ว' 
+                    });
+                } else {
+                    // ตรวจสอบว่าไม่มี error อื่น (เช่น min length) ก่อน clear
+                    if (debouncedCode.length >= 1 && debouncedCode.length <= 25) {
+                        clearErrors('employeeCode');
+                    }
+                }
+            } catch (error) {
+                logger.error('Error checking duplicate employee code:', error);
+            }
+        };
+
+        void checkDuplicate();
+    }, [debouncedCode, isEdit, setError, clearErrors]);
 
     // Fetch data for edit
     const { data: initialData } = useQuery({
@@ -199,7 +242,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
                 empSignature:  (d['emp_signature'] as string)     || '',
                 signatures:    ((d['signatures'] as EmployeeSignature[]) || []).map(s => ({
                     ...s,
-                    previewUrl: s.signature_path // ใช้ path เป็น preview เบื้องต้น
+                    previewUrl: s.signature_url // ใช้ url เป็น preview เบื้องต้น
                 })),
                 remark:        (d['remark'] as string)            || '',
                 // Legacy
@@ -243,9 +286,11 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         onSuccess: (res) => {
             if (res.success && res.data) {
                 appendSignature({
-                    id: res.data.id,
-                    signature_path: res.data.signature_path,
-                    previewUrl: res.data.signature_path
+                    emp_signature_id: res.data.emp_signature_id,
+                    signature_url: res.data.signature_url,
+                    previewUrl: res.data.signature_url,
+                    is_active: true,
+                    is_deleted: false
                 });
                 queryClient.invalidateQueries({ queryKey: ['employee', editId] });
             }
@@ -259,7 +304,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         },
         onSuccess: (res, variables) => {
             if (res?.success) {
-                const index = signatureFields.findIndex(f => f.id === variables.signatureId);
+                const index = signatureFields.findIndex(f => f.emp_signature_id === variables.signatureId);
                 if (index !== -1) removeSignature(index);
                 queryClient.invalidateQueries({ queryKey: ['employee', editId] });
             }
@@ -277,7 +322,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
     return {
         register,
         errors,
-        sides,
+        departments,
         positions,
         employeeGroups,
         heads,

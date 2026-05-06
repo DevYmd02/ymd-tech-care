@@ -8,7 +8,7 @@ import type { SaleAreaFormData } from '../types/area.types';
 import { extractErrorMessage } from '@/core/api/api';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export const areaSchema = z.object({
     saleAreaCode: z.string()

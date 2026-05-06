@@ -3,7 +3,7 @@ import { MasterDataService } from '@/modules/master-data';
 import type { ItemListItem, CostCenter, Project, WarehouseListItem, UnitListItem, Currency } from '@/modules/master-data/types/master-data-types';
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export interface MappedOption<T> {
     value: number | string;

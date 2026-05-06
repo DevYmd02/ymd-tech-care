@@ -13,7 +13,7 @@ import { AOHistoryModal } from '../shared/components/AOHistoryModal';
 import { useAOListData } from './hooks/useAOListData';
 import type { AOListItem, SOForApproval } from './types/sales-order-approval.types';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'ทั้งหมด' },

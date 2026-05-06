@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { POService } from '@/modules/procurement/services';
 import type { POListItem } from '@/modules/procurement/types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 // ====================================================================================
 // CONFIG

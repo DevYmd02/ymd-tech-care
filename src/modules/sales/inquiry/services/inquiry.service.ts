@@ -4,7 +4,7 @@
  */
 
 
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 
 export interface InquiryListParams {
     inquiry_no?: string;

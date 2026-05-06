@@ -13,7 +13,7 @@ import { PRService } from '@/modules/procurement/services/pr.service';
 import { usePRMasterData } from '@/modules/procurement/pages/pr/hooks/usePRMasterData';
 import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { extractErrorMessage } from '@/core/api/api';
 

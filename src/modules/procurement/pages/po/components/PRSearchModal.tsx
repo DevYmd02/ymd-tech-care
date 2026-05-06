@@ -4,7 +4,7 @@ import { useDebounce } from '@/shared/hooks/useDebounce';
 import type { IReadyForPOPR } from '@/modules/procurement/schemas/qc-schemas';
 import { DialogFormLayout } from '@ui';
 import { Search, Loader2 } from 'lucide-react';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 
 interface PRSearchModalProps {

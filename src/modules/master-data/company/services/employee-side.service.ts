@@ -5,7 +5,7 @@
 
 import api from '@/core/api/api';
 import type { EmployeeSideMaster, EmployeeSideFormData } from '@/modules/master-data/company/types/employee-side.types';
-import { type PaginatedListResponse } from '@/shared/types/api-response.types';
+import { type PaginatedListResponse } from '@/shared/types/api.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 export const EmployeeSideService = {

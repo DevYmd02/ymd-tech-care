@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { Users, Save, X, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { VendorGroupService } from '@/modules/master-data/vendor/services/vendor-group.service';
 
 // ====================================================================================

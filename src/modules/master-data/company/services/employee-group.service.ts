@@ -4,9 +4,9 @@
  */
 
 import api, { extractErrorMessage } from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { EmployeeGroupMaster, EmployeeGroupFormData } from '@/modules/master-data/company/types/employee-group.types';
-import { type PaginatedListResponse } from '@/shared/types/api-response.types';
+import { type PaginatedListResponse } from '@/shared/types/api.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 interface EmployeeGroupPayload {

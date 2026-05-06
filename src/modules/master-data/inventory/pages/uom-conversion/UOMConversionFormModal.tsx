@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { RefreshCcw, Search, Save, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { mockItems, mockUnits, mockUOMConversions } from '@/modules/master-data/mocks/masterDataMocks';
 import type { UOMConversionFormData } from '@/modules/master-data/types/master-data-types';
 import { initialUOMConversionFormData } from '@/modules/master-data/types/master-data-types';

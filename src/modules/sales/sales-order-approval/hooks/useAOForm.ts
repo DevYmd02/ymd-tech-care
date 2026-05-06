@@ -11,7 +11,7 @@ import type { FieldErrors, Path, FieldPathValue } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@ui/feedback/Toast';
 import { useAuth } from '@core/auth/contexts/AuthContext';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 import { calculateLineTotal } from '@sales/shared/utils/sales-calculations';
 
 // Enrichment Services

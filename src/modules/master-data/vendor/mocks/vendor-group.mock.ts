@@ -1,5 +1,5 @@
 import type { VendorGroupMaster } from '../types/vendor-types';
-import type { ListResponse } from '@/shared/types/common-api.types';
+import type { ListResponse } from '@/shared/types/api.types';
 
 const data: VendorGroupMaster[] = [
     {

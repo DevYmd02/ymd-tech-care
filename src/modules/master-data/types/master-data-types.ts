@@ -16,7 +16,22 @@
 // RE-EXPORTS FROM SHARED
 // ====================================================================================
 export * from '@/shared/types/common-master.types';
-export * from '@/shared/types/approval-types';
+export { 
+    type CommonStatus, 
+    type VendorStatus, 
+    type BaseEntity, 
+    type BaseListItem,
+    type ApiResponse,
+    type ListResponse,
+    type ListParams,
+    type PartialExcept,
+    type DropdownItem,
+    type FormMode,
+    type FormState,
+    type ApprovalDocType,
+    type ApprovalFlow,
+    type ApprovalFlowStep
+} from '@/shared/types/common-types';
 
 // ====================================================================================
 // RE-EXPORTS FROM COMPANY MODULE

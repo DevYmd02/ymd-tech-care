@@ -6,7 +6,7 @@ import type { ReservationLineValues, ReservationFormValues } from '../../schemas
 import type { ReservationLineData } from '../../types/reservation.types';
 import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 interface ReservationLineTableProps {
     lines: ReservationLineData[];

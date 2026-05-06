@@ -1,6 +1,6 @@
 import api, { USE_MOCK } from '@/core/api/api';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { MOCK_TAX_CODES } from '@/modules/master-data/mocks/data/taxMocks';
 
 export const TaxCodeService = {

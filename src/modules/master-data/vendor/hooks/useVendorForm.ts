@@ -18,7 +18,7 @@ import {
     initialVendorFormData, 
     toVendorFormData as mapToFormData
 } from '../types/vendor-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { VendorSchema, type VendorSchemaType } from '../types/vendor-schemas';
 
 

@@ -3,7 +3,7 @@ import { DialogFormLayout } from '@ui';
 import { Search, Warehouse } from 'lucide-react';
 import type { WarehouseListItem } from '@master-data/types/master-data-types';
 import { ReservationInventoryService } from '@sales/reservation/services/reservation-inventory.service';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 interface WarehouseStockItem extends WarehouseListItem {
     qty_on_hand?: string | number;

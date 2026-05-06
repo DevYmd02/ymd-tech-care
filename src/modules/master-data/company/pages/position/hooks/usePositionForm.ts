@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PositionService } from '@company/services/org-position.service';
 import type { PositionFormData } from '@company/types/position.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export const positionSchema = z.object({
     positionCode: z.string().min(1, 'กรุณากรอกรหัสตำแหน่ง').max(20, 'รหัสตำแหน่งต้องไม่เกิน 20 ตัวอักษร'),

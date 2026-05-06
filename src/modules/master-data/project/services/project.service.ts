@@ -5,7 +5,7 @@
 
 import api, { USE_MOCK } from '@/core/api/api';
 import type { Project } from '@/modules/master-data/types/master-data-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { mockProjects } from '@/modules/master-data/mocks/masterDataMocks';
 
 export const ProjectService = {

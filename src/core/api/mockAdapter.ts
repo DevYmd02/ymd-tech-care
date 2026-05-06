@@ -1,6 +1,6 @@
 import MockAdapter from 'axios-mock-adapter';
 import type { AxiosInstance } from 'axios';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 // Import Modular Handlers
 import { setupAuthHandlers } from '@/modules/auth/mocks/handlers/auth.handler';

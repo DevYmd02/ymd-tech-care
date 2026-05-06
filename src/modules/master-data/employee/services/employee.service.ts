@@ -5,7 +5,7 @@
 
 import api from '@/core/api/api';
 import type { IEmployeeCreateRequest, IEmployeeResponse, IEmployee } from '@/modules/master-data/company/types/employee-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export const EmployeeService = {
   createEmployee: async (data: IEmployeeCreateRequest): Promise<IEmployeeResponse> => {

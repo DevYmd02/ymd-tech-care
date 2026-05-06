@@ -5,7 +5,7 @@
  */
 
 import api from '@core/api/api';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 
 export interface PricingCalculateParams {
     itemId: string | number;

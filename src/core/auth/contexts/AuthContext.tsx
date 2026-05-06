@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthService } from '@/core/auth/auth.service';
 import type { LoginPayload, UserProfile } from '@/core/auth/auth.service';
 import { setUnauthorizedHandler } from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 interface AuthContextType {
   isAuthenticated: boolean;

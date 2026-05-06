@@ -11,7 +11,7 @@ import { useTableFilters, useDebounce, useConfirmation } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import { CustomerGroupService } from '@customer/customer-group/services/customer-group.service';
 import type { CustomerGroup } from '@customer/customer-group/types/customer-group.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { CustomerGroupFormModal } from './CustomerGroupFormModal';
 
 export default function CustomerGroupList() {

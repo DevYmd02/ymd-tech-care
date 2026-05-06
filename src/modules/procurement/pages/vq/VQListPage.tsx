@@ -27,7 +27,7 @@ const VQVendorTrackingModal = lazy(() => import('./components/VQVendorTrackingMo
 
 // import { RFQSendConfirmModal } from '@/modules/procurement/pages/rfq/components/RFQSendConfirmModal';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 import { getColumns, getPendingColumns } from './components/VQColumns';
 import { RFQNoDisplay, PRNoDisplay } from './components/VQColumnComponents';

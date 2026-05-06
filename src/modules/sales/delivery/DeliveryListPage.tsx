@@ -10,7 +10,7 @@ import { Truck, Search, Plus, Eye, Edit } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { DeliveryService, type DeliveryHeader } from './services/delivery.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import { useConfirmation } from '@hooks/useConfirmation';
 import { DeliveryFormModal } from './components/DeliveryFormModal';

@@ -9,7 +9,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Save } from 'lucide-react';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 

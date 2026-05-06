@@ -11,7 +11,7 @@ import { Layers, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { CurrencyService } from '@currency/services/currency.service';
 import { DialogFormLayout, useToast } from '@ui';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { exchangeRateTypeSchema, type ExchangeRateTypeFormValues, type ExchangeRateType } from '@currency/types/currency-types';
 
 interface Props {

@@ -4,12 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
 import { useDebounce } from '@hooks/useDebounce';
 import { AQService } from '../services/aq.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { SQForApproval } from '../types/quotation-approve.types';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import { extractArrayFromResponse } from '@utils/clientFilterUtils';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 export interface AQSQSearchModalProps {
   isOpen: boolean;

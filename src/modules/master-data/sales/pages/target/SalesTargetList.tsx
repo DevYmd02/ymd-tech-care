@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Target, Users, Package } from 'lucide-react';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 // Components
 import { 

@@ -1,10 +1,10 @@
 import api, { USE_MOCK } from '@/core/api/api';
 import type { VendorTypeMaster, VendorTypeFormData } from '../types/vendor-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { MOCK_VENDOR_TYPES } from '../mocks/vendor-type.mock';
-import type { SuccessResponse } from '@/shared/types/api-response.types';
+import type { SuccessResponse } from '@/shared/types/api.types';
 
-import type { ListResponse } from '@/shared/types/common-api.types';
+import type { ListResponse } from '@/shared/types/api.types';
 
 // Local in-memory store
 const localVendorTypes: ListResponse<VendorTypeMaster> = { ...MOCK_VENDOR_TYPES };

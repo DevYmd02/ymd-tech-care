@@ -3,7 +3,7 @@ import { Search, Check, FileText, Loader2 } from 'lucide-react';
 import type { PRHeader } from '@/modules/procurement/types';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 
 interface PRSourceSelectionModalProps {

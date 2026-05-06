@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { WarehouseService } from '../services/warehouse.service';
 import { BranchService } from '@/modules/master-data/company/services/org-branch.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { WarehouseMaster, WarehouseCreateRequest } from '@/modules/master-data/types/master-data-types';
 
 export const warehouseSchema = z.object({

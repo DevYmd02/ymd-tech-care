@@ -1,8 +1,8 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { GRNListParams, GRNListResponse, GRNListItem, GRNSummaryCounts, CreateGRNPayload } from '@/modules/procurement/types';
-import type { SuccessResponse } from '@/shared/types/api-response.types';
+import type { SuccessResponse } from '@/shared/types/api.types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
 const BASE_URL = '/procurement/grn';

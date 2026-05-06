@@ -3,7 +3,7 @@ import { Save, Plus, Calendar } from 'lucide-react';
 import { DialogFormLayout, CustomDateInput } from '@ui';
 import { LotNoService } from '@/modules/master-data/inventory/services/inventory-master.service';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { LotNoFormData } from '@/modules/master-data/inventory/types/inventory-master.types';
 
 interface LotCreateModalProps {

@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useToast } from '@ui/feedback/Toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { ICOption, ICOptionFilters } from '../types/ic-option.types';
 import { ICOptionService } from '../services/ic-option.service';
 import { BranchService } from '@/modules/master-data/company/services/branch.service';

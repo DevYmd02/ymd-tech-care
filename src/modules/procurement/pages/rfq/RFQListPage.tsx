@@ -15,7 +15,7 @@ import { PageListLayout, SmartTable, RFQStatusBadge, FilterField, MobileListCard
 import { useTableFilters } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 // Services & Types
 import { RFQService, PRService, AVService } from '@/modules/procurement/services';
 import type { RFQFilterCriteria, RFQHeader, RFQStatus, SendRFQToVendorPayload } from '@/modules/procurement/types';

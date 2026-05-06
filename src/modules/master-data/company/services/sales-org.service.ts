@@ -4,7 +4,7 @@
  */
 
 import api from '@/core/api/api';
-import { type PaginatedListResponse } from '@/shared/types/api-response.types';
+import { type PaginatedListResponse } from '@/shared/types/api.types';
 import { type SaleAreaMaster as SalesZoneMaster, type SaleAreaFormData as SalesZoneFormData } from '@master-data/sales/pages/area/types/area.types';
 import { type SalesChannelMaster, type SalesChannelFormData } from '@master-data/sales/pages/channel/types/channel.types';
 import { type SalePeriodMaster, type SalePeriodFormData } from '@master-data/sales/pages/target/types/sale-period.types';

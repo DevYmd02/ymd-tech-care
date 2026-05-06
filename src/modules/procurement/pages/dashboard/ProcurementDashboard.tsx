@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { Card, StatCard } from '@ui';
 import { ProcurementDashboardService, type DashboardData } from '../../services';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 // Lazy load heavy chart components
 const ProcurementCharts = lazy(() => import('./components/ProcurementCharts'));

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } fr
 import { CustomerTypeService } from '@customer/customer-type/services/customer-type.service';
 import { initialCustomerTypeFormData, type CustomerTypeFormData } from '@customer/customer-type/types/customer-type.types';
 import { toast } from 'react-hot-toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { extractErrorMessage } from '@/core/api/api';
 import { useDebounce } from '@/shared/hooks';
 

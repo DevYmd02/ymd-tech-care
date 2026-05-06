@@ -259,6 +259,7 @@ export interface AOListItem {
   approval_emp_name?: string;
   base_total_amount?: number;
   quote_total_amount?: number;
+  total_amount?: number;
   so_id?: string | number;
   so_no?: string;
   so_date?: string;

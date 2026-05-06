@@ -12,9 +12,9 @@ import { RSActionsCell } from './components/form/RSActionsCell';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 import { ReservationService } from './services/reservation.service';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 // ====================================================================================
 // CONSTANTS
 // ====================================================================================

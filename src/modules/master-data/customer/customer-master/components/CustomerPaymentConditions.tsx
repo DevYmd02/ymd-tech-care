@@ -5,7 +5,7 @@ import type { CustomerFormData } from '@customer/customer-master/types/customer-
 import { useState, useEffect } from 'react';
 import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
 import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/price-level-name.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 interface CustomerPaymentConditionsProps {
     formData: CustomerFormData;

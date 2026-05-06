@@ -4,18 +4,22 @@
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const unwrapResponseData = (response: any): any => {
-    if (!response) return response;
+    if (!response || typeof response !== 'object') return response;
+    
     let unwrapped = response;
     let depth = 0;
+    
     while (unwrapped && unwrapped.data !== undefined && !Array.isArray(unwrapped.data) && typeof unwrapped.data === 'object' && depth < 3) {
         unwrapped = unwrapped.data;
         depth++;
     }
+    
     if (unwrapped && unwrapped.data !== undefined) {
         return unwrapped.data;
     }
     return unwrapped;
 };
+
 
 /**
  * Scan an object for any array property that looks like line items.
@@ -24,6 +28,7 @@ export const unwrapResponseData = (response: any): any => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const extractLinesArray = (data: any): any[] => {
     if (!data || typeof data !== 'object') return [];
+    
     const possibleArrays = [
         data.lines, data.vqLines, data.vq_lines, 
         data.prLines, data.pr_lines, data.prLinesRaw,
@@ -31,11 +36,17 @@ export const extractLinesArray = (data: any): any[] => {
         data.rfqLines, data.rfq_lines, data.rfq_items,
         data.po_lines, data.poLines
     ];
+    
     for (const arr of possibleArrays) {
         if (Array.isArray(arr) && arr.length > 0) return arr;
     }
+    
     for (const arr of possibleArrays) {
         if (Array.isArray(arr)) return arr;
     }
+    
     return [];
 };
+
+
+

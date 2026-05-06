@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, Search, Plus, Save, Trash2, X, Loader2 } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { mockBranches } from '@/modules/master-data/mocks/masterDataMocks';
 import type { BranchFormData } from '@/modules/master-data/types/master-data-types';
 import { initialBranchFormData } from '@/modules/master-data/types/master-data-types';

@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { EmployeeGroupService } from '@company/services/employee-group.service';
 import type { EmployeeGroupFormData } from '@company/types/employee-group.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { extractErrorMessage } from '@/core/api/api';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';

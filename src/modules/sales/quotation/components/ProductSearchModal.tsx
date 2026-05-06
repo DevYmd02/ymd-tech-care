@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, Package, Check, X } from 'lucide-react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@/shared/utils';
 import { ItemMasterService } from '@inventory/services/item-master.service';
 import type { ItemListItem } from '@inventory/types/product-types';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@hooks/useDebounce';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 /**
  * @file ProductSearchModal.tsx

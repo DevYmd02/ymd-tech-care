@@ -1,9 +1,9 @@
 import api, { USE_MOCK } from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { mockItemBarcodes } from '@/modules/master-data/mocks/masterDataMocks';
 import type { ItemBarcodeListItem, ItemBarcodeCreateRequest, ItemBarcodeUpdateRequest, ItemBarcode } from '@/modules/master-data/types/master-data-types';
-import type { ListResponse } from '@/shared/types/common-api.types';
-import type { SuccessResponse } from '@/shared/types/api-response.types';
+import type { ListResponse } from '@/shared/types/api.types';
+import type { SuccessResponse } from '@/shared/types/api.types';
 
 export const ItemBarcodeService = {
   getAll: async (params?: { item_id?: number; barcode?: string }): Promise<ListResponse<ItemBarcodeListItem>> => {

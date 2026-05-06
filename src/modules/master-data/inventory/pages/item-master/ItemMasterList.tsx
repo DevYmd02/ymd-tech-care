@@ -7,7 +7,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { Package, Edit2, Trash2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ItemMasterService } from '@inventory/services/item-master.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { ItemListItem } from '@master-data/types/master-data-types';
 import { ItemMasterFormModal } from './ItemMasterFormModal';
 import { ItemLotModal } from './components/ItemLotModal';

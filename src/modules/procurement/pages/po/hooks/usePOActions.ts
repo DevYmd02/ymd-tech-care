@@ -4,7 +4,7 @@ import { useConfirmation } from '@/shared/hooks';
 import { POService } from '@/modules/procurement/services';
 import type { POListItem } from '@/modules/procurement/types';
 import { Send } from 'lucide-react';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 // ====================================================================================
 // HOOK

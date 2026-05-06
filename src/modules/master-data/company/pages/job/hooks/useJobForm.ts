@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { JobService } from '@company/services/org-job.service';
 import type { JobFormData } from '@company/types/job.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export const jobSchema = z.object({
     jobCode: z.string().min(1, 'กรุณากรอกรหัส Job').max(20, 'รหัส Job ต้องไม่เกิน 20 ตัวอักษร'),

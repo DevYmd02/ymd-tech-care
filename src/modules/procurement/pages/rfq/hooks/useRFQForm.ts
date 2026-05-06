@@ -12,7 +12,7 @@ import type { PRHeader } from '@/modules/procurement/types';
 import type { Resolver } from 'react-hook-form';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { RFQService, type RFQCreateDTO, type RFQLineDTO } from '@/modules/procurement/services/rfq.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { useQuery } from '@tanstack/react-query';
 import { 

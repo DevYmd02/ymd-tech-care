@@ -12,7 +12,7 @@
  * @see src/core/api/mockUtils.ts — the original mock filtering logic this mirrors
  */
 
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

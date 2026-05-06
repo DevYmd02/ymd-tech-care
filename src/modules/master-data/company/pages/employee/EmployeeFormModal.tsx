@@ -56,7 +56,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
     const {
         register,
         errors,
-        sides,
+        departments,
         positions,
         employeeGroups,
         heads,
@@ -75,28 +75,46 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
 
     // ── Footer ──────────────────────────────────────────────────────────────
     const FormFooter = (
-        <div className="flex justify-end gap-3 px-6 py-4">
-            <button
-                type="button"
-                className="px-5 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg flex items-center gap-2 transition-colors border border-gray-300 dark:border-gray-600 font-medium"
-                onClick={onClose}
-            >
-                <X className="w-4 h-4" />
-                ยกเลิก
-            </button>
-            <button
-                type="button"
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50 font-medium"
-                onClick={handleSave}
-                disabled={isSubmitting}
-            >
-                {isSubmitting ? (
-                    <span className="loading loading-spinner loading-xs" />
-                ) : (
-                    <Save className="w-4 h-4" />
-                )}
-                บันทึก
-            </button>
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+            {/* Status Toggle on the left */}
+            <div className="flex items-center gap-3">
+                <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                        type="checkbox" 
+                        className="sr-only peer" 
+                        checked={isActive}
+                        onChange={(e) => setValue('isActive', e.target.checked)}
+                    />
+                    <div className="w-10 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-emerald-300 dark:peer-focus:ring-emerald-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                </label>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    สถานะการใช้งาน {isActive ? '(Active)' : '(Inactive)'}
+                </span>
+            </div>
+
+            <div className="flex gap-3">
+                <button
+                    type="button"
+                    className="px-5 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg flex items-center gap-2 transition-colors border border-gray-300 dark:border-gray-600 font-medium"
+                    onClick={onClose}
+                >
+                    <X className="w-4 h-4" />
+                    ยกเลิก
+                </button>
+                <button
+                    type="button"
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50 font-medium"
+                    onClick={handleSave}
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? (
+                        <span className="loading loading-spinner loading-xs" />
+                    ) : (
+                        <Save className="w-4 h-4" />
+                    )}
+                    บันทึก
+                </button>
+            </div>
         </div>
     );
 
@@ -125,7 +143,6 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                             <input
                                 {...register('employeeCode')}
                                 type="text"
-                                placeholder="EMP-001"
                                 className={`${styles.input} ${errors.employeeCode ? 'border-red-500 focus:ring-red-200' : ''}`}
                                 disabled={isEdit}
                             />
@@ -137,14 +154,22 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                         </div>
 
                         <div>
-                            <label className={styles.label}>เลขประจำตัวประชาชน</label>
+                            <label className={styles.label}>
+                                เลขประจำตัวประชาชน <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 {...register('taxIdCard')}
                                 type="text"
-                                placeholder="1234567890123"
-                                className={styles.input}
+                                className={`${styles.input} ${errors.taxIdCard ? 'border-red-500 focus:ring-red-200' : ''}`}
+                                onInput={(e) => {
+                                    e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '');
+                                }}
                             />
-                            <Hint text="varchar(25) - เลขประจำตัวประชาชน" />
+                            {errors.taxIdCard ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.taxIdCard.message}</p>
+                            ) : (
+                                <Hint text="varchar(25) - เลขประจำตัวประชาชน" />
+                            )}
                         </div>
                     </div>
 
@@ -194,7 +219,6 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                             <input
                                 {...register('empName')}
                                 type="text"
-                                placeholder="สมชาย ใจดี"
                                 className={`${styles.input} ${errors.empName ? 'border-red-500' : ''}`}
                             />
                             {errors.empName ? (
@@ -209,7 +233,6 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                             <input
                                 {...register('empNameEng')}
                                 type="text"
-                                placeholder="Somchai Jaidee"
                                 className={styles.input}
                             />
                             <Hint text="varchar(255) - ชื่อพนักงาน (Eng)" />
@@ -219,14 +242,22 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                     {/* Row 4: โทรศัพท์ + Email */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className={styles.label}>โทรศัพท์</label>
+                            <label className={styles.label}>
+                                โทรศัพท์ <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 {...register('tel')}
                                 type="text"
-                                placeholder="081-234-5678"
-                                className={styles.input}
+                                className={`${styles.input} ${errors.tel ? 'border-red-500 focus:ring-red-200' : ''}`}
+                                onInput={(e) => {
+                                    e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '');
+                                }}
                             />
-                            <Hint text="varchar(255) - โทรศัพท์" />
+                            {errors.tel ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.tel.message}</p>
+                            ) : (
+                                <Hint text="varchar(255) - โทรศัพท์" />
+                            )}
                         </div>
 
                         <div>
@@ -234,7 +265,6 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                             <input
                                 {...register('email')}
                                 type="email"
-                                placeholder="employee@company.com"
                                 className={`${styles.input} ${errors.email ? 'border-red-500' : ''}`}
                             />
                             {errors.email ? (
@@ -254,60 +284,88 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
 
                     {/* Address full width */}
                     <div className="mb-4">
-                        <label className={styles.label}>ที่อยู่</label>
+                        <label className={styles.label}>
+                            ที่อยู่ <span className="text-red-500">*</span>
+                        </label>
                         <textarea
                             {...register('address')}
                             rows={3}
-                            placeholder="123 ถนน..."
-                            className={`${styles.input} resize-y`}
+                            className={`${styles.input} resize-y ${errors.address ? 'border-red-500 focus:ring-red-200' : ''}`}
                         />
-                        <Hint text="text - ที่อยู่" />
+                        {errors.address ? (
+                            <p className="text-red-500 text-xs mt-1">{errors.address.message}</p>
+                        ) : (
+                            <Hint text="text - ที่อยู่" />
+                        )}
                     </div>
 
                     {/* ตำบล อำเภอ จังหวัด รหัสไปรษณีย์ */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
-                            <label className={styles.label}>ตำบล</label>
+                            <label className={styles.label}>
+                                ตำบล <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 {...register('district')}
                                 type="text"
-                                placeholder="คลองเดย"
-                                className={styles.input}
+                                className={`${styles.input} ${errors.district ? 'border-red-500 focus:ring-red-200' : ''}`}
                             />
-                            <Hint text="varchar(100) - ตำบล" />
+                            {errors.district ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.district.message}</p>
+                            ) : (
+                                <Hint text="varchar(100) - ตำบล" />
+                            )}
                         </div>
 
                         <div>
-                            <label className={styles.label}>อำเภอ</label>
+                            <label className={styles.label}>
+                                อำเภอ <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 {...register('amphur')}
                                 type="text"
-                                placeholder="คลองเดย"
-                                className={styles.input}
+                                className={`${styles.input} ${errors.amphur ? 'border-red-500 focus:ring-red-200' : ''}`}
                             />
-                            <Hint text="varchar(100) - อำเภอ" />
+                            {errors.amphur ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.amphur.message}</p>
+                            ) : (
+                                <Hint text="varchar(100) - อำเภอ" />
+                            )}
                         </div>
 
                         <div>
-                            <label className={styles.label}>จังหวัด</label>
+                            <label className={styles.label}>
+                                จังหวัด <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 {...register('province')}
                                 type="text"
-                                placeholder="กรุงเทพมหานคร"
-                                className={styles.input}
+                                className={`${styles.input} ${errors.province ? 'border-red-500 focus:ring-red-200' : ''}`}
                             />
-                            <Hint text="varchar(100) - จังหวัด" />
+                            {errors.province ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.province.message}</p>
+                            ) : (
+                                <Hint text="varchar(100) - จังหวัด" />
+                            )}
                         </div>
 
                         <div>
-                            <label className={styles.label}>รหัสไปรษณีย์</label>
+                            <label className={styles.label}>
+                                รหัสไปรษณีย์ <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 {...register('postCode')}
                                 type="text"
-                                placeholder="10110"
-                                className={styles.input}
+                                className={`${styles.input} ${errors.postCode ? 'border-red-500 focus:ring-red-200' : ''}`}
+                                onInput={(e) => {
+                                    e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '');
+                                }}
                             />
-                            <Hint text="varchar(25) - รหัสไปรษณีย์" />
+                            {errors.postCode ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.postCode.message}</p>
+                            ) : (
+                                <Hint text="varchar(25) - รหัสไปรษณีย์" />
+                            )}
                         </div>
                     </div>
                 </section>
@@ -322,31 +380,39 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         {/* แผนก */}
                         <div>
-                            <label className={styles.label}>แผนก</label>
+                            <label className={styles.label}>
+                                แผนก <span className="text-red-500">*</span>
+                            </label>
                             <select
                                 {...register('deptId')}
-                                className={`${styles.input} cursor-pointer`}
+                                className={`${styles.input} cursor-pointer ${errors.deptId ? 'border-red-500' : ''}`}
                             >
                                 <option value="">-- เลือกแผนก --</option>
-                                {sides.map(side => (
+                                {departments.map(dept => (
                                     <option
-                                        key={side.side_id || side.department_id || side.emp_side_id}
-                                        value={String(side.side_id || side.department_id || side.emp_side_id || '')}
+                                        key={dept.emp_dept_id || dept.id}
+                                        value={String(dept.emp_dept_id || dept.id || '')}
                                     >
-                                        {side.emp_side_code || side.side_code || side.department_code || '-'} -{' '}
-                                        {side.emp_side_name || side.side_name || side.department_name || '-'}
+                                        {dept.emp_dept_code || dept.dept_code || '-'} -{' '}
+                                        {dept.emp_dept_name || dept.dept_name || '-'}
                                     </option>
                                 ))}
                             </select>
-                            <Hint text="varchar(25) dept_code / uuid dept_id (FK)" />
+                            {errors.deptId ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.deptId.message}</p>
+                            ) : (
+                                <Hint text="varchar(25) dept_code / uuid dept_id (FK)" />
+                            )}
                         </div>
 
                         {/* ตำแหน่ง */}
                         <div>
-                            <label className={styles.label}>ตำแหน่ง</label>
+                            <label className={styles.label}>
+                                ตำแหน่ง <span className="text-red-500">*</span>
+                            </label>
                             <select
                                 {...register('postId')}
-                                className={`${styles.input} cursor-pointer`}
+                                className={`${styles.input} cursor-pointer ${errors.postId ? 'border-red-500' : ''}`}
                                 onChange={(e) => {
                                     const pos = positions.find(p => String(p.position_id) === e.target.value);
                                     setValue('postId', e.target.value);
@@ -361,17 +427,23 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                     </option>
                                 ))}
                             </select>
-                            <Hint text="varchar(25) position_code / uuid post_id (FK)" />
+                            {errors.postId ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.postId.message}</p>
+                            ) : (
+                                <Hint text="varchar(25) position_code / uuid post_id (FK)" />
+                            )}
                         </div>
                     </div>
 
                     {/* Row 2: กลุ่มพนักงาน + รหัสหัวหน้า */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div>
-                            <label className={styles.label}>กลุ่มพนักงาน</label>
+                            <label className={styles.label}>
+                                กลุ่มพนักงาน <span className="text-red-500">*</span>
+                            </label>
                             <select
                                 {...register('empGroupId')}
-                                className={`${styles.input} cursor-pointer`}
+                                className={`${styles.input} cursor-pointer ${errors.empGroupId ? 'border-red-500' : ''}`}
                             >
                                 <option value="">-- เลือกกลุ่มพนักงาน --</option>
                                 {employeeGroups.map(group => (
@@ -380,7 +452,11 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                     </option>
                                 ))}
                             </select>
-                            <Hint text="varchar(25) emp_group_code / uuid emp_group_id (FK)" />
+                            {errors.empGroupId ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.empGroupId.message}</p>
+                            ) : (
+                                <Hint text="varchar(25) emp_group_code / uuid emp_group_id (FK)" />
+                            )}
                         </div>
 
                         <div>
@@ -420,8 +496,10 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                             <input
                                 {...register('taxId')}
                                 type="text"
-                                placeholder="TAX-001"
                                 className={styles.input}
+                                onInput={(e) => {
+                                    e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '');
+                                }}
                             />
                             <Hint text="varchar(25) - เลขประจำตัวผู้เสียภาษี" />
                         </div>
@@ -555,7 +633,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                                 className="p-1.5 bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-500 hover:text-white rounded-md transition-colors disabled:opacity-50"
                                                 disabled={isDeleting}
                                                 onClick={() => {
-                                                    if (field.id) handleDeleteSignature(field.id);
+                                                    if (field.emp_signature_id) handleDeleteSignature(field.emp_signature_id);
                                                 }}
                                                 title="ลบลายเซ็นต์"
                                             >
@@ -575,26 +653,11 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                         <textarea
                             {...register('remark')}
                             rows={3}
-                            placeholder="หมายเหตุ..."
                             className={`${styles.input} resize-y`}
                         />
                         <Hint text="varchar(255) - หมายเหตุ" />
                     </div>
 
-                    {/* Active status toggle */}
-                    <div>
-                        <label className={styles.label}>
-                            สถานะการใช้งาน <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            className={`${styles.input} cursor-pointer`}
-                            value={isActive ? 'true' : 'false'}
-                            onChange={(e) => setValue('isActive', e.target.value === 'true')}
-                        >
-                            <option value="true">ใช้งาน (Active)</option>
-                            <option value="false">ไม่ใช้งาน (Inactive)</option>
-                        </select>
-                    </div>
                 </section>
 
             </div>

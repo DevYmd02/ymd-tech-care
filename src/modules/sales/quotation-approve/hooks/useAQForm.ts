@@ -12,7 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';
 import { useAuth } from '@core/auth/contexts/AuthContext';
 import { extractErrorMessage } from '@core/api/api';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 import { calculateLineTotal } from '@sales/shared/utils/sales-calculations';
 
 // Enrichment Services

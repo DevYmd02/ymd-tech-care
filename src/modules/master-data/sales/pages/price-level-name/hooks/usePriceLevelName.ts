@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
 import type { PriceLevelName } from '../types/price-level-name.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export function usePriceLevelName(isActive: boolean = true) {
     const [allItems, setAllItems] = useState<PriceLevelName[]>([]);

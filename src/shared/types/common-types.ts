@@ -45,29 +45,17 @@ export interface BaseListItem {
 // ====================================================================================
 // API TYPES
 // ====================================================================================
+import type { ApiResponse as BaseApiResponse, DataListResponse, ListParams as BaseListParams } from './api.types';
 
 /** Generic API Response */
-export interface ApiResponse<T = unknown> {
-    success: boolean;
-    message?: string;
-    data?: T;
-}
+export type ApiResponse<T = unknown> = BaseApiResponse<T>;
 
 /** Generic List Response (paginated) */
-export interface ListResponse<T> {
-    data: T[];
-    total: number;
-    page: number;
-    limit: number;
-}
+export type ListResponse<T> = DataListResponse<T>;
 
 /** Generic List Params */
-export interface ListParams {
-    page?: number;
-    limit?: number;
-    search?: string;
-    status?: CommonStatus | 'ALL';
-}
+export type ListParams = BaseListParams;
+
 
 // ====================================================================================
 // UTILITY TYPES
@@ -96,4 +84,30 @@ export interface FormState<T> {
     errors: Partial<Record<keyof T, string>>;
     isSubmitting: boolean;
     isDirty: boolean;
+}
+
+// ====================================================================================
+// APPROVAL WORKFLOW TYPES
+// ====================================================================================
+
+/** ApprovalDocType - ประเภทเอกสารที่ต้องอนุมัติ */
+export type ApprovalDocType = 'PR' | 'PO' | 'GRN' | 'INVOICE';
+
+/** ApprovalFlow - ตารางกำหนดเงื่อนไขการอนุมัติ */
+export interface ApprovalFlow {
+    flow_id: string;
+    doc_type: ApprovalDocType;
+    min_amount: number;
+    max_amount: number;
+    approval_flow_steps?: ApprovalFlowStep[];
+}
+
+/** ApprovalFlowStep - ขั้นตอนการอนุมัติ */
+export interface ApprovalFlowStep {
+    step_id: string;
+    flow_id: string;
+    step_no: number;
+    approver_role_id?: string;
+    approver_user_id?: string;
+    min_approvers: number;
 }

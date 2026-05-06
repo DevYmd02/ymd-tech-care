@@ -19,7 +19,7 @@ import type { CustomerMaster } from '@customer/customer-master/types/customer-ty
 import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 interface Props {
     isOpen: boolean;

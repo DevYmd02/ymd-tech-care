@@ -1,11 +1,15 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, ShoppingCart, Check, X } from 'lucide-react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@/shared/utils';
 import { AOService } from '../services/ao.service';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { SalesOrderService } from '@sales/sales-order/services/sales-order.service';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@hooks/useDebounce';
 import { format } from 'date-fns';
+import { extractArrayFromResponse } from '@utils/clientFilterUtils';
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import type { SOForApproval } from '../types/sales-order-approval.types';
 
 /**
@@ -31,12 +35,46 @@ export const SOSearchModal: React.FC<SOSearchModalProps> = React.memo(({
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearch = useDebounce(searchTerm, 400);
 
-    // Fetch pending sales orders
-    const { data: allSOs = [], isLoading } = useQuery({
-        queryKey: ['pending-sales-orders-lookup'],
-        queryFn: () => AOService.getPendingSOs(),
+    // 1. Customer lookup
+    const { data: customerResponse } = useQuery({
+        queryKey: ['master-customers-lookup'],
+        queryFn: () => CustomerService.getList({ limit: 1000 }),
+        staleTime: 30 * 60 * 1000,
         enabled: isOpen,
-        staleTime: 0, // ดึงข้อมูลใหม่เสมอเมื่อเปิด Modal (Background refetch)
+    });
+
+    const customerMap = useMemo(() => {
+        const map = new Map<string | number, string>();
+        const items = extractArrayFromResponse<CustomerMaster>(customerResponse as object);
+        items.forEach((c) => {
+            map.set(String(c.customer_id), c.customer_name_th || c.customer_name || '');
+        });
+        return map;
+    }, [customerResponse]);
+
+    // 2. SO Number lookup
+    const { data: soResponse } = useQuery({
+        queryKey: ['so-numbers-lookup'],
+        queryFn: () => SalesOrderService.getList({ limit: 1000 }),
+        staleTime: 10 * 60 * 1000,
+        enabled: isOpen,
+    });
+
+    const soNoMap = useMemo(() => {
+        const map = new Map<string | number, string>();
+        const items = (soResponse as unknown as { data?: Record<string, unknown>[] })?.data || [];
+        items.forEach((s) => {
+            map.set(String(s.so_id), String(s.so_no || ''));
+        });
+        return map;
+    }, [soResponse]);
+
+    // 3. Fetch pending sales orders
+    const { data: allSOs = [], isLoading } = useQuery({
+        queryKey: ['pending-sales-orders-lookup', customerMap.size > 0, soNoMap.size > 0],
+        queryFn: () => AOService.getPendingSOs(customerMap, soNoMap),
+        enabled: isOpen,
+        staleTime: 0, 
     });
 
     // Local filtering based on search term

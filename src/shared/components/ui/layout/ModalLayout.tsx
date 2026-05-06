@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@/shared/utils';
 import { styles } from '@/shared/constants/styles';
 
 interface ModalLayoutProps {

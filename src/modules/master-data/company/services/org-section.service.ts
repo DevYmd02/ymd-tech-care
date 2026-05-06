@@ -5,7 +5,7 @@
 
 import api from '@/core/api/api';
 import type { EmployeeDeptMaster, EmployeeDeptFormData } from '@/modules/master-data/company/types/employee-dept.types';
-import { type PaginatedListResponse } from '@/shared/types/api-response.types';
+import { type PaginatedListResponse } from '@/shared/types/api.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 export const EmployeeDeptService = {

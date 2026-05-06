@@ -43,13 +43,29 @@ const mapToAOListItem = (
   const aoNo = String(obj['so_approval_no'] || obj['soApprovalNo'] || obj['ao_no'] || '');
 
   const soDate = String(obj.so_date || obj.sale_order_date || obj.ao_date || obj.created_at || '').split('T')[0];
-  const cid = String(obj.customer_id || '');
-  const rawCustomerName = String(obj.customer_name || obj.customer_name_th || obj.customer_name_en || '');
+  const cid = String(obj.customer_id || soObj?.customer_id || '');
+  const rawCustomerName = String(
+    obj.customer_name || 
+    obj.customer_name_th || 
+    obj.customer_name_en || 
+    soObj?.customer_name || 
+    soObj?.customer_name_th || 
+    soObj?.customer_name_en || 
+    ''
+  );
   
   const customerName = (customerMap?.get(cid)) || (rawCustomerName.includes('Customer ID:') ? '' : rawCustomerName);
-  const customerCode = String(obj.customer_code || '');
+  const customerCode = String(obj.customer_code || soObj?.customer_code || '');
   
-  const displayQuoteAmount = Number(obj.quote_total_amount || obj.base_total_amount || obj.total_amount || 0);
+  const displayQuoteAmount = Number(
+    obj.quote_total_amount || 
+    obj.base_total_amount || 
+    obj.total_amount || 
+    soObj?.total_amount || 
+    soObj?.quote_total_amount || 
+    soObj?.base_total_amount || 
+    0
+  );
   const status = String(obj.status || (isHistory ? 'APPROVED' : 'PENDING')).toUpperCase();
 
   const isRejected = status === 'REJECTED';
@@ -69,8 +85,9 @@ const mapToAOListItem = (
     status,
     approval_emp_name: String(obj.approval_emp_name || obj.approved_by || ''),
     quote_total_amount: finalQuoteAmount,
+    total_amount: finalQuoteAmount,
     base_total_amount: finalBaseAmount,
-    currency: String(obj.currency || obj.quote_currency_code || obj.currency_code || 'THB'),
+    currency: String(obj.currency || obj.quote_currency_code || obj.currency_code || soObj?.currency || 'THB'),
     raw: obj,
   } satisfies AOListItem;
 };

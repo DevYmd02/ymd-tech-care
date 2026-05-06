@@ -13,7 +13,7 @@ import { QuickAdjustStockModal } from '../inventory/QuickAdjustStockModal';
 import { CreateBalanceModal } from '../inventory/CreateBalanceModal';
 import { ItemLotService } from '@inventory/services/item-lot.service';
 import type { ItemLot } from '@inventory/types/item-lot-types';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 export interface LotSearchModalProps {
     isOpen: boolean;

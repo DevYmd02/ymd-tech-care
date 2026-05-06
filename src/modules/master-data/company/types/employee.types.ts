@@ -103,15 +103,19 @@ export interface EmployeeFormData {
 }
 
 /**
- * โครงสร้างข้อมูลลายเซ็นต์พนักงาน
+ * โครงสร้างข้อมูลลายเซ็นต์พนักงาน (ตรงตามตาราง employee_signature)
  */
 export interface EmployeeSignature {
-    id?: number;
-    employee_id?: number;
-    signature_path: string;         // Path หรือ URL ของรูป
-    signature_name?: string;        // ชื่อเรียก (ถ้ามี)
-    file?: File;                    // สำหรับเก็บไฟล์ที่จะอัปโหลด (Client-side only)
-    previewUrl?: string;            // สำหรับแสดง Preview (Client-side only)
+    emp_signature_id?: number;      // Primary Key (ID ลายเซ็นต์)
+    emp_id?: number;                // รหัสพนักงาน (FK ไป employee)
+    signature_url: string;          // ที่อยู่ไฟล์ลายเซ็นต์ (URL / Path)
+    signature_name?: string;        // ชื่อไฟล์ / คำอธิบายลายเซ็นต์
+    is_active: boolean;             // เป็นลายเซ็นต์ที่ใช้งานอยู่หรือไม่
+    is_deleted: boolean;            // สถานะลบ (Soft Delete)
+    
+    // Helper fields สำหรับ Frontend
+    file?: File;                    // สำหรับเก็บไฟล์ที่จะอัปโหลด
+    previewUrl?: string;            // สำหรับแสดง Preview รูปภาพ
 }
 
 export type EmployeeListItem = EmployeeMaster;

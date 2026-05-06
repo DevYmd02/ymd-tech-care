@@ -8,7 +8,7 @@ import { SalesChannelService } from '../services/channel.service';
 import type { SalesChannelListItem } from '../types/channel.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export function useSalesChannelList() {
     const { 

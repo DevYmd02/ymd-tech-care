@@ -13,7 +13,7 @@ import toast from 'react-hot-toast';
 
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import type { ApiPriceLevel } from '../types/price-level.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 const nullableNumber = z.preprocess((val) => {
   if (val === '' || val === undefined || val === null) return null;

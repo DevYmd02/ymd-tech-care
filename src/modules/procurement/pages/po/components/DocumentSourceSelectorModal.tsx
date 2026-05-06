@@ -9,8 +9,8 @@ import { VendorService } from '@/modules/master-data/vendor/services/vendor.serv
 import type { VQListItem, PRHeader } from '@/modules/procurement/types';
 import type { IReadyForPOPR, QCListItem, QCListParams } from '@/modules/procurement/schemas/qc-schemas';
 import { ModalLayout } from '@/shared/components/ui/layout';
-import { cn } from '@/shared/utils/cn';
-import { logger } from '@/shared/utils/logger';
+import { cn } from '@/shared/utils';
+import { logger } from '@/shared/utils';
 
 interface DocumentSourceSelectorModalProps {
     isOpen: boolean;

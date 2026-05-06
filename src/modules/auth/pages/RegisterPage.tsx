@@ -11,7 +11,7 @@ import { Eye, EyeOff, Lock, User, ArrowRight, LayoutDashboard, Briefcase, AlertC
 import { AxiosError } from 'axios';
 import { AuthLayout, AuthInput, AuthLabel, AuthButton } from '@/shared/layouts/AuthLayout';
 import { AuthService } from '@/core/auth/auth.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 interface ApiErrorResponse {
     message: string;

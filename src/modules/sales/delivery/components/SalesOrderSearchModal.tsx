@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo, memo } from 'react';
 import { Search, ShoppingCart, Check, X } from 'lucide-react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@/shared/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@hooks/useDebounce';
 import { SalesOrderService, type SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';

@@ -11,7 +11,7 @@ import { ApprovedPRSelectionModal } from './ApprovedPRSelectionModal';
 import { WindowFormLayout } from '@ui';
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
 import type { PRHeader } from '@/modules/procurement/types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { CancelVendorModal } from './CancelVendorModal';
 import { useState } from 'react';

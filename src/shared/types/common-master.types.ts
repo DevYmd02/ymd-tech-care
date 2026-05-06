@@ -43,26 +43,14 @@ export interface IBaseFormData {
 // ====================================================================================
 // API TYPES - Request/Response (Common for all master data)
 // ====================================================================================
+import type { ListParams, DataListResponse, ApiResponse } from './api.types';
 
 /** Generic list params */
-export interface MasterDataListParams {
-    status?: 'ACTIVE' | 'INACTIVE' | 'ALL';
-    search?: string;
-    page?: number;
-    limit?: number;
-}
+export type MasterDataListParams = ListParams;
 
 /** Generic list response */
-export interface MasterDataListResponse<T> {
-    data: T[];
-    total: number;
-    page: number;
-    limit: number;
-}
+export type MasterDataListResponse<T> = DataListResponse<T>;
 
 /** Generic API response */
-export interface MasterDataResponse<T> {
-    success: boolean;
-    message?: string;
-    data?: T;
-}
+export type MasterDataResponse<T> = ApiResponse<T>;
+

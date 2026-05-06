@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, ClipboardList, Check, X } from 'lucide-react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@/shared/utils';
 import { type ReservationHeader } from '@sales/reservation/services/reservation.service';
 import { SalesOrderService } from '../services/sales-order.service';
 import { useQuery } from '@tanstack/react-query';

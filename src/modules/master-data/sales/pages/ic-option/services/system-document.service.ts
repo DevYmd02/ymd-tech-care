@@ -1,5 +1,5 @@
 import api from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export interface SystemDocument {
     system_document_id: number;

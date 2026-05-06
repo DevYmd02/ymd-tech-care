@@ -11,7 +11,7 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { CustomerTypeService } from '@customer/customer-type/services/customer-type.service';
 import type { CustomerType } from '@customer/customer-type/types/customer-type.types';
 import { toast } from 'react-hot-toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { CustomerTypeFormModal } from './CustomerTypeFormModal';
 
 export default function CustomerTypeList() {

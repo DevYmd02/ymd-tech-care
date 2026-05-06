@@ -4,7 +4,7 @@ import type { DeepPartial } from 'react-hook-form';
 import type { QuotationLineValues, QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { UnitListItem } from '@inventory/types/product-types';
 import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/price-level-name.types';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 interface QuotationLineTableProps {
     lines: DeepPartial<QuotationLineValues>[];
