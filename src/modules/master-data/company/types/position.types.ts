@@ -5,13 +5,13 @@
 
 import type { BaseMasterData } from '@/shared/types/common-master.types';
 
-export interface PositionMaster extends BaseMasterData {
-    id: number;
+export interface PositionMaster extends Partial<BaseMasterData> {
     position_id: number;
     position_code: string;
     position_name: string;
-    position_name_en?: string;
+    position_nameeng?: string;
 }
+
 
 export interface PositionFormData {
     positionCode: string;
@@ -20,4 +20,12 @@ export interface PositionFormData {
     isActive: boolean;
 }
 
+export interface PositionPayload {
+    position_code: string;
+    position_name: string;
+    position_nameeng: string;
+    is_active: boolean;
+}
+
 export type PositionListItem = PositionMaster;
+

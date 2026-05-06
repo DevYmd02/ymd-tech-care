@@ -151,7 +151,10 @@ export default function EmployeeList() {
             header: 'ตำแหน่ง',
             cell: ({ row }) => {
                 const item = row.original;
-                return item.position_name || item.position?.position_name || '-';
+                const pos = item.position;
+                // Try multiple common field names for position name
+                const name = item.position_name || pos?.position_name || item.pos_name || item.emp_position_name || '-';
+                return name;
             },
         },
         {
@@ -159,13 +162,20 @@ export default function EmployeeList() {
             header: 'ฝ่าย',
             cell: ({ row }) => {
                 const item = row.original;
-                // Use a type-safe way to access potentially missing fields
                 const dept = item.department;
                 const side = item.side;
+                const pos = item.position;
                 
-                const code = item.emp_side_code || item.side_code || item.department_code || dept?.department_code || side?.side_code;
-                const name = item.emp_side_name || item.side_name || item.department_name || dept?.department_name || side?.side_name;
+                // Try multiple common field names for department/side code and name
+                let code = item.emp_side_code || item.side_code || item.department_code || item.dept_code || item.emp_dept_code || dept?.department_code || side?.side_code;
+                let name = item.emp_side_name || item.side_name || item.department_name || item.dept_name || item.emp_dept_name || dept?.department_name || side?.side_name;
                 
+                // Special Fallback: If department info is missing, try pulling from position (common in this API)
+                if (!name && !code && pos) {
+                    code = pos.position_code;
+                    name = pos.position_name;
+                }
+
                 if (code && name) return `${code} - ${name}`;
                 return name || code || '-';
             },

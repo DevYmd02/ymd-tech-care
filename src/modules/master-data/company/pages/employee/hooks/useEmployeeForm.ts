@@ -163,7 +163,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
     });
 
     const departments = useMemo(() => (deptsData?.items || []).filter(item => item.is_active !== false), [deptsData]);
-    const positions = useMemo(() => (positionsData?.items || []).filter(item => item.is_active !== false), [positionsData]);
+    const positions = useMemo(() => (positionsData || []).filter(item => item.is_active !== false), [positionsData]);
     const employeeGroups = useMemo(() => (empGroupsData?.items || []).filter(item => item.is_active !== false), [empGroupsData]);
     const heads = useMemo(() => (headsData?.items || []).filter(item => item.is_active !== false), [headsData]);
     
@@ -333,25 +333,28 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
             
             if (errorElement) {
                 errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                if ('focus' in errorElement) (errorElement as any).focus();
+                if ('focus' in errorElement) (errorElement as HTMLElement).focus();
             }
         }
 
         // 2. 📝 Human-friendly Error Summary
-        const extractMessages = (errs: any): string[] => {
+        const extractMessages = (errs: Record<string, unknown>): string[] => {
             let messages: string[] = [];
             for (const key in errs) {
                 const error = errs[key];
-                if (error?.message && typeof error.message === 'string') {
-                    messages.push(error.message);
-                } else if (typeof error === 'object' && error !== null) {
-                    messages = messages.concat(extractMessages(error));
+                if (error && typeof error === 'object') {
+                    const errObj = error as Record<string, unknown>;
+                    if (typeof errObj.message === 'string') {
+                        messages.push(errObj.message);
+                    } else {
+                        messages = messages.concat(extractMessages(errObj));
+                    }
                 }
             }
             return Array.from(new Set(messages));
         };
 
-        const errorMessages = extractMessages(invalidErrors);
+        const errorMessages = extractMessages(invalidErrors as unknown as Record<string, unknown>);
 
         if (errorMessages.length > 0) {
             const ErrorToastUI = () => React.createElement('div', { className: 'flex flex-col gap-1 text-left' },
@@ -360,7 +363,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
                     errorMessages.map((msg: string, i: number) => React.createElement('li', { key: i }, msg))
                 )
             );
-            toast(React.createElement(ErrorToastUI) as any, 'error');
+            toast(React.createElement(ErrorToastUI) as React.ReactNode, 'error');
         } else {
             toast('กรุณาตรวจสอบข้อมูลที่ระบุให้ครบถ้วน', 'error');
         }

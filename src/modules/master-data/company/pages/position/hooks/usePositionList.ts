@@ -16,7 +16,7 @@ export function usePositionList(filters: Partial<TableFilters>) {
 
     return {
         ...query,
-        positions: query.data?.items || [],
-        totalCount: query.data?.total || 0,
+        positions: Array.isArray(query.data) ? query.data : [],
+        totalCount: Array.isArray(query.data) ? query.data.length : 0,
     };
 }
