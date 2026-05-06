@@ -18,8 +18,8 @@ interface EmployeeFormModalProps {
 
 // ─── Options ────────────────────────────────────────────────────────────────
 
-const THAI_TITLE_OPTIONS = ['นาย', 'นาง', 'นางสาว', 'ดร.', 'อื่นๆ'];
-const ENG_TITLE_OPTIONS  = ['Mr.', 'Mrs.', 'Ms.', 'Dr.', 'Other'];
+const THAI_TITLE_OPTIONS = ['นาย', 'นาง', 'นางสาว'];
+const ENG_TITLE_OPTIONS  = ['Mr.', 'Mrs.', 'Ms.'];
 
 const EMP_TYPE_OPTIONS = [
     { value: 'S', label: 'S - พนักงานขาย' },

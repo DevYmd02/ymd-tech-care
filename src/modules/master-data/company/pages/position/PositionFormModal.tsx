@@ -4,7 +4,6 @@
  * @module company
  */
 
-import { useWatch } from 'react-hook-form';
 import { Save, X, Briefcase } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
@@ -24,12 +23,8 @@ export const PositionFormModal = ({ isOpen, onClose, onSuccess, editId }: Positi
         register,
         errors,
         isSubmitting,
-        handleSave,
-        setValue,
-        control
+        handleSave
     } = usePositionForm(editId ?? null, isOpen, onSuccess);
-
-    const isActive = useWatch({ control, name: 'isActive' });
 
     // Header Icon
     const TitleIcon = <Briefcase className="w-5 h-5 text-white" />;
@@ -121,19 +116,17 @@ export const PositionFormModal = ({ isOpen, onClose, onSuccess, editId }: Positi
                     <p className="text-gray-400 text-xs mt-1">varchar(100) - ชื่อตำแหน่ง (Eng)</p>
                 </div>
 
-                {/* Status - Dropdown Select */}
-                <div>
-                    <label className={styles.label}>
-                        สถานะ <span className="text-red-500">*</span>
+                {/* Status - Checkbox */}
+                <div className="flex items-center gap-2 px-1">
+                    <input
+                        {...register('isActive')}
+                        id="isActive"
+                        type="checkbox"
+                        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer transition-all"
+                    />
+                    <label htmlFor="isActive" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                        ใช้งาน (Active)
                     </label>
-                    <select
-                        className={`${styles.input} cursor-pointer`}
-                        value={isActive ? 'true' : 'false'}
-                        onChange={(e) => setValue('isActive', e.target.value === 'true')}
-                    >
-                        <option value="true">ใช้งาน (Active)</option>
-                        <option value="false">ไม่ใช้งาน (Inactive)</option>
-                    </select>
                 </div>
             </div>
         </DialogFormLayout>
