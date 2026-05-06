@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, User, Check, X } from 'lucide-react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@/shared/utils';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import { CustomerStatusBadge } from '@customer/customer-master/components/CustomerStatusBadge';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';

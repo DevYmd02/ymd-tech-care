@@ -7,7 +7,7 @@ import {
     type DeliveryLineValues,
     getDeliveryDefaultValues,
 } from '../schemas/delivery.schemas';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { ItemListItem } from '@inventory/types/product-types';
 import type { UnitListItem } from '@master-data/types/master-data-types';
 

@@ -1,7 +1,7 @@
 import api, { USE_MOCK } from '@/core/api/api';
 import type { RFQHeader, RFQListResponse, RFQFilterCriteria, RFQDetailResponse, SendRFQToVendorPayload, PRHeader } from '@/modules/procurement/types';
-import { logger } from '@/shared/utils/logger';
-import type { SuccessResponse } from '@/shared/types/api-response.types';
+import { logger } from '@/shared/utils';
+import type { SuccessResponse } from '@/shared/types/api.types';
 import { extractErrorMessage } from '@/core/api/api';
 import { applyClientFilters, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 

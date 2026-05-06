@@ -8,7 +8,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { StandardCostService } from '../services/standard-cost.service';
 import type { StandardCostFormData, StandardCostLineFormData } from '../types/standard-cost.types';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export const useStandardCostForm = (editId: number | null, onSuccess: () => void, isOpen: boolean) => {
     const { user } = useAuth();

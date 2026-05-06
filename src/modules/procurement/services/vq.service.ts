@@ -1,8 +1,8 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
 import type { VQListParams, VQListResponse, VQCreateData, VQListItem, VQPendingQueueResponse, VQPendingQueueItem } from '@/modules/procurement/types';
-import { logger } from '@/shared/utils/logger';
-import type { SuccessResponse } from '@/shared/types/api-response.types';
+import { logger } from '@/shared/utils';
+import type { SuccessResponse } from '@/shared/types/api.types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
 const ENDPOINTS = {

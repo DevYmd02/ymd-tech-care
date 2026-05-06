@@ -7,7 +7,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { LocationService, ShelfService } from '../services/inventory-master.service';
 import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { Location } from '@/modules/master-data/inventory/types/inventory-master.types';
 
 // Zod schema for form validation

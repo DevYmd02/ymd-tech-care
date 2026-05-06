@@ -10,7 +10,7 @@ import { MasterDataService } from '@master-data/services/master-data.service';
 import { LocationService } from '@inventory/services/inventory-master.service';
 import { ItemLotService } from '@inventory/services/item-lot.service';
 import type { ItemLot } from '@inventory/types/item-lot-types';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 export interface LotSearchModalProps {
     isOpen: boolean;

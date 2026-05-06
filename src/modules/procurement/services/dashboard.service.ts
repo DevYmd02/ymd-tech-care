@@ -2,7 +2,7 @@ import { POService } from './po.service';
 import { POAService } from './poa.service';
 import { AVService } from './av.service';
 import { GRNService } from './grn.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { 
     POListItem, 
     PRHeader, 

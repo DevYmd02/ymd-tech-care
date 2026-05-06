@@ -11,7 +11,7 @@ import type {
   Currency,
   SaleAreaListItem,
 } from '@/modules/master-data/types/master-data-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { CustomerMaster } from '@/modules/master-data/customer/customer-master/types/customer-types';
 
 // Import services

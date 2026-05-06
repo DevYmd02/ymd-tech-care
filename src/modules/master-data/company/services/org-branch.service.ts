@@ -5,9 +5,9 @@ import type {
   BranchCreateRequest,
   BranchUpdateRequest
 } from '@/modules/master-data/types/master-data-types';
-import type { PaginatedListResponse } from '@/shared/types/api-response.types';
+import type { PaginatedListResponse } from '@/shared/types/api.types';
 import type { TableFilters } from '@/shared/hooks/useTableFilters';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 const ENDPOINT = '/org-branches';
 

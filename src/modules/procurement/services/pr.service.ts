@@ -17,8 +17,8 @@ import { applyClientFilters, applyClientPagination, extractArrayFromResponse } f
 export type PRUpdatePayload = Partial<CreatePRPayload> & { status?: PRStatus };
 
 export type { PRListParams, PRListResponse, ConvertPRRequest };
-import { logger } from '@/shared/utils/logger';
-import type { SuccessResponse } from '@/shared/types/api-response.types';
+import { logger } from '@/shared/utils';
+import type { SuccessResponse } from '@/shared/types/api.types';
 
 const ENDPOINTS = {
   list: '/pr',

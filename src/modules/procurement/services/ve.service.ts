@@ -1,6 +1,6 @@
 import api from '@/core/api/api';
 import type { VEListParams, VEListResponse, CreateVEPayload, VendorEvaluationHeader } from '@/modules/procurement/types/ve-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 const ENDPOINTS = {
   list:    '/ve/list',

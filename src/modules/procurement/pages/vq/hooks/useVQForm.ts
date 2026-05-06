@@ -7,7 +7,7 @@ import { VQService, type VQCreateData } from '@/modules/procurement/services/vq.
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { RFQHeader, RFQLine } from '@/modules/procurement/types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { MasterDataService } from '@/modules/master-data';
 const formatDateForInputHelper = (dateStr: string | Date | null | undefined): string => {
   if (!dateStr) return '';

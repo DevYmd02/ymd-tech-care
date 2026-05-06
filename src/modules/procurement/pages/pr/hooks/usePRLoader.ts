@@ -10,7 +10,7 @@
 import { useEffect, useRef } from 'react';
 import type { UseFormReset } from 'react-hook-form';
 import { PRService } from '@/modules/procurement/services/pr.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
 import { getPRDefaultFormValues, createEmptyPRLine } from '@/modules/procurement/schemas/pr-schemas';

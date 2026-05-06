@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } fr
 import { BusinessTypeService } from '@customer/business-type/services/business-type.service';
 import { initialBusinessTypeFormData, type BusinessTypeFormData } from '@customer/business-type/types/business-type.types';
 import { toast } from 'react-hot-toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { extractErrorMessage } from '@/core/api/api';
 import { useDebounce } from '@/shared/hooks';
 

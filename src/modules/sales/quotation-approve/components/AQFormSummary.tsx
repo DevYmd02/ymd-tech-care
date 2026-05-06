@@ -6,7 +6,7 @@
 import { Calculator } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import type { AQFormData } from '../schemas/aq.schema';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 export function AQFormSummary() {
   const { watch } = useFormContext<AQFormData>();

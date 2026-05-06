@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect} from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ItemLotService } from '@inventory/services/item-lot.service';
 import { initialItemLotFormData, type ItemLot, type ItemLotFormData } from '@inventory/types/item-lot-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { addDays, format, isValid, parseISO } from 'date-fns';
 

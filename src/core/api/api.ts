@@ -4,7 +4,7 @@
  */
 
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 // =============================================================================
 // ENVIRONMENT CONFIGURATION

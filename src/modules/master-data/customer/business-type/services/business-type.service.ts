@@ -2,7 +2,7 @@ import api, { USE_MOCK } from '@/core/api/api';
 import type { TableFilters } from '@/shared/hooks/useTableFilters';
 import type { MasterDataListResponse, MasterDataResponse } from '@/shared/types/common-master.types';
 import type { CustomerBusinessType } from '@customer/business-type/types/business-type.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 // Mock data integration for testing if needed
 const MOCK_BUSINESS_TYPES: CustomerBusinessType[] = []; 

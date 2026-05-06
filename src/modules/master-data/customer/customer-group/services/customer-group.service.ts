@@ -2,7 +2,7 @@ import api, { USE_MOCK } from '@/core/api/api';
 import type { TableFilters } from '@/shared/hooks/useTableFilters';
 import type { MasterDataListResponse, MasterDataResponse } from '@/shared/types/common-master.types';
 import type { CustomerGroup } from '@customer/customer-group/types/customer-group.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { MOCK_CUSTOMER_GROUPS } from '@customer/customer-master/mocks/data/customerData';
 
 export const CustomerGroupService = {

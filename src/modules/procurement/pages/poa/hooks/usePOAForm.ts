@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { POAService } from '@/modules/procurement/services/poa.service';
 import { POAFormSchema, type POAFormData } from '@/modules/procurement/schemas/poa-schemas';
 import type { POListItem, POLine } from '@/modules/procurement/types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';

@@ -5,7 +5,7 @@
  */
 
 import api, { USE_MOCK } from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type {
     ItemGroup, ItemGroupFormData,
     Brand, BrandFormData,
@@ -20,7 +20,7 @@ import type {
     LotNo, LotNoFormData,
     IBaseMaster // Import IBaseMaster
 } from '../types/inventory-master.types';
-import type { ListResponse } from '@/shared/types/common-api.types';
+import type { ListResponse } from '@/shared/types/api.types';
 import type { ItemGroupFormValues } from '../hooks/useItemGroupForm';
 import type { BrandFormValues } from '../hooks/useBrandForm';
 import type { PatternFormValues } from '../hooks/usePatternForm';

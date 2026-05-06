@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { QCService } from '@/modules/procurement/services/qc.service';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { extractErrorMessage } from '@/core/api/api';
 import { CreateQCSchema, type CreateQCFormValues, type CreateQCPayload } from '@/modules/procurement/schemas/qc-schemas';
 

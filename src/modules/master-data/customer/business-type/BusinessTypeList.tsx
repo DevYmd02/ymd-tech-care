@@ -12,7 +12,7 @@ import { useTableFilters, useDebounce, useConfirmation } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import { BusinessTypeService } from '@customer/business-type/services/business-type.service';
 import type { CustomerBusinessType } from '@customer/business-type/types/business-type.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { BusinessTypeFormModal } from './BusinessTypeFormModal';
 
 export default function BusinessTypeList() {

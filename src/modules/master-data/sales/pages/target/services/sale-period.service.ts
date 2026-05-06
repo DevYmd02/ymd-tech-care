@@ -4,7 +4,7 @@
  */
 
 import api from '@/core/api/api';
-import { type PaginatedListResponse } from '@/shared/types/api-response.types';
+import { type PaginatedListResponse } from '@/shared/types/api.types';
 import type { 
   SalePeriodMaster, 
   SalePeriodFormData,

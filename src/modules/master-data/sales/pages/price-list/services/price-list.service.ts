@@ -5,7 +5,7 @@
 
 import api from '@/core/api/api';
 import type { PriceListMaster, PriceListFormData,PriceListItemFormData } from '../types/price-list.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export const PriceListService = {
   /**

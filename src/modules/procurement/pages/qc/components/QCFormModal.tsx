@@ -24,7 +24,7 @@ import { useQCForm } from '../hooks/useQCForm';
 import { useConfirmation } from '@/shared/hooks';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 interface QCFormModalProps {
   isOpen: boolean;

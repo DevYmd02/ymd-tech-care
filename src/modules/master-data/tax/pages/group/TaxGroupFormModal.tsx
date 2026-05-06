@@ -5,7 +5,7 @@ import { styles } from '@/shared/constants/styles';
 import type { TaxGroup } from '@/modules/master-data/tax/types/tax-types';
 import { TaxGroupService } from '@/modules/master-data/tax/services/tax-group.service';
 import { DialogFormLayout } from '@ui';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 interface TaxGroupFormModalProps {
     isOpen: boolean;

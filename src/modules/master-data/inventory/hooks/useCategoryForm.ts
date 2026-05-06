@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { ProductCategoryService } from '../services/product-category.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { ProductCategoryListItem, ProductCategoryCreateRequest } from '@/modules/master-data/types/master-data-types';
 
 // Zod schema for form validation

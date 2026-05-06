@@ -5,7 +5,7 @@ import { QuotationService } from '@sales/quotation/services/quotation.service';
 import type { QuotationFormData } from '@sales/quotation/types/quotation.types';
 import { ItemMasterService } from '@inventory/services/item-master.service';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 import { 
     calculateDiscountAmount, 
     calculateVatAmount, 

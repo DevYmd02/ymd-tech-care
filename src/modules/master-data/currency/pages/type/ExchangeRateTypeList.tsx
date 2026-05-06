@@ -7,7 +7,7 @@ import { ActiveStatusBadge } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { ExchangeRateType } from '@currency/types/currency-types';
 import { CurrencyService } from '@currency/services/currency.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { ExchangeRateTypeFormModal } from './ExchangeRateTypeFormModal';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 

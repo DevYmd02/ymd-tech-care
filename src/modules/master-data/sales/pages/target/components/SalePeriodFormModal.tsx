@@ -10,9 +10,9 @@ import { z } from 'zod';
 import { Target, Save, X } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout, CustomDateInput } from '@ui';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { SalePeriodService } from '../services/sale-period.service';
-import { handleError } from '@/shared/utils/errorHandler';
+import { handleError } from '@/shared/utils';
 import type { 
   SalePeriodFormData 
 } from '../types/sale-period.types';

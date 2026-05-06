@@ -5,7 +5,7 @@
 
 import { Calculator, AlertCircle } from 'lucide-react';
 import { styles } from '@shared/constants/styles';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 interface SalesOrderSummaryProps {
     subTotal: number;

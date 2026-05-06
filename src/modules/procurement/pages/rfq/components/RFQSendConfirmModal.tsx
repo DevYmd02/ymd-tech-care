@@ -12,7 +12,7 @@ import { createPortal } from 'react-dom';
 import { Send, AlertTriangle, Users, Loader2, Mail, Printer } from 'lucide-react';
 import type { RFQHeader, SendRFQToVendorPayload } from '@/modules/procurement/types';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { MultiEmailInput } from '@/shared/components/ui/inputs/MultiEmailInput';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 

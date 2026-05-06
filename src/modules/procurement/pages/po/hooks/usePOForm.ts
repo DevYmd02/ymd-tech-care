@@ -17,7 +17,7 @@ import { VendorService } from '@/modules/master-data/vendor/services/vendor.serv
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
 import { unwrapResponseData, extractLinesArray } from '@/shared/utils/apiUtils';

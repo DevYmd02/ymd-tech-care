@@ -3,7 +3,7 @@ import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.serv
 import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import type { Currency } from '@/modules/master-data/currency/types/currency-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export interface MappedOption<T> {
     value: string;

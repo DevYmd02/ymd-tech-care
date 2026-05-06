@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { StandardCostService } from '../services/standard-cost.service';
 import type { StandardCostHeader, StandardCostFilter } from '../types/standard-cost.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export const useStandardCost = () => {
     const [data, setData] = useState<StandardCostHeader[]>([]);

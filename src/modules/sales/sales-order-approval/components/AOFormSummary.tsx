@@ -1,7 +1,7 @@
 import { Calculator } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import type { AOFormData } from '../schemas/ao.schema';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 import { calculateDiscountAmount, calculateVatAmount, calculateNetTotal } from '@sales/shared/utils/sales-calculations';
 
 export function AOFormSummary() {

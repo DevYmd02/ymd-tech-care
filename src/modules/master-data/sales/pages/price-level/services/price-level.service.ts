@@ -4,7 +4,7 @@
  */
 
 import api from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { 
   PriceLevel, 
   PriceLevelFormData 

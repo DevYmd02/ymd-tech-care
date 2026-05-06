@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BranchService } from '@company/services/org-branch.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { BranchListItem } from '@master-data/types/master-data-types';
 
 export const branchSchema = z.object({

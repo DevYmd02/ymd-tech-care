@@ -18,7 +18,7 @@ import { useReservationForm } from '../hooks/useReservationForm';
 import { ReservationService } from '../services/reservation.service';
 import type { ReservationFormData } from '../types/reservation.types';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 
 import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
 

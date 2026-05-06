@@ -10,7 +10,7 @@ import { LocationSearchModal } from '@sales/shared/components/search-modals/Loca
 import type { WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
 import axios from 'axios';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 interface QuickAdjustStockModalProps {
     isOpen: boolean;

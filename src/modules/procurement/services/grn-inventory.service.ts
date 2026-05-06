@@ -1,5 +1,5 @@
 import api from '@core/api/api';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 import type { LotNo } from '@inventory/types/inventory-master.types';
 import { USE_MOCK } from '@core/api/api';
 import { MOCK_LOT_NUMBERS } from '@inventory/mocks/inventory-master.mock';

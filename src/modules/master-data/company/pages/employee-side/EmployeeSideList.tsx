@@ -11,7 +11,7 @@ import {
     Building
 } from 'lucide-react';
 import { EmployeeSideFormModal } from './EmployeeSideFormModal';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { useEmployeeSideList } from './hooks/useEmployeeSideList';
 import type { EmployeeSideListItem } from '@master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';

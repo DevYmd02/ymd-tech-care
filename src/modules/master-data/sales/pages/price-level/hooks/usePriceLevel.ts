@@ -11,7 +11,7 @@ import { ItemMasterService } from '@/modules/master-data/inventory/services/item
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import type { ItemListItem, UnitListItem } from '@/modules/master-data/inventory/types/product-types';
 import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export function usePriceLevel(isActive: boolean = true) {
     const { 

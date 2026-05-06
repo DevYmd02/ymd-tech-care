@@ -12,7 +12,7 @@ import type { VendorSelection, PRLine, CreatePRPayload } from '@/modules/procure
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import { extractErrorMessage } from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { zodResolver } from '@hookform/resolvers/zod';

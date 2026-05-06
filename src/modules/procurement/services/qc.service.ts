@@ -3,9 +3,9 @@ import { USE_MOCK } from '@/core/api/api';
 import type { QCListParams, QCListResponse, CreateQCPayload, SubmitQCWinnerData, IReadyForPOPR } from '@/modules/procurement/schemas/qc-schemas';
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
 import type { RFQHeader } from '@/modules/procurement/types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
-import type { SuccessResponse } from '@/shared/types/api-response.types';
+import type { SuccessResponse } from '@/shared/types/api.types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
 const ENDPOINTS = {

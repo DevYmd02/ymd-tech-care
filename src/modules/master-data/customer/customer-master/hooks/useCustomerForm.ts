@@ -6,7 +6,7 @@ import type {
 } from '@customer/customer-master/types/customer-types';
 import { initialCustomerFormData, toCustomerFormData } from '@customer/customer-master/types/customer-types';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 interface UseCustomerFormProps {
     isOpen: boolean;

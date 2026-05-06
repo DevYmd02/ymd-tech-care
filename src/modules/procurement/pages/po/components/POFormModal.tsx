@@ -21,7 +21,7 @@ import { VendorSearchModal } from '@/modules/master-data/vendor/components/selec
 import { ProductSearchModal } from './ProductSearchModal';
 import { PRSearchModal } from './PRSearchModal';
 import { calculatePricingSummary, parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@/shared/utils';
 
 
 import type { POFormData, POLine } from '@/modules/procurement/schemas/po-schemas';

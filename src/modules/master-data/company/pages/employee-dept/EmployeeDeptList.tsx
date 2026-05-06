@@ -4,7 +4,7 @@ import {
     Trash2, 
     Layers
 } from 'lucide-react';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { EmployeeDeptFormModal } from './EmployeeDeptFormModal';
 import { useEmployeeDeptList } from './hooks/useEmployeeDeptList';
 import type { EmployeeDeptListItem } from '@company/types/employee-dept.types';

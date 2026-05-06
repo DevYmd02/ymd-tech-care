@@ -1,7 +1,7 @@
 import React, { createContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { ConfirmationModal } from './ConfirmationModal';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { ConfirmationVariant } from './ConfirmationModal';
 
 interface ConfirmationOptions {

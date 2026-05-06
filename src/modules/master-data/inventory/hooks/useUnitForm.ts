@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { UnitService } from '../services/unit.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
 
 export const unitSchema = z.object({

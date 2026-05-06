@@ -12,7 +12,7 @@ import { PrtService } from '@/modules/procurement/services/prt.service';
 import { prtSchema } from '@/modules/procurement/types/prt-types';
 import type { PrtItem, PrtFormValues } from '@/modules/procurement/types/prt-types';
 import { PrtItemsTable } from './PrtItemsTable';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 // ====================================================================================
 // TYPES & MOCKS (Moved to prt-types.ts)

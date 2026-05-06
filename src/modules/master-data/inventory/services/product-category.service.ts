@@ -1,7 +1,7 @@
 import api, { USE_MOCK } from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { mockProductCategories } from '@/modules/master-data/mocks/masterDataMocks';
-import type { SuccessResponse, PaginatedListResponse } from '@/shared/types/api-response.types';
+import type { SuccessResponse, PaginatedListResponse } from '@/shared/types/api.types';
 import type { ProductCategoryListItem, ProductCategoryCreateRequest, ProductCategoryUpdateRequest } from '@/modules/master-data/types/master-data-types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 

@@ -10,7 +10,7 @@ import { ProductSearchModal } from './ProductSearchModal';
 import { LeadSearchModal } from './LeadSearchModal';
 import { useQuotationForm } from '@sales/quotation/hooks/useQuotationForm';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 import { useToast } from '@ui/feedback/Toast';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { QuotationHeader } from '@sales/quotation/types/quotation.types';

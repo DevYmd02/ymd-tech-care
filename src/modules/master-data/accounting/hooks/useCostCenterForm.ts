@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CostCenterService } from '../services/cost-center.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { CostCenter } from '@/modules/master-data/types/master-data-types';
 
 export const costCenterSchema = z.object({

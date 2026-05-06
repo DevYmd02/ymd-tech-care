@@ -9,7 +9,7 @@ import { FileText, Search, Plus, Send } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { QuotationHeader, QuotationLineData } from '@sales/quotation/types/quotation.types';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import { QuotationFormModal } from '@sales/quotation/components/QuotationFormModal';
@@ -22,7 +22,7 @@ import { SQActionsCell } from './components/SQActionsCell';
 import { AQHistoryModal } from '@sales/shared/components/AQHistoryModal';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 import { useToast } from '@ui/feedback/Toast';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 // ====================================================================================
 // CONSTANTS

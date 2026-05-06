@@ -1,5 +1,5 @@
 import api from '@core/api/api';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 import type { ReservationFormData } from '../types/reservation.types';
 
 export interface ReservationListParams {

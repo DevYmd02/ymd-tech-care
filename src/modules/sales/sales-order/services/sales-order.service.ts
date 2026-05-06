@@ -1,5 +1,5 @@
 import api from '@core/api/api';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 import type { SalesOrderFormData } from '../types/sales-order.types';
 import type { ReservationHeader } from '@sales/reservation/services/reservation.service';
 

@@ -18,7 +18,7 @@ import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import { OrgEmployeeService } from '@company/services/employee.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 // ====================================================================================
 // CONFIG

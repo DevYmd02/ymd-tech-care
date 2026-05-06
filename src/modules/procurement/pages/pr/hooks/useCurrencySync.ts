@@ -11,7 +11,7 @@
 import { useRef, useEffect } from 'react';
 import type { UseFormSetValue, UseFormGetFieldState } from 'react-hook-form';
 import { fetchExchangeRate } from '@/modules/master-data/currency/services/mockExchangeRateService';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { PRFormData } from '@/modules/procurement/types/pr-types';
 
 // ─────────────────────────────────────────────────────────────────────────────

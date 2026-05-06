@@ -3,7 +3,7 @@ import { DialogFormLayout } from '@ui';
 import { Search, MapPin } from 'lucide-react';
 import type { Location } from '@inventory/types/inventory-master.types';
 import { ReservationInventoryService } from '@sales/reservation/services/reservation-inventory.service';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 interface LocationStockItem extends Location {
     qty_on_hand?: string | number;

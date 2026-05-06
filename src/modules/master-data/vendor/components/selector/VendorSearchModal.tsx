@@ -18,7 +18,7 @@ import type {
     VendorListItem, 
     VendorSearchItem 
 } from '@/modules/master-data/vendor/types/vendor-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 // Re-export for backward compatibility
 export type Vendor = VendorSearchItem;

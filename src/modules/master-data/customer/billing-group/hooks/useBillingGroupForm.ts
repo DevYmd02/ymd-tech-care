@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, type ChangeEvent, type FormEvent } fr
 import { BillingGroupService } from '../services/billing-group.service';
 import { initialBillingGroupFormData, type BillingGroupFormData } from '../types/billing-group.types';
 import { toast } from 'react-hot-toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { extractErrorMessage } from '@/core/api/api';
 import { useDebounce } from '@/shared/hooks';
 

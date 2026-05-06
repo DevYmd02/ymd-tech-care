@@ -11,7 +11,7 @@ import { PriceLevelNameService } from '../services/price-level-name.service';
 import type { PriceLevelNameFormData } from '../types/price-level-name.types';
 import type { ApiPriceLevelName } from '../types/price-level-name.types';
 import toast from 'react-hot-toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 const priceLevelNameSchema = z.object({
   code: z.string().min(1, 'กรุณากรอกรหัส'),

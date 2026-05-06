@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Check, FileText, Loader2, Info } from 'lucide-react';
 import type { ApprovalHeader } from '@/modules/procurement/types/av-types';
 import { ModalLayout } from '@/shared/components/ui/layout/ModalLayout';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 
 /** 🎯 Extended type to handle API aliases for AV record */

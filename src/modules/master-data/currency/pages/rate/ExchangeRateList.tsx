@@ -7,7 +7,7 @@ import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { ExchangeRateFormModal } from './ExchangeRateFormModal';
 import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 

@@ -13,7 +13,7 @@ import {
   MOCK_CUSTOMER_GROUPS, 
   MOCK_BILLING_GROUPS 
 } from '@customer/customer-master/mocks/data/customerData';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { MasterDataListResponse, MasterDataResponse } from '@/shared/types/common-master.types';
 
 /** Local Store for Mock Persistence */

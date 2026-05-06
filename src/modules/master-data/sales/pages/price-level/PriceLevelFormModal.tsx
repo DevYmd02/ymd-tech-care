@@ -15,7 +15,7 @@ import type { PriceLevelFormData } from './types/price-level.types';
 import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
 import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
 import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 interface Props {
     isOpen: boolean;

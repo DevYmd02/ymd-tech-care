@@ -5,7 +5,7 @@ import { ItemMasterService } from '@inventory/services/item-master.service';
 import type { ItemListItem } from '@inventory/types/product-types';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@hooks/useDebounce';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 /**
  * @file ProductSearchModal.tsx

@@ -14,7 +14,7 @@ import { AQHistoryModal } from '@sales/shared/components/AQHistoryModal';
 import { useAQListData } from './hooks/useAQListData';
 import type { AQListItem, SQForApproval } from './types/quotation-approve.types';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants

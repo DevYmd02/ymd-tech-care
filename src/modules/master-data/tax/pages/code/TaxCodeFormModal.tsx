@@ -8,7 +8,7 @@ import type { TaxCode, TaxGroup } from '@/modules/master-data/tax/types/tax-type
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import { TaxGroupService } from '@/modules/master-data/tax/services/tax-group.service';
 import { DialogFormLayout } from '@ui';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 interface TaxCodeFormModalProps {
     isOpen: boolean;

@@ -10,11 +10,11 @@ import { ShoppingCart, Search, Plus, Edit, Eye, Send, Clock } from 'lucide-react
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { SalesOrderService, type SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { SalesOrderFormModal } from './components/SalesOrderFormModal';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
 import { useConfirmation } from '@hooks/useConfirmation';
 import { AOHistoryModal } from '@sales/shared/components/AOHistoryModal';

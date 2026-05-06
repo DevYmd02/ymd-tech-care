@@ -5,7 +5,7 @@
 
 import api from '@/core/api/api';
 import type { PositionMaster, PositionFormData } from '@/modules/master-data/company/types/position.types';
-import { type PaginatedListResponse } from '@/shared/types/api-response.types';
+import { type PaginatedListResponse } from '@/shared/types/api.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 export const PositionService = {

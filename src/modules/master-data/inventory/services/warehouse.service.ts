@@ -1,9 +1,9 @@
 import api, { USE_MOCK } from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { mockWarehouses } from '@/modules/master-data/mocks/masterDataMocks';
 import type { WarehouseListItem, WarehouseMaster, WarehouseCreateRequest, WarehouseUpdateRequest, BackendWarehouse } from '@/modules/master-data/types/master-data-types';
-import type { ListResponse } from '@/shared/types/common-api.types';
-import type { SuccessResponse } from '@/shared/types/api-response.types';
+import type { ListResponse } from '@/shared/types/api.types';
+import type { SuccessResponse } from '@/shared/types/api.types';
 
 export const WarehouseService = {
   getAll: async (params?: any): Promise<ListResponse<WarehouseListItem>> => {

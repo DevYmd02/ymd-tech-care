@@ -5,7 +5,7 @@
 
 import api from '@/core/api/api';
 import type { EmployeeMaster, EmployeeFormData } from '@/modules/master-data/company/types/employee.types';
-import { type PaginatedListResponse } from '@/shared/types/api-response.types';
+import { type PaginatedListResponse } from '@/shared/types/api.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 export const OrgEmployeeService = {
@@ -19,7 +19,7 @@ export const OrgEmployeeService = {
   uploadSignature: (employeeId: number, file: File) => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post<{ success: boolean; data?: { id: number; signature_path: string }; message?: string }>(
+    return api.post<{ success: boolean; data?: { emp_signature_id: number; signature_url: string }; message?: string }>(
       `/employees/${employeeId}/signatures`, 
       formData, 
       { headers: { 'Content-Type': 'multipart/form-data' } }

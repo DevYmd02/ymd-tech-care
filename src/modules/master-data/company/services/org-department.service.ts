@@ -8,7 +8,7 @@
 
 import api from '@/core/api/api';
 import type { EmployeeSideMaster } from '@/modules/master-data/company/types/employee-side.types';
-import { type PaginatedListResponse } from '@/shared/types/api-response.types';
+import { type PaginatedListResponse } from '@/shared/types/api.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 /** Legacy type aliases for Department */

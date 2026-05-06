@@ -1,5 +1,5 @@
 import api, { USE_MOCK } from '@/core/api/api';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { type ItemLot, type ItemLotFormData } from '../types/item-lot-types';
 
 /**

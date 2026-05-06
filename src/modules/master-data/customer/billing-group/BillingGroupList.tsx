@@ -11,7 +11,7 @@ import { useTableFilters, useDebounce, useConfirmation } from '@/shared/hooks';
 import { createColumnHelper } from '@tanstack/react-table';
 import { BillingGroupService } from './services/billing-group.service';
 import type { CustomerBillingGroup } from './types/billing-group.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { BillingGroupFormModal } from './BillingGroupFormModal';
 
 export default function BillingGroupList() {

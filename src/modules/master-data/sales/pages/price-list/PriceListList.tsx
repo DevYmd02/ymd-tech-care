@@ -12,7 +12,7 @@ import { ActiveStatusBadge, StatusBadge } from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import { CheckCircle } from 'lucide-react';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { ColumnDef } from '@tanstack/react-table';
 
 // ==================== CONFIG ====================

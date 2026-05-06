@@ -1,7 +1,7 @@
 import { RefreshCcw, AlertTriangle } from 'lucide-react';
 import { ErrorBoundary as ReactErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import type { ReactNode, ErrorInfo } from 'react';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 /**
  * ErrorFallback - UI component to display when an error occurs

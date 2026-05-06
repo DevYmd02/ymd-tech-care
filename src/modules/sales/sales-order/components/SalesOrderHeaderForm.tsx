@@ -5,7 +5,7 @@
  */
 
 import { ShoppingCart, Search, User } from 'lucide-react';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 import { useFormContext, Controller, type FieldErrors } from 'react-hook-form';
 import { MulticurrencyWrapper } from '@components/forms/MulticurrencyWrapper';
 import { CustomDateInput, StatusCheckbox } from '@ui';

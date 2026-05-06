@@ -2,7 +2,7 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
 import type { PurchaseReturn, PRTListParams, PRTListResponse, PrtItem } from '@/modules/procurement/types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 
 const ENDPOINTS = {

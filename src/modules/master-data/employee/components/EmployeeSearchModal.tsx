@@ -10,7 +10,7 @@ import { EmployeeService } from '../services/employee.service';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/shared/hooks/useDebounce';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@/shared/utils';
 
 export interface EmployeeSearchModalProps {
     isOpen: boolean;

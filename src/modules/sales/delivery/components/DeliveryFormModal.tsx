@@ -6,7 +6,7 @@
 
 import { useState } from 'react';
 import { Save, Truck, Printer, Loader2 } from 'lucide-react';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 import { FormProvider } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';

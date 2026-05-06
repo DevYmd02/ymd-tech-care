@@ -12,7 +12,7 @@ import type { CustomerBusinessType } from '@customer/business-type/types/busines
 import type { CustomerType } from '@customer/customer-type/types/customer-type.types';
 import type { CustomerGroup } from '@customer/customer-group/types/customer-group.types';
 import type { CustomerBillingGroup } from '@customer/billing-group/types/billing-group.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 interface CustomerGeneralInfoProps {
     formData: CustomerFormData;

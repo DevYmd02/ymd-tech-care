@@ -7,11 +7,11 @@ import type {
   VendorDropdownItem,
   VendorStatus,
 } from '../types/vendor-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { 
   MOCK_VENDORS, 
 } from '@/modules/master-data/vendor/mocks/vendorMocks';
-import type { SuccessResponse } from '@/shared/types/api-response.types';
+import type { SuccessResponse } from '@/shared/types/api.types';
 
 // Local in-memory store for mocks (persists during session)
 let localVendorData: VendorMaster[] = [...MOCK_VENDORS];

@@ -8,7 +8,7 @@ import { icOptionSchema, type ICOptionFormData } from './types/ic-option.types';
 import { BranchService } from '@company/services/branch.service';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { ICOptionListTab } from './components/ICOptionListTab';
 
 interface ICOptionFormModalProps {

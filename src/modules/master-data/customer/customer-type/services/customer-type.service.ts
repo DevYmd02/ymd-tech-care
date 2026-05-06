@@ -2,7 +2,7 @@ import api, { USE_MOCK } from '@/core/api/api';
 import type { TableFilters } from '@/shared/hooks/useTableFilters';
 import type { MasterDataListResponse, MasterDataResponse } from '@/shared/types/common-master.types';
 import type { CustomerType } from '@customer/customer-type/types/customer-type.types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { MOCK_CUSTOMER_TYPES } from '@customer/customer-master/mocks/data/customerData';
 
 export const CustomerTypeService = {

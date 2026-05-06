@@ -5,7 +5,7 @@
 
 import api, { USE_MOCK } from '@/core/api/api';
 import type { CostCenter } from '@/modules/master-data/types/master-data-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { mockCostCenters } from '@/modules/master-data/mocks/masterDataMocks';
 
 export const CostCenterService = {

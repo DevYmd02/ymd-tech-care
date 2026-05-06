@@ -1,5 +1,5 @@
 import api, { USE_MOCK, extractErrorMessage } from '@core/api/api';
-import { logger } from '@utils/logger';
+import { logger } from '@utils';
 import type { QuotationFormData, QuotationHeader, QuotationListItem, QuotationLineData, RawQuotationData, RawQuotationLine } from '@sales/quotation/types/quotation.types';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import { applyClientFilters, extractArrayFromResponse, type PaginatedResponse } from '@utils/clientFilterUtils';

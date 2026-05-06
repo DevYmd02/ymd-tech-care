@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import { 
     Users, Package, Building2, Warehouse as WarehouseIcon, 
     DollarSign, FolderKanban,

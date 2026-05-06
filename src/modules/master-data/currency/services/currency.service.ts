@@ -1,5 +1,5 @@
 import type { ExchangeRateType, ExchangeRate, CurrencyApiItem, CurrencyMappedItem, CurrencyApiRequest, CurrencyCreateRequest, CurrencyFormValues } from '@currency/types/currency-types';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export interface BaseResponse<T> {
     items: T[];

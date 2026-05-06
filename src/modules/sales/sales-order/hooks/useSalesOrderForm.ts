@@ -7,7 +7,7 @@ import {
     type SalesOrderLineValues,
     getSalesOrderDefaultValues 
 } from '../schemas/sales-order.schemas';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import type { ItemListItem } from '@inventory/types/product-types';
 import type { Currency, UnitListItem } from '@master-data/types/master-data-types';

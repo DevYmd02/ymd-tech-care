@@ -21,7 +21,7 @@ import { POAHistoryModal } from './POAHistoryModal';
 import type { Control, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { POAFormData } from '@/modules/procurement/schemas/poa-schemas';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@/shared/utils';
 
 
 const ui = {

@@ -8,7 +8,7 @@ import type { SalesChannelFormData } from '../types/channel.types';
 import { extractErrorMessage } from '@/core/api/api';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
-import { logger } from '@/shared/utils/logger';
+import { logger } from '@/shared/utils';
 
 export const channelSchema = z.object({
     channelCode: z.string()

@@ -6,7 +6,7 @@
 
 import { Package, Tag } from 'lucide-react';
 import type { AQLineFormData } from '../schemas/aq.schema';
-import { formatNumber } from '@/shared/utils/numberUtils';
+import { formatNumber } from '@/shared/utils';
 
 interface AQFormLinesProps {
   lines: AQLineFormData[];
