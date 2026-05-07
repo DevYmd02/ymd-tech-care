@@ -17,7 +17,6 @@ import { QuotationService } from '@sales/quotation/services/quotation.service';
 import type { QuotationFormData, QuotationHeader, RawQuotationLine } from '@sales/quotation/types/quotation.types';
 import { ItemMasterService } from '@inventory/services/item-master.service';
 import { logger } from '@utils';
-import { useAuth } from '@core/auth/contexts/AuthContext';
 import { 
     calculateDiscountAmount, 
     calculateVatAmount, 
@@ -28,7 +27,6 @@ import { useQuotationModals } from './useQuotationModals';
 
 export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: QuotationHeader) => {
     const isEdit = !!id;
-    const { user } = useAuth();
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     // 🏷️ Extracted Modal States
@@ -40,6 +38,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     // 🛡️ Refs to track header changes for pricing synchronization
     const lastCustomerRef = useRef<number | null>(null);
     const lastBranchRef = useRef<number | null>(null);
+    const pricingAbortControllerRef = useRef<AbortController | null>(null);
     
     // React Hook Form Setup
     const methods = useForm<QuotationFormValues>({
@@ -383,35 +382,28 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     });
     const uoms = useMemo(() => uomResponse?.items || [], [uomResponse]);
 
-    // 🔄 Syncing with Fetched/Initial Data
+    // 🏗️ Step 0: Check if critical master data is loaded before initializing form.
+    const isMasterDataReady = useMemo(() => (
+        (branches?.length > 0 || !isOpen) && 
+        (taxCodes?.length > 0 || !isOpen) && 
+        (departments?.length > 0 || !isOpen) &&
+        (uoms?.length > 0 || !isOpen)
+    ), [branches?.length, taxCodes?.length, departments?.length, uoms?.length, isOpen]);
+
+    // 🧹 Concern 1: Explicit Cleanup when modal closes
     useEffect(() => {
         if (!isOpen) {
-            // 🧹 Explicit Cleanup: Reset form when modal closes
             if (lastInitializedId.current !== null) {
                 logger.info('🧹 [QuotationForm] Modal closed. Resetting form to defaults.');
                 reset(getQuotationDefaultValues());
             }
             lastInitializedId.current = null;
-            return;
         }
+    }, [isOpen, reset]);
 
-        // 🏗️ Step 0: Ensure critical master data is loaded before initializing form.
-        // This prevents dropdowns from showing "-- เลือก --" because the ID has no matching option yet.
-        const isMasterDataReady = (
-            (branches?.length > 0 || !isOpen) && 
-            (taxCodes?.length > 0 || !isOpen) && 
-            (departments?.length > 0 || !isOpen) &&
-            (uoms?.length > 0 || !isOpen)
-        );
-
-        if (isOpen && !isMasterDataReady) {
-            logger.debug('⏳ [QuotationForm] Waiting for master data...', { 
-                branches: branches?.length, 
-                taxCodes: taxCodes?.length, 
-                uoms: uoms?.length 
-            });
-            return;
-        }
+    // 🔄 Concern 2: Syncing with Fetched/Initial Data (Hydration)
+    useEffect(() => {
+        if (!isOpen || !isMasterDataReady) return;
 
         // Mode 1: Data-Reuse (Prefer initialData if it includes lines)
         if (hasInitialLines && !quotationDetail) {
@@ -420,12 +412,11 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
 
             logger.info('🎯 [QuotationForm] Using Data-Reuse Pattern (from List)');
             
-            // 🏗️ Reconstruct full payload using rawData to preserve all fields not in the list interface
             const raw = initialData.rawData || {};
             const linesToUse = initialData.lines || raw.saleQuotationLines || raw.lines || [];
             
             const constructedPayload: QuotationFormData = {
-                ...raw, // Spread all hidden fields like branch_id, project_id, etc.
+                ...raw, 
                 sq_id: initialData.sq_id,
                 sq_no: initialData.sq_no,
                 sq_date: initialData.date || (raw.sq_date as string) || '',
@@ -433,12 +424,10 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             } as QuotationFormData;
 
             const mappedData = mapApiToForm(constructedPayload);
-            logger.info('📦 [QuotationForm] Initial Mapped Data:', mappedData);
             reset(mappedData);
             lastInitializedId.current = currentTargetId;
-            // 🕵️ Recovery: Detect price sources for the loaded data
+            
             void recoverMissingPriceSources(mappedData.lines, Number(mappedData.customer_id), Number(mappedData.branch_id));
-            // Enrich lines if item_code is missing
             void enrichLinesWithItemData(mappedData.lines || []);
             return;
         }
@@ -446,7 +435,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         // Mode 2: Standard Fetch (If no initial data or when detail data arrives)
         const currentTarget = id || 'new';
 
-        if (isOpen && (lastInitializedId.current !== currentTarget || quotationDetail)) {
+        if (lastInitializedId.current !== currentTarget || quotationDetail) {
             if (id && quotationDetail) {
                 const detailId = 'detail-' + currentTarget;
                 if (lastInitializedId.current === detailId) return;
@@ -454,12 +443,10 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 const mappedData = mapApiToForm(quotationDetail);
                 reset(mappedData);
                 lastInitializedId.current = detailId;
-                // 🕵️ Recovery: Detect price sources for the loaded detail
+                
                 void recoverMissingPriceSources(mappedData.lines, Number(mappedData.customer_id), Number(mappedData.branch_id));
-                // Enrich lines if item_code is missing
                 void enrichLinesWithItemData(mappedData.lines || []);
             } else if (!id && lastInitializedId.current !== currentTarget) {
-                // 🛡️ Rescue: Ensure types match QuotationFormValues (convert ID strings to numbers)
                 const mergedValues: QuotationFormValues = initialData ? { 
                     ...defaultValues, 
                     sq_id: String(initialData.sq_id || ''),
@@ -491,24 +478,16 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         }
     }, [
         isOpen, 
-        initialData, 
+        isMasterDataReady,
+        id, 
+        quotationDetail,
+        initialData,
+        hasInitialLines,
         reset, 
         defaultValues, 
-        id, 
-        quotationDetail, 
         mapApiToForm, 
-        hasInitialLines, 
-        setValue, 
         recoverMissingPriceSources, 
-        enrichLinesWithItemData,
-        branches?.length,
-        taxCodes?.length,
-        uoms?.length,
-        departments?.length,
-        projects?.length,
-        saleAreas?.length,
-        employees?.length,
-        user?.employee_id
+        enrichLinesWithItemData
     ]);
 
     // ========================================================================
@@ -746,6 +725,11 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
 
         if (lines.length === 0) return;
 
+        // 🛡️ Race Condition Guard: Cancel previous batch sync if still in flight
+        pricingAbortControllerRef.current?.abort();
+        pricingAbortControllerRef.current = new AbortController();
+        const signal = pricingAbortControllerRef.current.signal;
+
         logger.info('🔄 [QuotationForm] Header changed. Synchronizing line prices...', { customer_id, branch_id });
         
         const updatedLines = [...lines];
@@ -774,7 +758,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                     qty: Number(line.qty) || 1,
                     branchId: branch_id,
                     customerId: customer_id
-                });
+                }, signal);
 
                 if (result) {
                     const price = Number(result.unitPrice);
@@ -828,6 +812,12 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         });
 
         await Promise.all(promises);
+
+        // 🛡️ Final Guard: Only update state if this request is still the latest one
+        if (signal.aborted) {
+            logger.debug('🛑 [QuotationForm] Price sync aborted. Skipping state update.');
+            return;
+        }
 
         if (hasChanges) {
             setValue('lines', updatedLines, { shouldValidate: true, shouldDirty: true });

@@ -28,7 +28,7 @@ export const PricingService = {
     /**
      * Hit the Unified Backend Pricing Engine.
      */
-    async calculatePrice(params: PricingCalculateParams): Promise<PricingCalculateResponse | null> {
+    async calculatePrice(params: PricingCalculateParams, signal?: AbortSignal): Promise<PricingCalculateResponse | null> {
         if (!params.itemId || !params.customerId || !params.branchId || params.qty <= 0) {
             return null;
         }
@@ -40,13 +40,18 @@ export const PricingService = {
                     qty: params.qty,
                     customerId: params.customerId,
                     branchId: params.branchId,
-                }
+                },
+                signal
             });
 
             logger.info(`[PricingService] ✅ Calculated Price: ${response.unitPrice} from ${response.sourceName}`);
             return response;
 
         } catch (err) {
+            // Handle cancellation silently
+            if (err instanceof Error && err.name === 'CanceledError') {
+                return null;
+            }
             logger.warn('[PricingService] ⚠️ Calculation Failed or Not Found:', err);
             return null;
         }
