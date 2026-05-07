@@ -22,7 +22,10 @@ export const EmployeeService = {
     try {
       const response = await api.get<IEmployee[]>('/employees');
       logger.info('[EmployeeService] Raw API Response:', response);
-      return response;
+      // Handle both direct array and paginated response { items: [...] } or { data: [...] }
+      const res = response as unknown as Record<string, unknown>;
+      const list = (res?.items as IEmployee[]) || (res?.data as IEmployee[]) || (Array.isArray(response) ? response : []);
+      return list;
     } catch (error) {
       logger.error('[EmployeeService] Error fetching employees:', error);
       throw error;

@@ -69,12 +69,16 @@ export const useReservationMasterData = (isOpen: boolean) => {
     });
 
     // Employees
-    const { data: employees = [] } = useQuery({
+    const { data: allEmployees = [] } = useQuery({
         queryKey: ['master-employees'],
         queryFn: MasterDataService.getEmployees,
         enabled: isOpen,
         staleTime: 5 * 60 * 1000,
     });
+
+    const employees = useMemo(() => 
+        allEmployees.filter(emp => emp.emp_type?.toString().trim() === 'S'),
+    [allEmployees]);
 
     // Units (UOMs)
     const { data: uomResponse } = useQuery({

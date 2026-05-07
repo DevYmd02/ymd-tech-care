@@ -224,9 +224,11 @@ export const MasterDataService = {
   getEmployees: async (): Promise<EmployeeListItem[]> => {
     try {
       const response = await EmployeeService.getList({ limit: 1000 });
-      // EmployeeService.getList returns PaginatedListResponse<EmployeeMaster> as the response body
-      const list = (response as unknown as { data: EmployeeListItem[] })?.data || (response as unknown as EmployeeListItem[]);
-      return Array.isArray(list) ? list : [];
+      // EmployeeService.getList returns PaginatedListResponse<EmployeeMaster> which has 'items'
+      // Some versions of the API might return 'data' or a direct array
+      const res = response as unknown as Record<string, unknown>;
+      const list = (res?.items as EmployeeListItem[]) || (res?.data as EmployeeListItem[]) || (Array.isArray(response) ? response : []);
+      return list;
     } catch (error) {
       logger.error('[MasterDataService] getEmployees failed:', error);
       return [];

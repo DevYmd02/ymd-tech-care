@@ -390,6 +390,7 @@ export function SalesOrderFormModal({
                 onClose={() => setIsEmployeeSearchOpen(false)}
                 onSelect={handleSelectEmployee}
                 headerColor="bg-indigo-600"
+                filterType="S"
             />
             
             <WarehouseSearchModal

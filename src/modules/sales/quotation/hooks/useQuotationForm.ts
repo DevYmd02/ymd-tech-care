@@ -360,11 +360,15 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         enabled: isOpen,
     });
 
-    const { data: employees = [] } = useQuery({
+    const { data: allEmployees = [] } = useQuery({
         queryKey: ['master-employees'],
         queryFn: () => MasterDataService.getEmployees(),
         enabled: isOpen,
     });
+
+    const employees = useMemo(() => 
+        allEmployees.filter(emp => emp.emp_type?.toString().trim() === 'S'),
+    [allEmployees]);
     
     const { data: priceLevelNames = [] } = useQuery({
         queryKey: ['master-price-level-names'],

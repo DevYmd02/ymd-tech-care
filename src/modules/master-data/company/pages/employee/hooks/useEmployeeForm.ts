@@ -311,8 +311,13 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
 
     const saveMutation = useMutation({
         mutationFn: async (data: EmployeeFormData) => {
+            // Remove calculated fields that should not be sent to backend
+            const { employee_fullname, employee_fullname_en, ...restData } = data;
+            void employee_fullname;
+            void employee_fullname_en;
+
             const payload = {
-                ...data,
+                ...restData,
                 // Ensure IDs are null instead of 0 or empty string
                 employee_head_id: data.employee_head_id || null,
                 emp_dept_id: data.emp_dept_id || null,

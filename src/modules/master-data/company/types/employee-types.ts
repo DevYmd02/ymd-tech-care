@@ -56,4 +56,5 @@ export interface IEmployee {
   branch?: {
     branch_name: string;
   };
+  emp_type?: string | boolean;
 }

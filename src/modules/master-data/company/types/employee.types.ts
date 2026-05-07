@@ -99,6 +99,9 @@ export interface EmployeeFormData {
     is_active: boolean;
     employee_head_id: number | null;
     addresses: EmployeeAddress[];
+    // Computed fields (optional, used for filtering out in payload)
+    employee_fullname?: string;
+    employee_fullname_en?: string;
 }
 
 export type EmployeeListItem = EmployeeMaster;
