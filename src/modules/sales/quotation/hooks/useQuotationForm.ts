@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useForm, useWatch, type Resolver, type Path } from 'react-hook-form';
+import { useForm, useWatch, type Resolver, type Path, type PathValue } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
 import { MasterDataService } from '@master-data';
@@ -640,32 +640,42 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     }, [setValue, getValues]);
 
     const handleLineChange = useCallback((index: number, field: keyof QuotationLineValues, value: string | number) => {
-        const currentLines = getValues('lines') || [];
-        if (!currentLines[index]) return;
-
-        const newLines = [...currentLines];
-        const updatedLine = { ...newLines[index], [field]: value };
+        const path = `lines.${index}.${field}` as const;
         
+        // 🛡️ CRITICAL: Don't validate on every keystroke for fields being typed in.
+        // This prevents Zod's coerce.number() from "bouncing" (e.g. converting "50." to 50 immediately).
+        // Validation will happen on blur because form mode is set to 'onBlur'.
+        const noValidateFields = ['qty', 'unit_price', 'discount_expression', 'note'];
+        const shouldValidate = !noValidateFields.includes(field);
+        
+        setValue(path, value as PathValue<QuotationFormValues, typeof path>, { 
+            shouldValidate, 
+            shouldDirty: true,
+            shouldTouch: true
+        });
+
         // Recalculate Line Total if dependent fields change
         if (field === 'qty' || field === 'unit_price' || field === 'discount_expression') {
-            const qty = Number(field === 'qty' ? value : updatedLine.qty) || 0;
-            const price = Number(field === 'unit_price' ? value : updatedLine.unit_price) || 0;
+            const line = getValues(`lines.${index}`);
+            if (!line) return;
+
+            const qty = Number(field === 'qty' ? value : line.qty) || 0;
+            const price = Number(field === 'unit_price' ? value : line.unit_price) || 0;
+            const ldInput = (field === 'discount_expression' ? (value as string) : line.discount_expression) || '';
             
-            const ldInput = (field === 'discount_expression' ? (value as string) : updatedLine.discount_expression) || '';
             const calculatedLD = calculateDiscountAmount(qty * price, ldInput);
-            
-            updatedLine.line_discount = calculatedLD;
-            updatedLine.line_total = calculateLineTotal(qty, price, calculatedLD);
+            const lineTotal = calculateLineTotal(qty, price, calculatedLD);
+
+            // Use targeted updates for dependent fields too
+            setValue(`lines.${index}.line_discount`, calculatedLD);
+            setValue(`lines.${index}.line_total`, lineTotal);
 
             // If user manually changed the unit_price, clear the system source
             if (field === 'unit_price') {
-                updatedLine.price_source = undefined;
-                updatedLine.price_source_name = 'MANUAL';
+                setValue(`lines.${index}.price_source`, undefined);
+                setValue(`lines.${index}.price_source_name`, 'MANUAL');
             }
         }
-        
-        newLines[index] = updatedLine;
-        setValue('lines', newLines, { shouldValidate: true });
     }, [setValue, getValues]);
 
     const handleLinePriceSync = useCallback(async (index: number) => {

@@ -82,19 +82,35 @@ export function useSalesOrderForm({
         }
 
         const isEditing = !!id;
-        const hasData = initialData && Object.keys(initialData).length > 0;
+        const hasActualData = initialData && (
+            initialData.so_no || 
+            initialData.customer_id || 
+            (initialData.lines && initialData.lines.length > 0) ||
+            initialData.reservation_id
+        );
 
-        // Reset if not initialized AND (not editing OR data has arrived)
-        if (!isInitializedRef.current) {
-            if (!isEditing || hasData) {
-                reset({
-                    ...getSalesOrderDefaultValues(),
-                    ...(initialData || {}),
-                });
-                isInitializedRef.current = true;
-            }
+        // Case 1: Create Mode (No ID) - Initialize once
+        if (!isEditing && !isInitializedRef.current) {
+            reset({
+                ...getSalesOrderDefaultValues(),
+                ...(initialData || {}),
+            });
+            isInitializedRef.current = true;
+            return;
+        }
+
+        // Case 2: Edit Mode - Initialize when actual data arrives
+        if (isEditing && hasActualData && !isInitializedRef.current) {
+            logger.debug('[useSalesOrderForm] Initializing Edit Mode with data:', initialData.so_no);
+            reset({
+                ...getSalesOrderDefaultValues(),
+                ...initialData,
+            });
+            isInitializedRef.current = true;
         }
     }, [isOpen, initialData, reset, id]);
+
+
 
     // --------------------------------------------------------
     // Currency & Exchange Rate Logic
@@ -305,13 +321,15 @@ export function useSalesOrderForm({
             const rsData = await ReservationService.getById(String(reservation.reservation_id));
             if (rsData) {
                 // Populate Header Fields (Robust Mapping)
+                const rs = rsData as Record<string, unknown>;
+                
+                // 1. Populate Header Fields via Mapping
                 const headerMap: Record<string, keyof SalesOrderFormValues> = {
                     customer_id: 'customer_id',
                     branch_id: 'branch_id',
                     emp_dept_id: 'emp_dept_id',
                     emp_sale_id: 'emp_sale_id',
                     emp_sale_name: 'emp_sale_name',
-                    sale_area_id: 'emp_area_id',
                     job_id: 'job_id',
                     tax_code_id: 'tax_code_id',
                     payment_term_days: 'payment_term_days',
@@ -321,7 +339,6 @@ export function useSalesOrderForm({
                     currency_code: 'currency_code'
                 };
 
-                const rs = rsData as Record<string, unknown>;
                 Object.entries(headerMap).forEach(([rsKey, soKey]) => {
                     const val = rs[rsKey];
                     if (val !== undefined && val !== null && val !== '') {
@@ -332,6 +349,13 @@ export function useSalesOrderForm({
                         }
                     }
                 });
+
+                // 2. Handle Sales Area (Special Case: try multiple keys)
+                const areaId = rs.sale_area_id || rs.emp_area_id || rs.area_id;
+                if (areaId !== undefined && areaId !== null && areaId !== '') {
+                    setValue('emp_area_id', String(areaId), { shouldValidate: true, shouldDirty: true });
+                }
+
                 
                 // Multicurrency Mapping
                 if (rsData.isMulticurrency !== undefined) {
@@ -371,6 +395,7 @@ export function useSalesOrderForm({
                         location_id: String(line.location_id || ''),
                         uom_id: String(line.uom_id || ''),
                         unit_price: Number(line.unit_price || 0),
+                        lot_id: line.lot_id ? String(line.lot_id) : undefined,
                         lot_no: line.lot_no || '',
                         line_discount_input: line.line_discount_input || '',
                         line_discount: Number(line.line_discount || 0),

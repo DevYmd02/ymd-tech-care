@@ -13,7 +13,7 @@ import { ProductSearchModal } from '@/modules/master-data/inventory/components/P
 import { CustomerSearchModal } from '@/modules/master-data/customer/customer-master/components/CustomerSearchModal';
 import { EmployeeSearchModal } from '@/modules/master-data/employee/components/EmployeeSearchModal';
 import { EmployeeDeptService } from '@company/services/employee-dept.service';
-import { BranchService } from '@company/services/branch.service';
+import { BranchService } from '@company/services/org-branch.service';
 import { useQuery } from '@tanstack/react-query';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';

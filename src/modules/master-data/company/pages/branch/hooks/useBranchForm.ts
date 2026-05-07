@@ -51,8 +51,10 @@ export function useBranchForm(editId: number | null, initialData?: BranchListIte
                 branch_name: initialData.branch_name,
                 is_active: initialData.is_active,
             });
+        } else if (!editId) {
+            reset(initialFormData);
         }
-    }, [initialData, reset]);
+    }, [initialData, editId, reset]);
 
     const saveMutation = useMutation({
         mutationFn: (data: BranchFormData) => {

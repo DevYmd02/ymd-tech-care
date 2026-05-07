@@ -273,6 +273,7 @@ function normalizeSQ(raw: unknown): SQForApproval | null {
     payment_term_days: Number(obj.payment_term_days || 0),
 
     branch_id: Number(obj.branch_id || branch.id || obj.id_branch || 0),
+    onhold: String(obj.onhold || 'N'),
     branch_name: String(obj.branch_name || branch.name || obj.branch_ref_name || '').replace(/^-$/, ''),
     emp_dept_id: Number(obj.emp_dept_id || dept.id || obj.id_dept || obj.id_department || obj.dept_id || 0),
     emp_dept_name: String(obj.emp_dept_name || dept.name || obj.dept_name || obj.department_name || '').replace(/^-$/, ''),
@@ -372,6 +373,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
     emp_sale_name: '',
     valid_until: '',
     payment_term_days: 0,
+    onhold: 'N',
     remarks: '',
     lines: [],
   }), []);
@@ -655,6 +657,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         sq_id: sq.sq_id,
         sq_no: sq.sq_no || String(aqItemArg?.sq_no || ''),
         sq_date: sq.sq_date || String(aqItemArg?.sq_date || ''),
+        customer_id: sq.customer_id || 0,
         customer_name: sq.customer_name || String(aqItemArg?.customer_name || ''),
         customer_code: sq.customer_code || String(aqItemArg?.customer_code || ''),
         status: String((aqDetails as Record<string, unknown>)?.status || aqItemArg?.status || sq.status) as AQFormData['status'],
@@ -695,6 +698,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         emp_dept_name: sq.emp_dept_name || String(aqItemArg?.emp_dept_name || ''),
         tax_code: sq.tax_code || String(aqItemArg?.tax_code || ''),
         isMulticurrency: Boolean(sq.isMulticurrency),
+        onhold: sq.onhold || 'N',
         lines: mappedLines,
       } as AQFormData);
     } catch (err) {
@@ -786,24 +790,26 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
     }
     setIsConfirmModalOpen(true);
   }, handleFormError);
-
   const handleConfirmApprove = async () => {
     if (!activeId) return;
     const data = formMethods.getValues();
-
-    const finalStatus: 'APPROVED' | 'REJECTED' = 'APPROVED'; // Always APPROVED for this handler
-
+    const approval_emp_id = user?.employee_id || user?.id; // Try to get a valid ID
+    
+    if (!approval_emp_id) {
+      toast('ไม่พบรหัสพนักงานของคุณในระบบ ไม่สามารถอนุมัติได้', 'error');
+      return;
+    }
 
     const payload: ApproveQuotationPayload = {
       sq_id: Number(activeId),
       aq_date: new Date().toISOString().split('T')[0],
-      status: finalStatus,
+      status: 'APPROVED',
       remarks: data.remarks || '',
-      approval_emp_id: user?.employee_id || 1,
-      approval_emp_name: user?.employee?.employee_fullname || '',
+      approval_emp_id: Number(approval_emp_id),
+      approval_emp_name: user?.employee?.employee_fullname || user?.username || 'System',
       base_currency_code: data.base_currency_code || 'THB',
       quote_currency_code: data.quote_currency_code || 'THB',
-      exchange_rate: data.exchange_rate || 1,
+      exchange_rate: Number(data.exchange_rate || 1),
       exchange_rate_date: data.exchange_rate_date || new Date().toISOString().split('T')[0],
       tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : undefined,
       discount_expression: data.discount_expression || '0',
@@ -818,6 +824,8 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         remarks: l.remarks || '',
       })),
     };
+
+    logger.info('[useAQForm] Confirming Approval with payload:', payload);
 
     setIsSubmitting(true);
     try {
@@ -860,16 +868,22 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
     const data = formMethods.getValues();
     const reason = data.reject_reason || 'Rejected';
 
+    const approval_emp_id = user?.employee_id || user?.id;
+    if (!approval_emp_id) {
+      toast('ไม่พบรหัสพนักงานของคุณในระบบ ไม่สามารถดำเนินการได้', 'error');
+      return;
+    }
+
     const payload: ApproveQuotationPayload = {
       sq_id: Number(activeId),
       aq_date: new Date().toISOString().split('T')[0],
       status: 'REJECTED',
       remarks: reason,
-      approval_emp_id: user?.employee_id || 1,
-      approval_emp_name: user?.employee?.employee_fullname || '',
+      approval_emp_id: Number(approval_emp_id),
+      approval_emp_name: user?.employee?.employee_fullname || user?.username || 'System',
       base_currency_code: data.base_currency_code || 'THB',
       quote_currency_code: data.quote_currency_code || 'THB',
-      exchange_rate: data.exchange_rate || 1,
+      exchange_rate: Number(data.exchange_rate || 1),
       exchange_rate_date: data.exchange_rate_date || new Date().toISOString().split('T')[0],
       aq_lines: data.lines.map(l => ({
         sq_line_id: Number(l.sq_line_id),
@@ -881,6 +895,8 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         remarks: reason,
       })),
     };
+
+    logger.info('[useAQForm] Confirming Reject with payload:', payload);
 
     setIsRejecting(true);
     try {

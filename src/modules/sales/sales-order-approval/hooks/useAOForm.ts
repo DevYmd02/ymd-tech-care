@@ -119,7 +119,10 @@ function normalizeSO(raw: unknown): SOForApproval | null {
     location_name: String(l.location_name || ''),
     lot_id: String(l.lot_id || ''),
     lot_no: String(l.lot_no || ''),
+    note: String(l.note || l.remarks || ''),
+    remarks: String(l.remarks || l.note || ''),
   }));
+
 
   const subTotal = lines.reduce((sum, l) => sum + l.line_total, 0);
 
@@ -156,13 +159,27 @@ function normalizeSO(raw: unknown): SOForApproval | null {
     
     tax_code_id: String(rawTaxId || ''),
     tax_code: String(obj.tax_code || tax.tax_code || tax.code || tax.name || ''),
-    tax_rate: Number(obj.tax_rate || tax.tax_rate || 0),
+    tax_rate: (() => {
+      const r = Number(obj.tax_rate || tax.tax_rate || 0);
+      return (r > 0 && r < 1) ? r * 100 : r; // Handle decimal vs percentage (0.07 vs 7)
+    })(),
+
     
     sub_total: subTotal,
     discount_expression: String(obj.discount_expression || obj.discount_input || '0'),
     discount_amount: Number(obj.discount_amount || 0),
+    
+    // Financial Fields (Multi-alias for robustness)
     tax_amount: Number(obj.tax_amount || obj.base_tax_amount || obj.vat_amount || 0),
+    vat_amount: Number(obj.vat_amount || obj.tax_amount || obj.base_tax_amount || 0),
+    quote_tax_amount: Number(obj.quote_tax_amount || obj.vat_amount || obj.tax_amount || 0),
+    base_tax_amount: Number(obj.base_tax_amount || obj.tax_amount || obj.vat_amount || 0),
+    
     net_total: Number(obj.net_total || obj.total_amount || obj.base_total_amount || 0),
+    total_amount: Number(obj.total_amount || obj.net_total || obj.base_total_amount || 0),
+    quote_total_amount: Number(obj.quote_total_amount || obj.total_amount || obj.net_total || 0),
+    base_total_amount: Number(obj.base_total_amount || obj.total_amount || obj.net_total || 0),
+
     
     currency_code: String(obj.currency_code || obj.base_currency_code || 'THB'),
     exchange_rate: Number(obj.exchange_rate || 1),
@@ -692,9 +709,8 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
   const handleConfirmApprove = async () => {
     if (!activeId) return;
     const data = formMethods.getValues();
-
     const payload: ApproveSalesOrderPayload = {
-      so_id: Number(activeId),
+      so_id: Number(activeId || 0),
       customer_id: Number(data.customer_id || 0),
       status: 'APPROVED',
       status_remark: data.remarks || '',
@@ -705,7 +721,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
       project_id: Number(data.job_id || 0),
       approval_emp_id: Number(data.approval_emp_id || user?.employee_id || 1),
       approval_emp_name: data.approval_emp_name || user?.employee?.employee_fullname || '',
-      branch_id: data.branch_id ? Number(data.branch_id) : undefined,
+      branch_id: Number(data.branch_id || user?.employee?.branch_id || 1),
       emp_sale_id: data.emp_sale_id ? Number(data.emp_sale_id) : undefined,
       base_currency_code: data.base_currency_code || 'THB',
       quote_currency_code: data.quote_currency_code || 'THB',
@@ -714,13 +730,13 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
       tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : undefined,
       discount_expression: data.discount_expression || '0',
       CreateSaleOrderApprovalLineDtos: data.lines.filter(l => l.is_approved).map(l => ({
-        so_line_id: Number(l.so_line_id),
-        item_id: Number(l.item_id),
-        qty: Number(l.qty_ordered),
-        uom_id: Number(l.uom_id),
-        approved_qty: Number(l.approved_qty),
+        so_line_id: Number(l.so_line_id || 0),
+        item_id: Number(l.item_id || 0),
+        qty: Number(l.qty_ordered || 0),
+        uom_id: Number(l.uom_id || 0),
+        approved_qty: Number(l.approved_qty || 0),
         remarks: l.remarks || '',
-        unit_price: Number(l.unit_price),
+        unit_price: Number(l.unit_price || 0),
         discount_expression: l.discount_expression || '0',
       })),
     };
@@ -758,7 +774,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
     const data = formMethods.getValues();
     
     const payload: ApproveSalesOrderPayload = {
-      so_id: Number(activeId),
+      so_id: Number(activeId || 0),
       customer_id: Number(data.customer_id || 0),
       status: 'REJECTED',
       status_remark: reason,
@@ -767,9 +783,9 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
       sale_area_id: Number(data.emp_area_id || 0),
       emp_dept_id: Number(data.emp_dept_id || 0),
       project_id: Number(data.job_id || 0),
-      approval_emp_id: Number(data.approval_emp_id || user?.employee_id || 1),
+      approval_emp_id: Number(data.approval_emp_id || user?.employee_id || 0),
       approval_emp_name: data.approval_emp_name || user?.employee?.employee_fullname || '',
-      branch_id: data.branch_id ? Number(data.branch_id) : undefined,
+      branch_id: Number(data.branch_id || user?.employee?.branch_id || 0),
       emp_sale_id: data.emp_sale_id ? Number(data.emp_sale_id) : undefined,
       base_currency_code: data.base_currency_code || 'THB',
       quote_currency_code: data.quote_currency_code || 'THB',
@@ -778,13 +794,13 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
       tax_code_id: data.tax_code_id ? Number(data.tax_code_id) : undefined,
       discount_expression: data.discount_expression || '0',
       CreateSaleOrderApprovalLineDtos: data.lines.map(l => ({
-        so_line_id: Number(l.so_line_id),
-        item_id: Number(l.item_id),
-        qty: Number(l.qty_ordered),
-        uom_id: Number(l.uom_id),
+        so_line_id: Number(l.so_line_id || 0),
+        item_id: Number(l.item_id || 0),
+        qty: Number(l.qty_ordered || 0),
+        uom_id: Number(l.uom_id || 0),
         approved_qty: 0,
         remarks: reason,
-        unit_price: Number(l.unit_price),
+        unit_price: Number(l.unit_price || 0),
         discount_expression: l.discount_expression || '0',
       })),
     };
