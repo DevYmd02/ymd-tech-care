@@ -4,13 +4,14 @@
  */
 
 import api from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import type { EmployeeDeptMaster, EmployeeDeptFormData } from '@/modules/master-data/company/types/employee-dept.types';
 import { type PaginatedListResponse } from '@/shared/types/api.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 export const EmployeeDeptService = {
-  getList: async (params?: Partial<TableFilters>): Promise<PaginatedListResponse<EmployeeDeptMaster>> => {
-    const response = await api.get<PaginatedListResponse<EmployeeDeptMaster> | EmployeeDeptMaster[]>('/department', { params });
+  getList: async (params?: Partial<TableFilters>, config?: AxiosRequestConfig): Promise<PaginatedListResponse<EmployeeDeptMaster>> => {
+    const response = await api.get<PaginatedListResponse<EmployeeDeptMaster> | EmployeeDeptMaster[]>('/department', { ...config, params });
     
     // Normalize: Handle raw array response from backend
     if (Array.isArray(response)) {
@@ -24,7 +25,7 @@ export const EmployeeDeptService = {
     
     return response;
   },
-  get: (id: string | number) => api.get<EmployeeDeptMaster>(`/department/${id}`),
+  get: (id: string | number, config?: AxiosRequestConfig) => api.get<EmployeeDeptMaster>(`/department/${id}`, config),
   create: async (data: EmployeeDeptFormData): Promise<{ success: boolean; data?: EmployeeDeptMaster; message?: string }> => {
     try {
       const response = await api.post<EmployeeDeptMaster>('/department', data);

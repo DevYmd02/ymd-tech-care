@@ -80,7 +80,12 @@ api.interceptors.response.use(
     const url = error.config?.url || 'UNKNOWN';
     const status = error.response?.status || 'UNKNOWN';
     
-    logger.error(`❌ [API Error] [${method}] ${url} (${status})`, error);
+    // Skip logging for canceled requests (planned cleanup)
+    if (axios.isCancel(error) || error.name === 'CanceledError') {
+      logger.debug(`[API Canceled] [${method}] ${url}`);
+    } else {
+      logger.error(`❌ [API Error] [${method}] ${url} (${status})`, error);
+    }
 
     if (error.response?.status === 401) {
       // 💡 LOGIN EXCEPTION: If the error comes from the login endpoint, 

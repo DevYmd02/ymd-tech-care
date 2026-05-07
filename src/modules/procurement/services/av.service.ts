@@ -1,33 +1,35 @@
 import api from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import type { PRListParams, PRListResponse, PRHeaderExtended } from '@/modules/procurement/types/pr-types';
-import type { ApproveExpensePayload, ApprovalListResponse } from '@/modules/procurement/types/av-types';
+import type { ApproveExpensePayload, ApprovalListResponse, ApprovalDetail } from '@/modules/procurement/types/av-types';
+import type { SuccessResponse } from '@/shared/types/api.types';
 
 export const AVService = {
-  getPendingPRs: async (params?: PRListParams): Promise<PRListResponse> => {
-    return await api.get<PRListResponse>('/pr', { params: { ...params, status: 'PENDING' } });
+  getPendingPRs: async (params?: PRListParams, config?: AxiosRequestConfig): Promise<PRListResponse> => {
+    return await api.get<PRListResponse>('/pr', { ...config, params: { ...params, status: 'PENDING' } });
   },
 
-  getPendingApprovalPRs: async (): Promise<PRHeaderExtended[]> => {
-    return await api.get<PRHeaderExtended[]>('/pr-approval/pr/pending-approval');
+  getPendingApprovalPRs: async (config?: AxiosRequestConfig): Promise<PRHeaderExtended[]> => {
+    return await api.get<PRHeaderExtended[]>('/pr-approval/pr/pending-approval', config);
   },
 
-  getPRById: async (prId: string | number): Promise<PRHeaderExtended> => {
-    return await api.get<PRHeaderExtended>(`/pr/${prId}`);
+  getPRById: async (prId: string | number, config?: AxiosRequestConfig): Promise<PRHeaderExtended> => {
+    return await api.get<PRHeaderExtended>(`/pr/${prId}`, config);
   },
 
-  approvePR: async (payload: ApproveExpensePayload): Promise<any> => {
-    return await api.post<any>('/pr-approval', payload);
+  approvePR: async (payload: ApproveExpensePayload, config?: AxiosRequestConfig): Promise<SuccessResponse> => {
+    return await api.post<SuccessResponse>('/pr-approval', payload, config);
   },
 
-  rejectPR: async (payload: ApproveExpensePayload): Promise<any> => {
-    return await api.post<any>('/pr-approval', payload);
+  rejectPR: async (payload: ApproveExpensePayload, config?: AxiosRequestConfig): Promise<SuccessResponse> => {
+    return await api.post<SuccessResponse>('/pr-approval', payload, config);
   },
 
-  getApprovalList: async (params?: any): Promise<ApprovalListResponse> => {
-    return await api.get<ApprovalListResponse>('/pr-approval', { params });
+  getApprovalList: async (params?: Partial<PRListParams>, config?: AxiosRequestConfig): Promise<ApprovalListResponse> => {
+    return await api.get<ApprovalListResponse>('/pr-approval', { ...config, params });
   },
 
-  getApprovalById: async (id: number): Promise<any> => {
-    return await api.get<any>(`/pr-approval/${id}`);
+  getApprovalById: async (id: number, config?: AxiosRequestConfig): Promise<ApprovalDetail> => {
+    return await api.get<ApprovalDetail>(`/pr-approval/${id}`, config);
   }
 };

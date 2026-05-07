@@ -5,6 +5,7 @@
  */
 
 import api, { USE_MOCK } from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import { logger } from '@/shared/utils';
 import type {
     ItemGroup, ItemGroupFormData,
@@ -56,7 +57,7 @@ function createInventoryService<T extends IBaseMaster, F, A, O = Partial<A>>(
     let localData: T[] = [...config.mockData];
 
     return {
-        getAll: async (params?: Record<string, string | number | boolean | undefined>): Promise<ListResponse<T>> => {
+        getAll: async (params?: Record<string, string | number | boolean | undefined>, axiosConfig?: AxiosRequestConfig): Promise<ListResponse<T>> => {
             if (USE_MOCK) {
                 logger.info(`🎭 [Mock Mode] Serving ${config.entityName} list`, params);
                 let filtered = [...localData];
@@ -94,7 +95,7 @@ function createInventoryService<T extends IBaseMaster, F, A, O = Partial<A>>(
                 };
             }
             try {
-                const response = await api.get<A[] | { items?: A[]; data?: A[]; total?: number; page?: number; limit?: number }>(config.apiPath, { params });
+                const response = await api.get<A[] | { items?: A[]; data?: A[]; total?: number; page?: number; limit?: number }>(config.apiPath, { ...axiosConfig, params });
                 
                 const rawItems = Array.isArray(response) 
                     ? response 
@@ -118,7 +119,7 @@ function createInventoryService<T extends IBaseMaster, F, A, O = Partial<A>>(
             }
         },
 
-        getById: async (id: number): Promise<T | null> => {
+        getById: async (id: number, axiosConfig?: AxiosRequestConfig): Promise<T | null> => {
             if (USE_MOCK) {
                 const item = localData.find(i => i.id === id);
                 if (item) {
@@ -128,7 +129,7 @@ function createInventoryService<T extends IBaseMaster, F, A, O = Partial<A>>(
                 return null;
             }
             try {
-                const response = await api.get<A | { data?: A } | null>(`${config.apiPath}/${id}`);
+                const response = await api.get<A | { data?: A } | null>(`${config.apiPath}/${id}`, axiosConfig);
                 if (!response) return null;
                 const rawItem = typeof response === 'object' && response !== null && 'data' in response && response.data 
                     ? response.data 

@@ -81,9 +81,9 @@ export const QCService = {
     return await api.get<QCListItem>(ENDPOINTS.detail(id), config);
   },
 
-  getReadyForPO: async (): Promise<IReadyForPOPR[]> => {
+  getReadyForPO: async (config?: AxiosRequestConfig): Promise<IReadyForPOPR[]> => {
     logger.info('[QCService] Fetching PRs waiting for QC (Ready for PO)');
-    return await api.get<IReadyForPOPR[]>('/po/pr/waiting-for-qc');
+    return await api.get<IReadyForPOPR[]>('/po/pr/waiting-for-qc', config);
   },
 
   getWaitingForQC: async (): Promise<RFQHeader[]> => {

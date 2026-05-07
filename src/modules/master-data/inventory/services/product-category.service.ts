@@ -1,11 +1,27 @@
 import api, { USE_MOCK } from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import { logger } from '@/shared/utils';
 import { mockProductCategories } from '@/modules/master-data/mocks/masterDataMocks';
 import type { SuccessResponse, PaginatedListResponse } from '@/shared/types/api.types';
 import type { ProductCategoryListItem, ProductCategoryCreateRequest, ProductCategoryUpdateRequest } from '@/modules/master-data/types/master-data-types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
-function mapToProductCategory(item: any): ProductCategoryListItem {
+import { normalizeListResponse, unwrapResponseData } from '@/shared/utils/apiUtils';
+
+interface BackendProductCategory {
+  item_category_id?: number;
+  category_id?: number;
+  item_category_code?: string;
+  category_code?: string;
+  item_category_name?: string;
+  category_name?: string;
+  item_category_nameeng?: string;
+  category_name_en?: string;
+  is_active?: boolean;
+  created_at?: string;
+}
+
+function mapToProductCategory(item: BackendProductCategory): ProductCategoryListItem {
   return {
     id: item.item_category_id || item.category_id,
     category_id: item.item_category_id || item.category_id,
@@ -18,7 +34,7 @@ function mapToProductCategory(item: any): ProductCategoryListItem {
 }
 
 export const ProductCategoryService = {
-  getAll: async (params?: Partial<TableFilters>): Promise<PaginatedListResponse<ProductCategoryListItem>> => {
+  getAll: async (params?: Partial<TableFilters>, config?: AxiosRequestConfig): Promise<PaginatedListResponse<ProductCategoryListItem>> => {
     if (USE_MOCK) {
       logger.info('🎭 [Mock Mode] Serving Product Category List');
       return {
@@ -29,32 +45,28 @@ export const ProductCategoryService = {
       };
     }
     try {
-      // Adjust API path if needed based on your backend request URL provided: /api/item-category
-      // Assuming base URL handles /api, we use /item-category
-      const response = await api.get<any>('/item-category', { params });
-
-      const rawItems = Array.isArray(response) ? response : (response.items || response.data || []);
-      const items = rawItems.map(mapToProductCategory);
-
-      // Return manually constructed PaginatedListResponse
-      if (Array.isArray(rawItems)) {
-        return { items, total: items.length, page: 1, limit: items.length || 10 };
-      }
-      return response;
+      const response = await api.get<unknown>('/item-category', { ...config, params });
+      const normalized = normalizeListResponse<BackendProductCategory>(response);
+      
+      return { 
+        items: normalized.items.map(mapToProductCategory), 
+        total: Number(normalized.total), 
+        page: Number(normalized.page), 
+        limit: Number(normalized.limit) 
+      };
     } catch (error) {
       logger.error('[ProductCategoryService] getAll error:', error);
       return { items: [], total: 0, page: 1, limit: 10 };
     }
   },
 
-  get: async (id: number): Promise<ProductCategoryListItem | null> => {
+  get: async (id: number, config?: AxiosRequestConfig): Promise<ProductCategoryListItem | null> => {
     if (USE_MOCK) return mockProductCategories.find(c => c.category_id === id) || null;
     try {
-      const response = await api.get<any>(`/item-category/${id}`);
-      if (!response) return null;
-
-      // Handle wrapped response or direct object
-      const rawItem = response.data || response;
+      const response = await api.get<unknown>(`/item-category/${id}`, config);
+      const rawItem = unwrapResponseData<BackendProductCategory>(response);
+      
+      if (!rawItem) return null;
       return mapToProductCategory(rawItem);
     } catch (error) {
       logger.error('[ProductCategoryService] get error:', error);

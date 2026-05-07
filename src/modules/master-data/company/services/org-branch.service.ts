@@ -1,4 +1,5 @@
 import api from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import type { 
   BranchListItem, 
   BranchDropdownItem,
@@ -9,31 +10,22 @@ import type { PaginatedListResponse } from '@/shared/types/api.types';
 import type { TableFilters } from '@/shared/hooks/useTableFilters';
 import { logger } from '@/shared/utils';
 
+import { normalizeListResponse } from '@/shared/utils/apiUtils';
+
 const ENDPOINT = '/org-branches';
 
 export const BranchService = {
-  getList: async (params?: Partial<TableFilters>): Promise<PaginatedListResponse<BranchListItem>> => {
-    const response = await api.get<PaginatedListResponse<BranchListItem> | BranchListItem[]>(ENDPOINT, { params });
-    
-    // Normalize: Handle raw array response (Real API)
-    if (Array.isArray(response)) {
-      return {
-        items: response,
-        total: response.length,
-        page: params?.page || 1,
-        limit: params?.limit || 10
-      };
-    }
-    
-    return response;
+  getList: async (params?: Partial<TableFilters>, config?: AxiosRequestConfig): Promise<PaginatedListResponse<BranchListItem>> => {
+    const response = await api.get<unknown>(ENDPOINT, { ...config, params });
+    return normalizeListResponse<BranchListItem>(response) as PaginatedListResponse<BranchListItem>;
   },
 
-  getDropdown: async (): Promise<BranchDropdownItem[]> => {
-    return api.get<BranchDropdownItem[]>(`${ENDPOINT}/dropdown`);
+  getDropdown: async (config?: AxiosRequestConfig): Promise<BranchDropdownItem[]> => {
+    return api.get<BranchDropdownItem[]>(`${ENDPOINT}/dropdown`, config);
   },
 
-  getById: async (id: number): Promise<BranchListItem | null> => {
-    return api.get<BranchListItem>(`${ENDPOINT}/${id}`);
+  getById: async (id: number, config?: AxiosRequestConfig): Promise<BranchListItem | null> => {
+    return api.get<BranchListItem>(`${ENDPOINT}/${id}`, config);
   },
 
   create: async (data: BranchCreateRequest): Promise<{ success: boolean; message?: string }> => {

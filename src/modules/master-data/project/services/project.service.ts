@@ -4,18 +4,19 @@
  */
 
 import api, { USE_MOCK } from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import type { Project } from '@/modules/master-data/types/master-data-types';
 import { logger } from '@/shared/utils';
 import { mockProjects } from '@/modules/master-data/mocks/masterDataMocks';
 
 export const ProjectService = {
-  getList: async (): Promise<Project[]> => {
+  getList: async (config?: AxiosRequestConfig): Promise<Project[]> => {
     if (USE_MOCK) {
        return mockProjects;
     }
     try {
       type ExpectedResponse = Project[] | { items?: Project[]; data?: Project[] };
-      const response = await api.get<ExpectedResponse>('/project');
+      const response = await api.get<ExpectedResponse>('/project', config);
       
       if (response && typeof response === 'object' && !Array.isArray(response)) {
         if ('items' in response && Array.isArray(response.items)) {
@@ -36,12 +37,12 @@ export const ProjectService = {
     }
   },
 
-  getById: async (id: number): Promise<Project | null> => {
+  getById: async (id: number, config?: AxiosRequestConfig): Promise<Project | null> => {
     if (USE_MOCK) {
       return mockProjects.find(p => p.project_id === id) || null;
     }
     try {
-      const response = await api.get<Project>(`/project/${id}`);
+      const response = await api.get<Project>(`/project/${id}`, config);
       return response;
     } catch (error) {
       logger.error('[ProjectService] getById error:', error);

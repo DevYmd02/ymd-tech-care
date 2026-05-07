@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import type { ExchangeRateType, ExchangeRate, CurrencyApiItem, CurrencyMappedItem, CurrencyApiRequest, CurrencyCreateRequest, CurrencyFormValues } from '@currency/types/currency-types';
 import { logger } from '@/shared/utils';
 
@@ -9,6 +10,8 @@ export interface BaseResponse<T> {
 }
 
 import api from '@/core/api/api';
+
+import { normalizeListResponse, unwrapResponseData } from '@/shared/utils/apiUtils';
 
 // 🔄 Helper function: Map from API to UI (Standardized like item-group)
 function mapCurrencyFromApi(item: CurrencyApiItem): CurrencyMappedItem {
@@ -57,14 +60,13 @@ export const CurrencyService = {
     // ==========================================
     // 🏦 Currency (Standardized for generic UI)
     // ==========================================
-    getAll: async (): Promise<BaseResponse<CurrencyMappedItem>> => {
+    getAll: async (config?: AxiosRequestConfig): Promise<BaseResponse<CurrencyMappedItem>> => {
         try {
-            const res = await api.get<CurrencyApiItem[] | { data: CurrencyApiItem[] }>('/currency', { timeout: 30000 });
-            const resData = res;
-            const rawItems = Array.isArray(resData) ? resData : (resData?.data || []);
+            const res = await api.get<unknown>('/currency', { ...config, timeout: 30000 });
+            const normalized = normalizeListResponse<CurrencyApiItem>(res);
             
             // 🔄 Transform payload to match generic UI structure (id, code, name_th, is_active)
-            const items = rawItems.map(mapCurrencyFromApi);
+            const items = normalized.items.map(mapCurrencyFromApi);
             return { items, total: items.length, page: 1, limit: items.length || 20 };
         } catch (error) {
             logger.error('[CurrencyService] getAll error:', error);
@@ -72,11 +74,11 @@ export const CurrencyService = {
         }
     },
 
-    getById: async (id: string | number): Promise<CurrencyMappedItem | null> => {
+    getById: async (id: string | number, config?: AxiosRequestConfig): Promise<CurrencyMappedItem | null> => {
         try {
-            const res = await api.get<CurrencyApiItem>(`/currency/${id}`);
-            const rawItem = res && 'currency_id' in res ? res : null;
-            return rawItem ? mapCurrencyFromApi(rawItem) : null;
+            const res = await api.get<unknown>(`/currency/${id}`, config);
+            const rawItem = unwrapResponseData<CurrencyApiItem>(res);
+            return (rawItem && 'currency_id' in rawItem) ? mapCurrencyFromApi(rawItem) : null;
         } catch (error) {
             logger.error('[CurrencyService] getById error:', error);
             return null;
@@ -124,28 +126,32 @@ export const CurrencyService = {
     },
 
     // 🔗 Legacy aliases to prevent breaking existing components that rely on the old method names
-    getCurrencies: function() { return this.getAll(); },
-    getCurrencyById: function(id: string) { return this.getById(id); },
+    getCurrencies: function(config?: AxiosRequestConfig) { return this.getAll(config); },
+    getCurrencyById: function(id: string, config?: AxiosRequestConfig) { return this.getById(id, config); },
     createCurrency: function(data: CurrencyFormValues) { return this.create(data); },
     updateCurrency: function(id: string, data: CurrencyFormValues) { return this.update(id, data); },
     deleteCurrency: function(id: string) { return this.delete(id); },
 
     // Exchange Rate Types
-    getExchangeRateTypes: async (): Promise<BaseResponse<ExchangeRateType>> => {
+    getExchangeRateTypes: async (config?: AxiosRequestConfig): Promise<BaseResponse<ExchangeRateType>> => {
         try {
-            const res = await api.get<{ data?: ExchangeRateType[] } | ExchangeRateType[]>('/exchange-rate-type');
-            const resData = res;
-            const items = Array.isArray(resData) ? resData : (resData?.data || []);
-            return { items, total: items.length, page: 1, limit: items.length || 20 };
+            const res = await api.get<unknown>('/exchange-rate-type', config);
+            const normalized = normalizeListResponse<ExchangeRateType>(res);
+            return { 
+                items: normalized.items, 
+                total: Number(normalized.total), 
+                page: Number(normalized.page), 
+                limit: Number(normalized.limit || 20) 
+            };
         } catch (error) {
             logger.error('[CurrencyService] getExchangeRateTypes error:', error);
             return { items: [], total: 0, page: 1, limit: 20 };
         }
     },
 
-    getExchangeRateTypeById: async (id: string): Promise<ExchangeRateType | null> => {
+    getExchangeRateTypeById: async (id: string, config?: AxiosRequestConfig): Promise<ExchangeRateType | null> => {
         try {
-            return await api.get<ExchangeRateType>(`/exchange-rate-type/${id}`);
+            return await api.get<ExchangeRateType>(`/exchange-rate-type/${id}`, config);
         } catch (error) {
             logger.error('[CurrencyService] getExchangeRateTypeById error:', error);
             return null;
@@ -183,21 +189,25 @@ export const CurrencyService = {
     },
 
     // Exchange Rates
-    getExchangeRates: async (): Promise<BaseResponse<ExchangeRate & { currency_code?: string; type_name?: string }>> => {
+    getExchangeRates: async (config?: AxiosRequestConfig): Promise<BaseResponse<ExchangeRate & { currency_code?: string; type_name?: string }>> => {
         try {
-            const res = await api.get<{ data?: (ExchangeRate & { currency_code?: string; type_name?: string })[] } | (ExchangeRate & { currency_code?: string; type_name?: string })[]>('/exchange-rate');
-            const resData = res;
-            const items = Array.isArray(resData) ? resData : (resData?.data || []);
-            return { items, total: items.length, page: 1, limit: items.length || 20 };
+            const res = await api.get<unknown>('/exchange-rate', config);
+            const normalized = normalizeListResponse<ExchangeRate & { currency_code?: string; type_name?: string }>(res);
+            return { 
+                items: normalized.items, 
+                total: Number(normalized.total), 
+                page: Number(normalized.page), 
+                limit: Number(normalized.limit || 20) 
+            };
         } catch (error) {
             logger.error('[CurrencyService] getExchangeRates error:', error);
             return { items: [], total: 0, page: 1, limit: 20 };
         }
     },
 
-    getExchangeRateById: async (id: string): Promise<ExchangeRate | null> => {
+    getExchangeRateById: async (id: string, config?: AxiosRequestConfig): Promise<ExchangeRate | null> => {
         try {
-            return await api.get<ExchangeRate>(`/exchange-rate/${id}`);
+            return await api.get<ExchangeRate>(`/exchange-rate/${id}`, config);
         } catch (error) {
             logger.error('[CurrencyService] getExchangeRateById error:', error);
             return null;
@@ -234,14 +244,13 @@ export const CurrencyService = {
         }
     },
 
-    getLatestExchangeRate: async (currencyId: string, rateDate?: string): Promise<{ rate: number; source?: string } | null> => {
+    getLatestExchangeRate: async (currencyId: string, rateDate?: string, config?: AxiosRequestConfig): Promise<{ rate: number; source?: string } | null> => {
         try {
-            const res = await api.get<{ rate: number; source?: string } | { data: { rate: number; source?: string } }>('/exchange-rate/latest', {
+            const res = await api.get<unknown>('/exchange-rate/latest', {
+                ...config,
                 params: { currency_id: currencyId, rate_date: rateDate }
             });
-            // Handle if response is wrapped in { data: ... }
-            const result = (res && 'data' in res) ? res.data : res;
-            return result as { rate: number; source?: string } | null;
+            return unwrapResponseData<{ rate: number; source?: string }>(res);
         } catch (error) {
             logger.error('[CurrencyService] getLatestExchangeRate error:', error);
             return null;

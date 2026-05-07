@@ -1,13 +1,16 @@
 import api, { USE_MOCK } from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import { logger } from '@/shared/utils';
 import { mockItemTypes } from '@/modules/master-data/mocks/masterDataMocks';
 import type { ItemTypeListItem, ItemTypeCreateRequest } from '@/modules/master-data/types/master-data-types';
 import type { ListResponse } from '@/shared/types/api.types';
 import type { SuccessResponse } from '@/shared/types/api.types';
 
+import { normalizeListResponse } from '@/shared/utils/apiUtils';
+
 export const ItemTypeService = {
 
-  getAll: async (params?: any): Promise<ListResponse<ItemTypeListItem>> => {
+  getAll: async (params?: unknown, config?: AxiosRequestConfig): Promise<ListResponse<ItemTypeListItem>> => {
     if (USE_MOCK) {
       logger.info('🎭 [Mock Mode] Serving Item Type List');
       return {
@@ -19,21 +22,11 @@ export const ItemTypeService = {
     }
 
     try {
-      const response = await api.get<ListResponse<ItemTypeListItem>>('/item-type', { params });
-
-      if (Array.isArray(response)) {
-        return {
-          items: response as ItemTypeListItem[],
-          total: response.length,
-          page: 1,
-          limit: 10
-        };
-      }
-
-      return response;
+      const response = await api.get<unknown>('/item-type', { ...config, params });
+      return normalizeListResponse<ItemTypeListItem>(response);
     } catch (error) {
       logger.error('[ItemTypeService] getAll error:', error);
-      return { items: [], total: 0 };
+      return { items: [], total: 0, page: 1, limit: 10 };
     }
   },
 

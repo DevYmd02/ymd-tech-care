@@ -64,6 +64,7 @@ export interface PRHeader {
   pr_tax_code_id?: number | null;          // INTEGER
   pr_tax_rate?: number;             // snapshot
   warehouse_id?: number;            // INTEGER
+  is_on_hold?: 'Y' | 'N' | boolean;
 
   // ── Data Hydration Fields (Fallback keys the backend may return) ──
   id?: number;                      // Fallback ID from some API responses
@@ -144,9 +145,10 @@ export interface PRLine {
   est_unit_price: number;           // DECIMAL(18,2) - ราคาต่อหน่วยโดยประมาณ
   est_amount: number;               // DECIMAL(18,2) - มูลค่ารวมโดยประมาณ
   needed_date: string;              // DATE - วันที่ต้องการสินค้า
-  preferred_vendor_id?: string; // uuid
+  preferred_vendor_id?: number; 
   remark?: string;                  // TEXT - หมายเหตุ
   line_discount_raw?: string;       // Postman: line_discount_raw
+  line_discount_amount?: number | string;
   line_net_amount?: string | number; // Added: Backend returns this as the line total
   line_total?: string | number;
   tax_amount?: string | number;
@@ -154,6 +156,9 @@ export interface PRLine {
   required_receipt_type?: string;
   tax_code_id?: number;
   unit_price?: number;
+  status?: string;
+  remaining_qty?: number | string;
+  uom_code?: string;
   // Nested Objects (Hydration)
   item?: {
     item_id: number;
@@ -167,6 +172,7 @@ export interface PRLine {
     unit_price: number;
     discount_amount: number;
   };
+  location_name?: string;
 }
 
 /** PRLineExtended - PR Line with VQ metadata for hydration */
@@ -335,6 +341,7 @@ export interface CreatePRPayload {
 // ====================================================================================
 
 export interface PRListParams {
+  pr_id?: number;
   pr_no?: string;
   status?: PRStatus | 'ALL';
   cost_center_id?: number;

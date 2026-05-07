@@ -2,8 +2,9 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { X, FileText, Loader2 } from 'lucide-react';
-import { AVService } from '../../../services/av.service';
+import { AVService } from '@procurement/services/av.service';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
+import type { PRHeaderExtended } from '@/modules/procurement/types/pr-types';
 
 interface PendingPRSearchModalProps {
   isOpen: boolean;
@@ -75,7 +76,7 @@ export const PendingPRSearchModal: React.FC<PendingPRSearchModalProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {prList.map((item: any, index: number) => {
+                  {prList.map((item: PRHeaderExtended, index: number) => {
                      const total = item.total_amount ?? item.pr_base_total_amount ?? 0;
                      return (
                         <tr key={item.pr_id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">

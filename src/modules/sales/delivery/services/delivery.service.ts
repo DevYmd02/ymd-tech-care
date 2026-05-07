@@ -1,6 +1,7 @@
 import api from '@core/api/api';
 import { logger } from '@utils';
 import type { DeliveryFormData } from '../types/delivery.types';
+import type { SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
 
 // ============================================================
 // List Params & Header Interface
@@ -303,6 +304,161 @@ export const DeliveryService = {
         }
     },
 
+    /** ดึงรายการใบสั่งขายที่รอจัดส่ง (Pending Deliveries) */
+    getPendingDeliveries: async (params: Record<string, unknown> = {}) => {
+        logger.debug('[DeliveryService] getPendingDeliveries params:', params);
+        try {
+            const response = await api.get<Record<string, unknown>[]>('/delivery/pending-deliveries', { params });
+            const rawData = Array.isArray(response) ? response : [];
+
+            const mappedData = rawData.map((item) => {
+                const customerObj = (item.customer || {}) as Record<string, unknown>;
+                const reservation = (item.reservation || {}) as Record<string, unknown>;
+
+                const customerName = String(
+                    item.customer_name ||
+                        customerObj.customer_name_th ||
+                        customerObj.customer_name ||
+                        customerObj.name ||
+                        reservation.customer_name ||
+                        ''
+                );
+
+                const customerCode = String(
+                    item.customer_code ||
+                        customerObj.customer_code ||
+                        customerObj.code ||
+                        reservation.customer_code ||
+                        ''
+                );
+
+                const totalVal = Number(item.total_amount || item.base_total_amount || item.quote_total_amount || 0);
+
+                return {
+                    ...item,
+                    so_id: String(item.so_id || ''),
+                    so_no: String(item.so_no || ''),
+                    so_date: item.so_date ? String(item.so_date).split('T')[0] : '',
+                    customer_id: String(item.customer_id || customerObj.customer_id || ''),
+                    customer_name: customerName,
+                    customer_code: customerCode,
+                    total_amount: totalVal,
+                    currency_code: String(item.currency_code || item.base_currency_code || 'THB'),
+                    onhold: item.onhold === 'Y' || item.onhold === true ? 'Y' : 'N',
+                    status: (item.status as SalesOrderHeader['status']) || 'APPROVED',
+                    rawData: item,
+                } as SalesOrderHeader;
+            });
+
+            return { data: mappedData, total: mappedData.length };
+        } catch (error) {
+            logger.error('[DeliveryService] getPendingDeliveries failed:', error);
+            return { data: [], total: 0 };
+        }
+    },
+
+    /** ดึงรายละเอียดใบสั่งขายที่รอจัดส่งรายใบ (รวม Line Items) */
+    getPendingDeliveryDetail: async (soId: string) => {
+        logger.debug('[DeliveryService] getPendingDeliveryDetail soId:', soId);
+        try {
+            const response = await api.get<Record<string, unknown> | Record<string, unknown>[]>(`/delivery/${soId}/pending-deliveries`);
+            // Response might be an object or an array. If array, take first.
+            const r = Array.isArray(response) ? (response.length > 0 ? response[0] : null) : response;
+            if (!r) return null;
+
+            // Map lines
+            const rawLines = (r['saleOrderLines'] || r['lines'] || []) as Record<string, unknown>[];
+            
+            // We'll use Promise.all to handle potential async enrichment
+            const lines = await Promise.all(rawLines.map(async (l) => {
+                const item = (l['item'] || l['item_master'] || {}) as Record<string, unknown>;
+                const uom = (l['uom'] || l['unit'] || {}) as Record<string, unknown>;
+                const wh = (l['warehouse'] || {}) as Record<string, unknown>;
+                const loc = (l['location'] || {}) as Record<string, unknown>;
+
+                const itemId = String(l['item_id'] || item['item_id'] || item['id'] || '');
+                let itemCode = String(l['item_code'] || item['item_code'] || item['code'] || '');
+                let itemName = String(l['item_name'] || item['item_name'] || item['item_name_th'] || item['name'] || '');
+
+                let uomId = String(l['uom_id'] || uom['uom_id'] || uom['id'] || '');
+                let uomName = String(l['uom_name'] || uom['uom_name'] || uom['name'] || uom['unit_name'] || '');
+
+                // Enrichment: If item_id exists but code/name are missing, fetch from master data
+                if (itemId && (!itemCode || !itemName)) {
+                    try {
+                        const { ItemMasterService } = await import('@master-data/inventory/services/item-master.service');
+                        const masterItem = await ItemMasterService.getById(Number(itemId));
+                        if (masterItem) {
+                            itemCode = masterItem.item_code || itemCode;
+                            itemName = masterItem.item_name || itemName;
+                            if (!uomId) {
+                                uomId = String(masterItem.unit_id || masterItem.base_uom_id || '');
+                                uomName = masterItem.unit_name || '';
+                            }
+                        }
+                    } catch (err) {
+                        logger.error('[DeliveryService] Failed to enrich item info:', err);
+                    }
+                }
+
+                const warehouseId = String(l['warehouse_id'] || wh['warehouse_id'] || wh['id'] || '');
+                const warehouseName = String(l['warehouse_name'] || wh['warehouse_name'] || wh['name'] || wh['name_th'] || '');
+
+                const locationId = String(l['location_id'] || loc['location_id'] || loc['id'] || '');
+                const locationName = String(l['location_name'] || loc['location_name'] || loc['name'] || loc['name_th'] || '');
+
+                const lotId = l['lot_id'] ? String(l['lot_id']) : '';
+                let lotNo = String(l['lot_no'] || '');
+
+                // Enrichment: If lot_id exists but lot_no is missing
+                if (lotId && !lotNo) {
+                    try {
+                        const { LotNoService } = await import('@master-data/inventory/services/inventory-master.service');
+                        const masterLot = await LotNoService.getById(Number(lotId));
+                        if (masterLot) {
+                            lotNo = masterLot.name_th || masterLot.code || '';
+                        }
+                    } catch (err) {
+                        logger.error('[DeliveryService] Failed to enrich lot info:', err);
+                    }
+                }
+
+                const qtyOrdered = Number(l['qty'] || l['qty_ordered'] || l['quantity'] || 0);
+                const remainingQtyVal = Number(l['remaining_qty'] || l['remaining_quantity'] || 0);
+                // If API explicitly returns 0 for a pending delivery, fallback to qtyOrdered
+                const remainingQty = remainingQtyVal > 0 ? remainingQtyVal : qtyOrdered;
+
+                return {
+                    ...l,
+                    so_line_id: String(l['so_line_id'] || l['id'] || ''),
+                    item_id: itemId,
+                    item_code: itemCode,
+                    item_name: itemName,
+                    qty_ordered: qtyOrdered,
+                    remaining_qty: remainingQty,
+                    qty_shipped: remainingQty, // Default to remaining
+                    uom_id: uomId,
+                    uom_name: uomName,
+                    warehouse_id: warehouseId,
+                    warehouse_name: warehouseName,
+                    location_id: locationId,
+                    location_name: locationName,
+                    lot_id: lotId,
+                    lot_no: lotNo,
+                    serial_no: String(l['serial_no'] || ''),
+                };
+            }));
+
+            return {
+                ...r,
+                lines,
+            };
+        } catch (error) {
+            logger.error('[DeliveryService] getPendingDeliveryDetail failed:', error);
+            return null;
+        }
+    },
+
     /** Sanitize data before API call */
     sanitizeData: (data: DeliveryFormData | Partial<DeliveryFormData>, isUpdate = false) => {
         const raw = { ...data } as Record<string, unknown>;
@@ -345,12 +501,16 @@ export const DeliveryService = {
             const headerDeliveryId = Number(raw['delivery_id'] || 0);
             payload.deliveryLines = (raw.lines as Record<string, unknown>[]).map((line) => {
                 const l: Record<string, unknown> = {
-                    delivery_id: headerDeliveryId || Number(line['delivery_id'] || 0),
                     item_id: Number(line['item_id']),
                     qty_shipped: Number(line['qty_shipped'] || 0),
                     uom_id: Number(line['uom_id']),
                     remarks: line['remarks'] || '',
                 };
+
+                if (isUpdate) {
+                    const dId = headerDeliveryId || Number(line['delivery_id'] || 0);
+                    if (dId > 0) l['delivery_id'] = dId;
+                }
 
                 if (isValidId(line['so_line_id'])) l['so_line_id'] = Number(line['so_line_id']);
                 if (isValidId(line['warehouse_id'])) l['warehouse_id'] = Number(line['warehouse_id']);

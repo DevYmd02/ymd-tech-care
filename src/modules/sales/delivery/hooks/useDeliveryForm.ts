@@ -10,6 +10,7 @@ import {
 import { logger } from '@/shared/utils';
 import type { ItemListItem } from '@inventory/types/product-types';
 import type { UnitListItem } from '@master-data/types/master-data-types';
+import { DeliveryService } from '../services/delivery.service';
 
 interface UseDeliveryFormProps {
     isOpen: boolean;
@@ -124,13 +125,33 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms }: UseDeliveryFo
         }
     };
 
-    const handleSelectSalesOrder = (soId: string, soNo: string, customerId: string, customerName: string, branchId: string) => {
+    const handleSelectSalesOrder = async (
+        soId: string,
+        soNo: string,
+        customerId: string,
+        customerName: string,
+        branchId: string
+    ) => {
         setValue('so_id', soId, { shouldValidate: true, shouldDirty: true });
         setValue('so_no', soNo, { shouldDirty: true });
         if (customerId) setValue('customer_id', customerId, { shouldDirty: true });
         if (customerName) setValue('customer_name', customerName, { shouldDirty: true });
         if (branchId) setValue('branch_id', branchId, { shouldDirty: true });
         logger.debug('[useDeliveryForm] Selected SO:', soNo);
+
+        // Auto fetch lines
+        try {
+            const detail = await DeliveryService.getPendingDeliveryDetail(soId);
+            if (detail && detail.lines && detail.lines.length > 0) {
+                setValue('lines', detail.lines as DeliveryLineValues[], {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                });
+                logger.debug('[useDeliveryForm] Auto-populated lines from SO:', detail.lines.length);
+            }
+        } catch (error) {
+            logger.error('[useDeliveryForm] Failed to fetch SO pending details:', error);
+        }
     };
 
     return {

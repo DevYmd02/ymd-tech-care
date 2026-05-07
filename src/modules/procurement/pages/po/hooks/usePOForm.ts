@@ -1,30 +1,22 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useBranches, useUnits, useCurrencies, useTaxCodes } from '@/modules/master-data/hooks/useMasterData';
 import { useSearchParams } from 'react-router-dom';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import type { Resolver, SubmitHandler, FieldErrors } from 'react-hook-form';
+import type { Resolver, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { POService, VQService, QCService } from '@/modules/procurement/services';
-import { POFormSchema, CreatePOSchema, type POFormData, type POLine, type ItemSelectorResult } from '@/modules/procurement/schemas/po-schemas'; 
-import type { IHydrationPRLine, IHydrationVQLine, IHydrationVQHeader } from '@/modules/procurement/schemas/po-schemas'; 
-import type { CreatePOPayload } from '@/modules/procurement/types/po-types';
+import { useQuery } from '@tanstack/react-query';
+import { POService, VQService } from '@/modules/procurement/services';
+import { POFormSchema, type POFormData, type ItemSelectorResult } from '@/modules/procurement/schemas/po-schemas'; 
+import { usePOHydration } from './usePOHydration';
+import { usePOCalculations } from './usePOCalculations';
+import { usePOActions } from './usePOActions';
 import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
-import { PRService } from '@/modules/procurement/services/pr.service';
-import type { PRHeader, PRLine } from '@/modules/procurement/types/pr-types';
+import type { PRHeader } from '@/modules/procurement/types/pr-types';
 import type { QuotationHeader, QuotationLine } from '@/modules/procurement/types/vq-types'; 
-import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
-import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { logger } from '@/shared/utils';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { extractErrorMessage } from '@/core/api/api';
-import { unwrapResponseData, extractLinesArray } from '@/shared/utils/apiUtils';
-import type { Currency } from '@/modules/master-data/types/master-data-types';
-import { 
-  parseDiscountAmount,
-  calculateLineTotal 
-} from '@/modules/procurement/utils/pricing.utils';
+
 
 // ====================================================================================
 // CONFIG
@@ -49,9 +41,7 @@ export const usePOForm = ({
     onSuccess,
     poId,
     initialValues,
-    isViewMode = false,
 }: UsePOFormOptions) => {
-    const queryClient = useQueryClient();
     const { toast } = useToast();
     const { user } = useAuth();
 
@@ -59,11 +49,9 @@ export const usePOForm = ({
     const [isVendorModalOpen, setIsVendorModalOpen] = useState(false);
     const [isQCModalOpen, setIsQCModalOpen]         = useState(false);
     const [isPRModalOpen, setIsPRModalOpen]         = useState(false);
-    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-    const [pendingPayload, setPendingPayload] = useState<POFormData | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState(false);
     const [isHydrating, setIsHydrating] = useState(false);
     const hasHydratedInitial = useRef(false);
+    const docAbortControllerRef = useRef<AbortController | null>(null);
 
     // ── Helper ──────────────────────────────────────────────────────────────
     const cleanD = (d: any) => (typeof d === 'string' && d.includes('T')) ? d.split('T')[0] : d;
@@ -71,14 +59,13 @@ export const usePOForm = ({
     // ── Master Data Queries (Shared Hooks) ──────────────────────────────────
     const { data: branches = [],   isLoading: isLoadingBranches }   = useBranches(isOpen);
     const { data: taxCodesData = [], isLoading: isLoadingTaxCodes } = useTaxCodes(isOpen);
-    const taxCodes = (taxCodesData as any)?.data || taxCodesData; // Handle both direct array and wrapped response
+    const taxCodes = (taxCodesData as any)?.data || taxCodesData; 
     
     const { data: unitsResponse,   isLoading: isLoadingUnits }      = useUnits(isOpen);
     const units = useMemo(() => unitsResponse?.items || [], [unitsResponse]);
     
     const { data: currenciesResponse, isLoading: isLoadingCurrencies } = useCurrencies(isOpen);
     const currencies = useMemo(() => (currenciesResponse as any)?.data || (currenciesResponse as any)?.items || currenciesResponse || [], [currenciesResponse]);
-
 
     // ── Form ──────────────────────────────────────────────────────────────────
     const formMethods = useForm<POFormData>({
@@ -109,29 +96,27 @@ export const usePOForm = ({
     });
 
     const {
-        control,
         register,
+        control,
         handleSubmit,
         reset,
         setValue,
         getValues,
         trigger,
-        getFieldState,
         formState: { errors },
     } = formMethods;
 
-    // Use `control` explicitly for dynamic fields
     const { fields, append, remove, replace, update } = useFieldArray({ control, name: 'po_lines' });
 
-    const watchVendorName      = useWatch({ control, name: 'vendor_name' });
-    const watchPrNo            = useWatch({ control, name: 'pr_no' });
+    // ── Watch Values ────────────────────────────────────────────────────────
+    const watchIsMulticurrency = useWatch({ control, name: 'is_multicurrency' });
     const watchCurrencyCode    = useWatch({ control, name: 'currency_code' }) as string | undefined;
     const watchTargetCurrency  = useWatch({ control, name: 'target_currency' }) as string | undefined;
-    const watchIsMulticurrency = useWatch({ control, name: 'is_multicurrency' });
-    const watchRfqId           = useWatch({ control, name: 'rfq_id' });
-    const watchWinningVqId     = useWatch({ control, name: 'winning_vq_id' });
+    const watchHeaderTaxCodeId = useWatch({ control, name: 'tax_code_id' });
+    const watchVendorName      = useWatch({ control, name: 'vendor_name' });
+    const watchPrNo            = useWatch({ control, name: 'pr_no' });
 
-    // ── Existing PO Detail Query (for view/edit) ─────────────────────────────
+    // ── Existing PO Detail Query ─────────────────────────────────────────────
     const { data: existingPO, isLoading: isLoadingPO } = useQuery({
         queryKey: ['existing-po', poId],
         queryFn: async () => {
@@ -145,8 +130,46 @@ export const usePOForm = ({
         setIsHydrating(isLoadingPO);
     }, [isLoadingPO]);
 
-    // ── 💱 Currency Default Sync ─────────────────────────────────────────────
-    // Ensure 'THB' is selected as default once master data arrives
+    // ── Sub-Hooks (Modularized Logic) ───────────────────────────────────────
+    
+    // 1. Calculations & Propagation
+    usePOCalculations({
+        formMethods,
+        currencies,
+        watchIsMulticurrency,
+        watchCurrencyCode,
+        watchTargetCurrency,
+        watchHeaderTaxCodeId
+    });
+
+    // 2. Actions (Save, Update, Delete)
+    const {
+        isSubmitting,
+        isConfirmModalOpen,
+        setIsConfirmModalOpen,
+        handleConfirmSave,
+        onSubmit
+    } = usePOActions({
+        poId,
+        user,
+        formMethods,
+        existingPO,
+        onClose,
+        onSuccess,
+        toast
+    });
+
+    // 3. Hydration (Source Mapping)
+    const { hydrateFromSource } = usePOHydration({
+        setValue,
+        getValues,
+        replace,
+        trigger,
+        toast,
+        currencies
+    });
+
+    // ── Default Currency Sync ─────────────────────────────────────────────
     useEffect(() => {
         if (isOpen && !isLoadingCurrencies && currencies.length > 0 && !poId && !isHydrating) {
             const currentCurrency = getValues('currency_code');
@@ -161,7 +184,7 @@ export const usePOForm = ({
         }
     }, [isOpen, isLoadingCurrencies, currencies, setValue, getValues, poId, isHydrating]);
 
-    // ── VQ Inheritance Query (read-only cross-module lookup) ──────────────────
+    // ── VQ Inheritance Query ──────────────────
     const { data: inheritedQC } = useQuery({
         queryKey: ['inherit-vq', 
             initialValues?.rfq_id || existingPO?.rfq_id, 
@@ -175,7 +198,6 @@ export const usePOForm = ({
 
             if ((!rfqId && !winningVqId) || !vendorId) return null;
             const res = await VQService.getList({});
-            // Find VQ by searching for vendor and matching RFQ/VQ ID
             const sourceVQ = res.data.find(vq => 
                 Number(vq.vendor_id) === Number(vendorId) && 
                 (Number(vq.rfq_id) === Number(rfqId) || Number(vq.vq_header_id) === Number(winningVqId) || Number(vq.quotation_id) === Number(winningVqId))
@@ -189,28 +211,19 @@ export const usePOForm = ({
         enabled: isOpen && (!!initialValues?.rfq_id || !!initialValues?.winning_vq_id || !!existingPO?.rfq_id || !!existingPO?.winning_vq_id) && (!!initialValues?.vendor_id || !!existingPO?.vendor_id)
     });
 
-    // ── Form Reset Effect (Hydration) ─────────────────────────────────────────
+    // ── Form Initial Hydration Effect ─────────────────────────────────────────
     useEffect(() => {
         if (isOpen) {
-            // 🏗️ Initialization Guard: Wait for critical master data
             const isMasterDataReady = (
                 (branches?.length > 0 || !isOpen) && 
                 (taxCodes?.length > 0 || !isOpen) && 
                 (units?.length > 0 || !isOpen)
             );
 
-            if (isOpen && !isMasterDataReady) {
-                logger.debug('⏳ [POForm] Waiting for master data...', {
-                    branches: branches?.length,
-                    taxCodes: taxCodes?.length,
-                    units: units?.length
-                });
-                return;
-            }
+            if (isOpen && !isMasterDataReady) return;
 
             let initialPOLines: POFormData['po_lines'] = [];
             
-            // Phase 0: Loaded from existing PO DB Call
             if (existingPO) {
                 const detail = existingPO as unknown as Record<string, unknown>;
                 const lines = (detail.poLines || detail.po_lines || detail.lines || []) as Record<string, unknown>[];
@@ -238,7 +251,6 @@ export const usePOForm = ({
                     }));
                 }
             }
-            // Phase 1: Direct PO Lines from internal or partial initialValues
             else if (initialValues?.po_lines && initialValues.po_lines.length > 0) {
                 initialPOLines = initialValues.po_lines.map((l: Record<string, any>, idx: number) => ({
                     ...l,
@@ -246,15 +258,14 @@ export const usePOForm = ({
                     id: Number(l.po_line_id || l.id || l.item_id || 0),
                     item_id: Number(l.item_id || l.id || 0),
                     line_no: l.line_no || idx + 1,
-                })) as any[]; // Cast to any[] temporarily to satisfy the complex PO line interface assignment
+                })) as any[]; 
             } 
-            // Phase 2: Derive from RFQ/VQ inheritance
             else if (inheritedQC && (inheritedQC.vq_lines || inheritedQC.lines)) {
                 const sourceLines = (inheritedQC.vq_lines || inheritedQC.lines) as QuotationLine[];
                 initialPOLines = sourceLines.map((l: QuotationLine, idx: number) => ({
                     line_no:         idx + 1,
                     item_id:         Number(l.item_id || 0),
-                    po_line_id:      undefined, // New PO line
+                    po_line_id:      undefined,
                     id:              Number(l.item_id || 0),
                     item_code:       l.item?.item_code || l.item_code || '',
                     item_name:       l.item?.item_name || l.item_name || '',
@@ -274,33 +285,16 @@ export const usePOForm = ({
                 }));
             }
 
-            // Phase 3: Default Empty Row for New PO (not derived from RFQ/VQ)
             if (initialPOLines.length === 0 && !initialValues?.rfq_id && !initialValues?.winning_vq_id) {
                 initialPOLines = [{
-                    line_no:         1,
-                    item_id:         0,
-                    id:              0,
-                    item_code:       '',
-                    item_name:       '',
-                    description:     '',
-                    pr_line_id:      null,
-                    status:          'OPEN',
-                    qty:             1,
-                    qty_ordered:     1,
-                    uom_id:          0,
-                    unit_price:      0,
-                    discount_amount: 0,
-                    discount_expression: '0',
-                    tax_code_id:     undefined,
-                    required_receipt_type: 'FULL',
-                    receipt_type:    'GOODS' as const,
-                    line_total:      0,
+                    line_no: 1, item_id: 0, id: 0, item_code: '', item_name: '', description: '',
+                    pr_line_id: null, status: 'OPEN', qty: 1, qty_ordered: 1, uom_id: 0, unit_price: 0,
+                    discount_amount: 0, discount_expression: '0', tax_code_id: undefined,
+                    required_receipt_type: 'FULL', receipt_type: 'GOODS' as const, line_total: 0,
                 }];
             }
 
             const detail = (existingPO as any) || {};
-
-            // 🎯 Robust Multicurrency Detection
             const backendCurrency = detail?.currency_code || detail?.quote_currency_code || initialValues?.currency_code || 'THB';
             const backendRate = Number(detail?.exchange_rate || inheritedQC?.exchange_rate || initialValues?.exchange_rate || 1);
             const isActuallyMulti = !!(backendCurrency && backendCurrency !== 'THB') || backendRate !== 1;
@@ -336,82 +330,10 @@ export const usePOForm = ({
             });
         }
     }, [
-        isOpen, 
-        initialValues, 
-        reset, 
-        inheritedQC, 
-        user, 
-        existingPO,
-        branches?.length,
-        taxCodes?.length,
-        units?.length,
-        currencies?.length
+        isOpen, initialValues, reset, inheritedQC, user, existingPO,
+        branches?.length, taxCodes?.length, units?.length, currencies?.length
     ]);
     
-
-    // ── Enforce THB when Multicurrency is OFF ─────────────────────────────────
-    useEffect(() => {
-        if (!watchIsMulticurrency) {
-            setValue('currency_code', 'THB');
-            setValue('exchange_rate', 1);
-            setValue('target_currency', 'THB');
-        }
-    }, [watchIsMulticurrency, setValue]);
-    
-    // ── Propagate Header Tax to all Lines ─────────────────────────────────────
-    const watchHeaderTaxCodeId = useWatch({ control, name: 'tax_code_id' });
-    useEffect(() => {
-        if (watchHeaderTaxCodeId !== undefined) {
-             const currentLines = getValues('po_lines') || [];
-             const needsUpdate = currentLines.some(l => Number(l.tax_code_id) !== Number(watchHeaderTaxCodeId));
-             if (needsUpdate) {
-                 const updatedLines = currentLines.map(l => ({
-                     ...l,
-                     tax_code_id: watchHeaderTaxCodeId
-                 }));
-                 setValue('po_lines', updatedLines as any, { shouldDirty: true });
-             }
-        }
-    }, [watchHeaderTaxCodeId, setValue, getValues]);
-
-    // ── Currency Exchange Rate Auto-Calculation triggers ─────────────────────
-    const prevCurrencyId = useRef<string | undefined>(undefined);
-    const prevTargetCurrency = useRef<string | undefined>(undefined);
-
-    useEffect(() => {
-        if (!watchCurrencyCode) return;
-        
-        // Equal currencies reset Rate to 1
-        if (watchCurrencyCode === watchTargetCurrency || !watchTargetCurrency) {
-            setValue('exchange_rate', 1, { shouldDirty: false });
-            prevCurrencyId.current = watchCurrencyCode;
-            prevTargetCurrency.current = watchTargetCurrency;
-            return;
-        }
-
-        const isSourceChanged = prevCurrencyId.current !== watchCurrencyCode;
-        const isTargetChanged = prevTargetCurrency.current !== watchTargetCurrency;
-
-        const { isDirty } = getFieldState('exchange_rate');
-        if (isSourceChanged || isTargetChanged || !isDirty) {
-            const safeCurrencies = Array.isArray(currencies) ? currencies : [];
-            const sourceObj = safeCurrencies.find((c: Currency) => c.currency_code === watchCurrencyCode);
-            const targetObj = safeCurrencies.find((c: Currency) => c.currency_code === watchTargetCurrency);
-
-            const fromRate = sourceObj?.exchange_rate || 1;
-            const toRate = targetObj?.exchange_rate || 1;
-
-            const calculatedRate = fromRate / toRate;
-
-            if (calculatedRate !== undefined && !isNaN(calculatedRate)) {
-                setValue('exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true, shouldDirty: false });
-            }
-        }
-
-        prevCurrencyId.current = watchCurrencyCode;
-        prevTargetCurrency.current = watchTargetCurrency;
-    }, [currencies, watchCurrencyCode, watchTargetCurrency, setValue, getFieldState]);
-
     // ── Handlers ──────────────────────────────────────────────────────────────
     const handleVendorSelect = (vendor: VendorSearchItem) => {
         setValue('vendor_id', Number(vendor.vendor_id));
@@ -431,377 +353,37 @@ export const usePOForm = ({
         setValue('vendor_name', undefined as any);
         setValue('is_multicurrency', false);
         setValue('currency_code', 'THB');
-        
-        // Reset lines to a single empty row
         replace([{
-            line_no: 1,
-            item_id: 0,
-            id: 0,
-            item_code: '',
-            item_name: '',
-            description: '',
-            qty: 1,
-            uom_id: 1,
-            unit_price: 0,
-            discount_amount: 0,
-            discount_expression: '0',
-            status: 'OPEN',
-            required_receipt_type: 'FULL',
-            receipt_type: 'GOODS',
-            line_total: 0
+            line_no: 1, item_id: 0, id: 0, item_code: '', item_name: '', description: '',
+            qty: 1, uom_id: 1, unit_price: 0, discount_amount: 0, discount_expression: '0',
+            status: 'OPEN', required_receipt_type: 'FULL', receipt_type: 'GOODS', line_total: 0
         }]);
     }, [setValue, replace]);
 
     const handleSelectReferenceDoc = useCallback(async (
-        prId: number, 
-        type: 'PR' | 'QC', 
-        qcId?: number, 
-        vendorId?: number, 
-        winningVqId?: number,
-        qcNo?: string,
-        approvalNo?: string
+        prId: number, type: 'PR' | 'QC', qcId?: number, vendorId?: number, 
+        winningVqId?: number, qcNo?: string, approvalNo?: string
     ) => {
-        logger.info(`🎯 [usePOForm] handleSelectReferenceDoc Triggered:`, { prId, type, qcId, vendorId, winningVqId, qcNo, approvalNo });
-        if (!prId) return;
-        
-        // 🚨 GHOST DATA PREVENTION: Reset critical fields before hydration
-        // @ts-expect-error - reset to undefined for clean state
-        setValue('vendor_id', undefined);
-        setValue('vendor_name', undefined);
-        setValue('is_multicurrency', false);
-        setValue('currency_code', 'THB');
-        setValue('qc_no', undefined);
-        setValue('approval_no', undefined);
-
+        if (docAbortControllerRef.current) docAbortControllerRef.current.abort();
+        docAbortControllerRef.current = new AbortController();
         setIsHydrating(true);
         try {
-            // 1. Parallel Fetch PR & VQ (if QC)
-            const rawPR = await PRService.getDetail(prId);
-            const fullPR = unwrapResponseData(rawPR);
-            let winningVQ: IHydrationVQHeader | undefined;
-
-            // 1.1 Resolution: If QC type but missing winningVqId, fetch QC Detail to find the winner
-            let resolvedWinningVqId = winningVqId;
-            if (type === 'QC' && !resolvedWinningVqId && qcId) {
-                try {
-                    const qcDetail = await QCService.getById(qcId);
-                    resolvedWinningVqId = Number(qcDetail.winning_vq_id || (qcDetail as any).vq_header_id);
-                    logger.info(`🎯 [usePOForm] Resolved winningVqId ${resolvedWinningVqId} from QC ${qcId}`);
-                } catch (qcErr) {
-                    logger.error('[usePOForm] Failed to resolve Winner from QC', qcErr);
-                }
-            }
-
-            setValue('qc_id', (Number(qcId || fullPR.qc_id) || undefined) as any);
-
-            // 🎯 NEW: Direct mapping of Document Numbers for UI labels
-            // Priority: Argument passed from Modal (Latest) > Backend PR Field
-            const finalQcNo = qcNo || (fullPR as any).qc_no || (fullPR as any).qcHeader?.qc_no;
-            const finalAvNo = approvalNo || (fullPR as any).av_no || (fullPR as any).approval_no;
-            
-            if (finalQcNo) setValue('qc_no', finalQcNo);
-            if (finalAvNo) setValue('approval_no', finalAvNo);
-            
-            if (type === 'QC' && resolvedWinningVqId) {
-                try {
-                    const rawVQ = await VQService.getById(resolvedWinningVqId);
-                    winningVQ = unwrapResponseData(rawVQ) as IHydrationVQHeader;
-                } catch (vqError) {
-                    logger.error('[usePOForm] Failed to fetch VQ details for QC flow', vqError);
-                    toast('ไม่สามารถดึงข้อมูลราคาจากใบเสนอราคาได้ กรุณาระบุราคาด้วยตนเอง', 'error');
-                }
-            }
-
-            
-            // 2. Map Header IDs
-            setValue('pr_id', Number(fullPR.pr_id));
-            setValue('pr_no', fullPR.pr_no);
-            setValue('approve_pr_id', (fullPR as any).approve_pr_id ? Number((fullPR as any).approve_pr_id) : (undefined as any));
-            setValue('rfq_id', (Number(qcId || (fullPR as any).rfq_id) || undefined) as any);
-            setValue('qc_id', (Number(qcId || (fullPR as any).qc_id) || undefined) as any);
-            setValue('winning_vq_id', (Number(resolvedWinningVqId || (fullPR as any).winning_vq_id) || undefined) as any);
-            
-            // 🏢 Branch & Project mapping
-            if (fullPR.branch_id) {
-                setValue('branch_id', Number(fullPR.branch_id));
-            }
-            
-            // 📝 Remarks mapping (from PR purpose or remark)
-            const prRemarks = fullPR.purpose || fullPR.remark;
-            if (prRemarks) {
-                setValue('remarks', prRemarks);
-            }
-
-            // 3. Map Vendor & Terms (Strict Hydration + Forced UI Refresh)
-            const finalVendorId = Number(vendorId || winningVQ?.vendor_id || fullPR.preferred_vendor_id);
-            if (finalVendorId) {
-                setValue('vendor_id', finalVendorId, { 
-                    shouldValidate: true, 
-                    shouldDirty: true 
-                });
-                // Prioritize Winner Vendor Name from VQ lookup
-                let finalVendorName = winningVQ?.vendor?.vendor_name || winningVQ?.vendor_name || fullPR.vendor_name || '';
-                if (finalVendorId && !finalVendorName) {
-                    try {
-                        const vendorDetail = await VendorService.getById(finalVendorId);
-                        if (vendorDetail) {
-                            finalVendorName = vendorDetail.vendor_name;
-                        }
-                    } catch (e) {
-                        logger.error('[usePOForm] Failed to fetch vendor detail for name', e);
-                    }
-                }
-                setValue('vendor_name', finalVendorName);
-            }
-
-            // FINANCIAL TERMS: Priority to VQ (Negotiated), then PR estimates
-            const creditTerm = Number(winningVQ?.payment_term_days ?? fullPR.payment_term_days ?? 30);
-            const leadTime = Number(winningVQ?.lead_time_days ?? 0);
-            const creditDays = Number(fullPR.credit_days ?? 0);
-            const finalCreditDays = leadTime > 0 ? leadTime : creditDays;
-            
-            const taxCodeId = Number(winningVQ?.tax_code_id ?? (winningVQ as any)?.tax_id ?? fullPR.pr_tax_code_id ?? (fullPR as any).pr_tax_id);
-
-            setValue('payment_term_days', creditTerm);
-            setValue('credit_days', finalCreditDays);
-            
-            // 📅 DELIVERY DATE MAPPING: Priority VQ -> PR Delivery -> PR Need By
-            const deliveryDate = (winningVQ as any)?.delivery_date || fullPR.delivery_date || fullPR.need_by_date;
-            if (deliveryDate) {
-                setValue('delivery_date', cleanD(deliveryDate));
-            }
-
-            if (taxCodeId) {
-                setValue('tax_code_id', taxCodeId, { shouldValidate: true });
-            }
-
-            // 💱 Currency & Multicurrency Mapping (Priority: Full VQ -> Partial VQ -> PR -> Default)
-            const finalExRate = Number(winningVQ?.exchange_rate || fullPR.pr_exchange_rate || 1);
-            
-            // 🔎 Deep Hydration: Fetch full VQ to get actual currency code/id if missing
-            let fullWinningVQ = winningVQ;
-            if (winningVQ?.vq_header_id) {
-                try {
-                    const vqDetail = await VQService.getById(Number(winningVQ.vq_header_id));
-                    if (vqDetail) fullWinningVQ = vqDetail as any;
-                } catch (e) {
-                    logger.error("❌ [usePOForm] Failed to fetch full VQ detail:", e);
-                }
-            }
-
-            // 🔍 DEBUG: Show ALL fields to find where USD is hiding
-            logger.info("🕵️ [usePOForm] Raw Winning VQ Data Dump:", fullWinningVQ);
-
-            let resolvedCode = fullWinningVQ?.quote_currency_code || (fullWinningVQ as any)?.currency_code || (fullWinningVQ as any)?.currency || fullPR.pr_quote_currency_code || 'THB';
-            
-            // If still THB but rate != 1, try ID lookup as a last resort
-            if (resolvedCode === 'THB' && finalExRate !== 1) {
-                const cId = (fullWinningVQ as any)?.currency_id || (fullWinningVQ as any)?.quote_currency_id || (fullWinningVQ as any)?.currencyId || (fullPR as any).pr_currency_id;
-                if (cId && Array.isArray(currencies)) {
-                    const match = (currencies as any[]).find(c => String(c.currency_id) === String(cId) || String(c.id) === String(cId));
-                    if (match) {
-                        resolvedCode = match.currency_code || match.code;
-                        logger.info("🎯 [usePOForm] Auto-corrected Currency from ID Map:", { cId, resolvedCode });
-                    }
-                }
-            }
-
-            // 🚨 EMERGENCY OVERRIDE: If rate is 33 and we're still THB, it's highly likely USD in this system's context
-            if (resolvedCode === 'THB' && finalExRate === 33) {
-                resolvedCode = 'USD';
-                logger.warn("🚨 [usePOForm] Emergency Override: Rate 33 detected, forcing USD.");
-            }
-
-            const isForeign = resolvedCode !== 'THB' || finalExRate !== 1;
-            
-            logger.info("💱 [usePOForm] Deep Currency detection result:", { 
-                resolvedCode, 
-                finalExRate, 
-                isForeign, 
-                source: fullWinningVQ ? 'Full VQ' : 'PR/Summary'
+            await hydrateFromSource(prId, type, { 
+                qcId, vendorId, winningVqId, qcNo, approvalNo, 
+                signal: docAbortControllerRef.current.signal 
             });
-
-            setValue('is_multicurrency', isForeign, { shouldValidate: true, shouldDirty: true });
-            setValue('quote_currency_code', resolvedCode);
-            setValue('currency_code', resolvedCode);
-            setValue('target_currency', 'THB'); 
-            setValue('exchange_rate', finalExRate);
-            
-            if (isForeign) {
-                const exDate = fullWinningVQ?.exchange_rate_date || fullPR.pr_exchange_rate_date;
-                if (exDate) {
-                    const dateObj = new Date(exDate);
-                    const dateStr = isNaN(dateObj.getTime()) ? new Date().toISOString() : dateObj.toISOString();
-                    setValue('exchange_rate_date', dateStr.split('T')[0]);
-                }
-            }
-            
-            // 📦 DEEP LINE ITEM MAPPING (STRICT OVERWRITE)
-            // PRService.getDetail has been updated to normalize items into .lines
-            const prLines = extractLinesArray(fullPR) as PRLine[];
-            
-            if (prLines.length > 0) {
-                // 🛡️ DYNAMIC PROPERTY CHECK (Rule 1): Be resilient to Backend property naming
-                const actualVQLines = winningVQ ? extractLinesArray(winningVQ) as IHydrationVQLine[] : [];
-
-                // 🧪 [HYDRATION_DEBUG] Scan properties
-                logger.info("💎 [HYDRATION_DEBUG] Data Scan:", {
-                    prLinesFound: prLines.length,
-                    vqLinesFound: actualVQLines.length,
-                    type
-                });
-
-                // 🎯 USE VQ-CENTRIC MAPPING FOR QC: If this PO is created from a QC, the PO should EXACTLY
-                // mirror the winning Vendor Quotation (both quantities and prices).
-                // Do NOT use PR lines as the loop base, otherwise it will try to order PR quantities instead of awarded quantities.
-                const isQC = type === 'QC' && winningVQ && actualVQLines.length > 0;
-                const sourceLines = isQC ? actualVQLines : prLines;
-                
-                const mappedLines: POFormData['po_lines'] = await Promise.all(sourceLines.map(async (sourceLine: any, index: number) => {
-                    let vqLine: IHydrationVQLine | undefined;
-                    let l: PRLine | undefined; // The corresponding PR line for metadata fallback
-                    
-                    if (isQC) {
-                        vqLine = sourceLine as IHydrationVQLine;
-                        
-                        // 🔍 Find the parent PR Line for reference data (like requested receipt type)
-                        const vqItemCode = String(vqLine.item_code || vqLine.item?.item_code || (vqLine as any).code || "");
-                        l = prLines.find((p: any) => {
-                            if (vqLine!.pr_line_id && Number(p.pr_line_id) === Number(vqLine!.pr_line_id)) return true;
-                            if (vqLine!.item_id && Number(p.item_id || p.item?.item_id) === Number(vqLine!.item_id)) return true;
-                            const pCode = String(p.item_code || p.item?.item_code || p.code || "");
-                            if (vqItemCode && pCode && vqItemCode === pCode) return true;
-                            return false;
-                        }) as PRLine | undefined;
-                    } else {
-                        l = sourceLine as PRLine;
-                        vqLine = undefined;
-                    }
-
-                    // 🛡️ DEEP ID EXCAVATION FOR FALLBACK (Ultimate Guard): 
-                    const getRobustItemId = (line: IHydrationPRLine, vqL?: IHydrationVQLine) => {
-                        const vqId = vqL?.item_id || vqL?.product_id || vqL?.id;
-                        if (vqId) return Number(vqId);
-
-                        const vqNestedId = vqL?.item?.item_id || vqL?.item?.id || vqL?.item?.product_id;
-                        if (vqNestedId) return Number(vqNestedId);
-
-                        const prId = line?.item_id || line?.id;
-                        if (prId) return Number(prId);
-
-                        const prNestedId = line?.item?.item_id || line?.item?.id;
-                        if (prNestedId) return Number(prNestedId);
-
-                        return undefined;
-                    };
-
-                    let finalUnitPrice = 0;
-                    let discAmount = 0;
-                    let discExpr = '0';
-
-                    if (isQC && vqLine) {
-                        finalUnitPrice = Number(vqLine.unit_price || 0);
-                        discAmount = Number(vqLine.discount_amount || 0);
-                        discExpr = String(vqLine.discount_expression || '0');
-                    } else {
-                        finalUnitPrice = Number(l?.unit_price || l?.est_unit_price || 0);
-                        discExpr = String(l?.line_discount_raw || '0');
-                    }
-
-                    const safeL = l || {} as PRLine;
-                    const safeHydrationLine = safeL as IHydrationPRLine;
-
-                    // 🛡️ DATA INTEGRITY (Rule 3): All IDs/Prices must be Number()
-                    const finalItemId = getRobustItemId(safeHydrationLine, vqLine);
-                    const getItemCode = (line: PRLine) => String(line?.item?.item_code || line?.item_code || "");
-                    
-                    let finalCode = String(
-                        vqLine?.item_code || vqLine?.item?.item_code || 
-                        (vqLine as unknown as Record<string, unknown> | undefined)?.code || (vqLine?.item as unknown as Record<string, unknown> | undefined)?.code || 
-                        safeL.item?.item_code || safeL.item_code || 
-                        (safeL.item as unknown as Record<string, unknown> | undefined)?.code || (safeL as unknown as Record<string, unknown> | undefined)?.code || 
-                        getItemCode(safeL) || ''
-                    );
-
-                    if (!finalCode && finalItemId && finalItemId > 0) {
-                        try {
-                            const fetchedItem = await ItemMasterService.getById(Number(finalItemId));
-                            if (fetchedItem?.item_code) {
-                                finalCode = fetchedItem.item_code;
-                            }
-                        } catch (e) {
-                            logger.error("[usePOForm] Async Item Fix failed", e);
-                        }
-                    }
-
-                    return {
-                        po_line_id: undefined, // New lines from Reference Doc
-                        id: (finalItemId || 0) as number, // 🚀 Dual Mapping
-                        item_id: (finalItemId || 0) as number,
-                        code: finalCode, // 🚀 Dual Mapping
-                        item_code: finalCode, 
-                        line_no: index + 1,
-                        item_name: String(vqLine?.item_name || vqLine?.item?.item_name || safeL.item_name || safeL.item?.item_name || ''), 
-                        description: String(vqLine?.remark || vqLine?.item?.description || safeL.description || safeL.item_name || safeL.item?.item_name || ''), 
-                        pr_line_id: safeL.pr_line_id ? Number(safeL.pr_line_id) : (vqLine?.pr_line_id ? Number(vqLine.pr_line_id) : undefined), // Ensure correct PR Line ID
-                        rfq_line_id: vqLine?.rfq_line_id ? Number(vqLine.rfq_line_id) : undefined, // Provided by Vendor Quotation relation
-                        status: 'OPEN' as const,
-                        qty: Number(vqLine?.qty ?? safeL.qty ?? 1), 
-                        qty_ordered: Number(vqLine?.qty ?? safeL.qty ?? 1),
-                        uom_id: Number(vqLine?.uom_id || safeL.uom_id || safeL.item?.uom_id || 0) || 1, 
-                        unit_price: Number(finalUnitPrice), 
-                        discount_amount: Number(discAmount),
-                        discount_expression: discExpr,
-                        tax_code_id: vqLine?.tax_code_id ? Number(vqLine.tax_code_id) : (safeL.tax_code_id ? Number(safeL.tax_code_id) : Number(getValues('tax_code_id'))), 
-                        required_receipt_type: (safeL.required_receipt_type as "FULL" | "PARTIAL") || 'FULL',
-                        receipt_type: 'GOODS' as const,
-                        line_total: (() => {
-                            // 🚀 DYNAMIC TOTAL CALCULATION (Prioritize VQ Net Amount if backend sent it)
-                            if (isQC && vqLine && 'net_amount' in vqLine && Number(vqLine.net_amount) > 0) {
-                                return Number(vqLine.net_amount);
-                            }
-                            
-                            const usedQty = Number(vqLine?.qty ?? safeL.qty ?? 0);
-                            const amountBeforeDiscount = usedQty * finalUnitPrice;
-                            const discount = parseDiscountAmount(discExpr, amountBeforeDiscount);
-                            
-                            return Number(calculateLineTotal(usedQty, finalUnitPrice, discount).toFixed(2));
-                        })(),
-                    };
-                }));
-
-                // 🧪 [HYDRATION_DEBUG] Verification
-                logger.info("🛠️ [HYDRATION_DEBUG] Final Hydrated Lines Count:", mappedLines.length);
-
-                replace(mappedLines);
-                
-                // 🧪 UI REFRESH (Rule 4): Force full validation state refresh
-                setTimeout(() => {
-                    trigger('po_lines');
-                    // Ensure the form state recognizes the change
-                    const currentLines = getValues('po_lines');
-                    logger.info("💎 [FINAL_DEBUG] Hydrated State Check:", currentLines.map(cl => ({ id: cl.id, item_id: cl.item_id, code: cl.code })));
-                }, 100);
-            }
-            
-            toast(`เชื่อมโยงข้อมูลจาก ${fullPR.pr_no} สำเร็จ`, 'success');
-        } catch (error) {
-            logger.error('[usePOForm] handleSelectReferenceDoc error:', error);
-            toast('ไม่สามารถดึงข้อมูลเอกสารต้นทางได้', 'error');
         } finally {
             setIsHydrating(false);
         }
-    }, [setValue, getValues, replace, trigger, toast, currencies]);
-    
+    }, [hydrateFromSource]);
+
     // ── Auto-Hydrate from Reference Doc on Create Mount ───────────────────────
     useEffect(() => {
         if (isOpen && !poId && initialValues?.pr_id) {
             const isQcFlow = !!initialValues?.qc_id || !!initialValues?.winning_vq_id;
-            
             if (isQcFlow) {
                 handleSelectReferenceDoc(
-                    Number(initialValues.pr_id), 
-                    'QC', 
+                    Number(initialValues.pr_id), 'QC', 
                     initialValues.qc_id ? Number(initialValues.qc_id) : undefined, 
                     initialValues.vendor_id ? Number(initialValues.vendor_id) : undefined,
                     initialValues.winning_vq_id ? Number(initialValues.winning_vq_id) : undefined,
@@ -813,39 +395,25 @@ export const usePOForm = ({
         }
     }, [isOpen, initialValues?.pr_id, initialValues?.qc_id, initialValues?.winning_vq_id, initialValues?.vendor_id, initialValues?.qc_no, handleSelectReferenceDoc, poId]);
 
-
     const handleSelectPR = useCallback((pr: PRHeader) => {
         handleSelectReferenceDoc(pr.pr_id, 'PR');
     }, [handleSelectReferenceDoc]);
 
     const handleSelectQC = useCallback((qc: { 
-        qc_id: number; 
-        qc_no: string; 
-        pr_id: number; 
-        pr_no: string; 
-        vendor_id?: number; 
-        vendor_name?: string 
-        approval_no?: string;
+        qc_id: number; qc_no: string; pr_id: number; pr_no: string; 
+        vendor_id?: number; vendor_name?: string; approval_no?: string;
     }) => {
         handleSelectReferenceDoc(qc.pr_id, 'QC', qc.qc_id, qc.vendor_id, undefined, qc.qc_no, qc.approval_no);
     }, [handleSelectReferenceDoc]);
 
-
-    /**
-     * 🔍 Item Master Selector Handler
-     * @description Receives selected item from Modal and updates line with Dual Mapping
-     */
     const handleSelectItemMaster = useCallback((index: number, item: ItemSelectorResult) => {
-        // 🧩 Fallback matching by Name string since Backend might omit ID fields
         const anyItem = item as any;
         const prodUomId = anyItem.uom_id || anyItem.unit_id || anyItem.base_uom_id || anyItem.sale_uom_id;
         const prodUomName = anyItem.uom_name || anyItem.unit_name || anyItem.base_uom_name || anyItem.sale_uom_name || '';
 
         const safeUnits = Array.isArray(units) ? units : [];
         const matchedUnit = safeUnits.find(u => {
-            // Priority 1: ID Match
             if (prodUomId && (String(u.id) === String(prodUomId) || String(u.uom_id) === String(prodUomId))) return true;
-            // Priority 2: Name Match (Resilient)
             if (prodUomName && (u.uom_name?.trim() === prodUomName.trim() || u.unit_name?.trim() === prodUomName.trim())) return true;
             return false;
         });
@@ -862,16 +430,11 @@ export const usePOForm = ({
             uom_id: finalUomId || 0,
             unit_price: Number(item.standard_price || item.unit_price || 0),
         });
-        
-        // 🧪 UI ERROR CLEARANCE: Trigger validation immediately to clear red highlights
         setTimeout(() => trigger(`po_lines.${index}.item_id`), 100);
     }, [update, getValues, trigger, units]);
 
-    // (handleSelectProduct removed as it's now handled by the component state)
-
     const [searchParams] = useSearchParams();
 
-    // ── Smart Session Reset ──────────────────────────────────────────────────────
     useEffect(() => {
         if (!isOpen) {
             hasHydratedInitial.current = false;
@@ -880,11 +443,8 @@ export const usePOForm = ({
         }
     }, [isOpen, reset]);
 
-    // ── Auto-Hydrate PR Logic (when selected from DocumentSourceSelector or URL) ────
     useEffect(() => {
         if (!isOpen || hasHydratedInitial.current || isHydrating) return;
-
-        // Support both camelCase and snake_case URL parameters
         const sPrId = searchParams.get('sourcePrId') || searchParams.get('source_pr_id');
         const sQcId = searchParams.get('sourceQcId') || searchParams.get('source_qc_id');
         const sVqId = searchParams.get('winningVqId') || searchParams.get('winning_vq_id');
@@ -892,26 +452,16 @@ export const usePOForm = ({
         const sQcNo = searchParams.get('qcNo') || searchParams.get('qc_no');
         const sCreateFromQC = searchParams.get('createFromQC') === 'true' || searchParams.get('create_from_qc') === 'true';
 
-        // Priority 1: URL Parameters (For direct deep links)
-        // Priority 2: initialValues (For internal modal flow)
         const prId = sPrId ? Number(sPrId) : (initialValues?.pr_id || undefined);
         const qcId = sQcId ? Number(sQcId) : (initialValues?.qc_id || undefined);
         const vendorId = sVendorId ? Number(sVendorId) : (initialValues?.vendor_id || undefined);
         const winningVqId = sVqId ? Number(sVqId) : (initialValues?.winning_vq_id || undefined);
         const isQC = sCreateFromQC || !!qcId || !!winningVqId;
 
-        // Auto-hydration logic for both PR and QC flows
         if (prId && getValues('po_lines').length === 0) {
-            logger.debug("🚀 [usePOForm] Starting Auto-Hydration:", { prId, isQC });
-            hasHydratedInitial.current = true; // Set flag immediately to prevent double-hits
-            
-            const type = isQC ? 'QC' : 'PR';
+            hasHydratedInitial.current = true; 
             handleSelectReferenceDoc(
-                prId, 
-                type, 
-                qcId, 
-                vendorId, 
-                winningVqId,
+                prId, isQC ? 'QC' : 'PR', qcId, vendorId, winningVqId,
                 sQcNo || initialValues?.qc_no,
                 searchParams.get('approvalNo') || searchParams.get('approval_no') || initialValues?.approval_no
             );
@@ -919,276 +469,59 @@ export const usePOForm = ({
     }, [isOpen, initialValues, getValues, handleSelectReferenceDoc, isHydrating, searchParams]);
 
     const handleAddLine = useCallback(() => {
-        const nextLineNo = fields.length + 1;
         append({
-            line_no:         nextLineNo,
-            item_id:         0,
-            item_code:       '',
-            item_name:       '',
-            description:     '',
-            pr_line_id:      null,
-            status:          'OPEN',
-            qty:             1,
-            qty_ordered:     1,
-            uom_id:          0,
-            unit_price:      0,
-            discount_amount: 0,
-            discount_expression: '0',
-            tax_code_id:     undefined,
-            required_receipt_type: 'FULL',
-            receipt_type:    'GOODS' as const,
-            line_total:      0,
+            line_no: fields.length + 1, item_id: 0, item_code: '', item_name: '', description: '',
+            pr_line_id: null, status: 'OPEN', qty: 1, qty_ordered: 1, uom_id: 0, unit_price: 0,
+            discount_amount: 0, discount_expression: '0', tax_code_id: undefined,
+            required_receipt_type: 'FULL', receipt_type: 'GOODS' as const, line_total: 0,
         });
     }, [append, fields.length]);
 
-    // const { user } = useAuth(); (Moved to top)
-
-    const handleConfirmSave = async () => {
-        if (!pendingPayload) return;
-        
-        try {
-            setIsSubmitting(true);
-            
-            // 🛡️ Data Integrity Guard: Strict Vendor ID Validation
-            const safeVendorId = Number(pendingPayload.vendor_id);
-            if (!safeVendorId || isNaN(safeVendorId) || safeVendorId <= 0) {
-                throw new Error("Invalid Vendor ID. กรุณาเลือกผู้ขายที่ถูกต้องจากระบบ");
-            }
-
-            // 🧠 Safe Coercion Helper: Prevents NaN and treats 0/empty as undefined
-            const safeId = (id: unknown): number | undefined => {
-                if (id === null || id === undefined || id === "") return undefined;
-                const num = Number(id);
-                return isNaN(num) || num === 0 ? undefined : num;
-            };
-
-            // STRICT PAYLOAD ARCHITECTURE (Aligned with Backend Contract 100%)
-            const fullPayload: CreatePOPayload = {
-                po_date:            pendingPayload.po_date ? new Date(pendingPayload.po_date).toISOString() : new Date().toISOString(),
-                pr_id:              safeId(pendingPayload.pr_id),
-                vendor_id:          Number(pendingPayload.vendor_id),
-                branch_id:          Number(pendingPayload.branch_id),
-                warehouse_id:       Number(pendingPayload.ship_to_warehouse_id),
-                base_currency_code: pendingPayload.base_currency_code || "THB",
-                quote_currency_code: pendingPayload.currency_code || pendingPayload.quote_currency_code || "THB",
-                exchange_rate:      Number(pendingPayload.exchange_rate || 1),
-                exchange_rate_date: pendingPayload.exchange_rate_date ? new Date(pendingPayload.exchange_rate_date).toISOString() : new Date().toISOString(),
-                tax_code_id:        Number(pendingPayload.tax_code_id),
-                discount_expression: pendingPayload.discount_expression || "0",
-                status:             "DRAFT", // Hardcode DRAFT for new creation
-                created_at:         new Date().toISOString(),
-                created_by:         (poId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined)) as unknown as number,
-                
-                // 🚫 FORBIDDEN PROPERTIES: Backend DTO strictly rejects these in the header for PO creation.
-                // Re-removing to fix 400 Bad Request: "property ... should not exist"
-                // payment_term_days, delivery_date, remark
-                
-                // 🚫 SUMMARY FIELDS REMOVED: Backend calculates subtotal, tax_amount, total_amount automatically.
-                // Property subtotal should not exist. property tax_amount should not exist. property total_amount should not exist.
-
-                po_lines: (pendingPayload.po_lines || []).map((item: POLine, index: number) => ({
-                    line_no:        index + 1,
-                    item_id:        Number(item.item_id),
-                    pr_line_id:     safeId(item.pr_line_id),
-                    rfq_line_id:    safeId(item.rfq_line_id), // 🎯 PR/QC Traceability
-                    status:         "OPEN",
-                    qty:            Number(item.qty_ordered ?? item.qty ?? 0),
-                    uom_id:         Number(item.uom_id),
-                    unit_price:     Number(item.unit_price),
-                    tax_code_id:    pendingPayload.tax_code_id !== undefined ? Number(pendingPayload.tax_code_id) : Number(item.tax_code_id),
-                    discount_expression: String(item.discount_expression || "0"),
-                    required_receipt_type: item.required_receipt_type || "FULL",
-                    description:    String(item.description || "")
-                }))
-            };
-
-            const cleanPayload = (obj: unknown): unknown => {
-                if (Array.isArray(obj)) {
-                    return obj.map(item => cleanPayload(item));
-                }
-                if (obj !== null && typeof obj === 'object') {
-                    const newObj: Record<string, unknown> = {};
-                    const entries = Object.entries(obj as Record<string, unknown>);
-                    for (const [key, val] of entries) {
-                        const v = val;
-                        if (v === undefined || v === null || (typeof v === 'number' && isNaN(v))) {
-                            continue;
-                        }
-                        newObj[key] = cleanPayload(v);
-                    }
-                    return newObj;
-                }
-                return obj;
-            };
-
-            const baseCleanedPayload = cleanPayload(fullPayload) as Record<string, unknown>;
-
-            const finalizedPayload = baseCleanedPayload as unknown as CreatePOPayload;
-
-            logger.info("FINAL_PO_PAYLOAD (Cleaned + Null Override):", finalizedPayload);
-
-            if (poId) {
-                // 🔄 UPDATE FLOW (Deep Scan Patch)
-                logger.info(`[usePOForm] Updating existing PO: ${poId}`);
-                
-                // 🛡️ Data Integrity: Remove Forbidden properties, add Mandatory ones
-                // Backend PATCH forbids 'created_by' but requires 'status', 'created_at', and 'updated_by'
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                const { created_by, ...patchCandidate } = finalizedPayload;
-                
-                const updatePayload = {
-                    ...patchCandidate,
-                    updated_by: Number(user?.id || 1), // 🛡️ Mandatory for PATCH
-                    // Ensure these are present as the backend says "should not be empty"
-                    status:     finalizedPayload.status || (existingPO as any)?.status || 'DRAFT',
-                    created_at: finalizedPayload.created_at || (existingPO as any)?.created_at || new Date().toISOString(),
-                };
-
-                await POService.update(Number(poId), updatePayload as any);
-                
-                // 🌟 Auto-submit if it was REJECTED
-                if ((existingPO as any)?.status === 'REJECTED') {
-                    logger.info(`[usePOForm] Auto-submitting PO ${poId} from REJECTED state`);
-                    await POService.submit(Number(poId));
-                }
-            } else {
-                CreatePOSchema.parse(finalizedPayload);
-                await POService.create(finalizedPayload as unknown as CreatePOPayload);
-            }
-
-            queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
-            queryClient.invalidateQueries({ queryKey: ['pr-ready-for-po-triple'] });
-            toast('บันทึกใบสั่งซื้อสำเร็จ', 'success');
-
-            setIsConfirmModalOpen(false);
-            if (onSuccess) onSuccess();
-            onClose();
-        } catch (error: unknown) {
-            logger.error('[usePOForm] handleConfirmSave error:', error);
-            const errMsg = extractErrorMessage(error);
-            toast(errMsg, 'error');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const onSubmit: SubmitHandler<POFormData> = (data) => {
-        if (!data.vendor_id || Number(data.vendor_id) <= 0) {
-            toast('กรุณาระบุผู้จัดจำหน่าย (Vendor) ก่อนบันทึกใบสั่งซื้อ', 'error');
-            return;
-        }
-        setPendingPayload(data);
-        setIsConfirmModalOpen(true);
-    };
-
     const onInvalidSubmit = (errors: FieldErrors<POFormData>) => {
         logger.error("Form Validation Errors:", errors);
-
-        // 1. 🎯 Auto-Scroll to first error field
         const firstErrorKey = Object.keys(errors)[0] as keyof POFormData;
         if (firstErrorKey) {
-            // Find the element by name attribute (standard react-hook-form behavior)
             const errorElement = document.getElementsByName(firstErrorKey)[0] || 
                                document.querySelector(`[name="${firstErrorKey}"]`);
-            
             if (errorElement) {
                 errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // Optional: Focus it if it's an input
                 if ('focus' in errorElement) (errorElement as any).focus();
-            } else if (firstErrorKey === 'po_lines') {
-                // Special case for table errors
-                const tableElement = document.querySelector('table');
-                tableElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
-        }
-
-        // 2. 📝 Extract human-friendly messages
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const extractErrorMessages = (errs: any): string[] => {
-            let messages: string[] = [];
-            for (const key in errs) {
-                const error = errs[key];
-                if (error?.message && typeof error.message === 'string') {
-                    messages.push(error.message);
-                } else if (typeof error === 'object' && error !== null) {
-                    messages = messages.concat(extractErrorMessages(error));
-                }
-            }
-            return Array.from(new Set(messages));
-        };
-
-        const errorMessages = extractErrorMessages(errors);
-
-        if (errorMessages.length > 0) {
-            const ErrorToastUI = () => React.createElement('div', { className: 'flex flex-col gap-1' },
-                React.createElement('span', { className: 'font-semibold text-sm' }, 'พบข้อมูลไม่ถูกต้อง:'),
-                React.createElement('ul', { className: 'list-disc pl-4 text-xs' },
-                    errorMessages.map((msg: string, i: number) => React.createElement('li', { key: i }, msg))
-                )
-            );
-            toast(React.createElement(ErrorToastUI), 'error');
-        } else {
-            toast("กรุณาตรวจสอบข้อมูลที่ระบุให้ครบถ้วน", 'error');
         }
     };
 
     return {
-        // Form
-        formMethods,
-        control,
-        register,
-        handleSubmit,
-        errors,
-        fields,
-        append,
-        remove,
-        setValue,
+        // Form & Master Data
+        formMethods, register, control, errors, handleSubmit, setValue,
+        branches, units, currencies, taxCodes,
+        isLoadingBranches, isLoadingUnits, isLoadingCurrencies, isLoadingTaxCodes,
+        fields, append, remove, replace, update,
         
-        // Watched values
-        watchVendorName,
-        watchPrNo,
-        watchCurrencyCode,
-        watchIsMulticurrency,
+        // State
+        isVendorModalOpen, setIsVendorModalOpen,
+        isQCModalOpen, setIsQCModalOpen,
+        isPRModalOpen, setIsPRModalOpen,
+        isHydrating, isSubmitting,
+        isConfirmModalOpen, setIsConfirmModalOpen,
+        
+        // Values
+        watchVendorName, watchPrNo, watchCurrencyCode, watchTargetCurrency,
+        watchIsMulticurrency, watchRfqId: initialValues?.rfq_id || existingPO?.rfq_id,
+        watchWinningVqId: initialValues?.winning_vq_id || existingPO?.winning_vq_id,
         
         // Handlers
-        handleVendorSelect,
-        handleSelectPR,
-        handleSelectQC,
-        handleSelectReferenceDoc,
-        handleClearReference,
-        handleAddLine,
         onSubmit,
         onInvalidSubmit,
         handleConfirmSave,
-        
-        // Modal states
-        isConfirmModalOpen,
-        setIsConfirmModalOpen,
-        isSubmitting,
-        isVendorModalOpen,
-        setIsVendorModalOpen,
-        isQCModalOpen,
-        setIsQCModalOpen,
-        isPRModalOpen,
-        setIsPRModalOpen,
-        isHydrating,
-        
-        // Data
-        branches,
-        isLoadingBranches,
-        taxCodes,
-        isLoadingTaxCodes,
-        units,
-        isLoadingUnits,
-        currencies,
-        isLoadingCurrencies,
-        
-        // Handlers
+        handleVendorSelect,
+        handleClearReference,
+        handleSelectReferenceDoc,
+        handleSelectPR,
+        handleSelectQC,
         handleSelectItemMaster,
-
-        // Initial Data for UI (Conditional disabling logic)
-        isInherited: !!watchRfqId || !!watchWinningVqId,
-        isViewMode,
+        handleAddLine,
+        onClose,
         existingPO,
+        isInherited: !!(getValues('rfq_id') || getValues('winning_vq_id'))
     };
 };

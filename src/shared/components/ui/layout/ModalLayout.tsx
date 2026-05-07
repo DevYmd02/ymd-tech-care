@@ -142,6 +142,10 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                         : "opacity-0 translate-y-8 scale-95"
                 )}
                 onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="modal-title"
+                aria-describedby={subtitle ? "modal-subtitle" : undefined}
             >
                 {/* Header Section */}
                 {variant === 'window' ? (
@@ -152,13 +156,14 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                     )}>
                         <div className="flex items-center space-x-3">
                             {titleIcon}
-                            <span className="uppercase font-black tracking-tighter">{title}</span>
+                            <span id="modal-title" className="uppercase font-black tracking-tighter">{title}</span>
                         </div>
                         <div className="flex items-center space-x-3">
                             {headerRight}
                             <button 
                                 type="button" 
                                 onClick={onClose} 
+                                aria-label="Close modal"
                                 className="bg-red-600 hover:bg-red-500 text-white rounded-md p-1 px-2 transition-all hover:scale-105 active:scale-95 shadow-sm flex items-center gap-1 group"
                             >
                                 <X size={16} className="group-hover:rotate-90 transition-transform" />
@@ -185,11 +190,11 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                                 </div>
                             )}
                             <div>
-                                <h2 className={cn("text-xl font-extrabold leading-tight", headerColor ? "text-white" : styles.text.primary)}>
+                                <h2 id="modal-title" className={cn("text-xl font-extrabold leading-tight", headerColor ? "text-white" : styles.text.primary)}>
                                     {title}
                                 </h2>
                                 {subtitle && (
-                                    <p className={cn("text-sm font-medium mt-1", headerColor ? "text-white/80" : "text-gray-500 dark:text-gray-400")}>
+                                    <p id="modal-subtitle" className={cn("text-sm font-medium mt-1", headerColor ? "text-white/80" : "text-gray-500 dark:text-gray-400")}>
                                         {subtitle}
                                     </p>
                                 )}
@@ -199,6 +204,7 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                             {headerRight}
                             <button 
                                 onClick={onClose}
+                                aria-label="Close modal"
                                 className={cn(
                                     "p-2 rounded-full transition-all duration-200",
                                     headerColor ? "text-white hover:bg-white/20" : "text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"

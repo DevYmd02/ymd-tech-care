@@ -99,10 +99,15 @@ export default function TabPanel({
   return (
     <div className={className}>
       {/* Tab Headers */}
-      <div className={`flex ${containerStyles}`}>
+      <div 
+        className={`flex ${containerStyles}`}
+        role="tablist"
+        aria-orientation="horizontal"
+      >
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            id={`tab-${tab.id}`}
             type="button"
             onClick={() => !tab.disabled && onTabChange(tab.id)}
             className={getTabStyles(activeTab === tab.id, !!tab.disabled)}
@@ -110,8 +115,9 @@ export default function TabPanel({
             role="tab"
             aria-selected={activeTab === tab.id}
             aria-controls={`tabpanel-${tab.id}`}
+            tabIndex={activeTab === tab.id ? 0 : -1}
           >
-            {tab.icon && <span className="w-4 h-4">{tab.icon}</span>}
+            {tab.icon && <span className="w-4 h-4" aria-hidden="true">{tab.icon}</span>}
             {tab.label}
           </button>
         ))}
@@ -119,9 +125,11 @@ export default function TabPanel({
 
       {/* Tab Content */}
       <div 
-        className="pt-4"
+        className="pt-4 focus:outline-none"
         role="tabpanel"
         id={`tabpanel-${activeTab}`}
+        aria-labelledby={`tab-${activeTab}`}
+        tabIndex={0}
       >
         {children}
       </div>

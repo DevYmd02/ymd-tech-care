@@ -12,8 +12,10 @@ import type {
   PRHeaderExtended,
   CreatePRPayload,
   PRStatus,
+  PRLine,
 } from '@/modules/procurement/types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { unwrapResponseData, extractLinesArray } from '@/shared/utils/apiUtils';
 
 export type PRUpdatePayload = Partial<CreatePRPayload> & { status?: PRStatus };
 
@@ -129,7 +131,8 @@ export function clearPRServiceAVCache() {
 function overlayAVStatus(items: PRHeader[], avStatusMap: Map<number, { status: string; av_no?: string }>): PRHeader[] {
   if (avStatusMap.size === 0) return items;
   return items.map(item => {
-    const avData = avStatusMap.get(Number(item.pr_id));
+    const prId = Number(item.pr_id);
+    const avData = !isNaN(prId) ? avStatusMap.get(prId) : undefined;
     
     if (avData) {
       const avStatus = avData.status;
@@ -139,11 +142,10 @@ function overlayAVStatus(items: PRHeader[], avStatusMap: Map<number, { status: s
       const newItem = { ...item };
       if (avNo) newItem.av_no = avNo;
 
-      // 🛡️ Only override status if the current Header status is 'PENDING'
-      // This ensures we trust the Header (GET /pr) once a document is no longer waiting for approval,
-      // while still allowing the AV Module to sync status for active 'PENDING' items.
-      if (avStatus && avStatus !== item.status) {
-        if (item.status === 'PENDING') {
+      // 🛡️ Only override status if the current Header status is 'PENDING' (case-insensitive)
+      const currentStatus = (item.status || '').toUpperCase();
+      if (avStatus && avStatus !== currentStatus) {
+        if (currentStatus === 'PENDING') {
           logger.info(`[PRService] 🔄 Syncing PENDING PR ${item.pr_no} status → ${avStatus} (from AV record)`);
           newItem.status = avStatus as PRHeader['status'];
         } else {
@@ -154,6 +156,22 @@ function overlayAVStatus(items: PRHeader[], avStatusMap: Map<number, { status: s
     }
     return item;
   });
+}
+
+/**
+ * Deduplicates PR items by pr_id to prevent UI key collisions and rendering bugs.
+ */
+function deduplicatePRs(items: PRHeader[]): PRHeader[] {
+    const seen = new Set<number>();
+    return items.filter(item => {
+        const id = Number(item.pr_id);
+        if (isNaN(id) || seen.has(id)) {
+            if (!isNaN(id)) logger.warn(`[PRService] 🛑 Removing duplicate PR record: ID=${id}, No=${item.pr_no}`);
+            return false;
+        }
+        seen.add(id);
+        return true;
+    });
 }
 
 export const PRService = {
@@ -270,8 +288,10 @@ export const PRService = {
             logger.warn('[PRService] AV status hydration failed (non-critical):', err);
         }
 
-        // 🎯 3. FINAL FILTERING (Using fully hydrated items)
-        return applyClientFilters<PRHeader>(hydratedItems, filterParams, {
+        // 🎯 3. FINAL DEDUPLICATION & FILTERING
+        const uniqueItems = deduplicatePRs(hydratedItems);
+
+        return applyClientFilters<PRHeader>(uniqueItems, filterParams, {
             searchableFields: ['pr_no', 'requester_name', 'purpose'],
             dateField: 'need_by_date',
             backendTotal: response.total,
@@ -281,8 +301,9 @@ export const PRService = {
 
     // ⚡ PHASE 2: Server-Side Pagination & Filtering (Real API)
     if (!USE_MOCK) {
-        // Hydrate data with vendor info for display even if not filtering
-        let hydratedItems = [...allItems];
+        // 🎯 Deduplicate raw response first
+        let hydratedItems = deduplicatePRs(allItems);
+        
         try {
             const now = Date.now();
             if (!cachedVendors || (now - lastVendorFetchTime > VENDOR_CACHE_TTL)) {
@@ -301,7 +322,7 @@ export const PRService = {
                 }
             });
 
-            hydratedItems = allItems.map(item => {
+            hydratedItems = hydratedItems.map(item => {
                 const vId = item.preferred_vendor_id || item.vendor_id;
                 const vendorFromId = vId ? vendorMap[Number(vId)] : undefined;
                 
@@ -336,82 +357,26 @@ export const PRService = {
     // This ensures the table only shows items for the current page
     const page = 1;
     const limit = 20;
-    return applyClientPagination<PRHeader>(allItems, page, limit, response.total);
+    const uniqueItems = deduplicatePRs(allItems);
+    return applyClientPagination<PRHeader>(uniqueItems, page, limit, response.total);
   },
 
   getDetail: async (id: number, config?: AxiosRequestConfig): Promise<PRHeaderExtended> => {
     logger.info(`[PRService] Fetching PR Detail: ${id}`);
     const response = await api.get<unknown>(ENDPOINTS.detail(id), config);
     
-    // 🔍 DIAGNOSTIC: Log the raw response structure to identify unwrap issues
-    logger.debug('[PRService.getDetail] RAW response keys:', Object.keys(response as object || {}));
-    
-    let finalResult: PRHeaderExtended | null = null;
-    const raw = response as Record<string, unknown>;
+    // 🎯 Use centralized utilities to handle inconsistent backend shapes
+    const data = unwrapResponseData<PRHeaderExtended>(response);
+    const lines = extractLinesArray<PRLine>(response);
 
-    // 🛡️ Helper to find lines in any object structure
-    const extractLines = (obj: any) => {
-        if (!obj) return [];
-        return Array.isArray(obj.lines) ? obj.lines : 
-               (Array.isArray(obj.pr_lines) ? obj.pr_lines : 
-               (Array.isArray(obj.line_items) ? obj.line_items : []));
+    // Merge lines into the header object as expected by UI
+    let finalResult: PRHeaderExtended = {
+        ...data,
+        lines: lines.length > 0 ? lines : (data.lines || [])
     };
 
-    // ─── Shape 1: Already unwrapped by interceptor → { pr_id, pr_no, ... } ─────
-    if (raw && 'pr_id' in raw) {
-      finalResult = {
-        ...raw,
-        lines: extractLines(raw),
-      } as unknown as PRHeaderExtended;
-      logger.debug('[PRService.getDetail] Shape 1 (direct): pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
-    }
-    
-    // ─── Shape 2: Single envelope { data: { pr_id, pr_no, ... } } ───────────────
-    else if (raw && 'data' in raw && raw.data && typeof raw.data === 'object') {
-      const inner = raw.data as Record<string, unknown>;
-      if ('pr_id' in inner) {
-        finalResult = {
-            ...inner,
-            lines: extractLines(inner),
-        } as unknown as PRHeaderExtended;
-        logger.debug('[PRService.getDetail] Shape 2 (data envelope): pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
-      }
-      
-      // ─── Shape 3: Double envelope { data: { data: { pr_id, ... } } } ───────── 
-      else if ('data' in inner && inner.data && typeof inner.data === 'object') {
-        const deepInner = inner.data as Record<string, unknown>;
-        if ('pr_id' in deepInner) {
-          finalResult = {
-              ...deepInner,
-              lines: extractLines(deepInner),
-          } as unknown as PRHeaderExtended;
-          logger.debug('[PRService.getDetail] Shape 3 (double envelope): pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
-        }
-      }
-    }
- 
-    // ─── Shape 4: { header: { pr_id, pr_no, ... }, lines: [...] } ────────────────
-    // ✅ CONFIRMED: Real NestJS backend returns this shape (seen in browser log)
-    else if (raw && 'header' in raw && raw.header && typeof raw.header === 'object') {
-      const header = raw.header as Record<string, unknown>;
-      if ('pr_id' in header) {
-        finalResult = {
-          ...header,
-          // Merge lines from the top-level `lines` or fallbacks key into the PRHeader
-          lines: extractLines(raw) || extractLines(header),
-        } as unknown as PRHeaderExtended;
-        logger.debug('[PRService.getDetail] Shape 4 (header+lines): pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
-      }
-    }
+    logger.debug('[PRService.getDetail] Hydrated: pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
 
-    // ─── Fallback: Return as-is and let TS handle it ─────────────────────────────
-    if (!finalResult) {
-        logger.warn('[PRService.getDetail] Could not determine response shape — using raw as PRHeader');
-        finalResult = {
-            ...raw,
-            lines: extractLines(raw)
-        } as unknown as PRHeaderExtended;
-    }
 
     // 🎯 AV STATUS HYDRATION (Detail): Overlay correct status from AV module
     if (!USE_MOCK) {

@@ -4,7 +4,8 @@ import { DialogFormLayout } from '@layout/DialogFormLayout';
 import { cn } from '@/shared/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@hooks/useDebounce';
-import { SalesOrderService, type SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
+import { type SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
+import { DeliveryService } from '../services/delivery.service';
 import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
 
 /**
@@ -33,10 +34,8 @@ export const SalesOrderSearchModal = memo(({
     const { data: soResponse, isLoading } = useQuery({
         queryKey: ['sales-orders-search', debouncedSearch],
         queryFn: () =>
-            SalesOrderService.getList({
+            DeliveryService.getPendingDeliveries({
                 so_no: debouncedSearch,
-                status: 'APPROVED',
-                limit: 100,
             }),
         enabled: isOpen,
         staleTime: 30 * 1000,

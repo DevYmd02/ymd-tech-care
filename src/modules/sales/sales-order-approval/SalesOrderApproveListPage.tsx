@@ -106,7 +106,7 @@ export default function SalesOrderApproveListPage() {
         enableSorting: false,
       }),
       columnHelper.accessor('ao_no', {
-        header: 'เลขที่ AO',
+        header: 'เลขที่ SOA',
         cell: (info) => (
           <span
             className={`font-bold ${
@@ -258,10 +258,10 @@ export default function SalesOrderApproveListPage() {
               accentColor="emerald"
             />
             <FilterField
-              label="เลขที่อนุมัติ (AO)"
+              label="เลขที่อนุมัติ (SOA)"
               value={aoNo}
               onChange={setAoNo}
-              placeholder="AO-xxxx"
+              placeholder="SOA-xxxx"
               accentColor="emerald"
             />
             <FilterField

@@ -4,6 +4,7 @@ import { logger } from '@/shared/utils';
 import type { SuccessResponse } from '@/shared/types/api.types';
 import { extractErrorMessage } from '@/core/api/api';
 import { applyClientFilters, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { unwrapResponseData } from '@/shared/utils/apiUtils';
 
 const ENDPOINTS = {
   list: '/rfq',
@@ -105,6 +106,8 @@ export const cleanParams = (params: object = {}): Record<string, string | number
 
   return cleaned;
 };
+
+import type { AxiosRequestConfig } from 'axios';
 
 export const RFQService = {
   getList: async (params?: RFQFilterCriteria): Promise<RFQListResponse> => {
@@ -217,9 +220,10 @@ export const RFQService = {
     };
   },
 
-  getById: async (id: number): Promise<RFQDetailResponse> => {
+  getById: async (id: number, config?: AxiosRequestConfig): Promise<RFQDetailResponse> => {
     logger.info(`[RFQService] Fetching RFQ Detail: ${id}`);
-    return await api.get<RFQDetailResponse>(ENDPOINTS.detail(id));
+    const response = await api.get<unknown>(ENDPOINTS.detail(id), config);
+    return unwrapResponseData<RFQDetailResponse>(response);
   },
 
   create: async (payload: RFQCreateDTO): Promise<RFQHeader> => {

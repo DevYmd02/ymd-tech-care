@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import type { FieldErrors, Path, FieldPathValue, SubmitHandler } from 'react-hook-form';
+import type { FieldErrors, Path, FieldPathValue, Resolver, SubmitHandler } from 'react-hook-form';
 import {
   PRFormSchema,
   getPRDefaultFormValues,
@@ -8,9 +8,8 @@ import {
   getInitialLines
 } from '@/modules/procurement/schemas/pr-schemas';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
-import type { VendorSelection, PRLine, CreatePRPayload } from '@/modules/procurement/types/pr-types';
+import type { VendorSelection, CreatePRPayload } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
-import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import { extractErrorMessage } from '@/core/api/api';
 import { logger } from '@/shared/utils';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
@@ -21,9 +20,9 @@ import { usePRMasterData, type MappedOption } from './usePRMasterData';
 import type { WarehouseListItem, Currency } from '@/modules/master-data/types/master-data-types';
 import { usePRActions } from './usePRActions';
 import { useQueryClient } from '@tanstack/react-query';
-import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { usePRCalculations } from './usePRCalculations';
+import { usePRHydration } from './usePRHydration';
 
 const PR_CONFIG = {
   MIN_LINES: 1,
@@ -31,13 +30,6 @@ const PR_CONFIG = {
 } as const;
 
 // 🎯 Helper to sanitize ISO strings to YYYY-MM-DD for HTML5 date inputs
-const sanitizeDate = (dateStr?: string | null): string => {
-  if (!dateStr) return '';
-  // If it's a full ISO string (contains T), slice it
-  if (dateStr.includes('T')) return dateStr.split('T')[0];
-  // If it's already YYYY-MM-DD, return as is
-  return dateStr;
-};
 
 export interface UsePRFormProps {
   id?: number;
@@ -88,8 +80,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
 
   const formMethods = useForm<PRFormData>({
     defaultValues: getPRDefaultFormValues(user),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(PRFormSchema) as any,
+    resolver: zodResolver(PRFormSchema) as Resolver<PRFormData>,
     mode: 'onBlur',
   });
   const { handleSubmit, setValue, reset, watch, control, getFieldState, formState: { isSubmitting, errors } } = formMethods;
@@ -118,7 +109,8 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     logger.error('Validation Errors:', fieldErrors);
 
     // 1. 🎯 Auto-Scroll to first error field
-    const firstErrorKey = Object.keys(fieldErrors)[0] as keyof PRFormData;
+    const errorKeys = Object.keys(fieldErrors) as Array<keyof PRFormData>;
+    const firstErrorKey = errorKeys[0];
     if (firstErrorKey) {
         // Try to find element by name attribute
         const errorElement = document.getElementsByName(firstErrorKey)[0] || 
@@ -126,7 +118,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         
         if (errorElement) {
             errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            if ('focus' in errorElement) (errorElement as any).focus();
+            if ('focus' in errorElement) (errorElement as HTMLElement).focus();
         } else if (firstErrorKey === 'lines') {
             // Special case for table errors
             const tableElement = document.querySelector('table');
@@ -139,16 +131,16 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     }
 
     // 2. 📝 Human-friendly Error Summary
-    const extractMessages = (errs: any): string[] => {
+    const extractMessages = (errs: FieldErrors<PRFormData>): string[] => {
         let messages: string[] = [];
-        for (const key in errs) {
-            const error = errs[key];
-            if (error?.message && typeof error.message === 'string') {
+        Object.values(errs).forEach((error) => {
+            if (!error) return;
+            if ('message' in error && typeof error.message === 'string') {
                 messages.push(error.message);
-            } else if (typeof error === 'object' && error !== null) {
-                messages = messages.concat(extractMessages(error));
+            } else if (typeof error === 'object') {
+                messages = [...messages, ...extractMessages(error as FieldErrors<PRFormData>)];
             }
-        }
+        });
         return Array.from(new Set(messages));
     };
 
@@ -161,223 +153,52 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
                 errorMessages.map((msg: string, i: number) => React.createElement('li', { key: i }, msg))
             )
         );
-        toast(React.createElement(ErrorToastUI) as any, 'error');
+        toast(React.createElement(ErrorToastUI), 'error');
     } else {
         toast('กรุณาตรวจสอบข้อมูลที่ระบุให้ครบถ้วน', 'error');
     }
   }, [toast]);
 
 
+  // 🎯 Request Cancellation Management
+  // 🎯 Stabilize the hydration callback to prevent infinite loops during reset()
+  const handleDataLoaded = useCallback((data: Partial<PRFormData>) => {
+    logger.debug('[usePRForm] Data hydrated, resetting form', data.pr_no);
+    reset(data);
+  }, [reset]);
 
+  // 🎯 Hydration Engine (Extracted - Now manages its own AbortController)
+  const { isLoading: isPRLoading } = usePRHydration({
+    id,
+    isOpen,
+    isMasterDataLoading,
+    warehouses,
+    masterItems,
+    masterUnits,
+    onDataLoaded: handleDataLoaded
+  });
+
+  // @deprecated Cleanup on Unmount (Now handled within individual hooks)
+
+  // Handle New PR initialization
   useEffect(() => {
-    // Phase 1 & 2: Safe hydration ensures we only execute PR fetching and mapping WHEN master data is completely loaded
-    if (isOpen && !isMasterDataLoading && warehouses.length > 0 && !prevIsOpenRef.current) {
-      prevIsOpenRef.current = true; // Mark as executed for this opencycle so we don't re-fetch
-
-      const timer = setTimeout(async () => {
-        if (id) {
-          try {
-            setIsActionLoading(true);
-            const pr = await PRService.getDetail(id);
-            if (pr) {
-              // 1. Get unique warehouse IDs safely from line items
-              const uniqueWhIds = Array.from(new Set((pr.lines || []).map(l => l.warehouse_id).filter(Boolean)));
-              
-              // 2. Fetch locations for those warehouses in parallel safely
-              const locationMaps = await Promise.all(
-                uniqueWhIds.map(async (whId) => {
-                  try {
-                    const res = await LocationService.getAll({ warehouse_id: Number(whId) });
-                    return { whId: Number(whId), items: res?.items || [] };
-                  } catch (err) {
-                    logger.error(`[usePRForm] Failed to fetch locations for warehouse ${whId}:`, err);
-                    return { whId: Number(whId), items: [] };
-                  }
-                })
-              );
-
-              // 3. Flatten into lookup map [location_id] -> code/name
-              const locationLookup: Record<number, string> = {};
-              locationMaps.forEach(map => {
-                map.items.forEach(item => {
-                  locationLookup[item.location_id] = item.code || item.name_th;
-                });
-              });
-
-              const mappedLines: PRLineFormData[] = (pr.lines || []).map((line: PRLine) => {
-                const matchedItem = masterItems?.find(i => String(i.item_id) === String(line.item_id));
-                const matchedUnit = masterUnits?.find(u => String(u.uom_id || u.unit_id) === String(line.uom_id));
-
-                // 🎯 FIX: Hydrate Warehouse from Line instead of Header
-                const lineWhId = line.warehouse_id || pr.warehouse_id || 1;
-                const matchedWh = warehouses.find(w => String(w.value) === String(lineWhId));
-
-                // 🎯 FIX: Map Location Code/Name with lookup safety
-                const locName = locationLookup[Number(line.location)] || line.location || '';
-
-                return {
-                  pr_line_id: line.pr_line_id ? Number(line.pr_line_id) : undefined,
-                  item_id: line.item_id ? Number(line.item_id) : undefined,
-                  item_code: matchedItem?.item_code || line.item_code || '',
-                  item_name: matchedItem?.item_name || line.item_name || '',
-                  description: line.description || line.item_name || matchedItem?.item_name || '',
-                  qty: Number(line.qty) || 0,
-                  uom: matchedUnit?.uom_name || matchedUnit?.unit_name || line.uom || '',
-                  uom_id: line.uom_id ? Number(line.uom_id) : undefined,
-                  est_unit_price: Number(line.est_unit_price) || 0,
-                  est_amount: (Number(line.qty) || 0) * (Number(line.est_unit_price) || 0),
-                   needed_date: sanitizeDate(line.needed_date),
-                  preferred_vendor_id: line.preferred_vendor_id ? Number(line.preferred_vendor_id) : undefined,
-                  remark: line.remark || '',
-                  warehouse_id: Number(lineWhId), 
-                  warehouse_code: matchedWh?.original?.warehouse_code || '',
-                  location: line.location || '',
-                  _base_uom_name: matchedItem?.uom_name || matchedItem?.unit_name || '',
-                  _base_uom_id: matchedItem?.uom_id || matchedItem?.unit_id ? Number(matchedItem.uom_id || matchedItem.unit_id) : undefined,
-                  _purchasing_uom_name: matchedItem?.purchasing_unit_name || '',
-                  _purchasing_uom_id: matchedItem?.purchasing_unit_id ? Number(matchedItem.purchasing_unit_id) : undefined,
-                  location_name: locName, 
-                  discount: (() => {
-                    const gross = (Number(line.qty) || 0) * (Number(line.est_unit_price) || 0);
-                    const raw = line.line_discount_raw || '';
-                    if (!raw) return 0;
-                    if (raw.endsWith('%')) {
-                      const pct = parseFloat(raw.replace('%', ''));
-                      return isNaN(pct) ? 0 : gross * (pct / 100);
-                    }
-                    return parseFloat(raw) || 0;
-                  })(),
-                  line_discount_raw: line.line_discount_raw || ''
-                };
-              });
-
-              while (mappedLines.length < PR_CONFIG.MIN_LINES) {
-                mappedLines.push(createEmptyPRLine());
-              }
-
-               let vendorName = pr.vendor_name || pr.suggested_vendor || '';
-              let vendorId = pr.preferred_vendor_id ?? pr.vendor_id;
-              const vendorCodeFallback = pr.vendor_quote_no || '';
-
-              // 🔍 ABSOLUTE MASTER FALLBACK LOOKUP:
-              // Mirror PRListPage.tsx exactly by searching through complete vendor item list
-              if (!vendorName) {
-                try {
-                  const vendorListRes = await VendorService.getList();
-                  const vendorItems = vendorListRes.items || [];
-
-                  // 1. Try Lookup by ID
-                  if (vendorId) {
-                     const matched = vendorItems.find((v: any) => Number(v.vendor_id || v.id) === Number(vendorId));
-                     if (matched?.vendor_name) {
-                         vendorName = matched.vendor_name;
-                     }
-                  }
-
-                  // 2. Try Lookup by Code Fallback (Vendor Quote No)
-                  if (!vendorName && vendorCodeFallback) {
-                     const codeTrim = vendorCodeFallback.trim().toLowerCase();
-                     const matched = vendorItems.find((v: any) => 
-                        v.vendor_code && v.vendor_code.trim().toLowerCase() === codeTrim
-                     );
-                     if (matched) {
-                        vendorName = matched.vendor_name;
-                        vendorId = matched.vendor_id; // Upgrade missing ID holding form integrity
-                     }
-                  }
-                } catch (err) {
-                  logger.error('[usePRForm] Absolute fallback lookup failed:', err);
-                }
-              }
-
-              // ── Robust Hydration — Use fallbacks for inconsistent API naming ─────────────
-              const formData: Partial<PRFormData> = {
-                ...pr,
-                version: pr.version ?? 1,
-                pr_no: pr.pr_no || 'DRAFT-TEMP',
-
-                // 1. Cost Center / Department Fallback
-                cost_center_id: (() => {
-                  const val = pr.cost_center_id ?? pr.department_id;
-                  return val ? Number(val) : undefined;
-                })(),
-
-                // 2. Project
-                project_id: pr.project_id ? Number(pr.project_id) : undefined,
-
-                // 3. Purpose / Remark Fallback
-                purpose: (pr.purpose || pr.remark || '').trim(),
-                pr_date: sanitizeDate(pr.pr_date),
-                need_by_date: sanitizeDate(pr.need_by_date),
-
-                // 4. Vendor Fallback
-                preferred_vendor_id: vendorId ? Number(vendorId) : undefined,
-                vendor_name: vendorName,
-
-                requester_user_id: pr.requester_user_id ? Number(pr.requester_user_id) : 1,
-                
-                preparer_name: pr.requester_name || pr.employee_name || '',
-                requester_name: pr.requester_name || pr.employee_name || '',
-                
-                pr_base_currency_code: pr.pr_base_currency_code || 'THB',
-                pr_quote_currency_code: pr.pr_quote_currency_code || 'THB',
-                isMulticurrency: (pr.pr_base_currency_code || 'THB') !== 'THB',
-                pr_exchange_rate: pr.pr_exchange_rate || 1,
-                pr_exchange_rate_date: sanitizeDate(pr.pr_exchange_rate_date || pr.pr_date || ''),
-                lines: mappedLines,
-                is_on_hold: pr.status === 'DRAFT' ? 'Y' : 'N',
-                pr_tax_code_id: pr.pr_tax_code_id ? Number(pr.pr_tax_code_id) : undefined,
-                pr_tax_rate: (() => {
-                  if (pr.pr_tax_rate != null) return Number(pr.pr_tax_rate);
-                  const matchedTax = purchaseTaxOptions.find(t => String(t.value) === String(pr.pr_tax_code_id));
-                  return Number(matchedTax?.original?.tax_rate || 0);
-                })(),
-                delivery_date: sanitizeDate(pr.delivery_date || pr.need_by_date || pr.pr_date || ''),
-                pr_discount_raw: pr.pr_discount_raw != null ? String(pr.pr_discount_raw) : '',
-                remark: pr.remark || '',
-                shipping_method: pr.shipping_method || '',
-                vendor_quote_no: pr.vendor_quote_no || '',
-                credit_days: pr.credit_days != null ? Number(pr.credit_days) : undefined,
-                payment_term_days: pr.payment_term_days != null ? Number(pr.payment_term_days) : undefined,
-                pr_sub_total: 0,
-                pr_discount_amount: 0,
-                pr_tax_amount: 0,
-                total_amount: Number(pr.total_amount || 0),
-              };
-
-              reset(formData);
-            }
-          } catch (error) {
-            logger.error('Failed to fetch PR details:', error);
-          } finally {
-            setIsActionLoading(false);
-          }
-        } else {
-          try {
-            const nextPRNo = await PRService.generateNextDocumentNo();
+    if (isOpen && !id && !isMasterDataLoading && !prevIsOpenRef.current) {
+        prevIsOpenRef.current = true;
+        PRService.generateNextDocumentNo().then(nextPRNo => {
             reset({ 
               ...getPRDefaultFormValues(user), 
               pr_no: nextPRNo.document_no,
               credit_days: '',
               payment_term_days: ''
             });
-          } catch (err) {
+        }).catch(err => {
             logger.error('[usePRForm] Failed to generate PR No:', err);
-            // Fallback securely so the form doesn't crash
-            reset({ 
-              ...getPRDefaultFormValues(user), 
-              pr_no: 'DRAFT-TEMP',
-              credit_days: '',
-              payment_term_days: ''
-            });
-          }
-        }
-      }, 0);
-      return () => clearTimeout(timer);
+            reset({ ...getPRDefaultFormValues(user), pr_no: 'DRAFT-TEMP' });
+        });
     } else if (!isOpen) {
-      prevIsOpenRef.current = false;
+        prevIsOpenRef.current = false;
     }
-  }, [isOpen, isMasterDataLoading, reset, id, user, setIsActionLoading, masterItems, masterUnits, purchaseTaxOptions, warehouses]);
+  }, [isOpen, id, isMasterDataLoading, reset, user]);
 
   // Currency Sync
   const sourceCurrencyCode = watch('pr_base_currency_code');
@@ -891,9 +712,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
             if (!isOnHold) {
                 try {
                     logger.info(`🚀 [usePRForm] Triggering explicit approval process for PR ${id}`);
-                    // 🎯 NOTE: Casting to any because processDirectApproval is a dynamic method shorthand 
-                    // that TS might not always resolve correctly in older service definitions.
-                    await (PRService as any).processDirectApproval(id);
+                    await PRService.processDirectApproval(id);
                     // ⏱️ Minor delay to allow backend processing before list refresh
                     await new Promise(resolve => setTimeout(resolve, 800));
                 } catch (approveErr) {
@@ -1022,6 +841,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     products, costCenters, projects, purchaseTaxOptions, currencies, masterUnits,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleDelete,
-    handleVoid, control, reset, formMethods, user
+    handleVoid, control, reset, formMethods, user,
+    isLoading: isMasterDataLoading || isPRLoading || isActionLoading
   };
 };

@@ -105,9 +105,9 @@ export const usePRLoader = ({
               mappedLines.push(createEmptyPRLine());
             }
 
-            const formData: any = {
+            const formData: PRFormData = {
               ...pr,
-              version: (pr as any).version ?? 1,
+              version: pr.version ?? 1,
               pr_no: pr.pr_no || 'DRAFT-TEMP',
               ...(pr.project_id !== undefined && { project_id: pr.project_id ? Number(pr.project_id) : undefined }),
               preparer_name: pr.requester_name || '',

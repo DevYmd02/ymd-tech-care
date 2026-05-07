@@ -254,6 +254,8 @@ export function DeliveryFormModal({
                                     <DeliveryLineTable
                                         lines={lines}
                                         uoms={uoms}
+                                        warehouses={warehouses}
+                                        locations={locations}
                                         onAddLine={handleAddLine}
                                         onRemoveLine={handleRemoveLine}
                                         onLineChange={handleLineChange}
