@@ -8,14 +8,22 @@ import {
   MOCK_BILLING_GROUPS 
 } from '../data/customerData';
 import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
+import type { CustomerMaster } from '../../types/customer-types';
+
+/** Local Persistence Store */
+let localCustomers = [...MOCK_CUSTOMERS];
 
 export const setupCustomerHandlers = (mock: MockAdapter) => {
+  // ===========================================================================
+  // MAIN CUSTOMER ENDPOINTS
+  // ===========================================================================
+
   // 1. GET Customer List
-  mock.onGet('/customer').reply((config: AxiosRequestConfig) => {
+  mock.onGet('/customer-master').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
     
-    // Enhancement Layer: Map relational names for search if needed
-    const enhancedData = MOCK_CUSTOMERS.map(cust => ({
+    // Enhancement Layer: Map relational names for search
+    const enhancedData = localCustomers.map(cust => ({
       ...cust,
       customer_id: sanitizeId(cust.customer_id),
       business_type_id: sanitizeId(cust.business_type_id),
@@ -35,38 +43,90 @@ export const setupCustomerHandlers = (mock: MockAdapter) => {
     return [200, result];
   });
 
-  // 2. GET Business Type List
-  mock.onGet('/customer/business-type').reply((config: AxiosRequestConfig) => {
+  // 2. GET Customer Detail
+  mock.onGet(/\/customer-master\/\d+/).reply((config) => {
+    const id = parseInt(config.url?.split('/').pop() || '0');
+    const customer = localCustomers.find(c => c.customer_id === id);
+    return customer ? [200, customer] : [404, { message: 'Customer not found' }];
+  });
+
+  // 3. POST Create Customer
+  mock.onPost('/customer-master').reply((config) => {
+    const payload = JSON.parse(config.data);
+    const newId = Math.floor(Math.random() * 1000000);
+    const newCustomer: CustomerMaster = {
+      ...payload,
+      customer_id: newId,
+      id: newId,
+      is_active: true,
+      status: 'ACTIVE',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    localCustomers.unshift(newCustomer);
+    return [201, newCustomer];
+  });
+
+  // 4. PATCH Update Customer
+  mock.onPatch(/\/customer-master\/\d+/).reply((config) => {
+    const id = parseInt(config.url?.split('/').pop() || '0');
+    const payload = JSON.parse(config.data);
+    const index = localCustomers.findIndex(c => c.customer_id === id);
+    
+    if (index !== -1) {
+      localCustomers[index] = { 
+        ...localCustomers[index], 
+        ...payload, 
+        updated_at: new Date().toISOString() 
+      };
+      return [200, localCustomers[index]];
+    }
+    return [404, { message: 'Customer not found' }];
+  });
+
+  // 5. DELETE Customer
+  mock.onDelete(/\/customer-master\/\d+/).reply((config) => {
+    const id = parseInt(config.url?.split('/').pop() || '0');
+    localCustomers = localCustomers.filter(c => c.customer_id !== id);
+    return [204];
+  });
+
+  // ===========================================================================
+  // MASTER DATA LOOKUPS
+  // ===========================================================================
+
+  // Business Type List
+  mock.onGet('/customer-master/business-type').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
     const result = applyMockFilters(MOCK_BUSINESS_TYPES, params, {
-      searchableFields: ['business_type_code', 'business_type_name', 'business_type_nameeng'],
+      searchableFields: ['business_type_code', 'business_type_name'],
     });
     return [200, result];
   });
 
-  // 3. GET Customer Type List
-  mock.onGet('/customer/type').reply((config: AxiosRequestConfig) => {
+  // Customer Type List
+  mock.onGet('/customer-master/type').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
     const result = applyMockFilters(MOCK_CUSTOMER_TYPES, params, {
-      searchableFields: ['customer_type_code', 'customer_type_name', 'customer_type_nameeng'],
+      searchableFields: ['customer_type_code', 'customer_type_name'],
     });
     return [200, result];
   });
 
-  // 4. GET Customer Group List
-  mock.onGet('/customer/group').reply((config: AxiosRequestConfig) => {
+  // Customer Group List
+  mock.onGet('/customer-master/group').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
     const result = applyMockFilters(MOCK_CUSTOMER_GROUPS, params, {
-      searchableFields: ['customer_group_code', 'customer_group_name', 'customer_group_nameeng'],
+      searchableFields: ['customer_group_code', 'customer_group_name'],
     });
     return [200, result];
   });
 
-  // 5. GET Billing Group List
-  mock.onGet('/customer/billing-group').reply((config: AxiosRequestConfig) => {
+  // Billing Group List
+  mock.onGet('/customer-master/billing-group').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
     const result = applyMockFilters(MOCK_BILLING_GROUPS, params, {
-      searchableFields: ['bill_group_code', 'bill_group_name', 'bill_group_nameeng'],
+      searchableFields: ['bill_group_code', 'bill_group_name'],
     });
     return [200, result];
   });
