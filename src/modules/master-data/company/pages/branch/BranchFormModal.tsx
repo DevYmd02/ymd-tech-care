@@ -4,12 +4,6 @@
  * @module company
  */
 
-/**
- * @file BranchFormModal.tsx
- * @description Modal สำหรับสร้าง/แก้ไขข้อมูลสาขา (Refactored to Standard)
- * @module company
- */
-
 import { Building2, Save, X, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
@@ -74,7 +68,7 @@ export function BranchFormModal({ isOpen, onClose, editId, initialData, onSucces
         <DialogFormLayout
             isOpen={isOpen}
             onClose={handleClose}
-            title={editId ? 'แก้ไขข้อมูลสาขา' : 'เพิ่มสาขาใหม่'}
+            title={editId !== null ? 'แก้ไขข้อมูลสาขา' : 'เพิ่มสาขาใหม่'}
             titleIcon={TitleIcon}
             footer={FormFooter}
         >

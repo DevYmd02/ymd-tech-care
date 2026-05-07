@@ -5,7 +5,7 @@ import { DialogFormLayout } from '@ui';
 import { Settings, Save, X, PlusCircle, AlertCircle, Package, Database, Info, List } from 'lucide-react';
 import { ICOptionService } from './services/ic-option.service';
 import { icOptionSchema, type ICOptionFormData } from './types/ic-option.types';
-import { BranchService } from '@company/services/branch.service';
+import { BranchService } from '@company/services/org-branch.service';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';
 import { logger } from '@/shared/utils';

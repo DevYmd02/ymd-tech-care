@@ -18,6 +18,7 @@ export interface EmployeeSearchModalProps {
     onSelect: (employee: IEmployee) => void;
     title?: string;
     headerColor?: string;
+    filterType?: string;
 }
 
 export const EmployeeSearchModal: React.FC<EmployeeSearchModalProps> = React.memo(({
@@ -25,7 +26,8 @@ export const EmployeeSearchModal: React.FC<EmployeeSearchModalProps> = React.mem
     onClose,
     onSelect,
     title = 'ค้นหาพนักงาน - Find Employee',
-    headerColor
+    headerColor,
+    filterType
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const debouncedSearch = useDebounce(searchTerm, 400);
@@ -38,15 +40,23 @@ export const EmployeeSearchModal: React.FC<EmployeeSearchModalProps> = React.mem
     });
 
     const filteredData = useMemo(() => {
-        if (!debouncedSearch.trim()) return employees;
+        let data = employees;
+        
+        // Apply type filter if provided
+        if (filterType) {
+            data = data.filter(emp => emp.emp_type?.toString().trim() === filterType);
+        }
+
+        if (!debouncedSearch.trim()) return data;
+        
         const term = debouncedSearch.toLowerCase();
-        return employees.filter(emp => 
+        return data.filter(emp => 
             emp.employee_code.toLowerCase().includes(term) ||
             emp.employee_firstname_th.toLowerCase().includes(term) ||
             emp.employee_lastname_th.toLowerCase().includes(term) ||
             (emp.email && emp.email.toLowerCase().includes(term))
         );
-    }, [employees, debouncedSearch]);
+    }, [employees, debouncedSearch, filterType]);
 
     const handleSelect = useCallback((employee: IEmployee) => {
         onSelect(employee);

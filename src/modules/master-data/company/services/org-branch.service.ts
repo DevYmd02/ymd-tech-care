@@ -47,7 +47,8 @@ export const BranchService = {
 
   update: async (data: BranchUpdateRequest): Promise<{ success: boolean; message?: string }> => {
     try {
-      await api.put<void>(`${ENDPOINT}/${data.branch_id}`, data);
+      const { branch_id, ...payload } = data;
+      await api.put<void>(`${ENDPOINT}/${branch_id}`, payload);
       return { success: true };
     } catch {
       return { success: false, message: 'เกิดข้อผิดพลาดในการอัพเดทสาขา' };

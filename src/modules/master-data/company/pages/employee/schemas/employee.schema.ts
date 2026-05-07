@@ -1,47 +1,42 @@
 import { z } from 'zod';
 
+/**
+ * @file employee.schema.ts
+ * @description Zod schema for Employee form. Uses snake_case to match API payloads.
+ */
 export const employeeSchema = z.object({
-    // ข้อมูลพื้นฐาน
-    employeeCode:   z.string().min(1, 'กรุณากรอกรหัสพนักงาน').max(25, 'รหัสพนักงานต้องไม่เกิน 25 ตัวอักษร'),
-    taxIdCard:      z.string().min(1, 'กรุณากรอกเลขประจำตัวประชาชน').max(25).regex(/^\d+$/, 'กรุณากรอกเฉพาะตัวเลข'),
-    empTitle:       z.string().min(1, 'กรุณาเลือกคำนำหน้า').max(50),
-    empTitleEng:    z.string().max(255).or(z.literal('')),
-    empName:        z.string().min(1, 'กรุณากรอกชื่อพนักงาน').max(255),
-    empNameEng:     z.string().max(255).or(z.literal('')),
-    tel:            z.string().min(1, 'กรุณากรอกเบอร์โทรศัพท์').max(255).regex(/^\d+$/, 'กรุณากรอกเฉพาะตัวเลข'),
-    email:          z.string().email('รูปแบบอีเมลไม่ถูกต้อง').or(z.literal('')),
-
-    // ที่อยู่
-    address:        z.string().min(1, 'กรุณากรอกที่อยู่').max(5000),
-    district:       z.string().min(1, 'กรุณากรอกตำบล').max(100),
-    amphur:         z.string().min(1, 'กรุณากรอกอำเภอ').max(100),
-    province:       z.string().min(1, 'กรุณากรอกจังหวัด').max(100),
-    postCode:       z.string().min(1, 'กรุณากรอกรหัสไปรษณีย์').max(25).regex(/^\d+$/, 'กรุณากรอกเฉพาะตัวเลข'),
-
-    // ข้อมูลองค์กร
-    deptId:         z.string().min(1, 'กรุณาเลือกแผนก'),
-    deptCode:       z.string().max(25).or(z.literal('')),
-    postId:         z.string().min(1, 'กรุณาเลือกตำแหน่ง'),
-    positionId:     z.number().optional(),
-    positionCode:   z.string().max(25).or(z.literal('')),
-    empGroupId:     z.string().min(1, 'กรุณาเลือกกลุ่มพนักงาน'),
-    empGroupCode:   z.string().max(25).or(z.literal('')),
-    headId:         z.string().max(25).or(z.literal('')),
-    headName:       z.string().max(255).or(z.literal('')),
-
-    // ข้อมูลอื่นๆ
-    salary:         z.number().min(0).default(0),
-    remark:         z.string().max(255).or(z.literal('')),
-    isActive:       z.boolean().default(true),
-
-    // ลายเซ็นต์ (Array ของรูปภาพ)
-    signatures: z.array(z.object({
-        emp_signature_id: z.number().optional(),
-        signature_url: z.string(),
-        previewUrl: z.string().optional(),
-        is_active: z.boolean().default(true),
-        is_deleted: z.boolean().default(false)
-    })).optional().default([])
+    branch_id:             z.number().nullable(),
+    employee_code:         z.string().min(1, 'กรุณากรอกรหัสพนักงาน').max(25),
+    employee_title_th:     z.string().min(1, 'กรุณาเลือกคำนำหน้า'),
+    employee_title_en:     z.string().default(''),
+    employee_firstname_th: z.string().min(1, 'กรุณากรอกชื่อ (ไทย)'),
+    employee_lastname_th:  z.string().min(1, 'กรุณากรอกนามสกุล (ไทย)'),
+    employee_firstname_en: z.string().default(''),
+    employee_lastname_en:  z.string().default(''),
+    employee_startdate:    z.string().nullable(),
+    employee_resigndate:   z.string().nullable(),
+    employee_status:       z.number().default(1),
+    phone:                 z.string().min(1, 'กรุณากรอกเบอร์โทรศัพท์'),
+    email:                 z.string().email('รูปแบบอีเมลไม่ถูกต้อง').or(z.literal('')),
+    remark:                z.string().default(''),
+    tax_id:                z.string().default(''),
+    emp_type:              z.string().default('G'),
+    position_id:           z.number().nullable(),
+    emp_dept_id:           z.number().nullable(),
+    is_active:             z.boolean().default(true),
+    employee_head_id:      z.number().nullable(),
+    
+    // Addresses
+    addresses: z.array(z.object({
+        address_type:   z.string().default('CONTACT'),
+        address:        z.string().default(''),
+        sub_district:   z.string().default(''),
+        district:       z.string().default(''),
+        province:       z.string().default(''),
+        postal_code:    z.string().default(''),
+        country:        z.string().default('TH'),
+        contact_person: z.string().default('')
+    })).default([])
 });
 
 export type EmployeeSchemaType = z.infer<typeof employeeSchema>;

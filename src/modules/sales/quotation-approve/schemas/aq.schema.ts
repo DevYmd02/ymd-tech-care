@@ -49,6 +49,7 @@ export const AQFormSchema = z.object({
   sq_date: z.string().default(''),
 
   // Customer (readonly display)
+  customer_id: z.coerce.number().optional().default(0),
   customer_name: z.string().default(''),
   customer_code: z.string().default(''),
 
@@ -98,6 +99,7 @@ export const AQFormSchema = z.object({
 
   valid_until: z.string().optional().default(''),
   payment_term_days: z.coerce.number().default(0),
+  onhold: z.string().optional().default('N'),
   remarks: z.string().optional().default(''),
 
   lines: z.array(AQLineSchema).default([]),

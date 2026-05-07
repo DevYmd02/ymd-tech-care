@@ -42,12 +42,12 @@ export const ItemBarcodeFieldArray: React.FC<Props> = ({
                     </div>
                     <div>
                         <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">จัดการบาร์โค้ดสินค้า (Barcode Management)</h3>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400">ผูกบาร์โค้ดเข้ากับหน่วยนับ พร้อมกำหนดประเภทการใช้ (ซื้อ/ขาย)</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400">ผูกบาร์โค้ดเข้ากับหน่วยนับ (Barcode Management) {/* พร้อมกำหนดประเภทการใช้ (ซื้อ/ขาย) */}</p>
                     </div>
                 </div>
                 <button
                     type="button"
-                    onClick={() => append({ uom_id: 0, barcode: '', is_primary: false, is_purchase: true, is_sales: true })}
+                    onClick={() => append({ uom_id: 0, barcode: '', is_primary: false /*, is_purchase: true, is_sales: true */ })}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
                 >
                     <Plus size={14} /> เพิ่มรายการบาร์โค้ด
@@ -61,7 +61,7 @@ export const ItemBarcodeFieldArray: React.FC<Props> = ({
                         <tr className="bg-gray-50/50 dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-700">
                             <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/3">หน่วยนับ (Unit)</th>
                             <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">รหัสบาร์โค้ด (Barcode Value)</th>
-                            <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-40 whitespace-nowrap">ประเภทการใช้งาน</th>
+                            {/* <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-40 whitespace-nowrap">ประเภทการใช้งาน</th> */}
                             <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">หลัก</th>
                             <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">ลบ</th>
                         </tr>
@@ -118,9 +118,10 @@ export const ItemBarcodeFieldArray: React.FC<Props> = ({
                                                 )}
                                             </div>
                                         </td>
+                                        
+                                        {/* 
                                         <td className="px-4 py-3">
                                             <div className="flex items-center justify-center gap-1.5">
-                                                {/* Purchase Toggle */}
                                                 <button
                                                     type="button"
                                                     onClick={() => {
@@ -132,12 +133,10 @@ export const ItemBarcodeFieldArray: React.FC<Props> = ({
                                                             ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/40 shadow-sm shadow-blue-500/10' 
                                                             : 'bg-gray-100 dark:bg-gray-800/80 text-gray-400 border border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                                                     }`}
-                                                    title={watchedBarcodes[index]?.is_purchase ? 'จำหน่ายสำหรับหน่วยจัดซื้อ' : 'คลิกเพื่อระบุเป็นหน่วยจัดซื้อ'}
                                                 >
                                                     <span className="text-[11px] font-bold">ซื้อ</span>
                                                 </button>
 
-                                                {/* Sales Toggle */}
                                                 <button
                                                     type="button"
                                                     onClick={() => {
@@ -149,12 +148,14 @@ export const ItemBarcodeFieldArray: React.FC<Props> = ({
                                                             ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/40 shadow-sm shadow-emerald-500/10' 
                                                             : 'bg-gray-100 dark:bg-gray-800/80 text-gray-400 border border-transparent hover:border-gray-300 dark:hover:border-gray-600'
                                                     }`}
-                                                    title={watchedBarcodes[index]?.is_sales ? 'จำหน่ายสำหรับหน่วยขาย' : 'คลิกเพื่อระบุเป็นหน่วยขาย'}
                                                 >
                                                     <span className="text-[11px] font-bold">ขาย</span>
                                                 </button>
                                             </div>
-                                        </td>
+                                        </td> 
+                                        */}
+
+
                                         <td className="px-4 py-3 text-center">
                                             <button
                                                 type="button"

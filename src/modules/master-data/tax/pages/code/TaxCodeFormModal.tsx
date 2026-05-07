@@ -145,9 +145,12 @@ export function TaxCodeFormModal({ isOpen, onClose, taxId, onSuccess }: TaxCodeF
                             <span className="text-red-500 text-xs">{errors.tax_name.message}</span>
                         )}
                     </div>
+                </div>
 
+                {/* Row 2: Shorter fields grouped into 3 columns */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
                     {/* Tax Group */}
-                    <div className="md:col-span-2 flex flex-col gap-1">
+                    <div className="flex flex-col gap-1">
                         <label className={styles.label}>กลุ่มภาษี (Tax Group)</label>
                         <select
                             {...register('tax_group_id', { setValueAs: v => v ? Number(v) : null })}
@@ -161,17 +164,6 @@ export function TaxCodeFormModal({ isOpen, onClose, taxId, onSuccess }: TaxCodeF
                                 </option>
                             ))}
                         </select>
-                    </div>
-
-                    {/* Description */}
-                    <div className="md:col-span-2 flex flex-col gap-1">
-                        <label className={styles.label}>คำอธิบาย (Description)</label>
-                        <textarea
-                            {...register('description')}
-                            className={styles.input}
-                            placeholder="คำอธิบายเพิ่มเติม"
-                            rows={3}
-                        />
                     </div>
 
                     {/* Tax Type */}
@@ -205,9 +197,23 @@ export function TaxCodeFormModal({ isOpen, onClose, taxId, onSuccess }: TaxCodeF
                             className={styles.input}
                         />
                     </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 mt-6">
+
+                    {/* Description */}
+                    <div className="flex flex-col gap-1">
+                        <label className={styles.label}>คำอธิบาย (Description)</label>
+                        <textarea
+                            {...register('description')}
+                            className={styles.input}
+                            placeholder="คำอธิบายเพิ่มเติม"
+                            rows={3}
+                        />
+                    </div>
 
                     {/* Active */}
-                    <div className="md:col-span-2 pt-2">
+                    <div className="pt-2">
                         <label className="flex items-center gap-2 cursor-pointer">
                             <input
                                 type="checkbox"

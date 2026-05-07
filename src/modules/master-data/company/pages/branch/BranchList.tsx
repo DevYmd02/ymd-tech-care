@@ -51,6 +51,7 @@ export default function BranchList() {
     const queryClient = useQueryClient();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
+    const [editingData, setEditingData] = useState<BranchListItem | null>(null);
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<keyof typeof filters>[] = useMemo(() => [
@@ -104,8 +105,9 @@ export default function BranchList() {
         setIsModalOpen(true);
     };
 
-    const handleEdit = (id: number) => {
-        setEditingId(id);
+    const handleEdit = (data: BranchListItem) => {
+        setEditingId(data.branch_id);
+        setEditingData(data);
         setIsModalOpen(true);
     };
 
@@ -118,6 +120,7 @@ export default function BranchList() {
     const handleModalClose = () => {
         setIsModalOpen(false);
         setEditingId(null);
+        setEditingData(null);
     };
 
     // ==================== TABLE COLUMNS ====================
@@ -164,14 +167,14 @@ export default function BranchList() {
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.id)}
+                        onClick={() => handleEdit(row.original)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.id)}
+                        onClick={() => handleDelete(row.original.branch_id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -234,7 +237,7 @@ export default function BranchList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
-                    rowIdField="id"
+                    rowIdField="branch_id"
                     className="shadow-sm"
                 />
             </div>
@@ -243,7 +246,9 @@ export default function BranchList() {
             <BranchFormModal 
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
+                onSuccess={handleModalClose}
                 editId={editingId}
+                initialData={editingData}
             />
         </div>
     );

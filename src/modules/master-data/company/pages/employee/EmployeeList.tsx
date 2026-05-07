@@ -158,27 +158,15 @@ export default function EmployeeList() {
             },
         },
         {
-            id: 'department_name',
-            header: 'ฝ่าย',
+            id: 'emp_type',
+            header: 'ประเภทพนักงาน',
             cell: ({ row }) => {
-                const item = row.original;
-                const dept = item.department;
-                const side = item.side;
-                const pos = item.position;
-                
-                // Try multiple common field names for department/side code and name
-                let code = item.emp_side_code || item.side_code || item.department_code || item.dept_code || item.emp_dept_code || dept?.department_code || side?.side_code;
-                let name = item.emp_side_name || item.side_name || item.department_name || item.dept_name || item.emp_dept_name || dept?.department_name || side?.side_name;
-                
-                // Special Fallback: If department info is missing, try pulling from position (common in this API)
-                if (!name && !code && pos) {
-                    code = pos.position_code;
-                    name = pos.position_name;
-                }
-
-                if (code && name) return `${code} - ${name}`;
-                return name || code || '-';
+                const type = row.original.emp_type?.toString().trim();
+                if (type === 'G') return <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-xs font-medium dark:bg-blue-900/30 dark:text-blue-400">พนักงานปกติ</span>;
+                if (type === 'S') return <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 text-xs font-medium dark:bg-amber-900/30 dark:text-amber-400">พนักงานขาย</span>;
+                return <span className="text-gray-400 text-xs italic">{type || 'ไม่ระบุ'}</span>;
             },
+            size: 120,
         },
         {
             accessorKey: 'is_active',
@@ -196,14 +184,14 @@ export default function EmployeeList() {
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.id)}
+                        onClick={() => handleEdit(row.original.employee_id || row.original.id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                         title="แก้ไข"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.id)}
+                        onClick={() => handleDelete(row.original.employee_id || row.original.id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -265,7 +253,7 @@ export default function EmployeeList() {
                         onPageChange: handlePageChange,
                         onPageSizeChange: (size) => setFilters({ limit: size, page: 1 }),
                     }}
-                    rowIdField="id"
+                    rowIdField="employee_id"
                     className="shadow-sm"
                 />
             </div>
@@ -276,7 +264,7 @@ export default function EmployeeList() {
                 isOpen={isModalOpen} 
                 onClose={handleModalClose}
                 editId={editingId}
-                onSuccess={refetch}
+                onSuccess={() => { refetch(); handleModalClose(); }}
             />
         </div>
     );

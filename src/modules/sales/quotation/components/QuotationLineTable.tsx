@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Plus, Trash2, Package, Search, AlertCircle, Loader2, Tag } from 'lucide-react';
 import { useFormContext, useFieldArray, useWatch } from 'react-hook-form';
 import type { QuotationLineValues, QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
@@ -29,7 +30,7 @@ const compactInputClass = "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 bor
 /**
  * 💡 Optimized Row Component: Watches only its own index
  */
-const QuotationLineRow = ({
+const QuotationLineRow = memo(({
     index,
     readOnly,
     onLineChange,
@@ -256,7 +257,7 @@ const QuotationLineRow = ({
             )}
         </tr>
     );
-};
+});
 
 export function QuotationLineTable({ 
     onAddLine, 

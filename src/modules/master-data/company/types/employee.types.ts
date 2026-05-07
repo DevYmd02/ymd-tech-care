@@ -20,6 +20,8 @@ export interface EmployeeMaster extends BaseMasterData {
     employee_lastname_th?: string;
     email?: string;
     phone?: string;
+    tax_id?: string;
+    emp_type?: string;
     position_id?: number;
     position_name?: string;
     department_id?: number;
@@ -61,71 +63,45 @@ export interface EmployeeMaster extends BaseMasterData {
     };
 }
 
-/**
- * Employee Form Data — covers all fields from M16 employee schema
- */
-export interface EmployeeFormData {
-    // ข้อมูลพื้นฐาน
-    employeeCode: string;           // emp_code varchar(25) yes
-    taxIdCard: string;              // tax_idcard varchar(25)
-    empTitle: string;               // emp_title varchar(50) yes  — คำนำหน้า (Thai)
-    empTitleEng: string;            // emp_titleeng varchar(255) — คำนำหน้า (Eng)
-    empName: string;                // emp_name varchar(255) yes — ชื่อพนักงาน (Thai)
-    empNameEng: string;             // emp_nameeng varchar(255) — ชื่อพนักงาน (Eng)
-    tel: string;                    // tel varchar(255)
-    email: string;                  // email varchar(255)
-
-    // ที่อยู่
-    address: string;                // address text
-    district: string;               // district varchar(100) — ตำบล
-    amphur: string;                 // amphur varchar(100) — อำเภอ
-    province: string;               // province varchar(100) — จังหวัด
-    postCode: string;               // post_code varchar(25) — รหัสไปรษณีย์
-
-    // ข้อมูลองค์กร
-    deptId: string;                 // dept_id uuid (FK) — ID แผนก
-    deptCode: string;               // dept_code varchar(25) — รหัสแผนก
-    postId: string;                 // post_id uuid (FK) — ID ตำแหน่ง
-    positionCode: string;           // position_code varchar(25) — รหัสตำแหน่ง
-    empGroupId: string;             // emp_group_id uuid (FK)
-    empGroupCode: string;           // emp_group_code varchar(25)
-    empHead: string;                // emp_head uuid — ID หัวหน้า
-    empHeadCode: string;            // emp_head_code varchar(25) — รหัสหัวหน้า
-    empType: string;                // emp_type boolean — S:พนักงานขาย, G:พนักงานปกติ
-    taxId: string;                  // tax_id varchar(25) — เลขประจำตัวผู้เสียภาษี
-
-    // วันที่สำคัญ
-    empStartDate: string;           // emp_startdate datetime(8)
-    empResignDate: string;          // emp_resigndate datetime(8)
-    empStatus: string;              // emp_status boolean — 1:ทำงาน 2:พักงาน 3:ลาออก 4:เกษียณ
-
-    // อื่นๆ
-    empSignature: string;           // emp_signature varchar(255) — Path ลายเซ็นต์ (Legacy/Main)
-    signatures?: EmployeeSignature[]; // รองรับหลายลายเซ็นต์ (แยกตาราง/แยก Endpoint)
-    remark: string;                 // remark varchar(255)
-
-    // Legacy fields (kept for backward compat)
-    firstName: string;
-    lastName: string;
-    positionId: number;
-    sideId: string | number;
-    isActive: boolean;
+export interface EmployeeAddress {
+    address_type: 'CONTACT' | 'REGISTERED' | string;
+    address: string;
+    sub_district?: string;
+    district: string;
+    province: string;
+    postal_code: string;
+    country: string;
+    contact_person: string;
 }
 
 /**
- * โครงสร้างข้อมูลลายเซ็นต์พนักงาน (ตรงตามตาราง employee_signature)
+ * Employee Form Data — covers all fields from requested POST payload
  */
-export interface EmployeeSignature {
-    emp_signature_id?: number;      // Primary Key (ID ลายเซ็นต์)
-    emp_id?: number;                // รหัสพนักงาน (FK ไป employee)
-    signature_url: string;          // ที่อยู่ไฟล์ลายเซ็นต์ (URL / Path)
-    signature_name?: string;        // ชื่อไฟล์ / คำอธิบายลายเซ็นต์
-    is_active: boolean;             // เป็นลายเซ็นต์ที่ใช้งานอยู่หรือไม่
-    is_deleted: boolean;            // สถานะลบ (Soft Delete)
-    
-    // Helper fields สำหรับ Frontend
-    file?: File;                    // สำหรับเก็บไฟล์ที่จะอัปโหลด
-    previewUrl?: string;            // สำหรับแสดง Preview รูปภาพ
+export interface EmployeeFormData {
+    branch_id: number | null;
+    employee_code: string;
+    employee_title_th: string;
+    employee_title_en: string;
+    employee_firstname_th: string;
+    employee_lastname_th: string;
+    employee_firstname_en: string;
+    employee_lastname_en: string;
+    employee_startdate: string | null;
+    employee_resigndate: string | null;
+    employee_status: number;
+    phone: string;
+    email: string;
+    remark: string;
+    tax_id: string;
+    emp_type: string;
+    position_id: number | null;
+    emp_dept_id: number | null;
+    is_active: boolean;
+    employee_head_id: number | null;
+    addresses: EmployeeAddress[];
+    // Computed fields (optional, used for filtering out in payload)
+    employee_fullname?: string;
+    employee_fullname_en?: string;
 }
 
 export type EmployeeListItem = EmployeeMaster;

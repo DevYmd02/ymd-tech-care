@@ -3,7 +3,7 @@ import { useToast } from '@ui/feedback/Toast';
 import { logger } from '@/shared/utils';
 import type { ICOption, ICOptionFilters } from '../types/ic-option.types';
 import { ICOptionService } from '../services/ic-option.service';
-import { BranchService } from '@/modules/master-data/company/services/branch.service';
+import { BranchService } from '@/modules/master-data/company/services/org-branch.service';
 
 export function useICOption() {
     const { toast } = useToast();

@@ -95,8 +95,8 @@ export function SalesOrderFormModal({
     const { data: taxCodes = [] } = useTaxCodes(isOpen) as { data: TaxCode[] | undefined };
     const { data: departments = [] } = useDepartments(isOpen) as { data: EmployeeDeptMaster[] | undefined };
     const { data: projects = [] } = useProjects(isOpen) as { data: Project[] | undefined };
-    const { data: saleAreasResponse } = useSaleAreas(isOpen) as { data: { items: SaleAreaMaster[] } | undefined };
-    const saleAreas = saleAreasResponse?.items || [];
+    const { data: saleAreas = [] } = useSaleAreas(isOpen) as { data: SaleAreaMaster[] | undefined };
+
 
     const { data: uomResponse } = useUnits(isOpen);
     const uoms = uomResponse?.items || [];
@@ -390,6 +390,7 @@ export function SalesOrderFormModal({
                 onClose={() => setIsEmployeeSearchOpen(false)}
                 onSelect={handleSelectEmployee}
                 headerColor="bg-indigo-600"
+                filterType="S"
             />
             
             <WarehouseSearchModal
@@ -429,8 +430,10 @@ export function SalesOrderFormModal({
                 onClose={() => setIsLotSearchOpen(false)}
                 onSelect={(lot: LotNo) => {
                     if (activeLineIndex !== null) {
-                        // Update lot_no
+                        // Update lot info
                         handleLineChange(activeLineIndex, 'lot_no', lot.code || '');
+                        handleLineChange(activeLineIndex, 'lot_id', String(lot.lot_id || lot.lot_no_id || lot.id || ''));
+
                         // 💡 Sync warehouse & location to match the selected LOT
                         // Critical when user picks from "Show All Stock" (different warehouse)
                         if (lot.warehouse_id) {
