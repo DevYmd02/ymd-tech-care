@@ -1,5 +1,12 @@
 import api from '@core/api/api';
 import { logger } from '@utils';
+import { 
+    normalizeId, 
+    normalizeDate, 
+    normalizeCustomerName, 
+    normalizeItemName, 
+    normalizeItemCode 
+} from '@/shared/utils/data-mapping.utils';
 import type { DeliveryFormData } from '../types/delivery.types';
 import type { SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
 
@@ -50,50 +57,63 @@ export const DeliveryService = {
             const rawData = Array.isArray(response) ? response : (response as { data: Record<string, unknown>[]; total: number }).data || [];
             const total = Array.isArray(response) ? response.length : (response as { data: unknown[]; total: number }).total || 0;
 
-            const mappedData = await Promise.all(rawData.map(async (item) => {
+            // 🚀 Optimization: Batch Enrichment (Fix N+1)
+            // 1. Identify unique SO IDs that need enrichment (missing so_no)
+            const soIdMap: Record<string, string> = {};
+            const uniqueSoIdsToFetch = new Set<string>();
+
+            rawData.forEach(item => {
+                const soObj = (item.sale_order || item.so || item.so_header || item.sale_order_header || {}) as Record<string, unknown>;
+                const soNo = String(item.so_no || soObj.so_no || soObj.no || item.sale_order_no || '');
+                const soId = normalizeId(item.so_id || soObj.so_id || soObj.id);
+                
+                if (!soNo && soId) {
+                    uniqueSoIdsToFetch.add(soId);
+                } else if (soNo && soId) {
+                    soIdMap[soId] = soNo;
+                }
+            });
+
+            // 2. Fetch all missing SO details in parallel
+            if (uniqueSoIdsToFetch.size > 0) {
+                await Promise.all(Array.from(uniqueSoIdsToFetch).map(async (id) => {
+                    try {
+                        const soRes = await api.get<Record<string, unknown>>(`/sale-order/${id}`);
+                        const soDataRaw = (soRes['data'] as Record<string, unknown>) || soRes;
+                        const soData = (soDataRaw['sale_order'] || soDataRaw['so_header'] || soDataRaw) as Record<string, unknown>;
+                        if (soData && soData['so_no']) {
+                            soIdMap[id] = String(soData['so_no']);
+                        }
+                    } catch { /* ignore */ }
+                }));
+            }
+
+            // 3. Map synchronously using the pre-fetched map
+            const mappedData = rawData.map((item) => {
                 const customerObj = (item.customer || item.customer_header || item.customer_ref || {}) as Record<string, unknown>;
                 const soObj = (item.sale_order || item.so || item.so_header || item.sale_order_header || {}) as Record<string, unknown>;
 
-                let soNo = String(item.so_no || soObj.so_no || soObj.no || item.sale_order_no || '');
-                const soId = String(item.so_id || soObj.so_id || soObj.id || '');
-
-                // 🚀 Enrichment: If so_no is missing but so_id exists, fetch it from Sales Order service
-                if (!soNo && soId) {
-                    try {
-                        const soRes = await api.get<Record<string, unknown>>(`/sale-order/${soId}`);
-                        const soDataRaw = (soRes['data'] as Record<string, unknown>) || soRes;
-                        const soData = (soDataRaw['sale_order'] || soDataRaw['so_header'] || soDataRaw) as Record<string, unknown>;
-                        if (soData) {
-                            soNo = String(soData['so_no'] || '');
-                        }
-                    } catch { /* ignore */ }
-                }
+                const soId = normalizeId(item.so_id || soObj.so_id || soObj.id);
+                const soNo = soIdMap[soId] || String(item.so_no || soObj.so_no || soObj.no || item.sale_order_no || '');
 
                 return {
                     ...item,
-                    delivery_id: String(item.delivery_id || item.id || ''),
+                    delivery_id: normalizeId(item.delivery_id || item.id),
                     delivery_no: String(item.delivery_no || ''),
-                    delivery_date: item.delivery_date ? String(item.delivery_date).split('T')[0] : '',
+                    delivery_date: normalizeDate(item.delivery_date),
                     so_id: soId,
                     so_no: soNo,
-                    customer_id: String(item.customer_id || customerObj.customer_id || customerObj.id || ''),
-                    customer_name: String(
-                        item.customer_name || 
-                        customerObj.customer_name_th || 
-                        customerObj.customer_name || 
-                        customerObj.name || 
-                        customerObj.name_th || 
-                        ''
-                    ),
-                    branch_id: String(item.branch_id || ''),
+                    customer_id: normalizeId(item.customer_id || customerObj.customer_id || customerObj.id),
+                    customer_name: normalizeCustomerName(item),
+                    branch_id: normalizeId(item.branch_id),
                     status: item.status || 'DRAFT',
                     tracking_no: String(item.tracking_no || ''),
                     carrier: String(item.carrier || ''),
                     ship_method: String(item.ship_method || ''),
-                    docu_date: item.docu_date ? String(item.docu_date).split('T')[0] : '',
+                    docu_date: normalizeDate(item.docu_date),
                     rawData: item,
                 } as DeliveryHeader;
-            }));
+            });
 
             return { data: mappedData, total };
         } catch (error) {
@@ -117,9 +137,9 @@ export const DeliveryService = {
             const r = (rRaw['delivery'] || rRaw['delivery_header'] || rRaw) as Record<string, unknown>;
 
             // Format dates
-            if (r['delivery_date']) r['delivery_date'] = String(r['delivery_date']).split('T')[0];
-            if (r['docu_date']) r['docu_date'] = String(r['docu_date']).split('T')[0];
-            if (r['updated_at']) r['updated_at'] = String(r['updated_at']).split('T')[0];
+            r['delivery_date'] = normalizeDate(r['delivery_date']);
+            r['docu_date'] = normalizeDate(r['docu_date']);
+            r['updated_at'] = normalizeDate(r['updated_at']);
 
             // Nested objects
             const customerObj = (r['customer'] || r['customer_header'] || {}) as Record<string, unknown>;
@@ -128,8 +148,8 @@ export const DeliveryService = {
             const warehouseObj = (r['warehouse'] || r['warehouse_header'] || {}) as Record<string, unknown>;
             const empObj = (r['ship_by_employee'] || r['employee'] || r['emp'] || {}) as Record<string, unknown>;
 
-            r['customer_id'] = String(r['customer_id'] || customerObj['customer_id'] || customerObj['id'] || '');
-            r['customer_name'] = String(r['customer_name'] || customerObj['customer_name_th'] || customerObj['customer_name'] || customerObj['name'] || '');
+            r['customer_id'] = normalizeId(r['customer_id'] || customerObj['customer_id'] || customerObj['id']);
+            r['customer_name'] = normalizeCustomerName(r);
             // 🚀 Shared SO Data Discovery (Enrich both header and lines)
             const rawSoId = String(r['so_id'] || soObj['so_id'] || soObj['id'] || r['sale_order_id'] || r['so_header_id'] || '');
             let sharedSoData: Record<string, unknown> | null = null;
@@ -170,9 +190,9 @@ export const DeliveryService = {
                 } catch { /* ignore */ }
             }
 
-            r['branch_id'] = String(r['branch_id'] || branchObj['branch_id'] || branchObj['id'] || '');
-            r['warehouse_id'] = String(r['warehouse_id'] || warehouseObj['warehouse_id'] || warehouseObj['id'] || '');
-            r['ship_by_emp'] = String(r['ship_by_emp'] || r['ship_by_employee_id'] || r['ship_by_employee'] || empObj['id'] || empObj['employee_id'] || '');
+            r['branch_id'] = normalizeId(r['branch_id'] || branchObj['branch_id'] || branchObj['id']);
+            r['warehouse_id'] = normalizeId(r['warehouse_id'] || warehouseObj['warehouse_id'] || warehouseObj['id']);
+            r['ship_by_emp'] = normalizeId(r['ship_by_emp'] || r['ship_by_employee_id'] || r['ship_by_employee'] || empObj['id'] || empObj['employee_id']);
             r['ship_by_emp_name'] = String(
                 r['ship_by_emp_name'] || empObj['employee_fullname'] ||
                 `${empObj['employee_firstname_th'] || ''} ${empObj['employee_lastname_th'] || ''}`.trim() || ''
@@ -198,9 +218,9 @@ export const DeliveryService = {
                 const uom = (l['uom'] || l['unit'] || {}) as Record<string, unknown>;
                 const warehouseLine = (l['warehouse'] || {}) as Record<string, unknown>;
 
-                const itemId = String(l['item_id'] || item['item_id'] || item['id'] || '');
-                let itemCode = String(l['item_code'] || item['item_code'] || item['code'] || '');
-                let itemName = String(l['item_name'] || item['item_name'] || item['item_name_th'] || item['name'] || '');
+                const itemId = normalizeId(l['item_id'] || item['item_id'] || item['id']);
+                let itemCode = normalizeItemCode(l);
+                let itemName = normalizeItemName(l);
 
                 // Re-enrich item if missing
                 if ((!itemCode || !itemName) && itemId) {
@@ -208,8 +228,8 @@ export const DeliveryService = {
                         const masterRes = await api.get<unknown>(`/item-master/${itemId}`);
                         const master = ((masterRes as Record<string, unknown>)?.data || masterRes) as Record<string, unknown>;
                         if (master) {
-                            itemCode = itemCode || String(master['item_code'] || master['code'] || '');
-                            itemName = itemName || String(master['item_name'] || master['item_name_th'] || master['name'] || '');
+                            itemCode = itemCode || normalizeItemCode(master);
+                            itemName = itemName || normalizeItemName(master);
                         }
                     } catch { /* ignore */ }
                 }
@@ -287,8 +307,8 @@ export const DeliveryService = {
 
                 return {
                     ...l,
-                    delivery_line_id: String(l['delivery_line_id'] || l['id'] || ''),
-                    delivery_id: String(l['delivery_id'] || ''),
+                    delivery_line_id: normalizeId(l['delivery_line_id'] || l['id']),
+                    delivery_id: normalizeId(l['delivery_id']),
                     so_line_id: soLineId,
                     item_id: itemId,
                     item_code: itemCode,
@@ -296,15 +316,15 @@ export const DeliveryService = {
                     qty_ordered: qtyOrdered,
                     remaining_qty: remainingQty,
                     qty_shipped: Number(l['qty_shipped'] || l['qty'] || l['quantity'] || 0),
-                    uom_id: String(l['uom_id'] || uom['uom_id'] || uom['id'] || ''),
+                    uom_id: normalizeId(l['uom_id'] || uom['uom_id'] || uom['id']),
                     uom_name: String(l['uom_name'] || uom['uom_name'] || uom['name'] || ''),
-                    warehouse_id: String(l['warehouse_id'] || warehouseLine['warehouse_id'] || warehouseLine['id'] || ''),
-                    location_id: l['location_id'] ? String(l['location_id']) : undefined,
-                    lot_id: lotIdVal ? String(
+                    warehouse_id: normalizeId(l['warehouse_id'] || warehouseLine['warehouse_id'] || warehouseLine['id']),
+                    location_id: l['location_id'] ? normalizeId(l['location_id']) : undefined,
+                    lot_id: normalizeId(lotIdVal ? (
                         (typeof lotIdVal === 'object' && lotIdVal !== null)
-                            ? ((lotIdVal as Record<string, unknown>).id || (lotIdVal as Record<string, unknown>).lot_id || '')
+                            ? ((lotIdVal as Record<string, unknown>).id || (lotIdVal as Record<string, unknown>).lot_id)
                             : lotIdVal
-                    ) : undefined,
+                    ) : undefined),
                     lot_no: lotNo,
                     serial_no: String(l['serial_no'] || ''),
                     remarks: String(l['remarks'] || ''),
