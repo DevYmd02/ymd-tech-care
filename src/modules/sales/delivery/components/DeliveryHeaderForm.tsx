@@ -12,6 +12,7 @@ interface DeliveryHeaderFormProps {
     branches: BranchListItem[];
     onSearchSalesOrder: () => void;
     onSearchEmployee: () => void;
+    onSearchAddress: () => void;
 }
 
 const SHIP_METHOD_OPTIONS = [
@@ -37,6 +38,7 @@ export function DeliveryHeaderForm({
     branches,
     onSearchSalesOrder,
     onSearchEmployee,
+    onSearchAddress,
 }: DeliveryHeaderFormProps) {
     const {
         register,
@@ -202,16 +204,26 @@ export function DeliveryHeaderForm({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex flex-col">
                     <label className={labelClass}>ที่อยู่จัดส่ง</label>
-                    <div className="relative flex-grow">
-                        <MapPin size={14} className="absolute left-3 top-3 text-amber-600 dark:text-white pointer-events-none" />
+                    <div className="relative flex-grow group">
+                        <MapPin size={14} className="absolute left-3 top-3 text-amber-600 dark:text-white pointer-events-none z-10" />
                         <textarea
                             {...register('ship_to_address')}
                             rows={4}
-                            placeholder="ระบุที่อยู่จัดส่ง..."
+                            readOnly
+                            onClick={onSearchAddress}
+                            placeholder="คลิกเพื่อเลือกที่อยู่จัดส่ง..."
                             className={
-                                'w-full px-3 py-2.5 pl-9 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all placeholder-slate-400 dark:placeholder-slate-600 resize-none h-[108px]'
+                                'w-full px-3 py-2.5 pl-9 bg-slate-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all placeholder-slate-400 dark:placeholder-slate-600 resize-none h-[108px] cursor-pointer hover:border-amber-400'
                             }
                         />
+                        <button
+                            type="button"
+                            onClick={onSearchAddress}
+                            className="absolute right-2 top-2 h-8 w-8 flex items-center justify-center text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors bg-white/50 dark:bg-gray-900/50 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm"
+                            title="เลือกที่อยู่จาก Master Data"
+                        >
+                            <Search size={14} className="dark:text-white" />
+                        </button>
                     </div>
                 </div>
                 <div className="space-y-3">

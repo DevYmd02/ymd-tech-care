@@ -109,15 +109,21 @@ export function useCustomerForm({
     // Sync "Same as Registered" logic
     useEffect(() => {
         if (sameAsRegistered && registeredAddress) {
-            const defaultAddresses = control._defaultValues.addresses as CustomerSchemaType['addresses'] | undefined;
+            const currentContactAddress = methods.getValues('addresses.1');
+            
             setValue('addresses.1', {
-                ...registeredAddress,
-                id: defaultAddresses?.[1]?.id || '2', // Preserve ID if possible
-                isMain: false,
-                addressType: 'CONTACT'
+                ...currentContactAddress, // Keep existing metadata (id, is_default, addressType)
+                address:         registeredAddress.address,
+                subDistrict:     registeredAddress.subDistrict,
+                district:        registeredAddress.district,
+                province:        registeredAddress.province,
+                postalCode:      registeredAddress.postalCode,
+                country:         registeredAddress.country,
+                contactPerson:   registeredAddress.contactPerson,
+                email:           registeredAddress.email,
             }, { shouldDirty: true });
         }
-    }, [sameAsRegistered, registeredAddress, setValue, control]);
+    }, [sameAsRegistered, registeredAddress, setValue, methods]);
 
     // Handle Initial Data & Reset
     useEffect(() => {
@@ -158,7 +164,7 @@ export function useCustomerForm({
                 phone:           a.phone || undefined,
                 phone_extension: a.phoneExtension || undefined,
                 email:           a.email || data.email || 'no-email@ymd.com',
-                is_default:      a.isMain,
+                is_default:      a.is_default,
                 is_active:       true
             };
 
@@ -206,7 +212,7 @@ export function useCustomerForm({
             province: '',
             postalCode: '',
             country: 'Thailand',
-            isMain: false,
+            is_default: false,
             addressType: 'SHIPPING',
             subDistrict: '',
             contactPerson: '',

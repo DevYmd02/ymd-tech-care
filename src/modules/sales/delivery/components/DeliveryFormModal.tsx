@@ -31,6 +31,7 @@ import type { LotNo } from '@inventory/types/inventory-master.types';
 import type { IEmployee } from '@master-data/company/types/employee-types';
 import { SalesOrderSearchModal } from '@sales/delivery/components/SalesOrderSearchModal';
 import type { SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
+import { CustomerAddressSearchModal } from './CustomerAddressSearchModal';
 
 // ============================================================
 // Props
@@ -67,6 +68,7 @@ export function DeliveryFormModal({
     const [isWarehouseSearchOpen, setIsWarehouseSearchOpen] = useState(false);
     const [isLocationSearchOpen, setIsLocationSearchOpen] = useState(false);
     const [isLotSearchOpen, setIsLotSearchOpen] = useState(false);
+    const [isAddressSearchOpen, setIsAddressSearchOpen] = useState(false);
     const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
 
     // --------------------------------------------------------
@@ -253,6 +255,7 @@ export function DeliveryFormModal({
                                         branches={branches}
                                         onSearchSalesOrder={() => setIsSalesOrderSearchOpen(true)}
                                         onSearchEmployee={() => setIsEmployeeSearchOpen(true)}
+                                        onSearchAddress={() => setIsAddressSearchOpen(true)}
                                     />
                                 </div>
                             </div>
@@ -395,6 +398,16 @@ export function DeliveryFormModal({
                         ? String(lines[activeLineIndex]?.item_id || '')
                         : undefined
                 }
+            />
+
+            <CustomerAddressSearchModal
+                isOpen={isAddressSearchOpen}
+                onClose={() => setIsAddressSearchOpen(false)}
+                customerId={watch('customer_id')}
+                onSelect={(address) => {
+                    methods.setValue('ship_to_address', address, { shouldDirty: true, shouldValidate: true });
+                }}
+                headerColor="bg-amber-600"
             />
         </WindowFormLayout>
     );

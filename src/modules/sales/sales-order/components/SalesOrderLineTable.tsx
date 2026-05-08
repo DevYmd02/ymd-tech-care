@@ -219,16 +219,23 @@ const SalesOrderLineRow = ({
 
             {/* Line Discount */}
             <td className="px-2 py-2">
-                <input
-                    type="text"
-                    value={line.line_discount_input ?? ''}
-                    disabled={isLocked}
-                    onChange={(e) => onLineChange(index, 'line_discount_input', e.target.value)}
-                    onFocus={(e) => e.target.select()}
-                    placeholder="0"
-                    maxLength={20}
-                    className={`${compactInputClass} text-right bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
-                />
+                <div className="flex flex-col items-end gap-1">
+                    <input
+                        type="text"
+                        value={line.line_discount_input || (Number(line.line_discount) > 0 ? String(line.line_discount) : '')}
+                        disabled={isLocked}
+                        onChange={(e) => onLineChange(index, 'line_discount_input', e.target.value)}
+                        onFocus={(e) => e.target.select()}
+                        placeholder="0"
+                        maxLength={20}
+                        className={`${compactInputClass} text-right bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
+                    />
+                    {Number(line.line_discount) > 0 && line.line_discount_input && (
+                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 rounded-sm">
+                            -{formatNumber(line.line_discount || 0)}
+                        </span>
+                    )}
+                </div>
             </td>
 
             {/* Line Total */}

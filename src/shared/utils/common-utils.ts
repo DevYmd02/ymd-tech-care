@@ -42,6 +42,13 @@ export const logger = {
     if (isDev) console.warn(`⚠️ [WARN] [${getTimestamp()}] ${message}`, ...args);
   },
   error: (message: string, error?: unknown) => {
+    // 🎯 SILENT 401: Don't spam the console with red errors if it's just a session expiry
+    // These are already handled by the API interceptor
+    if (error && typeof error === 'object' && 'response' in error) {
+      const status = (error as { response?: { status?: number } }).response?.status;
+      if (status === 401) return;
+    }
+    
     console.error(`❌ [ERROR] [${getTimestamp()}] ${message}`, error);
   },
 };

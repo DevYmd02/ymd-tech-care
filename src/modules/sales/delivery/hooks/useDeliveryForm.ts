@@ -11,6 +11,8 @@ import { logger } from '@/shared/utils';
 import type { ItemListItem } from '@inventory/types/product-types';
 import type { UnitListItem } from '@master-data/types/master-data-types';
 import { DeliveryService } from '../services/delivery.service';
+import { CustomerService } from '@customer/customer-master/services/customer.service';
+import type { CustomerAddress } from '@customer/customer-master/types/customer-types';
 
 interface UseDeliveryFormProps {
     isOpen: boolean;
@@ -146,6 +148,33 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms }: UseDeliveryFo
         if (customerName) setValue('customer_name', customerName, { shouldDirty: true });
         if (branchId) setValue('branch_id', branchId, { shouldDirty: true });
         logger.debug('[useDeliveryForm] Selected SO:', soNo);
+
+        // 🏠 Auto fetch customer default address
+        if (customerId) {
+            try {
+                const customer = await CustomerService.getById(Number(customerId));
+                if (customer) {
+                    const addresses: CustomerAddress[] = customer.customerAddresses || customer.addresses || [];
+                    const defaultAddr = addresses.find((a) => a.is_default) || addresses[0];
+                    if (defaultAddr) {
+                        const formattedAddress = [
+                            defaultAddr.address,
+                            defaultAddr.sub_district,
+                            defaultAddr.district,
+                            defaultAddr.province,
+                            defaultAddr.postal_code,
+                        ]
+                            .filter(Boolean)
+                            .join(' ');
+
+                        setValue('ship_to_address', formattedAddress, { shouldDirty: true });
+                        logger.debug('[useDeliveryForm] Auto-populated ship_to_address:', formattedAddress);
+                    }
+                }
+            } catch (error) {
+                logger.error('[useDeliveryForm] Failed to fetch customer address:', error);
+            }
+        }
 
         // Auto fetch lines
         try {

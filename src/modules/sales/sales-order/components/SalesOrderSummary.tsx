@@ -16,6 +16,7 @@ interface SalesOrderSummaryProps {
     totalAmount: number;
     currencySymbol?: string;
     lineCount: number;
+    readOnly?: boolean;
     onDiscountChange: (value: string) => void;
 }
 
@@ -28,6 +29,7 @@ export function SalesOrderSummary({
     totalAmount,
     currencySymbol = 'บาท',
     lineCount,
+    readOnly = false,
     onDiscountChange,
 }: SalesOrderSummaryProps) {
     const isNegative = totalAmount < 0;
@@ -62,15 +64,12 @@ export function SalesOrderSummary({
                     <div className="relative w-40">
                         <input
                             type="text"
-                            placeholder={
-                                discountAmount > 0
-                                    ? formatNumber(discountAmount)
-                                    : '0.00 หรือ 0%'
-                            }
-                            value={discountInput ?? ''}
+                            placeholder="0.00"
+                            value={discountInput || (discountAmount > 0 ? String(discountAmount) : '')}
                             onChange={(e) => onDiscountChange(e.target.value)}
+                            disabled={readOnly}
                             maxLength={15}
-                            className={`${styles.input} h-9 py-0 text-right bg-white border-emerald-200 focus:border-emerald-500 font-semibold text-emerald-600`}
+                            className={`${styles.input} h-9 py-0 text-right ${readOnly ? 'bg-gray-100 dark:bg-gray-800/50 cursor-not-allowed border-gray-200' : 'bg-white border-emerald-200 focus:border-emerald-500'} font-semibold text-emerald-600`}
                         />
                     </div>
                 </div>

@@ -56,7 +56,6 @@ export const AuthService = {
     login: async (data: LoginPayload): Promise<LoginResponse> => {
         try {
             const response = await api.post<LoginResponse>('/auth/login', data);
-            logger.info('🔍 [AuthService] Raw Login Response:', response);
             return response;
         } catch (error: unknown) {
             if (error instanceof AxiosError) {
@@ -72,7 +71,6 @@ export const AuthService = {
         try {
             const { employee_id, ...body } = data;
             const response = await api.post<RegisterResponse>(`/auth/employees/${employee_id}/auth`, body);
-            logger.info('📦 [AuthService] Raw Register Response:', response);
             return response;
         } catch (error: unknown) {
             if (error instanceof AxiosError) {
@@ -87,7 +85,6 @@ export const AuthService = {
     getProfile: async (): Promise<UserProfile> => {
         try {
             const response = await api.get<UserProfile>('/auth/me');
-            logger.info('👤 [AuthService] Get Profile Response:', response);
             return response;
         } catch (error: unknown) {
             logger.error('❌ [AuthService] Get profile failed:', error);
