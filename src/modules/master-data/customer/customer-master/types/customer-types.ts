@@ -25,7 +25,7 @@ export interface CustomerAddressFormItem {
     province: string;
     postalCode: string;
     country: string;
-    isMain: boolean;
+    is_default: boolean;
     addressType?: CustomerAddressType;
     contactPerson?: string;
     phone?: string;
@@ -41,7 +41,7 @@ export interface CustomerContactPerson {
     phone: string;
     mobile: string;
     email: string;
-    isMain: boolean;
+    is_default: boolean;
 }
 
 // ====================================================================================
@@ -199,7 +199,7 @@ export const initialCustomerFormData: CustomerFormData = {
         province: '',
         postalCode: '',
         country: 'Thailand',
-        isMain: true,
+        is_default: true,
         addressType: 'REGISTERED',
         contactPerson: '',
         phone: '',
@@ -213,7 +213,7 @@ export const initialCustomerFormData: CustomerFormData = {
         province: '',
         postalCode: '',
         country: 'Thailand',
-        isMain: false,
+        is_default: false,
         addressType: 'CONTACT',
         contactPerson: '',
         phone: '',
@@ -261,7 +261,7 @@ export const toCustomerFormData = (c: CustomerMaster): CustomerFormData => {
             province: addr.province || '',
             postalCode: addr.postal_code || '',
             country: addr.country || 'Thailand',
-            isMain: addr.is_default ?? false,
+            is_default: addr.is_default ?? false,
             addressType: addr.address_type || 'REGISTERED',
             contactPerson: addr.contact_person || '',
             phone: addr.phone || '',
@@ -285,7 +285,7 @@ export const toCustomerFormData = (c: CustomerMaster): CustomerFormData => {
             phone: contact.phone || '',
             mobile: contact.mobile || '',
             email: contact.email || '',
-            isMain: contact.is_primary ?? false
+            is_default: contact.is_primary ?? false
         })),
         note: '',
         status: c.status || 'ACTIVE',

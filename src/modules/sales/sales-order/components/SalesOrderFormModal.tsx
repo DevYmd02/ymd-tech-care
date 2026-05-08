@@ -289,7 +289,7 @@ export function SalesOrderFormModal({
                         <form
                             id="so-form"
                             onSubmit={handleSubmit(onFormSubmit)}
-                            className={`max-w-[1400px] mx-auto space-y-6 ${effectiveIsViewOnly ? 'pointer-events-none opacity-90' : ''}`}
+                            className={`max-w-[1400px] mx-auto space-y-6 ${effectiveIsViewOnly ? 'opacity-90' : ''}`}
                         >
                             {/* 1. Header */}
                             <div className={cardClass}>
@@ -302,6 +302,7 @@ export function SalesOrderFormModal({
                                         departments={(departments || []) as EmployeeDeptMaster[]}
                                         projects={(projects || []) as Project[]}
                                         saleAreas={saleAreas}
+                                        readOnly={effectiveIsViewOnly}
                                         onSearchCustomer={() => setIsCustomerSearchOpen(true)}
                                         onSearchReservation={() => setIsReservationSearchOpen(true)}
                                         onSearchEmployee={() => setIsEmployeeSearchOpen(true)}
@@ -316,6 +317,7 @@ export function SalesOrderFormModal({
                                         uoms={uoms}
                                         warehouses={warehouses}
                                         locations={locations}
+                                        readOnly={effectiveIsViewOnly}
                                         onAddLine={handleAddLine}
                                         onRemoveLine={handleRemoveLine}
                                         onLineChange={handleLineChange}
@@ -355,6 +357,7 @@ export function SalesOrderFormModal({
                                                 : 'บาท'
                                         }
                                         lineCount={watch('lines')?.length || 0}
+                                        readOnly={effectiveIsViewOnly}
                                         onDiscountChange={(val: string) =>
                                             methods.setValue('discount_input', val, { shouldDirty: true })
                                         }

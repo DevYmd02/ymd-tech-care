@@ -8,7 +8,7 @@ export const customerAddressSchema = z.object({
   province: z.string().min(1, 'กรุณากรอกจังหวัด'),
   postalCode: z.string().min(1, 'กรุณากรอกรหัสไปรษณีย์'),
   country: z.string().default('Thailand'),
-  isMain: z.boolean().default(false),
+  is_default: z.boolean().default(false),
   addressType: z.enum(['REGISTERED', 'CONTACT', 'BILLING', 'SHIPPING']).default('REGISTERED'),
   contactPerson: z.string().optional(),
   phone: z.string().optional(),
@@ -23,7 +23,7 @@ export const customerContactSchema = z.object({
   phone: z.string().optional(),
   mobile: z.string().optional(),
   email: z.string().email('รูปแบบอีเมลไม่ถูกต้อง').optional().or(z.literal('')),
-  isMain: z.boolean().default(false),
+  is_default: z.boolean().default(false),
 });
 
 export const customerSchema = z.object({

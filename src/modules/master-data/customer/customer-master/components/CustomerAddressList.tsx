@@ -14,7 +14,13 @@ export function CustomerAddressList({
     addAddress, 
     removeAddress, 
 }: CustomerAddressListProps) {
-    const { register, formState: { errors } } = useFormContext<CustomerSchemaType>();
+    const { register, setValue, formState: { errors } } = useFormContext<CustomerSchemaType>();
+    
+    const handleDefaultChange = (index: number) => {
+        addressFields.forEach((_, i) => {
+            setValue(`addresses.${i}.is_default`, i === index, { shouldDirty: true });
+        });
+    };
 
     return (
         <section>
@@ -35,20 +41,11 @@ export function CustomerAddressList({
             <div className="space-y-4">
                 {addressFields.map((field, index) => (
                     <div key={field.id} className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm relative">
-                        {index > 1 && (
-                            <button 
-                                type="button"
-                                onClick={() => removeAddress(index)}
-                                className="absolute top-4 right-4 text-red-500 hover:text-red-600"
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        )}
-                        
                         <div className="flex items-center gap-2 mb-4">
                             <span className="px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs font-bold rounded">
                                 {field.addressType === 'REGISTERED' ? 'ที่อยู่ตามทะเบียนภาษี' : field.addressType === 'CONTACT' ? 'ที่อยู่ติดต่อ' : 'ที่อยู่จัดส่ง'}
                             </span>
+
                             {field.addressType === 'CONTACT' && (
                                 <label className="flex items-center gap-2 cursor-pointer ml-4">
                                     <input 
@@ -59,6 +56,37 @@ export function CustomerAddressList({
                                     <span className="text-xs text-gray-500 italic">เหมือนกับที่อยู่ตามทะเบียน</span>
                                 </label>
                             )}
+
+                            <div className="ml-auto flex items-center gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        {...register(`addresses.${index}.is_default` as const)}
+                                        className="w-3.5 h-3.5 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
+                                        onChange={(e) => {
+                                            // Handle RHF internal update
+                                            register(`addresses.${index}.is_default` as const).onChange(e);
+                                            
+                                            // Handle custom single-selection logic
+                                            if (e.target.checked) {
+                                                handleDefaultChange(index);
+                                            }
+                                        }}
+                                    />
+                                    <span className="text-xs text-emerald-600 font-semibold">ที่อยู่ค่าเริ่มต้น</span>
+                                </label>
+
+                                {index > 1 && (
+                                    <button 
+                                        type="button"
+                                        onClick={() => removeAddress(index)}
+                                        className="text-red-500 hover:text-red-600 transition-colors"
+                                        title="ลบที่อยู่นี้"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

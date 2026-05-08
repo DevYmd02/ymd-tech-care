@@ -91,7 +91,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const parsedProfile = JSON.parse(savedProfile);
             setUser(parsedProfile);
             setIsAuthenticated(true);
-            logger.info('🔐 Session restored from local cache');
           } catch (e) {
             logger.error('Failed to parse cached user profile', e);
             clearAuthStorage();
@@ -127,7 +126,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
            const profileStr = JSON.stringify(response.user);
            localStorage.setItem(AUTH_PROFILE_KEY, profileStr);
            setUser(response.user);
-           logger.info('👤 User profile persisted to localStorage');
         }
         
         setIsAuthenticated(true);

@@ -67,77 +67,55 @@ api.interceptors.request.use(
   }
 );
 
+let isUnauthorizedHandling = false;
+
 api.interceptors.response.use(
   (response) => {
-    // Centralized Logging for Success
+    // ... existing success logic ...
     const method = response.config.method?.toUpperCase() || 'UNKNOWN';
     const url = response.config.url;
     logger.debug(`✅ [API] [${method}] ${url}`);
 
-    // 🎉 Success Toast for mutations (POST, PATCH, DELETE)
-    // Only show if not specifically disabled in config
     const skipToast = (response.config as CustomAxiosConfig).skipToast === true;
     if (!skipToast && ['POST', 'PATCH', 'DELETE'].includes(method)) {
-      // Don't toast for login
       if (!url?.includes('/auth/login')) {
         toast.success('ดำเนินการสำเร็จ');
       }
     }
 
-    // =========================================================================
-    // Standardized Response Handling (Robust Unwrapping)
-    // =========================================================================
     const resBody = response.data;
-    
-    // 1. Explicit Error Check (success: false)
     if (resBody && typeof resBody === 'object' && resBody.success === false) {
       return Promise.reject(response);
     }
 
     let finalData = resBody;
-
-    // 2. Unwrap standard envelopes { success: true, data: ... } or { data: ... }
     if (resBody && typeof resBody === 'object') {
-      // Handle { success: true, data: ... }
       if (resBody.data !== undefined && ('success' in resBody || Object.keys(resBody).length <= 3)) {
         finalData = resBody.data;
       }
-      
-      // Handle nested data { data: { data: ... } } or { data: { header: ... } }
       if (finalData && typeof finalData === 'object' && !Array.isArray(finalData)) {
         if (finalData.data !== undefined && !Array.isArray(finalData.data) && !('total' in finalData)) {
           finalData = finalData.data;
         } else if (finalData.header !== undefined && typeof finalData.header === 'object' && !Array.isArray(finalData.header)) {
-          // 🎯 STABILITY FIX: In document details (PR, SO, PO), lines/items are often siblings of 'header'.
-          // Instead of returning ONLY header (which strips lines) or ONLY the wrapper (which nests header),
-          // we flatten the header fields into the top level while preserving sibling arrays.
           const keys = Object.keys(finalData);
           const hasLines = keys.some(k => 
             k.toLowerCase().includes('line') || 
             k.toLowerCase().includes('item') || 
             k.toLowerCase().includes('detail')
           );
-          
           if (!hasLines) {
-            // Standard case: just a header wrapper, return it directly
             finalData = finalData.header;
           } else {
-            // Detail case: header + lines as siblings. Merge them to prevent data loss.
             finalData = { 
               ...(finalData.header as Record<string, unknown>), 
               ...finalData 
             };
-            // Note: we keep the 'header' key in there just in case, but fields are now flat.
           }
         }
       }
-
-      // 3. Normalize Paginated Lists (data vs items)
-      // If we have 'items' but no 'data' (array), add 'data' for consistency (used by PR module)
       if (finalData && typeof finalData === 'object' && Array.isArray(finalData.items) && finalData.data === undefined) {
         finalData.data = finalData.items;
       }
-      // If we have 'data' (array) but no 'items', add 'items' for consistency (used by Master Data)
       if (finalData && typeof finalData === 'object' && Array.isArray(finalData.data) && finalData.items === undefined) {
         finalData.items = finalData.data;
       }
@@ -146,23 +124,24 @@ api.interceptors.response.use(
     return finalData;
   },
   (error) => {
-    // Centralized Logging for Error
     const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
     const url = error.config?.url || 'UNKNOWN';
     const status = error.response?.status || 'UNKNOWN';
+    const isLoginRequest = url?.includes('/auth/login');
     
-    // Skip logging for canceled requests
     if (axios.isCancel(error) || error.name === 'CanceledError') {
       logger.debug(`[API Canceled] [${method}] ${url}`);
+    } else if (status === 401 && !isLoginRequest) {
+      // 🎯 SILENT 401: If it's a 401 and not a login request, it's just a session expiry.
+      // We don't want to spam the console with errors.
+      logger.warn(`⚠️ [API Session Expired] [${method}] ${url}`);
     } else {
       logger.error(`❌ [API Error] [${method}] ${url} (${status})`, error);
       
-      // 🚨 Automatic Error Toast
       const skipToast = (error.config as CustomAxiosConfig)?.skipToast === true;
       if (!skipToast) {
-        // Handle specific status codes
         if (status === 401) {
-          // Handled by unauthorizedHandler or LoginPage
+          // Handled by unauthorizedHandler
         } else if (status === 403) {
           toast.error('คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         } else if (status === 429) {
@@ -174,11 +153,16 @@ api.interceptors.response.use(
       }
     }
 
-    if (error.response?.status === 401) {
-      const isLoginRequest = error.config?.url?.includes('/auth/login');
-      if (!isLoginRequest) {
+    if (status === 401 && !isLoginRequest) {
+      if (!isUnauthorizedHandling) {
+        isUnauthorizedHandling = true;
+        
+        // Reset flag after a delay to allow for re-login
+        setTimeout(() => { isUnauthorizedHandling = false; }, 3000);
+
         localStorage.removeItem(AUTH_TOKEN_KEY);
         localStorage.removeItem(AUTH_PROFILE_KEY);
+        
         if (unauthorizedHandler) {
           unauthorizedHandler();
         }

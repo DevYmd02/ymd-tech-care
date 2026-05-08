@@ -51,7 +51,7 @@ export function useSalesOrderForm({
     
     // 💡 Performance Optimization:
     // We use selective watches for calculation.
-    const discount_input = useWatch({ control, name: 'discount_input' }) || '0';
+    const discount_input = useWatch({ control, name: 'discount_input' });
     const tax_code_id = useWatch({ control, name: 'tax_code_id' });
     const isMulticurrency = useWatch({ control, name: 'isMulticurrency' });
     const base_currency_code = useWatch({ control, name: 'base_currency_code' });
@@ -157,7 +157,7 @@ export function useSalesOrderForm({
 
         const subTotal = (watchedLineTotals || []).reduce((sum: number, val: number | string | undefined | null) => sum + (Number(val) || 0), 0);
         
-        const calculatedDiscount = calculateDiscountAmount(subTotal, discount_input);
+        const calculatedDiscount = calculateDiscountAmount(subTotal, discount_input ?? '');
 
         const selectedTaxCode = taxCodes.find(
             (t) => String(t.tax_code_id) === String(tax_code_id)
@@ -248,24 +248,29 @@ export function useSalesOrderForm({
         field: keyof SalesOrderLineValues,
         value: string | number | boolean | undefined
     ) => {
-        const currentLines = getValues('lines') || [];
-        const newLines = [...currentLines];
-        const updatedLine = { ...newLines[index], [field]: value };
+        const currentLine = getValues(`lines.${index}`);
+        if (!currentLine) return;
+        
+        const updatedLine = { ...currentLine, [field]: value };
 
-        // Auto-calculate line total
+        // Handle auto-calculations for this line
         if (field === 'qty_ordered' || field === 'unit_price' || field === 'line_discount_input') {
             const qty = Number(field === 'qty_ordered' ? value : updatedLine.qty_ordered) || 0;
             const price = Number(field === 'unit_price' ? value : updatedLine.unit_price) || 0;
             const ldInput = (field === 'line_discount_input' ? (value as string) : updatedLine.line_discount_input) || '';
             
             const calculatedLD = calculateDiscountAmount(qty * price, ldInput);
+            const calculatedTotal = calculateLineTotal(qty, price, calculatedLD);
             
             updatedLine.line_discount = calculatedLD;
-            updatedLine.line_total = calculateLineTotal(qty, price, calculatedLD);
+            updatedLine.line_total = calculatedTotal;
         }
 
-        newLines[index] = updatedLine as SalesOrderLineValues;
-        setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
+        // Update the specific line object to trigger useWatch correctly without full array replace
+        setValue(`lines.${index}` as Path<SalesOrderFormValues>, updatedLine as never, { 
+            shouldValidate: true, 
+            shouldDirty: true 
+        });
     };
 
     // --------------------------------------------------------
