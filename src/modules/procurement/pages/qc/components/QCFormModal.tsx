@@ -18,6 +18,12 @@ import type { RFQHeader, VQListItem, RFQDetailResponse } from '@/modules/procure
 
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
 import { SelectionModal } from './SelectionModal';
+
+/** Extended interface for selection modals to handle backend fields not in base RFQHeader */
+interface ExtendedRFQHeader extends RFQHeader {
+  av_no?: string;
+  rfq_remark?: string;
+}
 import { RFQSelectionModal } from './RFQSelectionModal';
 import { OrgEmployeeService } from '@/modules/master-data/company/services/employee.service';
 import { useQCForm } from '../hooks/useQCForm';
@@ -97,47 +103,47 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   useEffect(() => {
     // SCENARIO 1: Deep Hydration from API (Edit Mode Only)
     if (qcData && (mode === 'edit')) {
-      const actualQCData = (qcData as any)?.data || qcData;
-      setQCNo(actualQCData.qc_no || '');
-      setPRNo(actualQCData.ref_pr_no || actualQCData.pr_no || '');
-      setAVNo(actualQCData.approved_pr_no || actualQCData.av_no || '');
-      setValue('pr_id', actualQCData.pr_id || null);
-      setRFQNo(actualQCData.rfq_no || '');
+      const actualQCData = (qcData as unknown as Record<string, unknown>)?.data as unknown as Record<string, unknown> || qcData;
+      setQCNo((actualQCData.qc_no as string) || '');
+      setPRNo((actualQCData.ref_pr_no as string) || (actualQCData.pr_no as string) || '');
+      setAVNo((actualQCData.approved_pr_no as string) || (actualQCData.av_no as string) || '');
+      setValue('pr_id', Number(actualQCData.pr_id) || null);
+      setRFQNo((actualQCData.rfq_no as string) || '');
 
-      setValue('rfq_id', actualQCData.rfq_id || actualQCData.rfq_header_id || 0);
-      setQCDate(actualQCData.comparison_date ? new Date(actualQCData.comparison_date).toLocaleDateString('en-GB') : getTodayFormatted());
-      setValue('winning_vq_id', actualQCData.winning_vq_id || actualQCData.vq_header_id || 0);
+      setValue('rfq_id', Number(actualQCData.rfq_id || actualQCData.rfq_header_id) || 0);
+      setQCDate(actualQCData.comparison_date ? new Date(actualQCData.comparison_date as any).toLocaleDateString('en-GB') : getTodayFormatted());
+      setValue('winning_vq_id', Number(actualQCData.winning_vq_id || actualQCData.vq_header_id) || 0);
       
-      const remarkVal = actualQCData?.remark || actualQCData?.remarks || '';
+      const remarkVal = (actualQCData?.remark as string) || (actualQCData?.remarks as string) || '';
       setValue('remarks', remarkVal);
       
-      const creatorName = actualQCData?.created_by_name || actualQCData?.creator_name || actualQCData?.employee_name || '';
+      const creatorName = (actualQCData?.created_by_name as string) || (actualQCData?.creator_name as string) || (actualQCData?.employee_name as string) || '';
       if (creatorName) setCreatedBy(creatorName);
 
       const winnerId = actualQCData?.winning_vq_id || actualQCData.vq_header_id;
-      if (winnerId) setSelectedVQIds([winnerId]);
+      if (winnerId) setSelectedVQIds([Number(winnerId)]);
     } 
     // SCENARIO 2: Resilient Hydration from initialData (View mode or Fallback)
     else if (initialData && (mode === 'view' || mode === 'edit')) {
-      const actualInitial = (initialData as any)?.data || initialData;
+      const actualInitial = (initialData as unknown as Record<string, unknown>)?.data as unknown as Record<string, unknown> || initialData;
       
       // Mandatory Mapping: List items often use 'rfq_header_id' while form expects 'rfq_id'
       const mappedRfqId = actualInitial.rfq_id || actualInitial.rfq_header_id;
       const mappedWinnerId = actualInitial.winning_vq_id || actualInitial.vq_header_id;
 
-      setQCNo(actualInitial.qc_no || '');
-      setPRNo(actualInitial.ref_pr_no || actualInitial.pr_no || '');
-      setAVNo(actualInitial.approved_pr_no || actualInitial.av_no || '');
-      setRFQNo(actualInitial.rfq_no || '');
-      setQCDate(actualInitial.comparison_date ? new Date(actualInitial.comparison_date).toLocaleDateString('en-GB') : (actualInitial.created_at ? new Date(actualInitial.created_at).toLocaleDateString('en-GB') : getTodayFormatted()));
+      setQCNo((actualInitial.qc_no as string) || '');
+      setPRNo((actualInitial.ref_pr_no as string) || (actualInitial.pr_no as string) || '');
+      setAVNo((actualInitial.approved_pr_no as string) || (actualInitial.av_no as string) || '');
+      setRFQNo((actualInitial.rfq_no as string) || '');
+      setQCDate(actualInitial.comparison_date ? new Date(actualInitial.comparison_date as any).toLocaleDateString('en-GB') : (actualInitial.created_at ? new Date(actualInitial.created_at as any).toLocaleDateString('en-GB') : getTodayFormatted()));
       
       setValue('rfq_id', Number(mappedRfqId) || 0);
       setValue('winning_vq_id', Number(mappedWinnerId) || 0);
 
-      const remarkVal = actualInitial.remark || actualInitial.remarks || '';
+      const remarkVal = (actualInitial.remark as string) || (actualInitial.remarks as string) || '';
       setValue('remarks', remarkVal);
 
-      const creatorName = actualInitial.created_by_name || actualInitial.creator_name || actualInitial.employee_name || '';
+      const creatorName = (actualInitial.created_by_name as string) || (actualInitial.creator_name as string) || (actualInitial.employee_name as string) || '';
       if (creatorName) setCreatedBy(creatorName);
 
       if (mappedWinnerId) setSelectedVQIds([Number(mappedWinnerId)]);
@@ -148,15 +154,16 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
   // 👤 EFFECT: Fetch Creator Name if missing but ID is present
   useEffect(() => {
-    const actualQC = (qcData as any)?.data || qcData;
-    const actualInitial = (initialData as any)?.data || initialData;
+    const actualQC = (qcData as unknown as Record<string, unknown>)?.data as unknown as Record<string, unknown> || qcData;
+    const actualInitial = (initialData as unknown as Record<string, unknown>)?.data as unknown as Record<string, unknown> || initialData;
     const creatorId = actualQC?.created_by || actualInitial?.created_by;
     
     if (creatorId && !createdBy && (mode === 'view' || mode === 'edit')) {
       logger.debug('👤 [QCFormModal] Attempting to fetch creator name for ID:', creatorId);
-      OrgEmployeeService.get(creatorId as number).then((response: any) => {
-        const emp = response?.data || response;
-        const name = emp?.employee_name || emp?.first_name || emp?.first_name_th || emp?.employee_name_th || '';
+      OrgEmployeeService.get(creatorId as number).then((response: unknown) => {
+        const resp = response as unknown as Record<string, unknown>;
+        const emp = (resp?.data as unknown as Record<string, unknown>) || resp;
+        const name = (emp?.employee_name as string) || (emp?.first_name as string) || (emp?.first_name_th as string) || (emp?.employee_name_th as string) || '';
         if (name) {
           logger.debug('✅ [QCFormModal] Found creator name:', name);
           setCreatedBy(name);
@@ -169,12 +176,12 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     queryKey: ['waiting-for-qc-list', isOpen],
     queryFn: async () => {
       try {
-        const response: any = await QCService.getWaitingForQC();
+        const response = await QCService.getWaitingForQC() as unknown as Record<string, unknown>;
         
         // 🎯 EXACT API BINDING: Use strictly the documents returned by the waiting-for-qc endpoint.
         // The backend already implements the business rules on what is eligible for QC creation.
         // (Previously, this failed because the response is { data: [...] } not an array itself)
-        const waitingItems = Array.isArray(response) ? response : (response?.data || []);
+        const waitingItems = Array.isArray(response) ? response : (response?.data as RFQHeader[] || []);
         
         return waitingItems;
       } catch (err) {
@@ -201,8 +208,8 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const { data: vqList, isLoading: isVQListLoading, isFetching: isVQListFetching } = useQuery({
     queryKey: ['vq-list-for-qc-by-id', rfqId],
     queryFn: async () => {
-      if (!rfqId) return { data: [] };
-      const items = await QCService.getVQsWaitingForQC(Number(rfqId));
+      if (!rfqId) return { data: [] as VQListItem[] };
+      const items = (await QCService.getVQsWaitingForQC(Number(rfqId))) as unknown as VQListItem[];
       return { data: items || [] };
     },
     enabled: !!rfqId && isOpen,
@@ -232,7 +239,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       
       const recoveredPrId = actualRfq.pr_id;
       const recoveredPrNo = actualRfq.ref_pr_no || actualRfq.pr_no || '';
-      const recoveredAvNo = actualRfq.approved_pr_no || (actualRfq as any).av_no || '';
+      const recoveredAvNo = actualRfq.approved_pr_no || (actualRfq as unknown as Record<string, unknown>).av_no as string || '';
 
       if (recoveredPrId && (prId === null || prId === 0)) {
         setValue('pr_id', Number(recoveredPrId));
@@ -327,7 +334,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const { confirm } = useConfirmation();
 
   const selectedVQs = useMemo(() => {
-    return availableVQs.filter((vq: VQListItem) => selectedVQIds.includes((vq.vq_header_id || (vq as any).vq_id || vq.quotation_id!) as number));
+    return availableVQs.filter((vq: VQListItem) => selectedVQIds.includes((vq.vq_header_id || (vq as unknown as Record<string, unknown>).vq_id || vq.quotation_id!) as number));
   }, [availableVQs, selectedVQIds]);
 
   const toggleVQSelection = (vId: number) => {
@@ -399,7 +406,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       // 🛡️ Anti-Bias Guard: Auto-select only if <= 3 items
       if (safeVqList.length <= 3) {
         const allFetchedVQs = safeVqList
-          .map((vq: VQListItem) => vq.vq_header_id || (vq as any).vq_id || vq.quotation_id!);
+          .map((vq: VQListItem) => vq.vq_header_id || (vq as unknown as Record<string, unknown>).vq_id as number || vq.quotation_id!);
         if (allFetchedVQs.length > 0) {
           setSelectedVQIds(allFetchedVQs);
         }
@@ -418,7 +425,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     // 🔄 Reverse Sync: Fill PR & Department from RFQ (The absolute source of truth)
     const parentPrNo = rfq.ref_pr_no || rfq.pr_no || '';
     const parentPrId = rfq.pr_id;
-    const parentAvNo = rfq.approved_pr_no || (rfq as any).av_no || '';
+    const parentAvNo = rfq.approved_pr_no || (rfq as unknown as Record<string, unknown>).av_no as string || '';
     // @ts-expect-error - Handle extended RFQ fields not yet in interface but present in API response
     const parentDeptId = rfq.pr?.department_id || (rfq as unknown as Record<string, number>).department_id;
 
@@ -452,7 +459,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const handleSelectPR = (item: RFQHeader) => {
     const parentPrNo = item.ref_pr_no || item.pr_no || '';
     const parentPrId = item.pr_id;
-    const parentAvNo = (item as any).av_no || item.approved_pr_no || '';
+    const parentAvNo = (item as unknown as Record<string, unknown>).av_no as string || item.approved_pr_no || '';
     
     setPRNo(parentPrNo || '-');
     setAVNo(parentAvNo || (parentPrNo ? `รอ AV (${parentPrNo})` : 'อ้างอิงจาก RFQ'));
@@ -489,7 +496,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     // Both PR, AV, and RFQ inputs share the exact same source of truth object
     const parentPrNo = item.ref_pr_no || item.pr_no || '';
     const parentPrId = item.pr_id;
-    const parentAvNo = (item as any).av_no || item.approved_pr_no || '';
+    const parentAvNo = (item as unknown as Record<string, unknown>).av_no as string || item.approved_pr_no || '';
     
     setPRNo(parentPrNo || '-');
     setAVNo(parentAvNo || (parentPrNo ? `รอ AV (${parentPrNo})` : 'อ้างอิงจาก RFQ'));
@@ -548,7 +555,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       return;
     }
 
-    const winnerVQ = selectedVQs.find((vq: VQListItem) => (vq.vq_header_id || (vq as any).vq_id || vq.quotation_id) === winnerVQId);
+    const winnerVQ = selectedVQs.find((vq: VQListItem) => (vq.vq_header_id || (vq as unknown as Record<string, unknown>).vq_id || vq.quotation_id) === winnerVQId);
     if (!winnerVQ) {
       toast('ไม่พบข้อมูลผู้เสนอราคาที่เลือก', 'error');
       return;
@@ -559,7 +566,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
       return;
     }
 
-    const winner = availableVQs.find(v => (v.vq_header_id || (v as any).vq_id || v.quotation_id) === winnerVQId);
+    const winner = availableVQs.find(v => (v.vq_header_id || (v as unknown as Record<string, unknown>).vq_id || v.quotation_id) === winnerVQId);
     const winnerDisplayName = winner ? getVendorDisplayName(winner) : `ใบเสนอราคาเลขที่ ${winnerVQId}`;
 
     const isConfirmed = await confirm({
@@ -643,7 +650,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                       </h2>
                     {qcData?.winning_vq_id || initialData?.vq_header_id || winnerVQId ? (() => {
                       const effWinnerId = Number(qcData?.winning_vq_id || initialData?.vq_header_id || winnerVQId);
-                      const winnerVq = availableVQs.find((v: VQListItem) => (v.vq_header_id || (v as any).vq_id || v.quotation_id) === effWinnerId);
+                      const winnerVq = availableVQs.find((v: VQListItem) => (v.vq_header_id || (v as unknown as Record<string, unknown>).vq_id || v.quotation_id) === effWinnerId);
                       const winnerVqNo = winnerVq?.vq_no || winnerVq?.quotation_no || winnerVQDetail?.vq_no || 'กำลังโหลด...';
 
                       return (
@@ -739,7 +746,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                   เลขที่ RFQ อ้างอิง * 
                   {rfqDetail && (
                     <span className="text-xs font-normal text-gray-500 ml-2">
-                      ({rfqDetail._count?.rfqVendors || rfqDetail.vendor_count || rfqDetail.vendor_total || (rfqDetail as any).rfq_vendor_count || rfqDetail.sent_vendors_count || rfqDetail.responded_vendors_count || rfqDetail.rfqVendors?.length || rfqDetail.vendors?.length || (rfqDetail.vendor_name ? rfqDetail.vendor_name.split(',').length : 0)} ราย)
+                      ({rfqDetail._count?.rfqVendors || rfqDetail.vendor_count || rfqDetail.vendor_total || (rfqDetail as unknown as Record<string, unknown>).rfq_vendor_count as number || rfqDetail.sent_vendors_count || rfqDetail.responded_vendors_count || rfqDetail.rfqVendors?.length || rfqDetail.vendors?.length || (rfqDetail.vendor_name ? rfqDetail.vendor_name.split(',').length : 0)} ราย)
                     </span>
                   )}
                 </label>
@@ -1059,7 +1066,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
               {/* Summary Footer */}
               {!!winnerVQId && (() => {
-                const winnerVQ = selectedVQs.find((v: VQListItem) => (v.vq_header_id || (v as any).vq_id || v.quotation_id) === winnerVQId);
+                const winnerVQ = selectedVQs.find((v: VQListItem) => (v.vq_header_id || (v as unknown as Record<string, unknown>).vq_id || v.quotation_id) === winnerVQId);
                 return winnerVQ ? (
                   <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
@@ -1149,15 +1156,15 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
         prNo={avNo}
       />
 
-      <SelectionModal<RFQHeader>
+      <SelectionModal<ExtendedRFQHeader>
         isOpen={isPRSelectorOpen}
         onClose={() => setIsPRSelectorOpen(false)}
         title="เลือกเลขที่ PR อ้างอิง"
         subtitle="ค้นหาเอกสารอ้างอิง (PR) ที่ต้องการ"
-        data={waitingList || []}
+        data={(waitingList as ExtendedRFQHeader[]) || []}
         searchPlaceholder="ค้นหาด้วยเลขที่ PR, RFQ หรือหัวข้อ..."
-        searchKeys={['pr_no', 'ref_pr_no', 'rfq_no', 'purpose', 'remarks', 'rfq_remark' as any]}
-        onSelect={handleSelectPR}
+        searchKeys={['pr_no', 'ref_pr_no', 'rfq_no', 'purpose', 'remarks', 'rfq_remark']}
+        onSelect={(item) => handleSelectPR(item as RFQHeader)}
         keyExtractor={(item) => item.rfq_id}
         columns={[
           { 
@@ -1170,22 +1177,22 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
             ), 
             className: 'w-1/3' 
           },
-          { label: 'วัตถุประสงค์', key: (item: any) => item.purpose || item.remarks || item.rfq_remark || '-', className: 'flex-1' },
+          { label: 'วัตถุประสงค์', key: (item) => item.purpose || item.remarks || item.rfq_remark || '-', className: 'flex-1' },
         ]}
       />
 
-      <SelectionModal<RFQHeader | any>
+      <SelectionModal<ExtendedRFQHeader>
         isOpen={isAVSelectorOpen}
         onClose={() => setIsAVSelectorOpen(false)}
         title="เลือกเลขที่ AV อ้างอิง"
         subtitle="ค้นหาเอกสารอนุมัติ (Approved PR) ที่รอตรวจสอบ QC"
-        data={waitingList || []}
+        data={(waitingList as ExtendedRFQHeader[]) || []}
         searchPlaceholder="ค้นหาด้วยเลขที่ AV, PR หรือหัวข้อ..."
-        searchKeys={['av_no', 'approved_pr_no', 'pr_no', 'ref_pr_no', 'rfq_no', 'remarks', 'purpose'] as any}
-        onSelect={handleSelectActualAV}
-        keyExtractor={(item) => item.rfq_id || (item as any).av_no}
+        searchKeys={['av_no', 'approved_pr_no', 'pr_no', 'ref_pr_no', 'rfq_no', 'remarks', 'purpose'] as (keyof ExtendedRFQHeader)[]}
+        onSelect={(item) => handleSelectActualAV(item as RFQHeader)}
+        keyExtractor={(item) => item.rfq_id || item.av_no || item.rfq_no || Math.random()}
         columns={[
-          { label: 'เลขที่ AV / PR', key: (item: any) => (
+          { label: 'เลขที่ AV / PR', key: (item) => (
               <div className="flex flex-col">
                 <span className="font-bold">{item.av_no || item.approved_pr_no || '-'}</span>
                 <span className="text-[10px] text-gray-400 font-normal">{item.pr_no || item.ref_pr_no || '-'}</span>
@@ -1193,7 +1200,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
           ), className: 'w-1/4' },
           { 
             label: 'เลขที่ RFQ', 
-            key: (item: any) => (
+            key: (item) => (
               <div className="flex flex-col">
                 <span className="font-bold">{item.rfq_no || '-'}</span>
                 {item.creator_name && <span className="text-[10px] text-gray-400 font-normal">{item.creator_name}</span>}

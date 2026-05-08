@@ -200,7 +200,6 @@ export default function POListPage() {
             cell: (info) => {
                 const item = info.row.original;
                 // Strict Number Formatting - Using base_total_amount as priority
-                // @ts-expect-error - handle string to number conversion from API
                 const val = Number(item.base_total_amount || item.total_amount || 0);
                 return (
                     <div className="text-right font-bold text-gray-800 dark:text-white whitespace-nowrap w-full text-sm">
@@ -315,7 +314,6 @@ export default function POListPage() {
             footer: () => {
                  // Safe Math calculation - base_total_amount might be a string
                  const total = (data?.data || []).reduce((sum, item) => {
-                     // @ts-expect-error - string to number coercion
                      const amount = Number(item.base_total_amount || item.total_amount || 0);
                      return sum + amount;
                  }, 0);

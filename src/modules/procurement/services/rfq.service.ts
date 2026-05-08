@@ -193,6 +193,10 @@ export const RFQService = {
               currentStatus = 'SENT';
         }
 
+        // 🕵️‍♂️ Robust AV Mapping Recovery (Snake_Case + CamelCase + Nested discovery)
+        const rawItem = item as unknown as Record<string, unknown>;
+        const prApproval = rawItem.pr_approval as Record<string, unknown> | undefined;
+
         return {
             ...item,
             creator_name: creatorName,
@@ -202,8 +206,8 @@ export const RFQService = {
             branch_name: typeof branchName === 'string' ? branchName : '',
             
             // 🕵️‍♂️ Robust AV Mapping Recovery (Snake_Case + CamelCase + Nested discovery)
-            pr_approval_id: item.pr_approval_id || (item as any).pr_approval?.approval_id || (item as any).prApprovalId || (item as any).av_id || (item as any).approval_id,
-            approved_pr_no: item.approved_pr_no || (item as any).pr_approval?.approval_no || (item as any).ref_approved_pr_no || (item as any).refApprovedPrNo || (item as any).pr_approval_no || (item as any).av_no || (item as any).approval_no,
+            pr_approval_id: (item.pr_approval_id || prApproval?.approval_id || rawItem.prApprovalId || rawItem.av_id || rawItem.approval_id) as number | null,
+            approved_pr_no: (item.approved_pr_no || prApproval?.approval_no || rawItem.ref_approved_pr_no || rawItem.refApprovedPrNo || rawItem.pr_approval_no || rawItem.av_no || rawItem.approval_no) as string | null,
         };
     });
 
@@ -270,12 +274,12 @@ export const RFQService = {
     return cleanPayload(sanitizePayload(data, KNOWN_DTO_FIELDS)) as Record<string, unknown>;
   },
 
-  create: async (payload: any): Promise<RFQHeader> => {
+  create: async (payload: Record<string, unknown>): Promise<RFQHeader> => {
     logger.info('[RFQService] Creating RFQ');
     
     // 🎯 DOUBLE REQUESTER STRIKE FIX: Auto-fill requested_by from cache if missing but ID exists
     if (payload.requested_by_user_id && !payload.requested_by) {
-        payload.requested_by = masterDataCache.getEmployeeName(payload.requested_by_user_id) || '';
+        payload.requested_by = masterDataCache.getEmployeeName(Number(payload.requested_by_user_id)) || '';
     }
 
     const sanitizedPayload = RFQService.sanitizeData(payload);
@@ -292,12 +296,12 @@ export const RFQService = {
     }
   },
 
-  update: async (id: number, payload: any): Promise<SuccessResponse> => {
+  update: async (id: number, payload: Record<string, unknown>): Promise<SuccessResponse> => {
     logger.info(`[RFQService] Updating RFQ: ${id}`);
     
     // 🎯 DOUBLE REQUESTER STRIKE FIX for updates
     if (payload.requested_by_user_id && !payload.requested_by) {
-        payload.requested_by = masterDataCache.getEmployeeName(payload.requested_by_user_id) || '';
+        payload.requested_by = masterDataCache.getEmployeeName(Number(payload.requested_by_user_id)) || '';
     }
 
     const sanitizedPayload = RFQService.sanitizeData(payload);
@@ -353,12 +357,11 @@ export const RFQService = {
     return res;
   },
 
-  getPRApprovalDetail: async (prId: number): Promise<any[]> => {
+  getPRApprovalDetail: async (prId: number): Promise<Record<string, unknown>[]> => {
     logger.info(`[RFQService] Fetching PR Approval Detail for PR ID: ${prId}`);
     try {
       // 🎯 FIX: Postman shows backend returns 'approval_no', not 'approved_pr_no'
-      // 🎯 FIX: Postman shows backend returns 'approval_no', not 'approved_pr_no'
-      const res = await api.get<{ data: { approval_no?: string; approved_pr_no?: string; approval_id?: number | string; need_by_date?: string }[] }>(ENDPOINTS.prApprovalDetail(prId));
+      const res = await api.get<{ data: Record<string, unknown>[] }>(ENDPOINTS.prApprovalDetail(prId));
       
       const items = res.data || [];
       if (!Array.isArray(items)) {
@@ -366,7 +369,7 @@ export const RFQService = {
         return [];
       }
 
-      return items.filter((item: any) => Boolean(item.approval_no || item.approved_pr_no || item.approval_id));
+      return items.filter((item) => Boolean(item.approval_no || item.approved_pr_no || item.approval_id));
     } catch (error) {
       logger.error(`[RFQService] Failed to fetch PR Approval Detail for ${prId}:`, error);
       return [];

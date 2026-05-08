@@ -87,11 +87,25 @@ api.interceptors.response.use(
       return Promise.reject(response);
     }
 
-    // 🎯 Basic Unwrapping: Return the .data property if it's a standard envelope
-    // We keep this basic check to avoid breaking simple list/get calls across the app.
+    // 🎯 Robust Unwrapping: Only unwrap if it looks like a standard API envelope.
+    // If it contains keys that are not part of a standard envelope (like 'id', 'name', etc.), 
+    // we treat the whole object as the data payload.
     if (resBody && typeof resBody === 'object' && resBody.data !== undefined) {
-      // If it's a pagination object or has a specific success flag, it's likely the envelope
-      if ('success' in resBody || 'total' in resBody || Object.keys(resBody).length <= 3) {
+      const envelopeKeys = ['success', 'message', 'statusCode', 'status', 'total', 'page', 'limit', 'count', 'error'];
+      const bodyKeys = Object.keys(resBody);
+      
+      // If there are keys that are NOT in our envelope whitelist (excluding 'data' itself),
+      // it's likely a data object that just happens to have a 'data' property.
+      const hasDataSpecificKeys = bodyKeys.some(key => key !== 'data' && !envelopeKeys.includes(key));
+
+      if (import.meta.env.DEV && hasDataSpecificKeys) {
+        console.warn(
+          '[api.ts] Skipped unwrap — unknown keys found:',
+          bodyKeys.filter(k => k !== 'data' && !envelopeKeys.includes(k))
+        );
+      } 
+      
+      if (!hasDataSpecificKeys) {
         return resBody.data;
       }
     }

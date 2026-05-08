@@ -1,12 +1,17 @@
 import api, { USE_MOCK } from '@/core/api/api';
-import type { AxiosRequestConfig } from 'axios';
+import type { AxiosRequestConfig, AxiosError } from 'axios';
 import type {
   VendorMaster,
   VendorListItem,
   VendorListResponse,
   VendorResponse,
   VendorDropdownItem,
-  VendorStatus,
+  VendorFormData,
+  VendorCreateRequest,
+  VendorType,
+  VendorAddressType,
+  VendorContact,
+  VendorAddressFormItem,
 } from '../types/vendor-types';
 import { logger } from '@/shared/utils';
 import { 
@@ -18,117 +23,97 @@ import type { SuccessResponse } from '@/shared/types/api.types';
 let localVendorData: VendorMaster[] = [...MOCK_VENDORS];
 
 // 🔄 Helper function: Format payload to match the new backend JSON specification
-function mapVendorToApi(data: any): any {
-    const payload: any = {
-        vendor_code: data.vendor_code || data.vendorCode || '',
-        vendor_name: data.vendor_name || data.vendorNameTh || '',
-        vendor_nameeng: data.vendor_nameeng || data.vendor_name_en || data.vendorNameEn || '',
-        vat_registration_no: data.vat_registration_no || data.tax_id || data.taxId || '',
-        is_vat_registered: Boolean(data.is_vat_registered ?? data.vatRegistered ?? false),
-        payment_term_days: (() => {
-            if (data.payment_term_days !== undefined && data.payment_term_days !== null && data.payment_term_days !== '') {
-                return Number(data.payment_term_days);
-            }
-            const terms = data.paymentTerms;
-            if (terms === 'Cash') return 0;
-            if (terms === 'Net 7 Days') return 7;
-            if (terms === 'Net 15 Days') return 15;
-            if (terms === 'Net 30 Days') return 30;
-            if (terms === 'Net 60 Days') return 60;
-            const match = String(terms || '').match(/\d+/);
-            return match ? Number(match[0]) : 30; 
-        })(),
+function mapVendorToApi(data: VendorFormData, isUpdate: boolean = false): VendorCreateRequest {
+    // Helper to identify real DB IDs vs temp UI IDs (Date.now() or Math.random())
+    const isRealId = (id: unknown): id is number => 
+        typeof id === 'number' && id > 0 && id < 1000000000;
+
+    const payload: VendorCreateRequest = {
+        vendor_code: data.vendorCode || '',
+        vendor_name: data.vendorNameTh || '',
+        vendor_nameeng: data.vendorNameEn || '',
+        vat_registration_no: data.taxId || '',
+        is_vat_registered: Boolean(data.vatRegistered ?? false),
+        payment_term_days: Number(data.paymentTerms || 0),
         phone: data.phone || '',
-        phone_extension: data.mobile || data.phone_extension || '',
         email: data.email || '',
         website: data.website || '',
-        is_subject_to_wht: Boolean(data.is_subject_to_wht ?? data.whtRegistered ?? false),
-        is_active: data.is_active !== undefined ? Boolean(data.is_active) : true,
 
-        vendor_type_id: Number(data.vendor_type_id || data.vendorTypeId) || null,
-        vendor_group_id: Number(data.vendor_group_id || data.vendorGroupId) || null,
-        currency_id: Number(data.currency_id || data.currencyId) || null,
+        vendor_type_id: Number(data.vendorTypeId) || 0,
+        vendor_group_id: Number(data.vendorGroupId) || 0,
+        currency_id: Number(data.currencyId) || 0,
+        addresses: [],
+        contacts: [],
+        bank_accounts: []
     };
 
-    // Filter and Map Addresses (กรองเอาเฉพาะอันที่กรอกข้อมูลมาจริงๆ)
-    const rawAddresses = data.addresses || [];
+    // Filter and Map Addresses
+    const rawAddresses = (data.addresses || []) as VendorAddressFormItem[];
     payload.addresses = rawAddresses
-        .filter((a: any) => (a.address || '').trim() !== '')
-        .map((a: any, i: number) => {
-            const addrPayload: any = {
-                address: a.address || '',
-                sub_district: a.sub_district || a.subDistrict || '',
-                province: a.province || '',
-                district: a.district || '',
-                postal_code: String(a.postal_code || a.postalCode || ''),
-                is_default: Boolean(a.is_default ?? a.isMain ?? (i === 0)),
-                address_type: a.address_type || a.addressType || (i === 0 ? 'REGISTERED' : 'CONTACT'),
-                country: a.country || 'Thailand',
-                contact_person: a.contact_person || a.contactPerson || '',
-                phone: a.phone || '',
-                phone_extension: a.phone_extension || a.phoneExtension || '',
-                email: a.email || '',
-                is_active: Boolean(a.is_active ?? true)
-            };
-            return addrPayload;
-        });
+        .filter((a) => (a.address || '').trim() !== '')
+        .map((a, i: number) => ({
+            // For POST (Create), we MUST NOT send IDs. For PATCH (Update), we only send "real" IDs.
+            vendor_address_id: isUpdate && isRealId(a.id) ? a.id : undefined,
+            address: a.address || '',
+            sub_district: a.subDistrict || '',
+            province: a.province || '',
+            district: a.district || '',
+            postal_code: String(a.postalCode || ''),
+            is_default: Boolean(a.isMain ?? (i === 0)),
+            address_type: (a.addressType || (i === 0 ? 'REGISTERED' : 'CONTACT')) as VendorAddressType,
+            country: a.country || 'Thailand',
+            contact_person: a.contactPerson || '',
+            phone: a.phone || '',
+            phone_extension: a.phoneExtension || '',
+            email: a.email || '',
+            is_active: true
+        }));
 
-    // Map Contacts (Handles both API mapped format or Frontend mapped format)
-    const contacts = [];
-    if (data.contacts && data.contacts.length > 0) {
-        contacts.push(...data.contacts.map((c: any) => ({
-            contact_name: c.contact_name || c.name || '',
-            email: c.email || '',
+    // Map Contacts
+    const contacts: Partial<VendorContact>[] = [];
+    if (data.additionalContacts && data.additionalContacts.length > 0) {
+        contacts.push(...data.additionalContacts.map((c) => ({
+            contact_id: isUpdate && isRealId(c.id) ? c.id : undefined,
+            contact_name: c.name || '',
+            position: c.position || '',
             phone: c.phone || '',
             mobile: c.mobile || '',
-            position: c.position || '',
-            is_primary: Boolean(c.is_primary ?? c.isMain ?? false)
+            email: c.email || '',
+            is_primary: c.isMain || false
         })));
-    } else {
-        if ((data.contactName || '').trim() !== '') {
-            contacts.push({
-                contact_name: data.contactName,
-                email: data.email || '',
-                phone: data.phone || '',
-                mobile: data.mobile || '',
-                position: '',
-                is_primary: true
-            });
-        }
-        if (data.additionalContacts) {
-            contacts.push(...data.additionalContacts
-                .filter((c: any) => (c.name || '').trim() !== '')
-                .map((c: any) => ({
-                    contact_name: c.name || '',
-                    email: c.email || '',
-                    phone: c.phone || '',
-                    mobile: c.mobile || '',
-                    position: c.position || '',
-                    is_primary: Boolean(c.isMain ?? false)
-                }))
-            );
-        }
     }
-    payload.contacts = contacts.filter((c: any) => c.contact_name);
+    
+    if ((String(data.contactName) || '').trim() !== '') {
+        contacts.push({
+            contact_id: undefined, 
+            contact_name: data.contactName,
+            email: data.email || '',
+            phone: data.phone || '',
+            mobile: data.mobile || '',
+            position: 'Main Contact',
+            is_primary: true
+        });
+    }
+    
+    payload.contacts = contacts.filter((c) => c.contact_name);
 
     // Map Bank Accounts
-    const banks = data.bank_accounts || data.bankAccounts || [];
+    const banks = data.bankAccounts || [];
     payload.bank_accounts = banks
-        .filter((b: any) => (b.bank_name || b.bankName || b.account_no || b.accountNumber))
-        .map((b: any, i: number) => ({
-            bank_name: b.bank_name || b.bankName || '',
-            bank_branch: b.bank_branch || b.branchName || '',
-            account_no: b.account_no || b.accountNumber || '',
-            account_name: b.account_name || b.accountName || '',
-            account_type: b.account_type || b.accountType || 'SAVING',
-            swift_code: b.swift_code || b.swiftCode || '',
-            is_default: Boolean(b.is_default ?? b.isMain ?? (i === 0))
+        .filter((b) => (b.bankName || b.accountNumber))
+        .map((b, i: number) => ({
+            bank_account_id: isUpdate && isRealId(b.id) ? b.id : undefined,
+            bank_name: b.bankName || '',
+            bank_branch: b.branchName || '',
+            account_no: b.accountNumber || '',
+            account_name: b.accountName || '',
+            account_type: (b.accountType || 'SAVING') as 'SAVING' | 'CURRENT',
+            swift_code: b.swiftCode || '',
+            is_default: Boolean(b.isMain ?? (i === 0))
         }));
 
     return payload;
 }
-
-// Define Union Type for Legacy and Standard Responses - REMOVED (Trust Interceptor)
 
 export const VendorService = {
   getList: async (config?: AxiosRequestConfig): Promise<VendorListResponse> => {
@@ -142,10 +127,8 @@ export const VendorService = {
        };
     }
     try {
-      // Trust Global Interceptor - it unwraps { success, data } -> data
       const response = await api.get<VendorListResponse | VendorListItem[]>('/vendors', config);
       
-      // Handle raw array response (Real API) or standard paginated response
       if (Array.isArray(response)) {
         return {
           items: response,
@@ -184,18 +167,6 @@ export const VendorService = {
     }
   },
 
-  getByTaxId: async (taxId: string, config?: AxiosRequestConfig): Promise<VendorMaster | null> => {
-    if (USE_MOCK) {
-        return localVendorData.find(v => v.tax_id === taxId) || null;
-    }
-    try {
-      return await api.get<VendorMaster>(`/vendors/by-tax-id/${taxId}`, config);
-    } catch (error) {
-      logger.error('[VendorService] getByTaxId error:', error);
-      return null;
-    }
-  },
-
   getDropdown: async (config?: AxiosRequestConfig): Promise<VendorDropdownItem[]> => {
     if (USE_MOCK) {
       logger.info('🎭 [Mock Mode] Serving Vendor Dropdown');
@@ -213,112 +184,56 @@ export const VendorService = {
     }
   },
 
-  create: async (data: any): Promise<VendorResponse> => {
+  create: async (data: VendorFormData): Promise<VendorResponse> => {
     if (USE_MOCK) {
         logger.info('🎭 [Mock Mode] Creating Vendor', data);
-        
-        // Simulate Backend ID Generation
         const newId = Math.floor(Math.random() * 100000);
-        
-        // Map Request to Master (Mock)
         const newVendor: VendorMaster = {
             id: newId,
             vendor_id: newId, 
-            vendor_code: data.vendor_code || String(newId),
-            vendor_name: data.vendor_name,
-            vendor_name_en: data.vendor_name_en,
-            tax_id: data.tax_id,
-            vendor_type: data.vendor_type_id === 2 ? 'INDIVIDUAL' : 'COMPANY', // Simple logic
+            vendor_code: data.vendorCode || String(newId),
+            vendor_name: data.vendorNameTh,
+            vendor_name_en: data.vendorNameEn,
+            tax_id: data.taxId,
+            vendor_type: (data.vendorTypeId === 2 ? 'INDIVIDUAL' : 'COMPANY') as VendorType,
             status: 'ACTIVE',
-            vendor_type_id: data.vendor_type_id,
-            vendor_group_id: data.vendor_group_id,
-            currency_id: data.currency_id,
-            
-            // Map Relations
-            // Map Relations
-            addresses: data.addresses.map((a: any, i: number) => ({
-                vendor_address_id: Math.floor(Math.random() * 10000),
-                vendor_id: newId,
-                address_type: a.address_type || (i === 0 ? 'REGISTERED' : 'CONTACT'),
-                address: a.address || '',
-                district: a.district,
-                province: a.province,
-                postal_code: a.postal_code,
-                country: a.country || 'Thailand',
-                contact_person: a.contact_person,
-                phone: a.phone,
-                phone_extension: a.phone_extension,
-                email: a.email,
-                is_default: a.is_default || false,
-                is_active: true
-            })),
-            
-            contacts: data.contacts.map((c: any) => ({
-                contact_id: Math.floor(Math.random() * 10000),
-                vendor_id: newId,
-                contact_name: c.contact_name || '',
-                position: c.position,
-                phone: c.phone,
-                mobile: c.mobile,
-                email: c.email,
-                is_primary: c.is_primary || false
-            })),
-
-            bank_accounts: data.bank_accounts.map((b: any) => ({
-                bank_account_id: Math.floor(Math.random() * 10000),
-                vendor_id: newId,
-                bank_name: b.bank_name || '',
-                bank_branch: b.bank_branch,
-                account_no: b.account_no || '',
-                account_name: b.account_name || '',
-                account_type: b.account_type || 'SAVING',
-                swift_code: b.swift_code,
-                is_default: b.is_default || false
-            })),
-
-            // Flat fields
-            address_line1: data.addresses[0]?.address,
-            phone: data.phone,
-            phone_extension: data.phone_extension || data.mobile,
-            email: data.email,
-            website: data.website,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            updated_by: 1, // System Admin ID
-            
+            vendor_type_id: data.vendorTypeId,
+            vendor_group_id: data.vendorGroupId,
+            currency_id: data.currencyId,
+            addresses: [], // simplified for mock
+            contacts: [],
+            bank_accounts: [],
+            is_active: true,
             is_blocked: false,
             is_on_hold: false,
-            payment_term_days: data.payment_term_days,
-            credit_limit: data.credit_limit
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
         };
-
         localVendorData.unshift(newVendor);
         return { success: true, data: newVendor };
     }
 
     try {
-      // Map to exact payload needed by the new backend structure
-      const payload = mapVendorToApi(data); // โหมดสร้างใหม่
-      const response = await api.post<any>('/vendors', payload);
-      return { success: true, data: response } as any;
-    } catch (error: any) {
+      const payload = mapVendorToApi(data);
+      const response = await api.post<VendorMaster>('/vendors', payload);
+      return { success: true, data: response };
+    } catch (error: unknown) {
       logger.error('[VendorService] create error:', error);
-      const msg = error?.response?.data?.message || error?.response?.data?.error || error?.message || 'เกิดข้อผิดพลาดในการสร้าง Vendor';
-      const finalMsg = Array.isArray(msg) ? msg.join(', ') : msg;
+      const axiosError = error as AxiosError<{ message?: string | string[]; error?: string }>;
+      const msg = axiosError?.response?.data?.message || axiosError?.response?.data?.error || axiosError?.message || 'เกิดข้อผิดพลาดในการสร้าง Vendor';
+      const finalMsg = Array.from(new Set(Array.isArray(msg) ? msg : [msg])).join(', ');
       return { success: false, message: finalMsg };
     }
   },
 
-  update: async (vendorId: number, data: any): Promise<VendorResponse> => {
+  update: async (vendorId: number, data: Partial<VendorFormData>): Promise<VendorResponse> => {
     if (USE_MOCK) {
         const index = localVendorData.findIndex(v => v.vendor_id === vendorId);
         if (index !== -1) {
-            // Merge logic (simplified)
             localVendorData[index] = {
                 ...localVendorData[index],
-                vendor_name: data.vendor_name || localVendorData[index].vendor_name,
+                vendor_name: data.vendorNameTh || localVendorData[index].vendor_name,
                 updated_at: new Date().toISOString(),
-                // ... map other fields if needed
             };
             return { success: true, data: localVendorData[index] };
         }
@@ -326,15 +241,15 @@ export const VendorService = {
     }
 
     try {
-      // Only transform if it's a full update payload, ignore if it's a simple status toggle
-      const isFullUpdate = data.vendor_name || data.vendorNameTh || data.vendor_code || data.vendorCode;
-      const payload = isFullUpdate ? mapVendorToApi(data) : data; // โหมดแก้ไข
-      const response = await api.patch<any>(`/vendors/${vendorId}`, payload);
-      return { success: true, data: response } as any;
-    } catch (error: any) {
+      const isFullUpdate = data.vendorNameTh || data.vendorCode;
+      const payload = isFullUpdate ? mapVendorToApi(data as VendorFormData, true) : data;
+      const response = await api.patch<VendorMaster>(`/vendors/${vendorId}`, payload);
+      return { success: true, data: response };
+    } catch (error: unknown) {
       logger.error('[VendorService] update error:', error);
-      const msg = error?.response?.data?.message || error?.response?.data?.error || error?.message || 'เกิดข้อผิดพลาดในการอัปเดต Vendor';
-      const finalMsg = Array.isArray(msg) ? msg.join(', ') : msg;
+      const axiosError = error as AxiosError<{ message?: string | string[]; error?: string }>;
+      const msg = axiosError?.response?.data?.message || axiosError?.response?.data?.error || axiosError?.message || 'เกิดข้อผิดพลาดในการอัปเดต Vendor';
+      const finalMsg = Array.from(new Set(Array.isArray(msg) ? msg : [msg])).join(', ');
       return { success: false, message: finalMsg };
     }
   },
@@ -342,7 +257,6 @@ export const VendorService = {
   delete: async (vendorId: number): Promise<{ success: boolean; message?: string }> => {
     if (USE_MOCK) {
         const initialLength = localVendorData.length;
-        // Simulate Dependency Conflict for vendor-001 (Safe Delete Test)
         if (vendorId === 1) {
              return { 
                  success: false, 
@@ -350,10 +264,7 @@ export const VendorService = {
              };
         }
         localVendorData = localVendorData.filter(v => v.vendor_id !== vendorId);
-        if (localVendorData.length < initialLength) {
-            return { success: true };
-        }
-        return { success: false, message: 'Vendor not found' };
+        return { success: localVendorData.length < initialLength };
     }
     
     try {
@@ -366,17 +277,9 @@ export const VendorService = {
   },
 
   block: async (vendorId: number, remark?: string): Promise<VendorResponse> => {
-    if (USE_MOCK) {
-        const index = localVendorData.findIndex(v => v.vendor_id === vendorId);
-        if (index !== -1) {
-            localVendorData[index].is_blocked = true;
-            localVendorData[index].remarks = remark; // simplified
-            return { success: true, data: localVendorData[index] };
-        }
-    }
     try {
-      const response = await api.post<any>(`/vendors/${vendorId}/block`, { remark });
-      return { success: true, data: response } as any;
+      const response = await api.post<VendorMaster>(`/vendors/${vendorId}/block`, { remark });
+      return { success: true, data: response };
     } catch (error) {
       logger.error('[VendorService] block error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการ Block Vendor' };
@@ -385,8 +288,8 @@ export const VendorService = {
 
   unblock: async (vendorId: number): Promise<VendorResponse> => {
     try {
-      const response = await api.post<any>(`/vendors/${vendorId}/unblock`);
-      return { success: true, data: response } as any;
+      const response = await api.post<VendorMaster>(`/vendors/${vendorId}/unblock`);
+      return { success: true, data: response };
     } catch (error) {
       logger.error('[VendorService] unblock error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการ Unblock Vendor' };
@@ -395,8 +298,8 @@ export const VendorService = {
 
   setOnHold: async (vendorId: number, onHold: boolean): Promise<VendorResponse> => {
     try {
-      const response = await api.post<any>(`/vendors/${vendorId}/hold`, { on_hold: onHold });
-      return { success: true, data: response } as any;
+      const response = await api.post<VendorMaster>(`/vendors/${vendorId}/hold`, { on_hold: onHold });
+      return { success: true, data: response };
     } catch (error) {
       logger.error('[VendorService] setOnHold error:', error);
       return { success: false, message: 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ Hold' };
@@ -404,17 +307,9 @@ export const VendorService = {
   },
 
   updateStatus: async (vendorId: number, status: string): Promise<VendorResponse> => {
-    if (USE_MOCK) {
-        const index = localVendorData.findIndex(v => v.vendor_id === vendorId);
-        if (index !== -1) {
-            localVendorData[index].status = status as VendorStatus;
-            return { success: true, data: localVendorData[index] };
-        }
-        return { success: false, message: 'Vendor not found' };
-    }
     try {
-        const response = await api.patch<any>(`/vendors/${vendorId}/status`, { status });
-        return { success: true, data: response } as any;
+        const response = await api.patch<VendorMaster>(`/vendors/${vendorId}/status`, { status });
+        return { success: true, data: response };
     } catch (error) {
         logger.error('[VendorService] updateStatus error:', error);
         return { success: false, message: 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ' };
@@ -422,14 +317,6 @@ export const VendorService = {
   },
 
   search: async (query: string, config?: AxiosRequestConfig): Promise<VendorMaster[]> => {
-    if (USE_MOCK) {
-       // (Mock logic remains same...)
-       const lowerQuery = query.toLowerCase();
-       return MOCK_VENDORS.filter((v: VendorMaster) => 
-          v.vendor_name.toLowerCase().includes(lowerQuery) || 
-          v.vendor_code.toLowerCase().includes(lowerQuery)
-       );
-    }
     try {
       return await api.get<VendorMaster[]>('/vendors/search', { ...config, params: { ...config?.params, q: query } });
     } catch (error) {

@@ -286,14 +286,14 @@ export interface VendorCreateRequest {
     vendor_name: string;
     vendor_name_en?: string;
     vendor_nameeng?: string;
-    tax_id?: string;
+    vat_registration_no?: string;
     vendor_type?: VendorType; // Backend uses vendor_type_id instead
     
-    vendor_id?: number; // Changed from number to string
+    vendor_id?: number; 
     
-    vendor_type_id: number; // Changed from number to string
-    vendor_group_id: number; // Changed from number to string
-    currency_id: number; // Changed from number to string
+    vendor_type_id: number; 
+    vendor_group_id: number; 
+    currency_id: number; 
     
     // New Structure Matches JSON Response
     addresses: Partial<VendorAddress>[];
@@ -310,7 +310,7 @@ export interface VendorCreateRequest {
     payment_term_days?: number;
     credit_limit?: number;
     currency_code?: string;
-    vat_registered?: boolean;
+    is_vat_registered?: boolean;
 }
 
 /** Response จาก create/update */
@@ -389,7 +389,7 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
         vendor_name: form.vendorNameTh,
         vendor_name_en: form.vendorNameEn,
         vendor_nameeng: form.vendorNameEn,
-        tax_id: form.taxId || undefined,
+        vat_registration_no: form.taxId || undefined,
         vendor_type_id: Number(form.vendorTypeId),
         vendor_group_id: Number(form.vendorGroupId),
         currency_id: Number(form.currencyId),
@@ -401,6 +401,7 @@ export function toVendorCreateRequest(form: VendorFormData): VendorCreateRequest
         email: form.email || undefined,
         website: form.website || undefined,
         payment_term_days,
+        is_vat_registered: form.vatRegistered,
     };
 }
 
@@ -695,7 +696,7 @@ export const initialVendorFormData: VendorFormData = {
     mobile: '',
     email: '',
     website: '',
-    paymentTerms: '' as any,
+    paymentTerms: 30,
     creditLimit: 0,
     bankAccounts: [],
     additionalContacts: [],
