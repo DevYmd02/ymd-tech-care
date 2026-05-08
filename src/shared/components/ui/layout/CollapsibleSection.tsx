@@ -43,6 +43,16 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
       {/* Header */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsOpen(!isOpen);
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isOpen}
+        aria-controls={`collapsible-content-${title?.toString().replace(/\s+/g, '-').toLowerCase()}`}
         className={`flex items-center justify-between p-3 cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${headerClassName}`}
       >
         <div className="flex items-center gap-2">
@@ -58,6 +68,9 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 
       {/* Content */}
       <div 
+        id={`collapsible-content-${title?.toString().replace(/\s+/g, '-').toLowerCase()}`}
+        role="region"
+        aria-labelledby={`collapsible-header-${title?.toString().replace(/\s+/g, '-').toLowerCase()}`}
         className={`transition-all duration-300 ease-in-out ${
           isOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
         } overflow-hidden`}

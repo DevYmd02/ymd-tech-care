@@ -1,3 +1,4 @@
+import type { AxiosRequestConfig } from 'axios';
 import type {
   BranchListItem,
   WarehouseListItem,
@@ -32,36 +33,33 @@ import type { EmployeeListItem } from '@/modules/master-data/company/types/emplo
 
 import { PriceLevelNameService } from '@/modules/master-data/sales/pages/price-level-name/services/price-level-name.service';
 import type { PriceLevelName } from '@/modules/master-data/sales/pages/price-level-name/types/price-level-name.types';
+import { normalizeListResponse } from '@/shared/utils/apiUtils';
 
 export const MasterDataService = {
   // ... existing methods ...
-  getPriceLevelNames: async (): Promise<PriceLevelName[]> => {
+  getPriceLevelNames: async (config?: AxiosRequestConfig): Promise<PriceLevelName[]> => {
     try {
-      const response = await PriceLevelNameService.getList();
-      // Handle potential wrapping (data or items)
-      if (Array.isArray(response)) return response;
-      
-      const r = response as { data?: PriceLevelName[]; items?: PriceLevelName[] };
-      return r.data || r.items || [];
+      const response = await PriceLevelNameService.getList(config);
+      return normalizeListResponse<PriceLevelName>(response).items;
     } catch (error) {
       logger.error('[MasterDataService] getPriceLevelNames failed:', error);
       return [];
     }
   },
 
-  getCustomers: async (): Promise<CustomerMaster[]> => {
+  getCustomers: async (config?: AxiosRequestConfig): Promise<CustomerMaster[]> => {
     try {
-      const response = await CustomerService.getList({ limit: 1000 });
-      return response.data || [];
+      const response = await CustomerService.getList({ limit: 1000 }, config);
+      return response.data || []; // CustomerService uses DataListResponse (data)
     } catch (error) {
       logger.error('[MasterDataService] getCustomers failed:', error);
       return [];
     }
   },
 
-  getBranches: async (): Promise<BranchListItem[]> => {
+  getBranches: async (config?: AxiosRequestConfig): Promise<BranchListItem[]> => {
     try {
-      const response = await BranchService.getList();
+      const response = await BranchService.getList(undefined, config);
       return response.items || [];
     } catch (error) {
       logger.error('[MasterDataService] getBranches failed:', error);
@@ -78,9 +76,9 @@ export const MasterDataService = {
     }
   },
 
-  getWarehouses: async (): Promise<WarehouseListItem[]> => {
+  getWarehouses: async (config?: AxiosRequestConfig): Promise<WarehouseListItem[]> => {
     try {
-      const response = await WarehouseService.getAll();
+      const response = await WarehouseService.getAll(undefined, config);
       return response.items || [];
     } catch (error) {
       logger.error('[MasterDataService] getWarehouses failed:', error);
@@ -97,9 +95,12 @@ export const MasterDataService = {
     }
   },
 
-  getItems: async (query?: string, vendorId?: number | string): Promise<ItemListItem[]> => {
+  getItems: async (query?: string, vendorId?: number | string, config?: AxiosRequestConfig): Promise<ItemListItem[]> => {
     try {
-      const response = await ItemMasterService.getAll({ q: query, vendor_id: vendorId ? String(vendorId) : undefined, limit: 50 });
+      const response = await ItemMasterService.getAll(
+        { q: query, vendor_id: vendorId ? String(vendorId) : undefined, limit: 50 },
+        config
+      );
       return response.items || [];
     } catch (error) {
       logger.error('[MasterDataService] getItems failed:', error);
@@ -107,9 +108,9 @@ export const MasterDataService = {
     }
   },
 
-  getUnits: async (): Promise<UnitListItem[]> => {
+  getUnits: async (config?: AxiosRequestConfig): Promise<UnitListItem[]> => {
     try {
-      const response = await UnitService.getAll({ limit: 1000 });
+      const response = await UnitService.getAll({ limit: 1000 }, config);
       return response.items || [];
     } catch (error) {
       logger.error('[MasterDataService] getUnits failed:', error);
@@ -126,9 +127,9 @@ export const MasterDataService = {
     }
   },
 
-  getCostCenters: async (): Promise<CostCenter[]> => {
+  getCostCenters: async (config?: AxiosRequestConfig): Promise<CostCenter[]> => {
     try {
-      return await CostCenterService.getList();
+      return await CostCenterService.getList(config);
     } catch (error) {
       logger.error('[MasterDataService] getCostCenters failed:', error);
       return [];
@@ -144,9 +145,9 @@ export const MasterDataService = {
     }
   },
 
-  getDepartments: async (): Promise<DepartmentListItem[]> => {
+  getDepartments: async (config?: AxiosRequestConfig): Promise<DepartmentListItem[]> => {
     try {
-      const response = await DepartmentService.getList({ limit: 100 });
+      const response = await DepartmentService.getList({ limit: 100 }, config);
       return response?.items || [];
     } catch (error) {
       logger.error('[MasterDataService] getDepartments failed:', error);
@@ -154,9 +155,9 @@ export const MasterDataService = {
     }
   },
 
-  getProjects: async (): Promise<Project[]> => {
+  getProjects: async (config?: AxiosRequestConfig): Promise<Project[]> => {
     try {
-      return await ProjectService.getList();
+      return await ProjectService.getList(config);
     } catch (error) {
       logger.error('[MasterDataService] getProjects failed:', error);
       return [];
@@ -172,9 +173,9 @@ export const MasterDataService = {
     }
   },
 
-  getProductCategories: async (): Promise<ProductCategoryListItem[]> => {
+  getProductCategories: async (config?: AxiosRequestConfig): Promise<ProductCategoryListItem[]> => {
     try {
-      const response = await ProductCategoryService.getAll();
+      const response = await ProductCategoryService.getAll(undefined, config);
       return response.items || [];
     } catch (error) {
       logger.error('[MasterDataService] getProductCategories failed:', error);
@@ -191,9 +192,9 @@ export const MasterDataService = {
     }
   },
 
-  getItemTypes: async (): Promise<ItemTypeListItem[]> => {
+  getItemTypes: async (config?: AxiosRequestConfig): Promise<ItemTypeListItem[]> => {
     try {
-      const response = await ItemTypeService.getAll();
+      const response = await ItemTypeService.getAll(undefined, config);
       return response.items || [];
     } catch (error) {
       logger.error('[MasterDataService] getItemTypes failed:', error);
@@ -201,9 +202,9 @@ export const MasterDataService = {
     }
   },
 
-  getCurrencies: async (): Promise<Currency[]> => {
+  getCurrencies: async (config?: AxiosRequestConfig): Promise<Currency[]> => {
     try {
-      const response = await CurrencyService.getCurrencies();
+      const response = await CurrencyService.getCurrencies(config);
       return response?.items || [];
     } catch (error) {
       logger.error('[MasterDataService] getCurrencies failed:', error);
@@ -211,9 +212,9 @@ export const MasterDataService = {
     }
   },
   
-  getSaleAreas: async (): Promise<SaleAreaListItem[]> => {
+  getSaleAreas: async (config?: AxiosRequestConfig): Promise<SaleAreaListItem[]> => {
     try {
-      const response = await SaleAreaService.getList();
+      const response = await SaleAreaService.getList(config);
       return response || [];
     } catch (error) {
       logger.error('[MasterDataService] getSaleAreas failed:', error);
@@ -221,14 +222,10 @@ export const MasterDataService = {
     }
   },
 
-  getEmployees: async (): Promise<EmployeeListItem[]> => {
+  getEmployees: async (config?: AxiosRequestConfig): Promise<EmployeeListItem[]> => {
     try {
-      const response = await EmployeeService.getList({ limit: 1000 });
-      // EmployeeService.getList returns PaginatedListResponse<EmployeeMaster> which has 'items'
-      // Some versions of the API might return 'data' or a direct array
-      const res = response as unknown as Record<string, unknown>;
-      const list = (res?.items as EmployeeListItem[]) || (res?.data as EmployeeListItem[]) || (Array.isArray(response) ? response : []);
-      return list;
+      const response = await EmployeeService.getList({ limit: 1000 }, config);
+      return normalizeListResponse<EmployeeListItem>(response).items;
     } catch (error) {
       logger.error('[MasterDataService] getEmployees failed:', error);
       return [];

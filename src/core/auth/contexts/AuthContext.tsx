@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthService } from '@/core/auth/auth.service';
 import type { LoginPayload, UserProfile } from '@/core/auth/auth.service';
-import { setUnauthorizedHandler } from '@/core/api/api';
+import { setUnauthorizedHandler, AUTH_TOKEN_KEY, AUTH_PROFILE_KEY } from '@/core/api/api';
 import { logger } from '@/shared/utils';
 
 interface AuthContextType {
@@ -17,9 +17,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const clearAuthStorage = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('user_profile');
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_PROFILE_KEY);
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -73,7 +72,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const initializeAuth = async () => {
       if (hasInitialized.current) return;
       
-      const token = localStorage.getItem('token') || localStorage.getItem('access_token');
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       
       // Register API unauthorized handler (Perfection Point #2)
       setUnauthorizedHandler(() => {
@@ -86,7 +85,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (token) {
         // 💡 PERSISTENCE-FIRST STRATEGY
         // We restore the session from localStorage directly to avoid calling /auth/me (404 risk)
-        const savedProfile = localStorage.getItem('user_profile');
+        const savedProfile = localStorage.getItem(AUTH_PROFILE_KEY);
         if (savedProfile) {
           try {
             const parsedProfile = JSON.parse(savedProfile);
@@ -96,6 +95,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           } catch (e) {
             logger.error('Failed to parse cached user profile', e);
             clearAuthStorage();
+            navigate('/auth/login', { replace: true, state: { reason: 'session_corrupted' } });
           }
         } else {
           // Token exists but no profile? Might be a legacy state or manual entry.
@@ -120,12 +120,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const token = response.access_token;
       
       if (token && typeof token === 'string') {
-        localStorage.setItem('token', token);
+        localStorage.setItem(AUTH_TOKEN_KEY, token);
         
         // 💡 CRITICAL: Ensure user profile is stringified and saved
         if (response.user) {
            const profileStr = JSON.stringify(response.user);
-           localStorage.setItem('user_profile', profileStr);
+           localStorage.setItem(AUTH_PROFILE_KEY, profileStr);
            setUser(response.user);
            logger.info('👤 User profile persisted to localStorage');
         }

@@ -1,4 +1,5 @@
 import api, { USE_MOCK } from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import { logger } from '@/shared/utils';
 import { mockUnits } from '@/modules/master-data/mocks/masterDataMocks';
 import type { UnitListItem, UnitCreateRequest, UnitUpdateRequest } from '@/modules/master-data/types/master-data-types';
@@ -35,35 +36,24 @@ function mapUomToUnit(item: UomResponse): UnitListItem {
     };
 }
  
+import { normalizeListResponse } from '@/shared/utils/apiUtils';
+
 export const UnitService = {
-    getAll: async (params?: Partial<TableFilters>): Promise<PaginatedListResponse<UnitListItem>> => {
+    getAll: async (params?: Partial<TableFilters>, config?: AxiosRequestConfig): Promise<PaginatedListResponse<UnitListItem>> => {
         if (USE_MOCK) {
             logger.info('🎭 [Mock Mode] Serving Unit List');
             return { items: mockUnits, total: mockUnits.length, page: 1, limit: 100 };
         }
 
         try {
-            // 💡 resilient parsing: handle both raw array and wrapped response
-            type UomListResponse = UomResponse[] | { items?: UomResponse[]; data?: UomResponse[] };
-            const response = await api.get<UomListResponse>('/uom', { params });
-            logger.info('📡 [UnitService] getAll raw response:', response);
-
-            let rawData: UomResponse[] = [];
-            if (Array.isArray(response)) {
-                rawData = response;
-            } else if (response && typeof response === 'object') {
-                rawData = response.items || response.data || [];
-            }
+            const response = await api.get<unknown>('/uom', { ...config, params });
+            const normalized = normalizeListResponse<UomResponse>(response);
             
-            logger.info(`📦 [UnitService] Found ${rawData.length} raw units`);
-
-            const items = rawData.map(mapUomToUnit);
-            logger.info(`✅ [UnitService] Mapped ${items.length} units:`, items.slice(0, 3));
             return { 
-                items, 
-                total: items.length, 
-                page: params?.page || 1, 
-                limit: params?.limit || items.length || 10 
+                items: normalized.items.map(mapUomToUnit), 
+                total: Number(normalized.total), 
+                page: Number(normalized.page), 
+                limit: Number(normalized.limit) 
             };
         } catch (error) {
             logger.error('❌ [UnitService] getAll failed:', error);
@@ -71,11 +61,11 @@ export const UnitService = {
         }
     },
 
-    get: async (id: number): Promise<UnitListItem | null> => {
+    get: async (id: number, config?: AxiosRequestConfig): Promise<UnitListItem | null> => {
         if (USE_MOCK) return mockUnits.find(u => u.unit_id === id) ?? null;
         try {
             // ✅ รองรับ response ที่อาจจะถูก wrap ด้วย { data: ... } หรือส่งมาตรงๆ
-            const response = await api.get<{ success?: boolean; data?: UomResponse } & Partial<UomResponse>>(`/uom/${id}`);
+            const response = await api.get<{ success?: boolean; data?: UomResponse } & Partial<UomResponse>>(`/uom/${id}`, config);
 
             // Handle wrapped response { success: true, data: {...} }
             if (response?.success && response?.data) {

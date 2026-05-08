@@ -10,7 +10,6 @@ interface AVFormLinesProps {
 }
 
 export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
-    lines,
     updateLine,
     readOnly = false
 }) => {
@@ -65,8 +64,10 @@ export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
                     <tbody>
                         {(() => {
                             let visibleNo = 0;
-                            return lines.map((_, index) => {
-                                const line = watchedLines[index] || {};
+                            // 🎯 Use watchedLines directly to ensure we are in sync with the current form state
+                            const displayLines = watchedLines || [];
+                            
+                            return displayLines.map((line, index) => {
                                 const isApproved = !!line.is_approved;
                                 const status = watchForm('status');
 
@@ -131,20 +132,16 @@ export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
                                             {line.item_id && headerVendorId && line._item_vendor_id && line._item_vendor_id !== headerVendorId && (
                                                 <span className="flex-shrink-0 text-amber-500" title="สินค้านี้ปกติจัดซื้อจากผู้ขายรายอื่น"><AlertTriangle size={14} /></span>
                                             )}
-                                            <input 
-                                                value={line.item_code || ''} 
-                                                readOnly
-                                                className={`${lockedInputClass} text-center flex-1`} 
-                                            />
+                                            <div className={`${lockedInputClass} text-center flex-1 flex items-center justify-center`}>
+                                                {line.item_code || ''}
+                                            </div>
                                         </div>
                                     </td>
                                     
                                     <td className={tdBaseClass}>
-                                        <input 
-                                            value={line.item_name || ''} 
-                                            readOnly
-                                            className={lockedInputClass} 
-                                        />
+                                        <div className={`${lockedInputClass} px-3 flex items-center`}>
+                                            {line.item_name || ''}
+                                        </div>
                                     </td>
                                     
                                     <td className={tdBaseClass}>
@@ -161,7 +158,7 @@ export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
                                     
                                     <td className={tdBaseClass}>
                                         <div className={`${lockedInputClass} text-center flex items-center justify-center`}>
-                                            {line.uom || '-'}
+                                            {line.uom || line.uom_code || '-'}
                                         </div>
                                     </td>
                                     

@@ -8,6 +8,7 @@ import { PRFormSummary } from './PRFormSummary';
 import { ProductSearchModal } from './ProductSearchModal';
 import { WindowFormLayout } from '@ui';
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
+import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import { usePRForm } from '@/modules/procurement/pages/pr/hooks';
 import { WarehouseSearchModal } from '@/modules/procurement/shared/components/WarehouseSearchModal';
 import { LocationSearchModal } from '@/modules/procurement/shared/components/LocationSearchModal';
@@ -47,9 +48,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
   // V-04: Force readOnly if status is not DRAFT (prevent editing APPROVED/PENDING PRs)
   const currentStatus = watch('status');
   const readOnly = readOnlyProp || (!!id && currentStatus !== undefined && !['DRAFT', 'PENDING', 'REJECTED'].includes(currentStatus));
-
-  // Action permissions — decoupled from readOnly (which is only for input fields)
-  const canSaveDraft = !readOnly; // Only editable forms can save
 
   // Tabs state
   const [activeTab, setActiveTab] = useState('detail');
@@ -98,8 +96,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
 
                 {/* Approve/Reject actions removed to enforce Approval (AV) Module workflow */}
 
-                {/* Save/Submit — shown only when form is editable (DRAFT) */}
-                {canSaveDraft && (
+                {/* Save/Submit — shown only when form is editable (DRAFT/PENDING/REJECTED) */}
+                {!readOnly && (
                     <button 
                       type="button" 
                       onClick={handleSubmit(onSubmit, handleFormError)} 
@@ -137,7 +135,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
           />
 
           <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1 relative">
-            <SavingOverlay isVisible={isSubmitting} />
+            <SavingOverlay isVisible={isActionLoading} />
             <div className={cardClass}>
                 <PRHeader 
                     costCenters={costCenters}
@@ -262,7 +260,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ผู้จัดทำ</label>
                         <input 
                             type="text"
-                            value={user?.employee?.employee_fullname || user?.username || 'N/A'}
+                            value={watch('preparer_name') || user?.employee?.employee_fullname || user?.username || 'N/A'}
                             readOnly
                             className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-500 dark:text-gray-400 italic"
                         />
@@ -270,123 +268,131 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                 </div>
             </div>
 
-            {/* Currency & Exchange Rate Section (Always visible) */}
-            <div className={`${cardClass} p-3`}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
-                        <Controller
-                            name="pr_exchange_rate_date"
-                            control={control}
-                            render={({ field: { value, onChange, onBlur, ref } }) => (
-                              <div className="relative w-full">
-                                {/* 1. Visible Text Input */}
-                                <input
-                                  type="text"
-                                  readOnly
-                                  placeholder="dd/mm/yyyy"
-                                  value={formatDisplayDate(value)}
-                                  disabled={readOnly}
-                                  onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker() } catch (err) { void err; } }}
-                                  className="w-full h-9 pl-3 pr-8 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow cursor-pointer"
-                                />
-                                
-                                {/* 2. Hidden Native Input overlay for click/picker */}
-                                <input
-                                  type="date"
-                                  value={value || ''}
-                                  onChange={(e) => onChange(e.target.value)}
-                                  onBlur={onBlur}
-                                  ref={ref}
-                                  disabled={readOnly}
-                                  onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
-                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                  style={{ colorScheme: 'dark' }}
-                                />
-                                
-                                <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
-                              </div>
-                            )}
-                          />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
-                        <Controller
-                            name="pr_base_currency_code"
-                            control={control}
-                            render={({ field }) => (
-                                <select 
-                                    {...field}
-                                    value={field.value || 'THB'}
-                                    disabled={readOnly}
-                                    className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="">เลือกสกุลเงิน</option>
-                                    {currencies.map((c) => (
-                                      <option key={c.currency_id} value={c.currency_code}>{c.currency_code} - {c.name_th}</option>
-                                    ))}
-                                </select>
-                            )}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
-                        <Controller
-                            name="pr_quote_currency_code"
-                            control={control}
-                            render={({ field }) => (
-                                <select 
-                                    {...field}
-                                    value={field.value || 'THB'}
-                                    disabled={readOnly}
-                                    className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                                >
-                                    <option value="">เลือกสกุลเงิน</option>
-                                    {currencies.map((c) => (
-                                      <option key={c.currency_id} value={c.currency_code}>{c.currency_code} - {c.name_th}</option>
-                                    ))}
-                                </select>
-                            )}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">อัตราแลกเปลี่ยน</label>
-                        <Controller
-                            name="pr_exchange_rate"
-                            control={control}
-                            render={({ field: { value, onChange, onBlur, ref } }) => (
-                                <input 
-                                    ref={ref}
-                                    type="number"
-                                    step="0.0001"
-                                    value={value ?? 1}
-                                    onChange={onChange}
-                                    onBlur={onBlur}
-                                    readOnly={readOnly || watch('pr_base_currency_code') === 'THB'}
-                                    className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${watch('pr_base_currency_code') === 'THB' || readOnly ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
-                                />
-                            )}
-                        />
-                        <Controller
-                            name="pr_base_currency_code"
-                            control={control}
-                            render={({ field: { value: baseCurrency } }) => {
-                                if (!baseCurrency || baseCurrency === 'THB') return <></>;
-                                return (
-                                    <Controller
-                                        name="pr_exchange_rate"
-                                        control={control}
-                                        render={({ field: { value: rate } }) => (
-                                            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
-                                                1 {baseCurrency} ≈ {Number(rate || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
-                                            </div>
-                                        )}
+            {/* Multicurrency Section */}
+            <div className={`${cardClass} p-0`}>
+                <MulticurrencyWrapper
+                    control={control}
+                    name="isMulticurrency"
+                    label="ระบุสกุลเงินต่างประเทศ (Multicurrency)"
+                    disabled={readOnly}
+                    alwaysVisible={!!id}
+                >
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start px-3 pb-3">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
+                            <Controller
+                                name="pr_exchange_rate_date"
+                                control={control}
+                                render={({ field: { value, onChange, onBlur, ref } }) => (
+                                  <div className="relative w-full">
+                                    {/* 1. Visible Text Input */}
+                                    <input
+                                      type="text"
+                                      readOnly
+                                      placeholder="dd/mm/yyyy"
+                                      value={formatDisplayDate(value)}
+                                      disabled={readOnly}
+                                      onClick={(e) => { try { (e.currentTarget.nextElementSibling as HTMLInputElement)?.showPicker() } catch (err) { void err; } }}
+                                      className="w-full h-9 pl-3 pr-8 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 transition-shadow cursor-pointer"
                                     />
-                                );
-                            }}
-                        />
+                                    
+                                    {/* 2. Hidden Native Input overlay for click/picker */}
+                                    <input
+                                      type="date"
+                                      value={value || ''}
+                                      onChange={(e) => onChange(e.target.value)}
+                                      onBlur={onBlur}
+                                      ref={ref}
+                                      disabled={readOnly}
+                                      onClick={(e) => { if ('showPicker' in HTMLInputElement.prototype) e.currentTarget.showPicker(); }}
+                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                      style={{ colorScheme: 'dark' }}
+                                    />
+                                    
+                                    <Calendar size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
+                                  </div>
+                                )}
+                              />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">รหัสสกุลเงิน</label>
+                            <Controller
+                                name="pr_base_currency_code"
+                                control={control}
+                                render={({ field }) => (
+                                    <select 
+                                        {...field}
+                                        value={field.value || 'THB'}
+                                        disabled={readOnly}
+                                        className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="">เลือกสกุลเงิน</option>
+                                        {currencies.map((c) => (
+                                          <option key={c.currency_id} value={c.currency_code}>{c.currency_code} - {c.name_th}</option>
+                                        ))}
+                                    </select>
+                                )}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">ไปยังสกุลเงิน (Target)</label>
+                            <Controller
+                                name="pr_quote_currency_code"
+                                control={control}
+                                render={({ field }) => (
+                                    <select 
+                                        {...field}
+                                        value={field.value || 'THB'}
+                                        disabled={readOnly}
+                                        className="w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="">เลือกสกุลเงิน</option>
+                                        {currencies.map((c) => (
+                                          <option key={c.currency_id} value={c.currency_code}>{c.currency_code} - {c.name_th}</option>
+                                        ))}
+                                    </select>
+                                )}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">อัตราแลกเปลี่ยน</label>
+                            <Controller
+                                name="pr_exchange_rate"
+                                control={control}
+                                render={({ field: { value, onChange, onBlur, ref } }) => (
+                                    <input 
+                                        ref={ref}
+                                        type="number"
+                                        step="0.0001"
+                                        value={value ?? 1}
+                                        onChange={onChange}
+                                        onBlur={onBlur}
+                                        readOnly={readOnly || watch('pr_base_currency_code') === 'THB'}
+                                        className={`w-full h-9 px-3 text-sm text-right border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none transition-colors ${watch('pr_base_currency_code') === 'THB' || readOnly ? 'bg-gray-50 dark:bg-gray-800/50 italic text-gray-500' : 'bg-white dark:bg-gray-800 font-semibold'}`}
+                                    />
+                                )}
+                            />
+                            <Controller
+                                name="pr_base_currency_code"
+                                control={control}
+                                render={({ field: { value: baseCurrency } }) => {
+                                    if (!baseCurrency || baseCurrency === 'THB') return <></>;
+                                    return (
+                                        <Controller
+                                            name="pr_exchange_rate"
+                                            control={control}
+                                            render={({ field: { value: rate } }) => (
+                                                <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-medium">
+                                                    1 {baseCurrency} ≈ {Number(rate || 0).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} THB
+                                                </div>
+                                            )}
+                                        />
+                                    );
+                                }}
+                            />
+                        </div>
                     </div>
-                </div>
+                </MulticurrencyWrapper>
             </div>
 
             <PRFormLines 

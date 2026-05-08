@@ -184,19 +184,19 @@ export const VendorService = {
     }
   },
 
-  getByTaxId: async (taxId: string): Promise<VendorMaster | null> => {
+  getByTaxId: async (taxId: string, config?: AxiosRequestConfig): Promise<VendorMaster | null> => {
     if (USE_MOCK) {
         return localVendorData.find(v => v.tax_id === taxId) || null;
     }
     try {
-      return await api.get<VendorMaster>(`/vendors/by-tax-id/${taxId}`);
+      return await api.get<VendorMaster>(`/vendors/by-tax-id/${taxId}`, config);
     } catch (error) {
       logger.error('[VendorService] getByTaxId error:', error);
       return null;
     }
   },
 
-  getDropdown: async (): Promise<VendorDropdownItem[]> => {
+  getDropdown: async (config?: AxiosRequestConfig): Promise<VendorDropdownItem[]> => {
     if (USE_MOCK) {
       logger.info('🎭 [Mock Mode] Serving Vendor Dropdown');
       return localVendorData.filter(v => v.status === 'ACTIVE').map((v: VendorMaster) => ({
@@ -206,7 +206,7 @@ export const VendorService = {
       }));
     }
     try {
-      return await api.get<VendorDropdownItem[]>('/vendors/dropdown');
+      return await api.get<VendorDropdownItem[]>('/vendors/dropdown', config);
     } catch (error) {
       logger.error('[VendorService] getDropdown error:', error);
       return [];
@@ -421,8 +421,9 @@ export const VendorService = {
     }
   },
 
-  search: async (query: string): Promise<VendorMaster[]> => {
+  search: async (query: string, config?: AxiosRequestConfig): Promise<VendorMaster[]> => {
     if (USE_MOCK) {
+       // (Mock logic remains same...)
        const lowerQuery = query.toLowerCase();
        return MOCK_VENDORS.filter((v: VendorMaster) => 
           v.vendor_name.toLowerCase().includes(lowerQuery) || 
@@ -430,7 +431,7 @@ export const VendorService = {
        );
     }
     try {
-      return await api.get<VendorMaster[]>('/vendors/search', { params: { q: query } });
+      return await api.get<VendorMaster[]>('/vendors/search', { ...config, params: { ...config?.params, q: query } });
     } catch (error) {
       logger.error('[VendorService] search error:', error);
       return [];

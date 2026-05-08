@@ -78,6 +78,7 @@ export const QCHeaderSchema = z.object({
   status: QCStatusEnum.default('DRAFT'),
   comparison_date: z.union([z.string(), z.date()]).optional(),
   dept_division: z.string().optional(),
+  department_id: z.coerce.number().optional(),
   created_by: z.coerce.number().optional(),
   created_at: z.string().optional(),
 });

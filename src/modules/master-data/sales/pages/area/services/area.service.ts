@@ -4,6 +4,7 @@
  */
 
 import api from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import type { 
   SaleAreaMaster, 
   SaleAreaFormData 
@@ -13,14 +14,14 @@ export const SaleAreaService = {
   /**
    * Fetch all sales areas
    */
-  getList: (params?: Record<string, string | number | boolean>) => 
-    api.get<SaleAreaMaster[]>('/employee-sale-area', { params }),
+  getList: (config?: AxiosRequestConfig, params?: Record<string, string | number | boolean>) => 
+    api.get<SaleAreaMaster[]>('/employee-sale-area', { ...config, params }),
 
   /**
    * Fetch a single sales area by ID
    */
-  get: (id: string) => 
-    api.get<SaleAreaMaster>(`/employee-sale-area/${id}`),
+  get: (id: string, config?: AxiosRequestConfig) => 
+    api.get<SaleAreaMaster>(`/employee-sale-area/${id}`, config),
 
   /**
    * Create a new sales area

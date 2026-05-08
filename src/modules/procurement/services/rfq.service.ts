@@ -1,9 +1,11 @@
-import api, { USE_MOCK } from '@/core/api/api';
+import api, { USE_MOCK, extractErrorMessage } from '@/core/api/api';
 import type { RFQHeader, RFQListResponse, RFQFilterCriteria, RFQDetailResponse, SendRFQToVendorPayload, PRHeader } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils';
 import type { SuccessResponse } from '@/shared/types/api.types';
-import { extractErrorMessage } from '@/core/api/api';
+import { sanitizePayload, cleanPayload } from '@/shared/utils/payload.utils';
+import { masterDataCache } from '@/shared/utils/master-data-cache';
 import { applyClientFilters, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { unwrapResponseData } from '@/shared/utils/apiUtils';
 
 const ENDPOINTS = {
   list: '/rfq',
@@ -14,6 +16,26 @@ const ENDPOINTS = {
   approvedPRsWithoutRFQ: '/rfq/pr-approved/without-rfq',
   prApprovalDetail: (prId: number) => `/rfq/pr-approved/${prId}/without-rfq`,
 };
+
+/**
+ * Whitelist for RFQ Header fields (DTO)
+ */
+const KNOWN_DTO_FIELDS = [
+  'rfq_date', 'requested_by_user_id', 'requested_by', 'status', 
+  'quotation_due_date', 'branch_id', 'rfq_base_currency_code', 
+  'rfq_quote_currency_code', 'rfq_exchange_rate', 'rfq_exchange_rate_date',
+  'remarks', 'rfqVendors', 'rfqLines', 'pr_id', 'pr_approval_id',
+  'receive_location', 'payment_term_hint', 'incoterm', 'cost_center_id'
+];
+
+/**
+ * Whitelist for RFQ Line fields
+ */
+const KNOWN_LINE_DTO_FIELDS = [
+  'rfq_line_id', 'line_no', 'description', 'qty', 'uom_id',
+  'item_id', 'pr_line_id', 'approval_line_id', 'required_receipt_type',
+  'target_delivery_date', 'note_to_vendor'
+];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Backend DTO Interfaces — Only fields the NestJS backend accepts
@@ -106,6 +128,8 @@ export const cleanParams = (params: object = {}): Record<string, string | number
   return cleaned;
 };
 
+import type { AxiosRequestConfig } from 'axios';
+
 export const RFQService = {
   getList: async (params?: RFQFilterCriteria): Promise<RFQListResponse> => {
     logger.info('[RFQService] Fetching RFQ List', params);
@@ -156,13 +180,11 @@ export const RFQService = {
     // 🎯 HYBRID FALLBACK: Apply Client-Side Filtering when using Real API or Mock
     const normalizedItems = items.map((item) => {
         const u = item.requested_by_user;
-        const creatorName = u
-            ? `${u.employee_firstname_th} ${u.employee_lastname_th}`.trim()
-            : (item.created_by_name || item.creator_name || '-');
+        const empName = u ? masterDataCache.getEmployeeName(u.employee_id) : '-';
+        const creatorName = (item.created_by_name || item.creator_name || (typeof empName === 'string' ? empName : '-') || '-') as string;
+        const branchName = item.branch_id ? masterDataCache.getBranchName(item.branch_id) : '';
 
         // 🎯 Dynamic Status Matching (Mirroring Layout Logic)
-        // 🔒 FIX: Prioritize 'sent_vendors_count' (REQUIRED field) over legacy 'vendor_sent'
-        // '??' with 0 correctly picks 0 if present, but we should prioritize the most reliable fields first.
         const sentCount = item.sent_vendors_count ?? item.vendor_sent ?? 0;
         const total = item.vendor_total ?? item.vendor_count ?? 0;
         
@@ -177,6 +199,7 @@ export const RFQService = {
             status: currentStatus, // Overwrite with dynamic status
             ref_pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
             pr_no: item.ref_pr_no || item.pr_no || item.pr?.pr_no || null,
+            branch_name: typeof branchName === 'string' ? branchName : '',
             
             // 🕵️‍♂️ Robust AV Mapping Recovery (Snake_Case + CamelCase + Nested discovery)
             pr_approval_id: item.pr_approval_id || (item as any).pr_approval?.approval_id || (item as any).prApprovalId || (item as any).av_id || (item as any).approval_id,
@@ -217,17 +240,49 @@ export const RFQService = {
     };
   },
 
-  getById: async (id: number): Promise<RFQDetailResponse> => {
+  getById: async (id: number, config?: AxiosRequestConfig): Promise<RFQDetailResponse> => {
     logger.info(`[RFQService] Fetching RFQ Detail: ${id}`);
-    return await api.get<RFQDetailResponse>(ENDPOINTS.detail(id));
+    const response = await api.get<unknown>(ENDPOINTS.detail(id), config);
+    const data = unwrapResponseData<RFQDetailResponse>(response);
+    
+    const branchName = data.branch_id ? masterDataCache.getBranchName(data.branch_id) : '';
+    const creatorName = data.requested_by_user ? masterDataCache.getEmployeeName(data.requested_by_user.employee_id) : '';
+
+    return {
+        ...data,
+        branch_name: typeof branchName === 'string' ? branchName : '',
+        creator_name: (data.creator_name || (typeof creatorName === 'string' ? creatorName : '') || '') as string
+    };
   },
 
-  create: async (payload: RFQCreateDTO): Promise<RFQHeader> => {
+  /**
+   * Helper to sanitize data using whitelist
+   */
+  sanitizeData(data: Record<string, unknown>): Record<string, unknown> {
+    // Sanitize Lines first
+    if (Array.isArray(data.rfqLines)) {
+      data.rfqLines = data.rfqLines.map(line => 
+        sanitizePayload(line, KNOWN_LINE_DTO_FIELDS)
+      );
+    }
+    
+    // Sanitize Header
+    return cleanPayload(sanitizePayload(data, KNOWN_DTO_FIELDS)) as Record<string, unknown>;
+  },
+
+  create: async (payload: any): Promise<RFQHeader> => {
     logger.info('[RFQService] Creating RFQ');
-    logger.debug('🔧 [RFQService] WIRE-READY JSON:', JSON.stringify(payload, null, 2));
+    
+    // 🎯 DOUBLE REQUESTER STRIKE FIX: Auto-fill requested_by from cache if missing but ID exists
+    if (payload.requested_by_user_id && !payload.requested_by) {
+        payload.requested_by = masterDataCache.getEmployeeName(payload.requested_by_user_id) || '';
+    }
+
+    const sanitizedPayload = RFQService.sanitizeData(payload);
+    logger.debug('🔧 [RFQService] WIRE-READY JSON:', JSON.stringify(sanitizedPayload, null, 2));
     
     try {
-      const response = await api.post<RFQHeader>(ENDPOINTS.create, payload);
+      const response = await api.post<RFQHeader>(ENDPOINTS.create, sanitizedPayload);
       logger.info('✅ [RFQService] RFQ Created Successfully!', response);
       return response;
     } catch (error) {
@@ -237,10 +292,18 @@ export const RFQService = {
     }
   },
 
-  update: async (id: number, payload: Partial<RFQCreateDTO>): Promise<SuccessResponse> => {
+  update: async (id: number, payload: any): Promise<SuccessResponse> => {
     logger.info(`[RFQService] Updating RFQ: ${id}`);
+    
+    // 🎯 DOUBLE REQUESTER STRIKE FIX for updates
+    if (payload.requested_by_user_id && !payload.requested_by) {
+        payload.requested_by = masterDataCache.getEmployeeName(payload.requested_by_user_id) || '';
+    }
+
+    const sanitizedPayload = RFQService.sanitizeData(payload);
+
     try {
-      return await api.patch<SuccessResponse>(ENDPOINTS.detail(id), payload);
+      return await api.patch<SuccessResponse>(ENDPOINTS.detail(id), sanitizedPayload);
     } catch (error) {
       const errorMessage = extractErrorMessage(error);
       logger.error('💥 [RFQService] Backend Rejected RFQ Update:', errorMessage);

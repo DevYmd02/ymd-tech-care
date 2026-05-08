@@ -1,84 +1,183 @@
-import { useCallback } from 'react';
+import { useState } from 'react';
+import type { UseFormReturn } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
-import { useConfirmation } from '@/shared/hooks';
 import { POService } from '@/modules/procurement/services';
-import type { POListItem } from '@/modules/procurement/types';
-import { Send } from 'lucide-react';
+import { CreatePOSchema, type POFormData, type POLine } from '@/modules/procurement/schemas/po-schemas';
+import type { CreatePOPayload } from '@/modules/procurement/types/po-types';
 import { logger } from '@/shared/utils';
+import { extractErrorMessage } from '@/core/api/api';
 
-// ====================================================================================
-// HOOK
-// ====================================================================================
+interface UsePOActionsProps {
+    poId?: number;
+    user: any;
+    formMethods: UseFormReturn<POFormData>;
+    existingPO: any;
+    onClose: () => void;
+    onSuccess?: () => void;
+    toast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+}
 
-export const usePOActions = () => {
+export const usePOActions = (props?: UsePOActionsProps) => {
     const queryClient = useQueryClient();
-    const { confirm } = useConfirmation();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [pendingPayload, setPendingPayload] = useState<POFormData | null>(null);
 
-    /**
-     * Issue PO: APPROVED → ISSUED
-     * Shows confirm dialog, calls POService.issue(), then auto-refreshes list.
-     */
-    const handleIssuePO = useCallback((item: POListItem) => {
-        const amount = Number(item.total_amount ?? (item as unknown as { base_total_amount?: number }).base_total_amount ?? 0);
-        confirm({
-            title:       'ยืนยันการออกใบสั่งซื้อ',
-            description: `คุณต้องการออกใบสั่งซื้อเลขที่ ${item.po_no} ใช่หรือไม่?\nยอดรวม: ${amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} ${item.currency_code || 'THB'}`,
-            confirmText: 'ออก PO',
-            cancelText:  'ยกเลิก',
-            variant:     'info',
-            icon:        Send,
-            onConfirm:   async () => {
-                await POService.issue(item.po_id);
-            },
-        }).then((confirmed) => {
-            if (confirmed) {
-                confirm({
-                    title:       'ออก PO สำเร็จ!',
-                    description: `ใบสั่งซื้อ ${item.po_no} ถูกส่งให้ผู้ขายแล้ว`,
-                    confirmText: 'ตกลง',
-                    hideCancel:  true,
-                    variant:     'success',
-                });
-                // Auto-Refresh: invalidate PO list cache
-                queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+    // List-level Direct Submit
+    const handleDirectSubmit = async (item: any) => {
+        const poId = item.po_id || item.po_header_id || item.id;
+        if (!poId) return;
+
+        try {
+            setIsSubmitting(true);
+            logger.info(`[usePOActions] Direct submitting PO: ${poId}`);
+            await POService.submit(Number(poId));
+            queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+            props?.toast?.('ส่งอนุมัติสำเร็จ', 'success');
+        } catch (error: unknown) {
+            logger.error('[usePOActions] handleDirectSubmit error:', error);
+            const errMsg = extractErrorMessage(error);
+            props?.toast?.(errMsg, 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Form-level Save
+    const handleConfirmSave = async () => {
+        if (!props || !pendingPayload) return;
+        const { poId, user, existingPO, onClose, onSuccess, toast, formMethods } = props;
+        const { getValues } = formMethods;
+        
+        try {
+            setIsSubmitting(true);
+            
+            // 🛡️ Data Integrity Guard: Strict Vendor ID Validation
+            const safeVendorId = Number(pendingPayload.vendor_id);
+            if (!safeVendorId || isNaN(safeVendorId) || safeVendorId <= 0) {
+                throw new Error("Invalid Vendor ID. กรุณาเลือกผู้ขายที่ถูกต้องจากระบบ");
             }
-        }).catch((error) => {
-            logger.error('[usePOActions] handleIssuePO error:', error);
-        });
-    }, [confirm, queryClient]);
 
-    /**
-     * Submit PO for Approval: DRAFT → PENDING_APPROVAL
-     * GOLD PATTERN: Close-First, Empty Body, Dynamic Modal
-     */
-    const handleDirectSubmit = useCallback((item: POListItem) => {
-        const amount = Number(item.total_amount ?? (item as unknown as { base_total_amount?: number }).base_total_amount ?? 0);
-        const formattedAmount = amount.toLocaleString('th-TH', { 
-            minimumFractionDigits: 2, 
-            maximumFractionDigits: 2 
-        });
+            // 🧠 Safe Coercion Helper: Prevents NaN and treats 0/empty as undefined
+            const safeId = (id: unknown): number | undefined => {
+                if (id === null || id === undefined || id === "") return undefined;
+                const num = Number(id);
+                return isNaN(num) || num === 0 ? undefined : num;
+            };
 
-        return confirm({
-            title:       'ยืนยันการส่งอนุมัติ',
-            description: `คุณต้องการส่งเอกสาร ${item.po_no} เพื่อขออนุมัติใช่หรือไม่?\nยอดรวม: ${formattedAmount} ${item.currency_code || 'THB'}`,
-            confirmText: 'ส่งอนุมัติ',
-            cancelText:  'ยกเลิก',
-            variant:     'info',
-            icon:        Send,
-            onConfirm:   async () => {
-                // 1. API Call (Strict Empty Body Payload)
-                await POService.submit(item.po_id);
+            // STRICT PAYLOAD ARCHITECTURE (Aligned with Backend Contract 100%)
+            const fullPayload: CreatePOPayload = {
+                po_date:            pendingPayload.po_date ? new Date(pendingPayload.po_date).toISOString() : new Date().toISOString(),
+                pr_id:              safeId(pendingPayload.pr_id),
+                vendor_id:          Number(pendingPayload.vendor_id),
+                branch_id:          Number(pendingPayload.branch_id),
+                warehouse_id:       Number(pendingPayload.ship_to_warehouse_id),
+                base_currency_code: pendingPayload.base_currency_code || "THB",
+                quote_currency_code: pendingPayload.currency_code || pendingPayload.quote_currency_code || "THB",
+                exchange_rate:      Number(pendingPayload.exchange_rate || 1),
+                exchange_rate_date: pendingPayload.exchange_rate_date ? new Date(pendingPayload.exchange_rate_date).toISOString() : new Date().toISOString(),
+                tax_code_id:        Number(pendingPayload.tax_code_id),
+                discount_expression: pendingPayload.discount_expression || "0",
+                status:             "DRAFT", // Hardcode DRAFT for new creation
+                created_at:         new Date().toISOString(),
+                created_by:         (poId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined)) as unknown as number,
+                
+                po_lines: (pendingPayload.po_lines || []).map((item: POLine, index: number) => ({
+                    line_no:        index + 1,
+                    item_id:        Number(item.item_id),
+                    pr_line_id:     safeId(item.pr_line_id),
+                    rfq_line_id:    safeId(item.rfq_line_id), // 🎯 PR/QC Traceability
+                    status:         "OPEN",
+                    qty:            Number(item.qty_ordered ?? item.qty ?? 0),
+                    uom_id:         Number(item.uom_id),
+                    unit_price:     Number(item.unit_price),
+                    tax_code_id:    pendingPayload.tax_code_id !== undefined ? Number(pendingPayload.tax_code_id) : Number(item.tax_code_id),
+                    discount_expression: String(item.discount_expression || "0"),
+                    required_receipt_type: item.required_receipt_type || "FULL",
+                    description:    String(item.description || "")
+                }))
+            };
 
-                // 2. Success Feedback (UI-only delay for invalidation)
-                setTimeout(() => {
-                    queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
-                }, 100);
-            },
-        });
-    }, [confirm, queryClient]);
+            const cleanPayload = (obj: unknown): unknown => {
+                if (Array.isArray(obj)) {
+                    return obj.map(item => cleanPayload(item));
+                }
+                if (obj !== null && typeof obj === 'object') {
+                    const newObj: Record<string, unknown> = {};
+                    const entries = Object.entries(obj as Record<string, unknown>);
+                    for (const [key, val] of entries) {
+                        const v = val;
+                        if (v === undefined || v === null || (typeof v === 'number' && isNaN(v))) {
+                            continue;
+                        }
+                        newObj[key] = cleanPayload(v);
+                    }
+                    return newObj;
+                }
+                return obj;
+            };
+
+            const baseCleanedPayload = cleanPayload(fullPayload) as Record<string, unknown>;
+            const finalizedPayload = baseCleanedPayload as unknown as CreatePOPayload;
+
+            logger.info("FINAL_PO_PAYLOAD (Cleaned + Null Override):", finalizedPayload);
+
+            if (poId) {
+                // 🔄 UPDATE FLOW (Deep Scan Patch)
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { created_by, ...patchCandidate } = finalizedPayload;
+                
+                const updatePayload = {
+                    ...patchCandidate,
+                    updated_by: Number(user?.id || 1), // 🛡️ Mandatory for PATCH
+                    status:     finalizedPayload.status || (existingPO as any)?.status || 'DRAFT',
+                    created_at: finalizedPayload.created_at || (existingPO as any)?.created_at || new Date().toISOString(),
+                };
+
+                await POService.update(Number(poId), updatePayload as any);
+                
+                // 🌟 Auto-submit if it was REJECTED
+                if ((existingPO as any)?.status === 'REJECTED') {
+                    logger.info(`[usePOActions] Auto-submitting PO ${poId} from REJECTED state`);
+                    await POService.submit(Number(poId));
+                }
+            } else {
+                CreatePOSchema.parse(finalizedPayload);
+                await POService.create(finalizedPayload as unknown as CreatePOPayload);
+            }
+
+            queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+            queryClient.invalidateQueries({ queryKey: ['pr-ready-for-po-triple'] });
+            toast('บันทึกใบสั่งซื้อสำเร็จ', 'success');
+
+            setIsConfirmModalOpen(false);
+            if (onSuccess) onSuccess();
+            onClose();
+        } catch (error: unknown) {
+            logger.error('[usePOActions] handleConfirmSave error:', error);
+            const errMsg = extractErrorMessage(error);
+            toast(errMsg, 'error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const onSubmit = (data: POFormData) => {
+        if (!data.vendor_id || Number(data.vendor_id) <= 0) {
+            props?.toast?.('กรุณาระบุผู้จัดจำหน่าย (Vendor) ก่อนบันทึกใบสั่งซื้อ', 'error');
+            return;
+        }
+        setPendingPayload(data);
+        setIsConfirmModalOpen(true);
+    };
 
     return {
-        handleIssuePO,
-        handleDirectSubmit,
+        isSubmitting,
+        isConfirmModalOpen,
+        setIsConfirmModalOpen,
+        pendingPayload,
+        handleConfirmSave,
+        onSubmit,
+        handleDirectSubmit
     };
 };

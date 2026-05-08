@@ -4,18 +4,19 @@
  */
 
 import api, { USE_MOCK } from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import type { CostCenter } from '@/modules/master-data/types/master-data-types';
 import { logger } from '@/shared/utils';
 import { mockCostCenters } from '@/modules/master-data/mocks/masterDataMocks';
 
 export const CostCenterService = {
-  getList: async (): Promise<CostCenter[]> => {
+  getList: async (config?: AxiosRequestConfig): Promise<CostCenter[]> => {
     if (USE_MOCK) {
        return mockCostCenters;
     }
     try {
       type ExpectedResponse = CostCenter[] | { items?: CostCenter[]; data?: CostCenter[] };
-      const response = await api.get<ExpectedResponse>('/cost-centers');
+      const response = await api.get<ExpectedResponse>('/cost-centers', config);
       
       if (response && typeof response === 'object' && !Array.isArray(response)) {
         if ('items' in response && Array.isArray(response.items)) {
@@ -36,12 +37,12 @@ export const CostCenterService = {
     }
   },
 
-  getById: async (id: number): Promise<CostCenter | null> => {
+  getById: async (id: number, config?: AxiosRequestConfig): Promise<CostCenter | null> => {
     if (USE_MOCK) {
       return mockCostCenters.find(cc => cc.cost_center_id === id) || null;
     }
     try {
-      const response = await api.get<CostCenter>(`/cost-centers/${id}`);
+      const response = await api.get<CostCenter>(`/cost-centers/${id}`, config);
       return response;
     } catch (error) {
       logger.error('[CostCenterService] getById error:', error);

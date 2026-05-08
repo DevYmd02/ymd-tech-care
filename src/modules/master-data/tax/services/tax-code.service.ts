@@ -1,10 +1,11 @@
 import api, { USE_MOCK } from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import { logger } from '@/shared/utils';
 import { MOCK_TAX_CODES } from '@/modules/master-data/mocks/data/taxMocks';
 
 export const TaxCodeService = {
-    getTaxCodes: async (): Promise<TaxCode[]> => {
+    getTaxCodes: async (config?: AxiosRequestConfig): Promise<TaxCode[]> => {
         if (USE_MOCK) {
             logger.info('🎭 [Mock Mode] Serving Tax Codes');
             return new Promise((resolve) => {
@@ -13,7 +14,7 @@ export const TaxCodeService = {
         }
         try {
             type TaxCodeResponse = TaxCode[] | { data?: TaxCode[]; items?: TaxCode[] };
-            const response = await api.get<TaxCodeResponse>('/tax-code');
+            const response = await api.get<TaxCodeResponse>('/tax-code', config);
 
             if (Array.isArray(response)) {
                 return response;
@@ -29,14 +30,14 @@ export const TaxCodeService = {
         }
     },
 
-    getTaxCodeById: async (id: string): Promise<TaxCode | undefined> => {
+    getTaxCodeById: async (id: string, config?: AxiosRequestConfig): Promise<TaxCode | undefined> => {
         if (USE_MOCK) {
             return new Promise((resolve) => {
                 setTimeout(() => resolve(MOCK_TAX_CODES.find(t => t.tax_id === id)), 300);
             });
         }
         try {
-            return await api.get<TaxCode>(`/tax-code/${id}`);
+            return await api.get<TaxCode>(`/tax-code/${id}`, config);
         } catch (error) {
             logger.error('[TaxCodeService] getTaxCodeById error:', error);
             throw error;

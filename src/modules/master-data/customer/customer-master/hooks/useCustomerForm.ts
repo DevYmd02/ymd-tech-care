@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, type ChangeEvent, type FormEvent } from 'r
 import type { 
     CustomerFormData,
     CustomerMaster,
+    CustomerAddress,
     CustomerAddressFormItem
 } from '@customer/customer-master/types/customer-types';
 import { initialCustomerFormData, toCustomerFormData } from '@customer/customer-master/types/customer-types';
@@ -107,6 +108,10 @@ export function useCustomerForm({
             province: '',
             postalCode: '',
             country: '',
+            contactPerson: '',
+            phone: '',
+            phoneExtension: '',
+            email: '',
             isMain: false,
             addressType: 'SHIPPING'
         };
@@ -163,29 +168,42 @@ export function useCustomerForm({
                 }
             }
 
-            // Map addresses - aligned with CreateCustomerAddressDto
-            const mappedAddresses = formData.addresses.map(a => ({
-                address_type:    a.addressType || 'REGISTERED' as const,
-                address:         a.address || '',
-                sub_district:    a.subDistrict || undefined,
-                district:        a.district || '',
-                province:        a.province || '',
-                postal_code:     a.postalCode || '',
-                country:         a.country || 'Thailand',
-                contact_person:  a.contactPerson || '',
-                phone:           a.phone || undefined,
-                phone_extension: a.phoneExtension || undefined,
-                email:           a.email || formData.email || 'no-email@ymd.com', // Fallback cascade
-                is_default:      a.isMain ?? false,
-                is_active:       true
-            }));
+            // Send all addresses (both old and new) to prevent deactivation
+            const mappedAddresses = formData.addresses.map(a => {
+                const isRealId = typeof a.id === 'number' || (typeof a.id === 'string' && !isNaN(Number(a.id)) && a.id.length < 10);
+                
+                // Base address object without any ID property
+                const addr: Partial<CustomerAddress> = {
+                    address_type:    a.addressType || 'REGISTERED' as const,
+                    address:         a.address || '',
+                    sub_district:    a.subDistrict || undefined,
+                    district:        a.district || '',
+                    province:        a.province || '',
+                    postal_code:     a.postalCode || '',
+                    country:         a.country || 'Thailand',
+                    contact_person:  a.contactPerson || '',
+                    phone:           a.phone || undefined,
+                    phone_extension: a.phoneExtension || undefined,
+                    email:           a.email || formData.email || 'no-email@ymd.com',
+                    is_default:      a.isMain ?? false,
+                    is_active:       true
+                };
+
+                // IMPORTANT: Only add customer_address_id if it's an UPDATE
+                // During CREATE, do NOT send any ID fields.
+                if (id && isRealId) {
+                    addr.customer_address_id = Number(a.id);
+                }
+
+                return addr;
+            });
 
             let response;
 
             if (id) {
                 // ===== UPDATE Payload =====
                 const updatePayload = {
-                    customer_code:          formData.customer_code, // Added this
+                    customer_code:          formData.customer_code,
                     customer_name:          formData.customer_name_th,
                     customer_nameeng:       formData.customer_name_en,
                     tax_id:                 formData.tax_id,
@@ -203,7 +221,7 @@ export function useCustomerForm({
                     website:                formData.website,
                     price_level_id:         formData.price_level_id ? Number(formData.price_level_id) : undefined,
                     is_active:              formData.is_active,
-                    addresses:              mappedAddresses, // Changed from customerAddresses
+                    addresses:              mappedAddresses,
                 };
                 response = await CustomerService.update(id, updatePayload as unknown as Partial<CustomerMaster>);
             } else {

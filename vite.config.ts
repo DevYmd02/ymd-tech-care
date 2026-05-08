@@ -67,34 +67,38 @@ export default defineConfig(({ mode }) => {
               // VENDOR CHUNKING STRATEGY - Optimized for ERP Scale
               // ============================================================
               
-              // 1. Core Framework & Visuals (Merged to prevent circular chunks)
+              // 1. Core Framework (React)
               if (
                 id.includes('react') || 
                 id.includes('react-dom') || 
-                id.includes('react-router') ||
-                id.includes('recharts')
+                id.includes('react-router')
               ) {
-                return 'vendor-main';
+                return 'vendor-react';
               }
               
-              // 2. Icons
+              // 2. Charts (Very Heavy)
+              if (id.includes('recharts')) {
+                return 'vendor-charts';
+              }
+              
+              // 3. Icons
               if (id.includes('lucide')) return 'vendor-icons';
               
-              // 3. Forms & Validation
+              // 4. Forms & Validation
               if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
                 return 'vendor-forms';
               }
 
-              // 4. Data Fetching & Table
+              // 5. Data Fetching & Table
               if (id.includes('@tanstack/react-query')) return 'vendor-query';
               if (id.includes('@tanstack/react-table')) return 'vendor-table';
 
-              // 5. Utilities
+              // 6. Utilities
               if (id.includes('axios') || id.includes('date-fns')) {
                 return 'vendor-utils';
               }
               
-              // 6. Other large libs
+              // 7. Other UI libs
               if (id.includes('sweetalert2') || id.includes('react-hot-toast')) {
                 return 'vendor-ui-extra';
               }
@@ -102,7 +106,7 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 500,
     },
     test: {
       globals: true,

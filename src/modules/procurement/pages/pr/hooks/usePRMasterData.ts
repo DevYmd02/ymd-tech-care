@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useWarehouses, useProjects, useTaxCodes, useCurrencies, useUnits } from '@/modules/master-data/hooks/useMasterData';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 import type { ItemListItem, CostCenter, Project, WarehouseListItem, UnitListItem, Currency } from '@/modules/master-data/types/master-data-types';
@@ -23,7 +23,7 @@ export const usePRMasterData = (enabled = true) => {
     // 2. Specialized Master Data
     const { data: costCentersRes, isLoading: isLoadingCC } = useQuery({
         queryKey: ['master-cost-centers'],
-        queryFn: MasterDataService.getCostCenters,
+        queryFn: () => MasterDataService.getCostCenters(),
         enabled
     });
 
@@ -38,10 +38,11 @@ export const usePRMasterData = (enabled = true) => {
     const [isSearchingProducts, setIsSearchingProducts] = useState(false);
 
     // Extraction Helper
-    const extractArray = <T>(res: any): T[] => {
-        if (Array.isArray(res)) return res;
-        if (res?.data && Array.isArray(res.data)) return res.data;
-        if (res?.items && Array.isArray(res.items)) return res.items;
+    const extractArray = <T>(res: unknown): T[] => {
+        if (Array.isArray(res)) return res as T[];
+        const r = res as { data?: T[]; items?: T[] } | null;
+        if (r?.data && Array.isArray(r.data)) return r.data;
+        if (r?.items && Array.isArray(r.items)) return r.items;
         return [];
     };
 
@@ -58,47 +59,56 @@ export const usePRMasterData = (enabled = true) => {
     const costCenters = useMemo(() => extractArray<CostCenter>(costCentersRes), [costCentersRes]);
     const projects = useMemo(() => extractArray<Project>(projectsRes), [projectsRes]);
     const masterItems = useMemo(() => extractArray<ItemListItem>(itemsRes), [itemsRes]);
-    const masterUnits = useMemo(() => extractArray<UnitListItem>(unitsRes), [unitsRes]);
+    const units = useMemo(() => extractArray<UnitListItem>(unitsRes), [unitsRes]);
     const currencies = useMemo(() => extractArray<Currency>(currenciesRes), [currenciesRes]);
 
     const purchaseTaxOptions = useMemo(() => {
         const taxArray = extractArray<TaxCode>(taxCodesRes);
-        const filtered = taxArray.filter((t: TaxCode) => {
-            if (t.is_active === undefined || t.is_active === null) return true;
-            if (typeof t.is_active === 'boolean') return t.is_active;
-            return String(t.is_active).toUpperCase() === 'Y' || String(t.is_active) === '1' || String(t.is_active).toLowerCase() === 'true';
-        });
-        return filtered.map((t: TaxCode) => ({
-            value: Number(t.tax_code_id || t.tax_id),
-            label: t.tax_code,
-            original: t
+        return taxArray.map(tax => ({
+            label: `${tax.tax_code} - ${tax.tax_name} (${tax.tax_rate}%)`,
+            value: String(tax.tax_code_id),
+            rate: Number(tax.tax_rate),
+            original: tax
         }));
     }, [taxCodesRes]);
 
+    const searchControllerRef = useRef<AbortController | null>(null);
     const searchProducts = useCallback(async (query: string, vendorId?: number | string) => {
+        if (searchControllerRef.current) {
+            searchControllerRef.current.abort();
+        }
+        searchControllerRef.current = new AbortController();
+
         try {
             setIsSearchingProducts(true);
-            const items = await MasterDataService.getItems(query, vendorId);
+            const items = await MasterDataService.getItems(query, vendorId, { signal: searchControllerRef.current.signal });
             setProducts(items);
-        } catch (err) {
+        } catch (err: unknown) {
+            if (err instanceof Error && err.name === 'AbortError') return;
             logger.error('[usePRMasterData] Failed to search products:', err);
         } finally {
             setIsSearchingProducts(false);
         }
     }, []);
 
+    useEffect(() => {
+        return () => {
+            searchControllerRef.current?.abort();
+            searchControllerRef.current = null;
+        };
+    }, []);
+
     return {
-        products,
         warehouses,
         costCenters,
         projects,
+        masterItems,
         purchaseTaxOptions,
         currencies,
-        masterItems,
-        masterUnits,
-        isLoading: isLoadingWH || isLoadingPrj || isLoadingTax || isLoadingUnits || isLoadingCurr || isLoadingCC || isLoadingItems,
+        masterUnits: units,
+        products,
         isSearchingProducts,
         searchProducts,
-        error: null
+        isLoading: isLoadingWH || isLoadingPrj || isLoadingTax || isLoadingUnits || isLoadingCurr || isLoadingCC || isLoadingItems
     };
 };

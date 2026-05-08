@@ -38,7 +38,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
     const { data: readyPRs = [], isLoading, isError } = useQuery({
         queryKey: ['pr-ready-for-po-triple', searchQuery],
         enabled: isOpen, // 🎯 Only run when modal is open to avoid duplicate queries and overhead
-        queryFn: async () => {
+        queryFn: async ({ signal }) => {
             try {
                 const trimmedQuery = searchQuery.trim();
                 const qcParams: QCListParams = { limit: 100 }; // 🎯 DRAFT DISCOVERY: Broad search
@@ -53,11 +53,11 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                 }
 
                 const [specializedData, allApprovedPRs, allCompletedQCs, targetedQCRes] = await Promise.all([
-                    QCService.getReadyForPO(),
-                    PRService.getList({ status: 'ALL' as any, limit: 100 }), // 🎯 Metadata Registry (No 'q' to bypass backend search bug)
-                    QCService.getList(qcParams),
+                    QCService.getReadyForPO({ signal }),
+                    PRService.getList({ status: 'ALL' as any, limit: 100 }, { signal }), // 🎯 Metadata Registry (No 'q' to bypass backend search bug)
+                    QCService.getList(qcParams, { signal }),
                     // 🎯 DIAGNOSTIC TRACE: Specifically look for the missing QC regardless of status
-                    trimmedQuery.startsWith('QC-') ? QCService.getList({ qc_no: trimmedQuery, limit: 10 }) : Promise.resolve(null)
+                    trimmedQuery.startsWith('QC-') ? QCService.getList({ qc_no: trimmedQuery, limit: 10 }, { signal }) : Promise.resolve(null)
                 ]);
 
                 const items1 = Array.isArray(specializedData) ? specializedData : [];
@@ -225,7 +225,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                 return mergedResult;
             } catch (err) {
                 logger.error('[DocumentSourceSelectorModal] Triple scan failed:', err);
-                return QCService.getReadyForPO();
+                return QCService.getReadyForPO({ signal });
             }
         },
     });
@@ -240,7 +240,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
     const vqQueries = useQueries({
         queries: winningVqIds.map(id => ({
             queryKey: ['vq-detail', id],
-            queryFn: () => VQService.getById(id),
+            queryFn: ({ signal }: { signal: AbortSignal }) => VQService.getById(id, { signal }),
             enabled: isOpen && !!id,
         }))
     });
@@ -263,7 +263,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
     const vendorQueries = useQueries({
         queries: winningVendorIds.map(id => ({
             queryKey: ['vendor-detail', id],
-            queryFn: () => VendorService.getById(id),
+            queryFn: ({ signal }: { signal: AbortSignal }) => VendorService.getById(id, { signal }),
             enabled: isOpen && !!id,
         }))
     });

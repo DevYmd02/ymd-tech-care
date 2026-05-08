@@ -5,6 +5,8 @@ import type { QCListParams, QCListResponse, CreateQCPayload, SubmitQCWinnerData,
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
 import type { RFQHeader } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils';
+import { sanitizePayload, cleanPayload } from '@/shared/utils/payload.utils';
+import { masterDataCache } from '@/shared/utils/master-data-cache';
 
 import type { SuccessResponse } from '@/shared/types/api.types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
@@ -16,6 +18,13 @@ const ENDPOINTS = {
   compare: (id: number) => `/qc/compare/${id}`,
   cancel:  (id: number) => `/qc/cancel/${id}`,
 };
+
+/**
+ * Whitelist for QC Header fields (DTO)
+ */
+const KNOWN_DTO_FIELDS = [
+  'rfq_id', 'winning_vq_id', 'remarks', 'pr_id', 'department_id', 'created_by'
+];
 
 /**
  * 🧹 Helper to clean params before API call
@@ -70,7 +79,14 @@ export const QCService = {
     }
 
     // 🎯 HYBRID PAGINATION: Always apply client-side slicing even for mock responses
-    const allItems = extractArrayFromResponse<QCListItem>(response);
+    const allItems = extractArrayFromResponse<QCListItem>(response).map(item => {
+      const dId = item.department_id || (item as any).dept_id || (item as any).dept_id;
+      const deptName = dId ? masterDataCache.getDepartmentName(Number(dId)) : '';
+      return {
+        ...item,
+        dept_division: (item.dept_division || (typeof deptName === 'string' ? deptName : '') || '') as string
+      };
+    });
     const page = 1;
     const limit = 20;
     return applyClientPagination<QCListItem>(allItems, page, limit, response.total);
@@ -81,9 +97,9 @@ export const QCService = {
     return await api.get<QCListItem>(ENDPOINTS.detail(id), config);
   },
 
-  getReadyForPO: async (): Promise<IReadyForPOPR[]> => {
+  getReadyForPO: async (config?: AxiosRequestConfig): Promise<IReadyForPOPR[]> => {
     logger.info('[QCService] Fetching PRs waiting for QC (Ready for PO)');
-    return await api.get<IReadyForPOPR[]>('/po/pr/waiting-for-qc');
+    return await api.get<IReadyForPOPR[]>('/po/pr/waiting-for-qc', config);
   },
 
   getWaitingForQC: async (): Promise<RFQHeader[]> => {
@@ -109,9 +125,17 @@ export const QCService = {
 
 
 
+  /**
+   * Helper to sanitize data using whitelist
+   */
+  sanitizeData(data: Record<string, unknown>): Record<string, unknown> {
+    return cleanPayload(sanitizePayload(data, KNOWN_DTO_FIELDS)) as Record<string, unknown>;
+  },
+
   create: async (data: CreateQCPayload): Promise<{ qc_id: number }> => {
     logger.info('[QCService] Creating QC with 5-field payload', data);
-    return await api.post<{ qc_id: number }>(ENDPOINTS.create, data);
+    const sanitized = QCService.sanitizeData(data as unknown as Record<string, unknown>);
+    return await api.post<{ qc_id: number }>(ENDPOINTS.create, sanitized);
   },
 
   compare: async (id: number): Promise<{ success: boolean }> => {
@@ -229,7 +253,8 @@ export const QCService = {
             const key = pr.pr_no || `ID_${pr.pr_id}`;
             const isReadyByAPI = items1.some(i => (i.pr_no || `ID_${i.pr_id}`) === key);
             if (isReadyByAPI) return true;
-            return pr.qcHeaders?.some(h => (h.raw_status || h.status) === 'DRAFT');
+            const qcs = pr.qcHeaders || [];
+            return qcs.some(h => (h.raw_status || h.status) === 'DRAFT');
         });
 
         logger.info(`✅ [QCService] Triple-Scan Success: Found ${mergedResult.length} Advanced Ready PRs`);

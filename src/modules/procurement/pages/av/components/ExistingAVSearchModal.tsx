@@ -5,18 +5,19 @@ import { Search, X, Loader2, FileText, CheckCircle, Clock } from 'lucide-react';
 import { AVService } from '../../../services/av.service';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PRStatusBadge } from '@ui';
+import type { ApprovalHeader } from '../../../types/av-types';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   prId: number;
-  onSelect: (av: any) => void;
+  onSelect: (av: ApprovalHeader) => void;
 }
 
 export const ExistingAVSearchModal: React.FC<Props> = ({ isOpen, onClose, prId, onSelect }) => {
   const { data, isLoading } = useQuery({
     queryKey: ['existing-avs', prId],
-    queryFn: () => AVService.getApprovalList({ prId: prId }),
+    queryFn: () => AVService.getApprovalList({ pr_id: prId }),
     enabled: isOpen && !!prId,
   });
 
@@ -65,7 +66,7 @@ export const ExistingAVSearchModal: React.FC<Props> = ({ isOpen, onClose, prId, 
             </div>
           ) : (
             <div className="space-y-2">
-              {records.map((av: any) => (
+              {records.map((av: ApprovalHeader) => (
                 <button
                   key={av.approval_id}
                   onClick={() => {
@@ -80,7 +81,7 @@ export const ExistingAVSearchModal: React.FC<Props> = ({ isOpen, onClose, prId, 
                     </div>
                     <div className="flex flex-col gap-0.5">
                       <span className="font-bold text-gray-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors">
-                        {av.approval_no || av.av_no}
+                        {av.approval_no}
                       </span>
                       <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 italic font-medium">
                         <Clock size={12} className="opacity-70" />

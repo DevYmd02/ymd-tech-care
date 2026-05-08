@@ -9,8 +9,9 @@ import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { createColumnHelper } from '@tanstack/react-table';
 
-import { AVService } from '../../services/av.service';
+import { AVService } from '@procurement/services/av.service';
 import type { PRListParams } from '@/modules/procurement/services/pr.service';
+import type { ApprovalHeader } from '@/modules/procurement/types/av-types';
 
 const AV_STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
@@ -19,6 +20,51 @@ const AV_STATUS_OPTIONS = [
     { value: 'APPROVED', label: 'อนุมัติแล้ว' },
     { value: 'REJECTED', label: 'ไม่อนุมัติ' },
 ];
+
+/**
+ * Merged Record Type for the AV List Table.
+ * Combines fields from both PRHeader (Pending PRs) and ApprovalHeader (History).
+ */
+export interface AVCombinedRecord {
+    row_key: string;
+    pr_id: number;
+    pr_no: string;
+    status: string;
+    
+    // PR Header Fields
+    pr_date?: string;
+    requester_name?: string;
+    employee_name?: string;
+    created_by_name?: string;
+    purpose?: string;
+    remark?: string;
+    pr_base_total_amount?: string | number;
+    total_amount?: number;
+
+    // Approval Header Fields
+    approval_id?: number;
+    approval_no?: string;
+    av_no?: string;
+    approval_date?: string;
+    approval_emp_id?: number;
+    approval_emp_name?: string;
+    remarks?: string;
+    base_total_amount?: string | number;
+    quote_total_amount?: string | number;
+    reject_reason?: string;
+    created_at?: string;
+    updated_at?: string;
+    
+    // Custom UI fields
+    hasOtherAVs?: boolean;
+
+    // Nested relations
+    pr?: {
+        pr_no: string;
+        purpose?: string;
+        remark?: string;
+    };
+}
 
 export default function AVListPage() {
     // Force default status to PENDING for approvals
@@ -42,7 +88,7 @@ export default function AVListPage() {
     };
 
         const { data, isLoading, refetch } = useQuery({
-        queryKey: ['prs', apiFilters],
+        queryKey: ['av-list', apiFilters],
         queryFn: async () => {
 
             // ====================================================
@@ -65,14 +111,14 @@ export default function AVListPage() {
                 AVService.getPendingPRs({ limit: 1000, page: 1 })
             ]);
 
-            const pendingPRs: any[] = pendingRes || [];
-            const approvalRecords: any[] = approvalRes?.data || [];
-            const allPendingPRs: any[] = allPendingPRsRes?.data || allPendingPRsRes || [];
+            const pendingPRs = pendingRes || [];
+            const approvalRecords = approvalRes?.data || [];
+            const allPendingPRs = allPendingPRsRes?.data || allPendingPRsRes || [];
 
             // 🎯 NEW: Merged Set of IDs that are "Pending" in the main PR table
             const pendingPRIdSet = new Set<number>([
-                ...pendingPRs.map((p: any) => Number(p.pr_id)),
-                ...allPendingPRs.map((p: any) => Number(p.pr_id))
+                ...pendingPRs.map((p) => Number(p.pr_id)),
+                ...allPendingPRs.map((p) => Number(p.pr_id))
             ]);
 
 
@@ -80,7 +126,7 @@ export default function AVListPage() {
 
             // Build a map of pr_id -> approval record for fast lookup
             // This is the GROUND TRUTH of what has been processed
-            const approvalByPRId = new Map<number, any>();
+            const approvalByPRId = new Map<number, ApprovalHeader>();
             for (const rec of approvalRecords) {
                 const prId = Number(rec.pr_id);
                 if (!isNaN(prId)) {
@@ -107,22 +153,22 @@ export default function AVListPage() {
 
             // Pending items: all PRs currently awaiting action
             // Exclude truly handled ones (rejected or fully approved AFTER checking pending list)
-            const trulyPendingPRs = pendingPRs
-                .filter((p: any) => {
+            const trulyPendingPRs: AVCombinedRecord[] = pendingPRs
+                .filter((p) => {
                     const prId = Number(p.pr_id);
                     return !fullyHandledPRIds.has(prId); // Still pending or partial
                 })
-                .map((p: any) => ({
+                .map((p) => ({
                     ...p,
-                    status: (p.av_no || p.approval_no) ? 'PARTIAL' : 'PENDING',
+                    status: (p.av_no || (p as unknown as Record<string, unknown>).approval_no) ? 'PARTIAL' : 'PENDING',
                     row_key: `pending-${p.pr_id}`,
-                    pr_no: p.pr_no,
+                    pr_no: p.pr_no || '',
                 }));
 
             // Approval records: all completed/partial approval entries
             // 🎯 FIX: Filter out stale REJECTED/APPROVED records if the PR is now PENDING again
-            const approvalItems = approvalRecords
-                .filter((a: any) => {
+            const approvalItems: AVCombinedRecord[] = approvalRecords
+                .filter((a) => {
                     const prId = Number(a.pr_id);
                     const s = (a.status || '').toUpperCase();
                     
@@ -136,16 +182,19 @@ export default function AVListPage() {
                     if (pendingPRIdSet.has(prId) && (s === 'REJECTED' || s === 'APPROVED')) return false;
                     return true;
                 })
-                .map((a: any) => ({
-                    ...a,
-                    pr_no: a.pr?.pr_no || a.pr_no || '',
-                    row_key: `approved-${a.approval_id || a.pr_id}`,
-                }));
+                .map((a) => {
+                    const id = a.approval_id || (a as unknown as Record<string, unknown>).id as number;
+                    return {
+                        ...a,
+                        pr_no: a.pr?.pr_no || (a as unknown as Record<string, unknown>).pr_no as string || '',
+                        row_key: `approved-${id || a.pr_id || Math.random()}`,
+                    } as AVCombinedRecord;
+                });
 
             // ====================================================
             // 🎯 CLIENT-SIDE FILTER: Search & Status filter
             // ====================================================
-            const filterItem = (item: any): boolean => {
+            const filterItem = (item: AVCombinedRecord): boolean => {
                 // PR No search
                 const prNo = (item.pr_no || '').toLowerCase();
                 const filterPrNo = (apiFilters.pr_no || '').toLowerCase();
@@ -164,7 +213,7 @@ export default function AVListPage() {
                 return true;
             };
 
-            let combined: any[];
+            let combined: AVCombinedRecord[];
 
             const selectedStatus = filters.status;
             const hasAvSearch = !!apiFilters.approval_no;
@@ -174,13 +223,13 @@ export default function AVListPage() {
                 combined = trulyPendingPRs;
             } else if (selectedStatus === 'PARTIAL' && !hasAvSearch) {
                 // Show partially approved items: from both pending list (with PARTIAL status) and approval records
-                const partialFromPending = trulyPendingPRs.filter((p: any) => p.status === 'PARTIAL');
-                const partialFromApproval = approvalItems.filter((a: any) => a.status?.toUpperCase() === 'PARTIAL');
+                const partialFromPending = trulyPendingPRs.filter((p: AVCombinedRecord) => p.status === 'PARTIAL');
+                const partialFromApproval = approvalItems.filter((a: AVCombinedRecord) => a.status?.toUpperCase() === 'PARTIAL');
                 combined = [...partialFromPending, ...partialFromApproval];
             } else if (selectedStatus === 'APPROVED' && !hasAvSearch) {
-                combined = approvalItems.filter((a: any) => a.status?.toUpperCase() === 'APPROVED');
+                combined = approvalItems.filter((a: AVCombinedRecord) => a.status?.toUpperCase() === 'APPROVED');
             } else if (selectedStatus === 'REJECTED' && !hasAvSearch) {
-                combined = approvalItems.filter((a: any) => a.status?.toUpperCase() === 'REJECTED');
+                combined = approvalItems.filter((a: AVCombinedRecord) => a.status?.toUpperCase() === 'REJECTED');
             } else {
                 // ALL or searching specifically: merge — pending (not handled) + all approval records
                 combined = [...trulyPendingPRs, ...approvalItems];
@@ -189,16 +238,26 @@ export default function AVListPage() {
             // Apply text/date search filter
             const filtered = combined.filter(filterItem);
 
+            // 🎯 FINAL DEDUPLICATION: Ensure no duplicate row_keys enter the table
+            const finalDeduplicated: AVCombinedRecord[] = [];
+            const seenKeys = new Set<string>();
+            filtered.forEach(item => {
+                if (!seenKeys.has(item.row_key)) {
+                    seenKeys.add(item.row_key);
+                    finalDeduplicated.push(item);
+                }
+            });
+
             // Paginate client-side
             const startIndex = (filters.page - 1) * filters.limit;
-            const paginatedData = filtered.slice(startIndex, startIndex + filters.limit);
+            const paginatedData = finalDeduplicated.slice(startIndex, startIndex + filters.limit);
 
             return {
                 data: paginatedData,
-                total: filtered.length,
+                total: finalDeduplicated.length,
                 page: filters.page,
                 limit: filters.limit,
-                totalPages: Math.ceil(filtered.length / filters.limit),
+                totalPages: Math.ceil(finalDeduplicated.length / filters.limit),
             };
         },
         placeholderData: keepPreviousData,
@@ -208,15 +267,17 @@ export default function AVListPage() {
 
     const [isAVModalOpen, setIsAVModalOpen] = useState(false);
     const [selectedPRId, setSelectedPRId] = useState<number | undefined>(undefined);
-    const [selectedApproval, setSelectedApproval] = useState<any | undefined>(undefined);
+    const [selectedApproval, setSelectedApproval] = useState<AVCombinedRecord | undefined>(undefined);
+    const [isReadOnly, setIsReadOnly] = useState(false);
 
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [historyPrId, setHistoryPrId] = useState<number | undefined>(undefined);
     const [historyPrNo, setHistoryPrNo] = useState<string | undefined>(undefined);
 
-    const handleApprove = useCallback((id: number, approvalItem?: any) => {
+    const handleApprove = useCallback((id: number, approvalItem?: AVCombinedRecord, readOnly = false) => {
         setSelectedPRId(id);
         setSelectedApproval(approvalItem);
+        setIsReadOnly(readOnly);
         setIsAVModalOpen(true);
     }, []);
 
@@ -230,13 +291,14 @@ export default function AVListPage() {
         setIsAVModalOpen(false);
         setSelectedPRId(undefined);
         setSelectedApproval(undefined);
+        setIsReadOnly(false);
     };
 
     const handleAVSuccess = () => {
         refetch();
     };
 
-    const columnHelper = createColumnHelper<any>();
+    const columnHelper = createColumnHelper<AVCombinedRecord>();
     
     const columns = useMemo(() => [
         columnHelper.display({
@@ -246,7 +308,7 @@ export default function AVListPage() {
             size: 50,
             enableSorting: false,
         }),
-        columnHelper.accessor(row => (row as any).approval_no || '-', {
+        columnHelper.accessor(row => row.approval_no || '-', {
             id: 'av_no',
             header: 'เลขที่อนุมัติ AV',
             cell: (info) => {
@@ -263,12 +325,12 @@ export default function AVListPage() {
             size: 140,
             enableSorting: false,
         }),
-        columnHelper.accessor(row => (row as any).approval_date || '-', {
+        columnHelper.accessor(row => row.approval_date || '-', {
             id: 'pr_date_no',
             header: 'เอกสาร / วันที่',
             cell: (info) => {
                 const row = info.row.original;
-                const prNo = (row as any).pr?.pr_no || (row as any).pr_no || '-';
+                const prNo = row.pr?.pr_no || row.pr_no || '-';
                 return (
                     <div className="flex flex-col py-2">
                         <span className="font-bold whitespace-nowrap text-base leading-tight text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" onClick={() => handleViewHistory(row.pr_id, prNo)}>
@@ -276,7 +338,7 @@ export default function AVListPage() {
                         </span>
                         <div className="flex flex-col mt-1">
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                                {formatThaiDate((row as any).approval_date || (row as any).pr_date)}
+                                {formatThaiDate(row.approval_date || row.pr_date)}
                             </span>
                         </div>
                     </div>
@@ -285,7 +347,7 @@ export default function AVListPage() {
             size: 160,
             enableSorting: false,
         }),
-        columnHelper.accessor(row => (row as any).remarks || row.purpose || row.remark || '', {
+        columnHelper.accessor(row => row.remarks || row.purpose || row.remark || row.pr?.purpose || row.pr?.remark || '', {
             id: 'purpose',
             header: 'รายละเอียด',
             cell: (info) => (
@@ -296,11 +358,11 @@ export default function AVListPage() {
             size: 220,
             enableSorting: false,
         }),
-        columnHelper.accessor(row => (row as any).approval_emp_name || row.requester_name || '', {
+        columnHelper.accessor(row => row.approval_emp_name || row.requester_name || '', {
             header: 'ผู้จัดทำ',
             cell: (info) => {
                 const row = info.row.original;
-                const reqName = (row as any).approval_emp_name || (row as any).requester_name || (row as any).created_by_name || (row as any).employee_name;
+                const reqName = row.approval_emp_name || row.requester_name || row.created_by_name || row.employee_name;
                 const displayReq = reqName ? String(reqName) : 'ไม่ระบุผู้ขอ';
                 return (
                     <div className="flex flex-col py-2 gap-0.5">
@@ -313,7 +375,7 @@ export default function AVListPage() {
             size: 140,
             enableSorting: false,
         }),
-        columnHelper.accessor(row => Number((row as any).base_total_amount ?? (row as any).pr_base_total_amount ?? (row as any).total_amount ?? (row as any).quote_total_amount ?? 0), {
+        columnHelper.accessor(row => Number(row.base_total_amount ?? row.pr_base_total_amount ?? row.total_amount ?? row.quote_total_amount ?? 0), {
             id: 'total_amount',
             header: () => <span className="whitespace-nowrap">ยอดรวม (บาท)</span>,
             meta: { align: 'right' },
@@ -342,7 +404,10 @@ export default function AVListPage() {
             cell: ({ row }) => (
                 <div className="flex justify-center items-center gap-2 w-full h-full py-2 min-w-[100px]">
                     <button
-                        onClick={() => handleApprove(row.original.pr_id, row.original)}
+                        onClick={() => {
+                            const isPending = row.original.row_key?.startsWith('pending-');
+                            handleApprove(row.original.pr_id, row.original, !isPending);
+                        }}
                         className={`p-1.5 rounded-md transition-colors flex items-center justify-center ${
                             row.original.row_key?.startsWith('pending-')
                             ? "text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-300"
@@ -481,16 +546,16 @@ export default function AVListPage() {
                     >
                         {data?.data.map((item) => (
                             <MobileListCard
-                                key={(item as any).row_key}
-                                title={(item as any).pr?.pr_no || (item as any).pr_no || '-'}
-                                subtitle={formatThaiDate((item as any).approval_date || (item as any).pr_date)}
+                                key={item.row_key}
+                                title={item.pr?.pr_no || item.pr_no || '-'}
+                                subtitle={formatThaiDate(item.approval_date || item.pr_date)}
                                 statusBadge={<PRStatusBadge status={item.status} />}
                                 details={[
                                     {
                                         label: 'เลขที่อนุมัติ AV:',
-                                        value: (item as any).approval_no || (item as any).av_no ? (
+                                        value: item.approval_no || item.av_no ? (
                                             <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                                                {(item as any).approval_no || (item as any).av_no}
+                                                {item.approval_no || item.av_no}
                                             </span>
                                         ) : (
                                             <span className="text-gray-400 dark:text-gray-500">-</span>
@@ -498,19 +563,19 @@ export default function AVListPage() {
                                     },
                                     {
                                         label: 'ผู้ขอ:',
-                                        value: (item as any).approval_emp_name || (item as any).requester_name || 'ไม่ระบุผู้ขอ',
+                                        value: item.approval_emp_name || item.requester_name || 'ไม่ระบุผู้ขอ',
                                     }
                                 ]}
                                 amountLabel="ยอดรวม"
                                 amountValue={
                                     <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
-                                        {Number((item as any).quote_total_amount ?? (item as any).base_total_amount ?? (item as any).total_amount ?? (item as any).pr_base_total_amount ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                        {Number(item.quote_total_amount ?? item.base_total_amount ?? item.total_amount ?? item.pr_base_total_amount ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                                     </span>
                                 }
                                 actions={
                                     <div className="flex gap-2 w-full">
                                         <button
-                                            onClick={() => handleApprove(item.pr_id, item)}
+                                            onClick={() => handleApprove(item.pr_id, item, item.status !== 'PENDING' && item.status !== 'PARTIAL')}
                                             className={`flex-1 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm ${
                                                 item.status === 'PENDING'
                                                 ? "bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -527,7 +592,7 @@ export default function AVListPage() {
                                             <button
                                                 onClick={() => {
                                                     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                                    const approvalId = (item as any).approval_id;
+                                                    const approvalId = item.approval_id;
                                                     if (approvalId) {
                                                         window.open(`${apiUrl}/pr-approval/${approvalId}/pdf`, '_blank');
                                                     }
@@ -552,13 +617,14 @@ export default function AVListPage() {
                         onClose={handleCloseAVModal}
                         id={selectedPRId}
                         approvalItem={{
-                            ...(selectedApproval || {}),
-                            hasOtherAVs: (data?.data || []).some((item: any) => 
+                            ...selectedApproval,
+                            hasOtherAVs: (data?.data || []).some((item: AVCombinedRecord) => 
                                 item.pr_id === selectedPRId && 
                                 !!(item.approval_no || item.av_no)
                             )
-                        }}
+                        } as AVCombinedRecord}
                         onSuccess={handleAVSuccess}
+                        readOnly={isReadOnly}
                     />
                 </ErrorBoundary>
             )}

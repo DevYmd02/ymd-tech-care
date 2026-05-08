@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useForm, useFieldArray, useWatch, type Resolver, type FieldErrors } from 'react-hook-form';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,7 +20,7 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 import type { VQListItem, VQStatus, QuotationLine, QuotationHeader } from '@/modules/procurement/types/vq-types';
 import { useVQMasterData } from './useVQMasterData';
 import { calculatePricingSummary, parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
-import { unwrapResponseData, extractLinesArray } from '@/shared/utils/apiUtils';
+import { extractLinesArray } from '@/shared/utils/apiUtils';
 
 import type { VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
 
@@ -123,7 +123,8 @@ export const useVQForm = (
   const { purchaseTaxOptions, currencyOptions, isLoading: isMasterLoading } = useVQMasterData();
 
   const [availableVendors, setAvailableVendors] = useState<AvailableVendor[]>([]);
-  const hasInitialized = React.useRef(false);
+  const hasInitialized = useRef(false);
+  const rfqAbortControllerRef = useRef<AbortController | null>(null);
 
   const formMethods = useForm<QuotationFormData>({
     resolver: zodResolver(QuotationHeaderSchema) as Resolver<QuotationFormData>,
@@ -267,6 +268,8 @@ export const useVQForm = (
   // Reset form when modal opens
   useEffect(() => {
     if (!isOpen) {
+        rfqAbortControllerRef.current?.abort();
+        rfqAbortControllerRef.current = null;
         hasInitialized.current = false;
         return;
     }
@@ -482,7 +485,7 @@ export const useVQForm = (
             MasterDataService.getItems().catch(() => []),
             VQService.getVQsByRfqNo(initialRFQ.rfq_no || '').catch(() => ({ data: [] }))
         ]).then(async ([rawRFQ, itemsRes, existingVQsRes]) => {
-            const fullRFQ = unwrapResponseData(rawRFQ);
+            const fullRFQ = rawRFQ;
             logger.debug('🎯 [useVQForm] RFQ Hydration Payload:', {
                 rfq_id: fullRFQ?.rfq_id,
                 pr_approval_id: fullRFQ?.pr_approval_id,
@@ -496,7 +499,7 @@ export const useVQForm = (
                 .map((v: any) => Number(v.vendor_id));
             
             // 🎯 Fallback Array Scanning
-            const apiLines = extractLinesArray(fullRFQ);
+            const apiLines = extractLinesArray<RFQLine>(fullRFQ);
             
             let mappedLines: QuotationLineFormData[] = [];
             
@@ -896,6 +899,13 @@ export const useVQForm = (
 
 
   const handleSelectRFQ = async (rfq: RFQHeader) => {
+    // 🛑 Abort previous request if still in flight
+    if (rfqAbortControllerRef.current) {
+        rfqAbortControllerRef.current.abort();
+    }
+    rfqAbortControllerRef.current = new AbortController();
+    const signal = rfqAbortControllerRef.current.signal;
+
     toast('กำลังดึงข้อมูลใบขอราคาสินค้า...', 'info');
     try {
       // 1. Clear Stale Vendor Data immediately
@@ -903,13 +913,13 @@ export const useVQForm = (
 
       // 2. Fetch concurrently using Promise.all
       const [rawRFQ, itemsRes, rfqVendorsRes, existingVQsRes] = await Promise.all([
-        RFQService.getById(rfq.rfq_id),
-        MasterDataService.getItems().catch(() => []),
-        VQService.getModalWaitingForRFQVendor(rfq.rfq_id).catch(() => ({ data: [] })),
-        VQService.getVQsByRfqNo(rfq.rfq_no || '').catch(() => ({ data: [] }))
+        RFQService.getById(rfq.rfq_id, { signal }),
+        MasterDataService.getItems(undefined, undefined, { signal }).catch(() => []),
+        VQService.getModalWaitingForRFQVendor(rfq.rfq_id, { signal }).catch(() => ({ data: [] })),
+        VQService.getVQsByRfqNo(rfq.rfq_no || '', { signal }).catch(() => ({ data: [] }))
       ]);
 
-      const fullRFQ = unwrapResponseData(rawRFQ);
+      const fullRFQ = rawRFQ;
       const masterItems = Array.isArray(itemsRes) ? itemsRes : [];
 
       const existingVendorIds = (existingVQsRes?.data || [])
@@ -933,7 +943,7 @@ export const useVQForm = (
       const vendorsWithDetails: any[] = await Promise.all(
           sentVendors.map(async (v: any) => {
               try {
-                  const details = await VendorService.getById(v.vendor_id);
+                  const details = await VendorService.getById(v.vendor_id, { signal });
                   return { ...details, ...v }; 
               } catch {
                   return v; 
@@ -953,7 +963,7 @@ export const useVQForm = (
       setAvailableVendors(mappedVendors);
 
       // 5. Normal processing (setting RFQ lines)
-      const apiLines: RFQLine[] = extractLinesArray(fullRFQ);
+      const apiLines: RFQLine[] = extractLinesArray<RFQLine>(fullRFQ);
 
       const mappedLines: QuotationLineFormData[] = apiLines.map((line: RFQLine) => {
           const matchedItem = masterItems.find((i) => Number(i.item_id) === Number(line.item_id));
@@ -1059,6 +1069,15 @@ export const useVQForm = (
     setValue('payment_terms', '', { shouldValidate: true });
     setValue('payment_term_days', 0, { shouldValidate: true });
   };
+
+  // Cleanup on Unmount
+  useEffect(() => {
+    return () => {
+        if (rfqAbortControllerRef.current) {
+            rfqAbortControllerRef.current.abort();
+        }
+    };
+  }, []);
 
   return {
     formMethods,

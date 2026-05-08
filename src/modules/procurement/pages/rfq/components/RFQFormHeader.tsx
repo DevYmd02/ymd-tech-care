@@ -181,7 +181,7 @@ export const RFQFormHeader: React.FC<RFQFormHeaderProps> = ({ branches, currenci
             {/* Row 4: เงื่อนไขการชำระ, เงื่อนไขส่งมอบ, หมายเหตุ */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                    <label className={labelStyle}>เงื่อไขการชำระ</label>
+                    <label className={labelStyle}>เงื่อนไขการชำระ</label>
                     <input
                         type="text"
                         placeholder="เช่น Net 30"

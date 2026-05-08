@@ -260,7 +260,7 @@ export default function PRListPage() {
             enableSorting: false,
         }),
         columnHelper.accessor('requester_name', {
-            header: 'ผู้จัดทำ',
+            header: 'ผู้ขอซื้อ',
             cell: (info) => {
                 const row = info.row.original;
 

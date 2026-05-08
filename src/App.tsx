@@ -16,6 +16,7 @@ import { Toaster } from 'react-hot-toast';
 
 import { placeholderRoutes, ROUTES } from '@/core/config/routes';
 import { AuthProvider, useAuth } from '@/core/auth/contexts/AuthContext';
+import { MasterDataProvider } from '@/core/providers/MasterDataProvider';
 import { ProtectedRoute } from '@/core/auth/components/ProtectedRoute';
 import { PlaceholderPage } from '@ui';
 import { ToastProvider } from '@ui';
@@ -401,7 +402,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <MasterDataProvider>
+        <AppContent />
+      </MasterDataProvider>
     </AuthProvider>
   );
 }

@@ -5,11 +5,14 @@
 
 import { Package, Plus, Trash2, Search } from 'lucide-react';
 import type { DeliveryLineValues } from '../schemas/delivery.schemas';
-import type { UnitListItem } from '@master-data/types/master-data-types';
+import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
+import type { Location } from '@master-data/inventory/types/inventory-master.types';
 
 interface DeliveryLineTableProps {
     lines: DeliveryLineValues[];
     uoms: UnitListItem[];
+    warehouses?: WarehouseListItem[];
+    locations?: Location[];
     onAddLine: () => void;
     onRemoveLine: (index: number) => void;
     onLineChange: (index: number, field: keyof DeliveryLineValues, value: string | number | undefined) => void;
@@ -37,6 +40,8 @@ const tdClass = 'px-1 py-2 align-middle';
 export function DeliveryLineTable({
     lines,
     uoms,
+    warehouses = [],
+    locations = [],
     onAddLine,
     onRemoveLine,
     onLineChange,
@@ -81,6 +86,8 @@ export function DeliveryLineTable({
                             <th className="sticky left-0 z-20 w-12 px-3 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider bg-slate-50 dark:bg-[#1a1f2e] border-b border-r border-slate-200 dark:border-slate-800 py-3">ลำดับ</th>
                             <th className={`${thClass} sticky left-12 z-20 bg-slate-50 dark:bg-[#1a1f2e] border-b border-r border-slate-200 dark:border-slate-800`} style={{ width: 220 }}>รหัสสินค้า</th>
                             <th className={`${thClass} border-b border-slate-200 dark:border-slate-800`} style={{ minWidth: 400 }}>ชื่อสินค้า</th>
+                            <th className={`${thClass} border-b border-slate-200 dark:border-slate-800`} style={{ width: 140 }}>จำนวนสั่ง</th>
+                            <th className={`${thClass} border-b border-slate-200 dark:border-slate-800`} style={{ width: 140 }}>ค้างจัดส่ง</th>
                             <th className={`${thClass} border-b border-slate-200 dark:border-slate-800`} style={{ width: 140 }}>จำนวนจัดส่ง</th>
                             <th className={`${thClass} border-b border-slate-200 dark:border-slate-800`} style={{ width: 140 }}>หน่วย</th>
                             <th className={`${thClass} border-b border-slate-200 dark:border-slate-800`} style={{ width: 200 }}>คลังสินค้า</th>
@@ -137,6 +144,28 @@ export function DeliveryLineTable({
                                     />
                                 </td>
 
+                                {/* จำนวนสั่ง */}
+                                <td className={`${tdClass} border-b border-slate-100 dark:border-slate-800`}>
+                                    <input
+                                        type="number"
+                                        value={line.qty_ordered || ''}
+                                        readOnly
+                                        className={`${cellNumberClass} bg-slate-50 dark:bg-slate-800/40 text-slate-500 dark:text-slate-400`}
+                                        placeholder="0"
+                                    />
+                                </td>
+
+                                {/* ค้างจัดส่ง */}
+                                <td className={`${tdClass} border-b border-slate-100 dark:border-slate-800`}>
+                                    <input
+                                        type="number"
+                                        value={Math.max(0, (Number(line.remaining_qty) || 0) - (Number(line.qty_shipped) || 0))}
+                                        readOnly
+                                        className={`${cellNumberClass} bg-amber-50/30 dark:bg-amber-900/10 text-amber-600 dark:text-amber-400 font-bold`}
+                                        placeholder="0"
+                                    />
+                                </td>
+
                                 {/* จำนวนจัดส่ง */}
                                 <td className={`${tdClass} border-b border-slate-100 dark:border-slate-800`}>
                                     <input
@@ -181,12 +210,25 @@ export function DeliveryLineTable({
 
                                 {/* คลังสินค้า */}
                                 <td className={`${tdClass} border-b border-slate-100 dark:border-slate-800`}>
-                                    <div 
+                                    <div
                                         className={`${cellInputClass} flex items-center justify-between cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 truncate`}
                                         onClick={() => !isViewOnly && onSearchWarehouse(index)}
                                     >
-                                        <span className={line.warehouse_id ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500 italic'}>
-                                            {line.warehouse_id || 'คลังสินค้า'}
+                                        <span
+                                            className={
+                                                line.warehouse_id
+                                                    ? 'text-slate-700 dark:text-slate-200'
+                                                    : 'text-slate-400 dark:text-slate-500 italic'
+                                            }
+                                        >
+                                            {(() => {
+                                                if (line.warehouse_name) return line.warehouse_name;
+                                                if (!line.warehouse_id) return 'คลังสินค้า';
+                                                const wh = warehouses.find(
+                                                    (w: WarehouseListItem) => String(w.warehouse_id || w.id) === String(line.warehouse_id)
+                                                );
+                                                return wh ? (wh.warehouse_name || wh.warehouse_code || String(line.warehouse_id)) : String(line.warehouse_id);
+                                            })()}
                                         </span>
                                         <Search size={12} className="text-slate-400 dark:text-slate-500" />
                                     </div>
@@ -194,12 +236,25 @@ export function DeliveryLineTable({
 
                                 {/* ที่เก็บ */}
                                 <td className={`${tdClass} border-b border-slate-100 dark:border-slate-800`}>
-                                    <div 
+                                    <div
                                         className={`${cellInputClass} flex items-center justify-between cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 truncate`}
                                         onClick={() => !isViewOnly && onSearchLocation(index)}
                                     >
-                                        <span className={line.location_id ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500 italic'}>
-                                            {line.location_id || 'ที่เก็บ'}
+                                        <span
+                                            className={
+                                                line.location_id
+                                                    ? 'text-slate-700 dark:text-slate-200'
+                                                    : 'text-slate-400 dark:text-slate-500 italic'
+                                            }
+                                        >
+                                            {(() => {
+                                                if (line.location_name) return line.location_name;
+                                                if (!line.location_id) return 'ที่เก็บ';
+                                                const loc = locations.find(
+                                                    (l: Location) => String(l.location_id || l.id) === String(line.location_id)
+                                                );
+                                                return loc ? (loc.name_th || loc.code || String(line.location_id)) : String(line.location_id);
+                                            })()}
                                         </span>
                                         <Search size={12} className="text-slate-400 dark:text-slate-500" />
                                     </div>

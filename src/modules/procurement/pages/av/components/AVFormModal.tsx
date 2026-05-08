@@ -7,11 +7,13 @@ import { AVFormLines } from './AVFormLines';
 import { AVFormSummary } from './AVFormSummary';
 import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout';
 import { SharedRemarksTab } from '@/shared/components/forms/SharedRemarksTab';
-import { useAVForm } from '../hooks/useAVForm';
+import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
+import { useAVForm } from '@procurement/pages/av/hooks/useAVForm';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
 import { PendingPRSearchModal } from './PendingPRSearchModal';
 import { ExistingAVSearchModal } from './ExistingAVSearchModal';
 import { ApprovalHistoryModal } from '@/modules/procurement/shared/components/ApprovalHistoryModal';
+import type { ApprovalDetail } from '@procurement/types/av-types';
 
 const SHIPPING_OPTIONS = [
   { label: 'รถยนต์', value: 'Car' },
@@ -23,10 +25,11 @@ interface Props {
   onClose: () => void;
   id?: number;
   onSuccess?: () => void;
-  approvalItem?: any;
+  approvalItem?: Partial<ApprovalDetail> & { hasOtherAVs?: boolean };
+  readOnly?: boolean;
 }
 
-export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, approvalItem }) => {
+export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, approvalItem, readOnly: propReadOnly }) => {
   const {
     isSubmitting,
     costCenters, projects, purchaseTaxOptions, currencies,
@@ -54,7 +57,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
 
   const cardClass = 'bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-sm overflow-hidden';
 
-  const readOnly = true;
+  const readOnly = propReadOnly ?? false;
 
   // Date Formatting Helpers
   const formatDisplayDate = (val?: string) => {
@@ -106,7 +109,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
             <div className="flex items-center gap-2">
                 <button type="button" onClick={onClose} disabled={isSubmitting || isRejecting} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">ปิด</button>
 
-                {activeId && (!approvalItem || !approvalItem.status || approvalItem.status === 'PENDING' || approvalItem.status === 'PARTIAL') && (
+                {activeId && !readOnly && (!approvalItem || !approvalItem.status || approvalItem.status === 'PENDING' || approvalItem.status === 'PARTIAL') && (
                   <>
                     <button 
                         type="button" 
@@ -251,7 +254,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
                                 className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 cursor-not-allowed"
                               >
                                 <option value="">เลือกภาษี</option>
-                                {purchaseTaxOptions?.map((tax: any) => (
+                                {purchaseTaxOptions?.map((tax) => (
                                   <option key={tax.value} value={tax.value}>
                                     {tax.label}
                                   </option>
@@ -276,19 +279,26 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
                     <div className="md:col-span-2">
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">หมายเหตุ</label>
                         <input 
-                            {...register('reject_reason' as any)}
+                            {...register('reject_reason')}
                             type="text"
-                            placeholder="ระบุเหตุผล... (กรณีไม่อนุมัติ)"
-                            className={`w-full h-9 px-3 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white ${errors?.reject_reason ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300 dark:border-gray-600'}`}
+                            readOnly={readOnly}
+                            className={`w-full h-9 px-3 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white ${readOnly ? 'bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed italic' : ''} ${errors?.reject_reason ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300 dark:border-gray-600'}`}
                         />
-                        {errors?.reject_reason && <p className="text-red-500 text-[10px] mt-1">{(errors.reject_reason as any).message}</p>}
+                        {errors?.reject_reason && <p className="text-red-500 text-[10px] mt-1">{errors.reject_reason.message}</p>}
                     </div>
                 </div>
             </div>
 
-            {/* Currency & Exchange Rate Section */}
-            <div className={`${cardClass} p-3`}>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+            {/* Multicurrency Section */}
+            <div className={`${cardClass} p-0`}>
+                <MulticurrencyWrapper
+                    control={control}
+                    name="isMulticurrency"
+                    label="ระบุสกุลเงินต่างประเทศ (Multicurrency)"
+                    disabled={true}
+                    alwaysVisible={!!id}
+                >
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start px-3 pb-3">
                     <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">วันที่อัตราแลกเปลี่ยน</label>
                         <Controller
@@ -321,7 +331,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
                                     className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white cursor-not-allowed"
                                 >
                                     <option value="">เลือกสกุลเงิน</option>
-                                    {currencies?.map((c: any) => (
+                                    {currencies?.map((c) => (
                                       <option key={c.currency_id} value={c.currency_code}>{c.currency_code} - {c.name_th}</option>
                                     ))}
                                 </select>
@@ -341,7 +351,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
                                     className="w-full h-9 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white cursor-not-allowed"
                                 >
                                     <option value="">เลือกสกุลเงิน</option>
-                                    {currencies?.map((c: any) => (
+                                    {currencies?.map((c) => (
                                       <option key={c.currency_id} value={c.currency_code}>{c.currency_code} - {c.name_th}</option>
                                     ))}
                                 </select>
@@ -370,12 +380,13 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
                         )}
                     </div>
                 </div>
+                </MulticurrencyWrapper>
             </div>
 
             <AVFormLines 
-                lines={lines as any}
+                lines={lines}
                 updateLine={updateLine}
-                readOnly={false}
+                readOnly={readOnly}
             />
 
             <AVFormSummary />

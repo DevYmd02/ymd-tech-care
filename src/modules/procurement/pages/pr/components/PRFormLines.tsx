@@ -3,6 +3,7 @@ import { useFormContext, Controller } from 'react-hook-form';
 import { FileBox, Eraser, Plus, Trash2, Search, AlertTriangle } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
+import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
 
 interface PRFormLinesProps {
     lines: FieldArrayWithId<PRFormData, "lines", "id">[];
@@ -15,7 +16,7 @@ interface PRFormLinesProps {
     openWarehouseSearch: (index: number) => void;
     openLocationSearch: (index: number) => void;
     readOnly?: boolean;
-    masterUnits?: any[];
+    masterUnits?: UnitListItem[];
 }
 
 export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
@@ -171,7 +172,7 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                             control={control}
                                             render={({ field }) => {
                                                 // Dropdown must show ALL system units unconditionally for flexible select
-                                                const options = masterUnits.map((u: any) => ({ 
+                                                const options = masterUnits.map((u: UnitListItem) => ({ 
                                                     id: Number(u.uom_id || u.unit_id), 
                                                     name: u.uom_name || u.unit_name 
                                                 }));
@@ -190,12 +191,12 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                                         onChange={(e) => {
                                                             const selectedId = e.target.value ? Number(e.target.value) : undefined;
                                                             field.onChange(selectedId);
-                                                            const selectedName = options.find((o: any) => Number(o.id) === selectedId)?.name || '';
+                                                            const selectedName = options.find((o) => Number(o.id) === selectedId)?.name || '';
                                                             setValue(`lines.${index}.uom`, selectedName);
                                                         }}
                                                     >
                                                         <option value="">- หน่วย -</option>
-                                                        {options.map((opt: any) => (
+                                                        {options.map((opt) => (
                                                             <option key={`${opt.id}-${index}`} value={opt.id}>{opt.name}</option>
                                                         ))}
                                                     </select>

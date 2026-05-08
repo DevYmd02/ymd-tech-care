@@ -28,6 +28,20 @@ export interface ApprovalHeader {
   };
 }
 
+export interface ApprovalLine {
+  id: number;
+  approval_id: number;
+  pr_line_id: number;
+  approved_qty: string | number;
+  remarks?: string;
+  approval_date: string;
+}
+
+export interface ApprovalDetail extends ApprovalHeader {
+  pr_approval_lines?: ApprovalLine[];
+  prApprovalLines?: ApprovalLine[];
+}
+
 export interface ApprovalListResponse {
   data: ApprovalHeader[];
   total: number;
@@ -38,7 +52,7 @@ export interface ApprovalListResponse {
 
 export interface ApproveExpensePayload {
   pr_id: number;
-  status: 'APPROVED' | 'REJECTED';
+  status: 'APPROVED' | 'PARTIAL' | 'REJECTED';
   base_currency_code?: string;
   quote_currency_code?: string;
   exchange_rate?: number;

@@ -130,7 +130,7 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({ isOpen, 
 
     const { data: response, isLoading } = useQuery({
         queryKey: ['items-lookup', debouncedSearch],
-        queryFn: () => ItemMasterService.getAll({ q: debouncedSearch, limit: 20 }),
+        queryFn: ({ signal }) => ItemMasterService.getAll({ q: debouncedSearch, limit: 20 }, { signal }),
         enabled: isOpen,
         staleTime: 1000 * 60 * 5, // 5 minutes cache
     });

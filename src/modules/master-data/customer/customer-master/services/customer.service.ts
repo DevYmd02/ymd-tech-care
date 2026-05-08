@@ -1,4 +1,5 @@
 import api from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import type { TableFilters } from '@/shared/hooks/useTableFilters';
 import type { 
   CustomerMaster, 
@@ -12,9 +13,9 @@ import type { MasterDataListResponse, MasterDataResponse } from '@/shared/types/
 
 export const CustomerService = {
   /** Get Customer List (Main) */
-  getList: async (params?: Partial<TableFilters<CustomerStatus>>): Promise<MasterDataListResponse<CustomerMaster>> => {
+  getList: async (params?: Partial<TableFilters<CustomerStatus>>, config?: AxiosRequestConfig): Promise<MasterDataListResponse<CustomerMaster>> => {
     try {
-      const response = await api.get<unknown>('/customer-master', { params });
+      const response = await api.get<unknown>('/customer-master', { ...config, params });
       if (Array.isArray(response)) {
         return {
           data: response,
@@ -31,8 +32,8 @@ export const CustomerService = {
   },
 
   /** Get Business Types (Setup) */
-  getBusinessTypes: async (params?: Partial<TableFilters<string>>): Promise<MasterDataListResponse<CustomerBusinessType>> => {
-    const response = await api.get<unknown>('/customer-master/business-type', { params });
+  getBusinessTypes: async (params?: Partial<TableFilters<string>>, config?: AxiosRequestConfig): Promise<MasterDataListResponse<CustomerBusinessType>> => {
+    const response = await api.get<unknown>('/customer-master/business-type', { ...config, params });
     if (Array.isArray(response)) {
       return { data: response, total: response.length, page: 1, limit: response.length };
     }
@@ -40,8 +41,8 @@ export const CustomerService = {
   },
 
   /** Get Customer Groups (Setup) */
-  getCustomerGroups: async (params?: Partial<TableFilters<string>>): Promise<MasterDataListResponse<CustomerGroup>> => {
-    const response = await api.get<unknown>('/customer-master/group', { params });
+  getCustomerGroups: async (params?: Partial<TableFilters<string>>, config?: AxiosRequestConfig): Promise<MasterDataListResponse<CustomerGroup>> => {
+    const response = await api.get<unknown>('/customer-master/group', { ...config, params });
     if (Array.isArray(response)) {
       return { data: response, total: response.length, page: 1, limit: response.length };
     }
@@ -49,8 +50,8 @@ export const CustomerService = {
   },
 
   /** Get Billing Groups (Setup) */
-  getBillingGroups: async (params?: Partial<TableFilters<string>>): Promise<MasterDataListResponse<CustomerBillingGroup>> => {
-    const response = await api.get<unknown>('/customer-master/billing-group', { params });
+  getBillingGroups: async (params?: Partial<TableFilters<string>>, config?: AxiosRequestConfig): Promise<MasterDataListResponse<CustomerBillingGroup>> => {
+    const response = await api.get<unknown>('/customer-master/billing-group', { ...config, params });
     if (Array.isArray(response)) {
       return { data: response, total: response.length, page: 1, limit: response.length };
     }
@@ -58,9 +59,9 @@ export const CustomerService = {
   },
 
   /** Get Customer Detail */
-  getById: async (id: number): Promise<CustomerMaster | null> => {
+  getById: async (id: number, config?: AxiosRequestConfig): Promise<CustomerMaster | null> => {
     try {
-      return await api.get<CustomerMaster>(`/customer-master/${id}`);
+      return await api.get<CustomerMaster>(`/customer-master/${id}`, config);
     } catch (error) {
       logger.error('[CustomerService] getById error:', error);
       return null;

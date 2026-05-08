@@ -1,12 +1,15 @@
 import api, { USE_MOCK } from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import { logger } from '@/shared/utils';
 import { mockWarehouses } from '@/modules/master-data/mocks/masterDataMocks';
 import type { WarehouseListItem, WarehouseMaster, WarehouseCreateRequest, WarehouseUpdateRequest, BackendWarehouse } from '@/modules/master-data/types/master-data-types';
 import type { ListResponse } from '@/shared/types/api.types';
 import type { SuccessResponse } from '@/shared/types/api.types';
 
+import { normalizeListResponse, unwrapResponseData } from '@/shared/utils/apiUtils';
+
 export const WarehouseService = {
-  getAll: async (params?: any): Promise<ListResponse<WarehouseListItem>> => {
+  getAll: async (params?: unknown, config?: AxiosRequestConfig): Promise<ListResponse<WarehouseListItem>> => {
     if (USE_MOCK) {
        logger.info('🎭 [Mock Mode] Serving Warehouse List');
        return {
@@ -17,11 +20,10 @@ export const WarehouseService = {
        };
     }
     try {
-      // Strictly typed Backend response (Flat Array)
-      const data = await api.get<BackendWarehouse[]>('/warehouse', { params });
+      const response = await api.get<unknown>('/warehouse', { ...config, params });
+      const normalized = normalizeListResponse<BackendWarehouse>(response);
       
-      // Explicit mapping to UI-Ready format (Strictly Typed)
-      const items: WarehouseListItem[] = (data || []).map(item => ({
+      const items: WarehouseListItem[] = normalized.items.map(item => ({
           ...item,
           id: item.warehouse_id,
           is_active: true, // Default to true as it's missing from current API response
@@ -29,13 +31,13 @@ export const WarehouseService = {
       
       return { 
           items, 
-          total: items.length, 
-          page: 1, 
-          limit: 100 
+          total: normalized.total, 
+          page: normalized.page, 
+          limit: normalized.limit 
       };
     } catch (error) {
       logger.error('[WarehouseService] getAll error:', error);
-      return { items: [], total: 0 };
+      return { items: [], total: 0, page: 1, limit: 10 };
     }
   },
 
@@ -50,13 +52,13 @@ export const WarehouseService = {
     }
   },
 
-  getById: async (id: number): Promise<WarehouseMaster | null> => {
+  getById: async (id: number, config?: AxiosRequestConfig): Promise<WarehouseMaster | null> => {
     if (USE_MOCK) {
         return mockWarehouses.find(w => w.warehouse_id === id) as WarehouseMaster || null;
     }
     try {
-        const res = await api.get<{ data?: WarehouseMaster }>(`/warehouse/${id}`);
-        return res.data || null;
+        const res = await api.get<unknown>(`/warehouse/${id}`, config);
+        return unwrapResponseData<WarehouseMaster>(res);
     } catch (error) {
         logger.error('[WarehouseService] getById error:', error);
         return null;

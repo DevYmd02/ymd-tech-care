@@ -4,6 +4,12 @@ import type { POListParams, POListResponse, POListItem } from '@/modules/procure
 import { CreatePOSchema, type POStatus } from '@/modules/procurement/schemas/po-schemas';
 import type { CreatePOPayload } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils';
+import { sanitizePayload, cleanPayload } from '@/shared/utils/payload.utils';
+import { masterDataCache } from '@/shared/utils/master-data-cache';
+import { 
+    normalizeId, 
+    normalizeDate
+} from '@/shared/utils/data-mapping.utils';
 import type { SuccessResponse } from '@/shared/types/api.types';
 import { applyClientFilters, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
@@ -55,6 +61,23 @@ const ENDPOINTS = {
     waitingForQC: '/po/pr/waiting-for-qc',
 };
 
+/**
+ * Whitelist for PO Header fields (DTO)
+ */
+const KNOWN_DTO_FIELDS = [
+    'po_no', 'po_date', 'vendor_id', 'branch_id', 'status', 'remarks',
+    'payment_term_days', 'tax_code_id', 'currency_code', 'exchange_rate',
+    'pr_id', 'qc_id', 'poa_no', 'delivery_date', 'po_lines'
+];
+
+/**
+ * Whitelist for PO Line fields
+ */
+const KNOWN_LINE_DTO_FIELDS = [
+    'po_line_id', 'item_id', 'qty', 'unit_price', 'uom_id',
+    'discount_expression', 'note', 'pr_line_id'
+];
+
 export const POService = {
     /**
      * Fetch PO List with full data hydration (Vendors, PRs, QCs).
@@ -76,7 +99,7 @@ export const POService = {
             
             // Map our canonical frontend status to what the backend expects for the API call
             if (apiParams.status === 'PENDING_APPROVAL') {
-                (apiParams as any).status = 'PENDING';
+                (apiParams as unknown as Record<string, unknown>).status = 'PENDING';
             }
             
             // Strip other client-only filters
@@ -89,7 +112,7 @@ export const POService = {
         const response = await api.get<POListResponse>(ENDPOINTS.list, { ...config, params: apiParams });
         const rawItems = extractArrayFromResponse<POListItem>(response);
         
-        logger.debug(`[POService] RAW BACKEND RESULT: total=${response.total}, items_returned=${rawItems.length}, api_status_used="${(apiParams as any).status || 'NONE'}"`);
+        logger.debug(`[POService] RAW BACKEND RESULT: total=${response.total}, items_returned=${rawItems.length}, api_status_used="${(apiParams as unknown as Record<string, unknown>).status || 'NONE'}"`);
 
         // 1. Hydrate Vendors
         const vendorMap: Record<number, string> = {};
@@ -97,83 +120,65 @@ export const POService = {
             const vendorsRes = await VendorService.getList(config);
             const vendors = Array.isArray(vendorsRes) ? vendorsRes : vendorsRes.items || [];
             vendors.forEach((v) => {
-                const vendorObj = v as Record<string, unknown>;
-                const id = (vendorObj.vendor_id || vendorObj.id) as number;
-                const name = vendorObj.vendor_name as string;
+                const vendorObj = v as unknown as Record<string, unknown>;
+                const id = Number(vendorObj.vendor_id || vendorObj.id);
+                const name = String(vendorObj.vendor_name || '');
                 if (id && name) vendorMap[id] = name;
             });
         } catch (err) {
             logger.debug('[POService] Vendor hydration error', err);
         }
 
-        // 2. Hydrate PRs and QCs
-        const allItems = await Promise.all(rawItems.map(async (item) => {
+        // 2. Collect unique IDs for hydration
+        const prIdsToFetch = new Set<number>();
+        const qcIdsToFetch = new Set<number>();
+        const prMap: Record<number, string> = {};
+        const qcMap: Record<number, string> = {};
+
+        rawItems.forEach(item => {
+            if (item.pr_id && !item.pr_no) prIdsToFetch.add(item.pr_id);
+            const qcId = item.qc_id || (item as unknown as Record<string, unknown>).qc_header_id as number | undefined;
+            if (qcId && !item.qc_no) qcIdsToFetch.add(qcId);
+        });
+
+        // 3. Hydrate PRs and QCs in parallel (once per unique ID)
+        await Promise.all([
+            // Hydrate PRs
+            ...Array.from(prIdsToFetch).map(async (id) => {
+                try {
+                    const pr = await PRService.getDetail(id, config);
+                    if (pr?.pr_no) prMap[id] = pr.pr_no;
+                } catch { /* ignore */ }
+            }),
+            // Hydrate QCs
+            ...Array.from(qcIdsToFetch).map(async (id) => {
+                try {
+                    const qc = await QCService.getById(id, config);
+                    if (qc?.qc_no) qcMap[id] = qc.qc_no;
+                } catch { /* ignore */ }
+            })
+        ]);
+
+        // 4. Final Mapping
+        const allItems = rawItems.map((item) => {
+            const bName = masterDataCache.getBranchName(item.branch_id);
             const mappedItem = {
                 ...item,
-                po_id: item.po_id ?? (item as unknown as { po_header_id?: number }).po_header_id as number,
+                po_id: Number(normalizeId(item.po_id ?? (item as unknown as Record<string, unknown>).po_header_id)),
                 vendor_name: item.vendor_name || vendorMap[item.vendor_id] || undefined,
-                status: normalizePOStatus(item.status)
+                status: normalizePOStatus(item.status),
+                pr_no: item.pr_no || (item.pr_id ? prMap[item.pr_id] : undefined),
+                qc_no: item.qc_no || (item.qc_id || (item as unknown as Record<string, unknown>).qc_header_id ? qcMap[item.qc_id || (item as unknown as Record<string, unknown>).qc_header_id as number] : undefined),
+                po_date: normalizeDate(item.po_date),
+                branch_name: (typeof bName === 'string' ? bName : '') as string
             };
-
-            // Inflate pr_no
-            if (mappedItem.pr_id && !mappedItem.pr_no) {
-                try {
-                    const pr = await PRService.getDetail(mappedItem.pr_id, config);
-                    if (pr?.pr_no) mappedItem.pr_no = pr.pr_no;
-                } catch (err) {
-                    logger.debug(`[POService] Failed to inflate pr_no for PR ${mappedItem.pr_id}`, err);
-                }
-            }
-
-            // Inflate qc_no
-            const qcId = mappedItem.qc_id || (mappedItem as Record<string, unknown>).qc_header_id as number | undefined;
-            if (qcId && !mappedItem.qc_no) {
-                try {
-                    const qc = await QCService.getById(qcId, config);
-                    if (qc?.qc_no) mappedItem.qc_no = qc.qc_no;
-                } catch (err) {
-                    logger.debug(`[POService] Failed to inflate qc_no for QC ${qcId}`, err);
-                }
-            }
-
-            // Backup QC lookup
-            if (!mappedItem.qc_no && mappedItem.pr_no) {
-                try {
-                    const qcsRes = await QCService.getList({ pr_no: mappedItem.pr_no }, config);
-                    let qcs: Record<string, any>[] = [];
-                    
-                    if (Array.isArray(qcsRes)) {
-                        qcs = qcsRes;
-                    } else {
-                        const qcsResObj = qcsRes as unknown as Record<string, unknown>;
-                        if (qcsResObj && 'data' in qcsResObj && Array.isArray(qcsResObj.data)) {
-                            qcs = qcsResObj.data as Record<string, any>[];
-                        }
-                    }
-
-                    const activeQc = qcs.find((q: Record<string, unknown>) => q.status === 'COMPLETED') || qcs.find((q: Record<string, unknown>) => q.status === 'DRAFT');
-                    if (activeQc?.qc_no) {
-                        mappedItem.qc_no = activeQc.qc_no as string;
-                        const vqId = activeQc.winning_vq_id || activeQc.vq_header_id || activeQc.winning_vq_header_id;
-                        const vId = activeQc.winning_vendor_id || activeQc.vendor_id;
-                        if (vqId) mappedItem.winning_vq_id = Number(vqId);
-                        if (vId) mappedItem.vendor_id = Number(vId);
-                        if (activeQc.qc_id || activeQc.qc_header_id || activeQc.id) {
-                            mappedItem.qc_id = Number(activeQc.qc_id || activeQc.qc_header_id || activeQc.id);
-                        }
-                    }
-                } catch (err) {
-                    logger.debug(`[POService] Backup QC lookup failed for PR ${mappedItem.pr_no}`, err);
-                }
-            }
-
             return mappedItem;
-        }));
+        });
 
         // Client-side Filtering & Pagination Layer
         // We apply this for both Mock and Live data to ensure UI consistency 
         // especially when the backend may have different search/pagination behaviors.
-        const result = applyClientFilters<POListItem>(allItems, params as any, {
+        const result = applyClientFilters<POListItem>(allItems, params as unknown as Record<string, string | number | boolean | undefined | null>, {
             searchableFields: ['po_no', 'vendor_name', 'qc_no', 'pr_no', 'poa_no'],
             dateField: 'po_date',
             backendTotal: response.total ?? allItems.length,
@@ -195,13 +200,17 @@ export const POService = {
     getById: async (id: number, config?: AxiosRequestConfig): Promise<POListItem> => {
         logger.info(`[POService] Fetching PO Detail: ${id}`);
         const res = await api.get<POListItem>(ENDPOINTS.detail(id), config);
+        const bName = masterDataCache.getBranchName(res.branch_id);
+        const eName = masterDataCache.getEmployeeName(res.created_by);
         const mappedItem = {
             ...res,
             po_id: res.po_id ?? (res as unknown as { po_header_id?: number }).po_header_id as number,
             status: normalizePOStatus(res.status),
-            exchange_rate: Number((res as Record<string, any>).exchange_rate || (res as Record<string, any>).exchangeRate || (res as Record<string, any>).quote_currency_rate || 1),
-            quote_currency_code: String((res as Record<string, any>).quote_currency_code || res.currency_code || (res as Record<string, any>).quoteCurrencyCode || (res as Record<string, any>).currencyCode || 'THB'),
-            base_currency_code: String((res as Record<string, any>).base_currency_code || (res as Record<string, any>).target_currency || (res as Record<string, any>).baseCurrencyCode || (res as Record<string, any>).targetCurrency || 'THB'),
+            branch_name: (typeof bName === 'string' ? bName : '') as string,
+            created_by_name: (res.created_by_name || (typeof eName === 'string' ? eName : '') || '') as string,
+            exchange_rate: Number((res as unknown as Record<string, unknown>).exchange_rate || (res as unknown as Record<string, unknown>).exchangeRate || (res as unknown as Record<string, unknown>).quote_currency_rate || 1),
+            quote_currency_code: String((res as unknown as Record<string, unknown>).quote_currency_code || res.currency_code || (res as unknown as Record<string, unknown>).quoteCurrencyCode || (res as unknown as Record<string, unknown>).currencyCode || 'THB'),
+            base_currency_code: String((res as unknown as Record<string, unknown>).base_currency_code || (res as unknown as Record<string, unknown>).target_currency || (res as unknown as Record<string, unknown>).baseCurrencyCode || (res as unknown as Record<string, unknown>).targetCurrency || 'THB'),
         };
 
         if (mappedItem.vendor_id && !mappedItem.vendor_name) {
@@ -222,19 +231,19 @@ export const POService = {
                     itemWithDelivery.delivery_date = prDetail.delivery_date;
                 }
                 // Hydrate missing payment terms and tax codes from PR
-                const pr = prDetail as any;
-                if (!mappedItem.payment_term_days && (pr.payment_term_days || pr.credit_days)) {
-                    mappedItem.payment_term_days = Number(pr.payment_term_days || pr.credit_days);
+                const pr = prDetail as unknown as Record<string, unknown>;
+                if (!mappedItem.payment_term_days && (pr['payment_term_days'] || pr['credit_days'])) {
+                    mappedItem.payment_term_days = Number(pr['payment_term_days'] || pr['credit_days']);
                 }
-                if (!mappedItem.tax_code_id && (pr.tax_code_id || pr.pr_tax_code_id)) {
-                    mappedItem.tax_code_id = Number(pr.tax_code_id || pr.pr_tax_code_id);
+                if (!mappedItem.tax_code_id && (pr['tax_code_id'] || pr['pr_tax_code_id'])) {
+                    mappedItem.tax_code_id = Number(pr['tax_code_id'] || pr['pr_tax_code_id']);
                 }
             } catch (error) {
                 logger.error('[POService] PR hydration failed', error);
             }
         }
 
-        const qcId = mappedItem.qc_id || (mappedItem as any).qc_header_id || (mappedItem as any).qc_id || (mappedItem as any).id as number | undefined;
+        const qcId = mappedItem.qc_id || (mappedItem as unknown as Record<string, unknown>).qc_header_id || (mappedItem as unknown as Record<string, unknown>).qc_id || (mappedItem as unknown as Record<string, unknown>).id as number | undefined;
         if (qcId && !mappedItem.qc_no) {
             try {
                 const qcDetail = await QCService.getById(Number(qcId), config);
@@ -248,14 +257,14 @@ export const POService = {
         if (!mappedItem.qc_no && mappedItem.pr_no) {
             try {
                 const qcsRes = await QCService.getList({ pr_no: mappedItem.pr_no }, config);
-                let qcs: Record<string, any>[] = [];
+                let qcs: Record<string, unknown>[] = [];
                 
                 if (Array.isArray(qcsRes)) {
-                    qcs = qcsRes;
+                    qcs = qcsRes as Record<string, unknown>[];
                 } else {
                     const qcsResObj = qcsRes as unknown as Record<string, unknown>;
                     if (qcsResObj && 'data' in qcsResObj && Array.isArray(qcsResObj.data)) {
-                        qcs = qcsResObj.data as Record<string, any>[];
+                        qcs = qcsResObj.data as Record<string, unknown>[];
                     }
                 }
 
@@ -316,15 +325,29 @@ export const POService = {
         return mappedItem;
     },
 
+    /**
+     * Helper to sanitize data using whitelist
+     */
+    sanitizeData(data: Record<string, unknown>): Record<string, unknown> {
+        if (Array.isArray(data.po_lines)) {
+            data.po_lines = data.po_lines.map(line => 
+                sanitizePayload(line, KNOWN_LINE_DTO_FIELDS)
+            );
+        }
+        return cleanPayload(sanitizePayload(data, KNOWN_DTO_FIELDS)) as Record<string, unknown>;
+    },
+
     create: async (data: CreatePOPayload): Promise<POListItem> => {
         logger.info('[POService] Creating PO');
         CreatePOSchema.parse(data);
-        return await api.post<POListItem>(ENDPOINTS.create, data);
+        const sanitized = POService.sanitizeData(data as unknown as Record<string, unknown>);
+        return await api.post<POListItem>(ENDPOINTS.create, sanitized);
     },
 
     update: async (id: number, data: Partial<CreatePOPayload>): Promise<POListItem> => {
         logger.info(`[POService] Updating PO: ${id}`);
-        return await api.patch<POListItem>(ENDPOINTS.detail(id), data);
+        const sanitized = POService.sanitizeData(data as unknown as Record<string, unknown>);
+        return await api.patch<POListItem>(ENDPOINTS.detail(id), sanitized);
     },
 
     issue: async (id: number, remark?: string): Promise<SuccessResponse> => {

@@ -5,6 +5,7 @@
  */
 
 import api from '@/core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import { logger } from '@/shared/utils';
 import type { PriceLevelName, PriceLevelNameFormData } from '../types/price-level-name.types';
 
@@ -12,16 +13,16 @@ export const PriceLevelNameService = {
   /**
    * Fetch all price level names
    */
-  getList: async (params?: Record<string, string | number | boolean>) => {
-    const response = await api.get<PriceLevelName[]>('/price-level', { params });
+  getList: async (config?: AxiosRequestConfig, params?: Record<string, string | number | boolean>) => {
+    const response = await api.get<PriceLevelName[]>('/price-level', { ...config, params });
     return response;
   },
 
   /**
    * Fetch a single price level name by ID
    */
-  get: (id: string | number) =>
-    api.get<PriceLevelName>(`/price-level/${id}`),
+  get: (id: string | number, config?: AxiosRequestConfig) =>
+    api.get<PriceLevelName>(`/price-level/${id}`, config),
 
   /**
    * Sanitize payload for backend

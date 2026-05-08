@@ -4,7 +4,15 @@
  */
 
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
+import { toast } from 'react-hot-toast';
 import { logger } from '@/shared/utils';
+
+/**
+ * Extended Axios configuration to support custom properties
+ */
+export interface CustomAxiosConfig extends AxiosRequestConfig {
+  skipToast?: boolean;
+}
 
 // =============================================================================
 // ENVIRONMENT CONFIGURATION
@@ -18,6 +26,7 @@ export const API_BASE_URL = (import.meta.env.VITE_API_URL as string) || '/api';
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
 export const AUTH_TOKEN_KEY = 'token';
+export const AUTH_PROFILE_KEY = 'user_profile';
 
 let unauthorizedHandler: (() => void) | null = null;
 
@@ -65,8 +74,17 @@ api.interceptors.response.use(
     const url = response.config.url;
     logger.debug(`✅ [API] [${method}] ${url}`);
 
+    // 🎉 Success Toast for mutations (POST, PATCH, DELETE)
+    // Only show if not specifically disabled in config
+    const skipToast = (response.config as CustomAxiosConfig).skipToast === true;
+    if (!skipToast && ['POST', 'PATCH', 'DELETE'].includes(method)) {
+      // Don't toast for login
+      if (!url?.includes('/auth/login')) {
+        toast.success('ดำเนินการสำเร็จ');
+      }
+    }
+
     // Standardized Response Unwrapping
-    // Handles BOTH Mock ({ success: true, data: ... }) and Real NestJS (raw { ... })
     const resBody = response.data;
     if (resBody && typeof resBody === 'object' && resBody.success === true && resBody.data !== undefined) {
       return resBody.data;
@@ -80,18 +98,34 @@ api.interceptors.response.use(
     const url = error.config?.url || 'UNKNOWN';
     const status = error.response?.status || 'UNKNOWN';
     
-    logger.error(`❌ [API Error] [${method}] ${url} (${status})`, error);
+    // Skip logging for canceled requests
+    if (axios.isCancel(error) || error.name === 'CanceledError') {
+      logger.debug(`[API Canceled] [${method}] ${url}`);
+    } else {
+      logger.error(`❌ [API Error] [${method}] ${url} (${status})`, error);
+      
+      // 🚨 Automatic Error Toast
+      const skipToast = (error.config as CustomAxiosConfig)?.skipToast === true;
+      if (!skipToast) {
+        // Handle specific status codes
+        if (status === 401) {
+          // Handled by unauthorizedHandler or LoginPage
+        } else if (status === 403) {
+          toast.error('คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
+        } else if (status === 429) {
+          toast.error('คุณทำรายการบ่อยเกินไป กรุณารอสักครู่');
+        } else {
+          const errorMessage = extractErrorMessage(error);
+          toast.error(errorMessage);
+        }
+      }
+    }
 
     if (error.response?.status === 401) {
-      // 💡 LOGIN EXCEPTION: If the error comes from the login endpoint, 
-      // do NOT trigger the unauthorized handler (logout/redirect).
-      // This allows the LoginPage to catch the error and display "Invalid credentials".
       const isLoginRequest = error.config?.url?.includes('/auth/login');
-
       if (!isLoginRequest) {
         localStorage.removeItem(AUTH_TOKEN_KEY);
-        localStorage.removeItem('user_profile');
-        
+        localStorage.removeItem(AUTH_PROFILE_KEY);
         if (unauthorizedHandler) {
           unauthorizedHandler();
         }
@@ -152,12 +186,13 @@ export const extractErrorMessage = (error: unknown): string => {
 
 // Strictly override the methods that return AxiosResponse to return Promise<T>
 // This matches our interceptor behavior which unwraps the response.data
+
 export interface ApiClient extends Omit<AxiosInstance, 'get' | 'put' | 'post' | 'delete' | 'patch'> {
-  get<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
-  delete<T>(url: string, config?: AxiosRequestConfig): Promise<T>;
-  post<T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig): Promise<T>;
-  put<T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig): Promise<T>;
-  patch<T, D = unknown>(url: string, data?: D, config?: AxiosRequestConfig): Promise<T>;
+  get<T>(url: string, config?: CustomAxiosConfig): Promise<T>;
+  delete<T>(url: string, config?: CustomAxiosConfig): Promise<T>;
+  post<T, D = unknown>(url: string, data?: D, config?: CustomAxiosConfig): Promise<T>;
+  put<T, D = unknown>(url: string, data?: D, config?: CustomAxiosConfig): Promise<T>;
+  patch<T, D = unknown>(url: string, data?: D, config?: CustomAxiosConfig): Promise<T>;
 }
 
 if (import.meta.env.DEV) {

@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { usePRCalculations } from '@/modules/procurement/pages/pr/hooks';
-import type { AVFormData, AVLineFormData } from '../../../schemas/av.schema';
+import type { PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
+import type { AVFormData, AVLineFormData } from '@procurement/schemas/av.schema';
 
 interface AVFormSummaryProps {
     isViewMode?: boolean;
@@ -63,7 +64,7 @@ export const AVFormSummary: React.FC<AVFormSummaryProps> = () => {
             qty: approvedQty,
             discount: discount // Override with recalculated discount
         };
-    }) as any;
+    }) as PRLineFormData[];
 
     const {
         subtotal,

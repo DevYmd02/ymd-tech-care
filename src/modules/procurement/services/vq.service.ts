@@ -4,6 +4,9 @@ import type { VQListParams, VQListResponse, VQCreateData, VQListItem, VQPendingQ
 import { logger } from '@/shared/utils';
 import type { SuccessResponse } from '@/shared/types/api.types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { unwrapResponseData } from '@/shared/utils/apiUtils';
+
+import type { AxiosRequestConfig } from 'axios';
 
 const ENDPOINTS = {
   list: '/vq',
@@ -17,7 +20,7 @@ const ENDPOINTS = {
 };
 
 export const VQService = {
-  getList: async (params?: VQListParams): Promise<VQListResponse> => {
+  getList: async (params?: VQListParams, config?: AxiosRequestConfig): Promise<VQListResponse> => {
     logger.info('[VQService] Fetching VQ List', params);
     
     // 🧹 Extract ONLY safe pagination/sorting for backend
@@ -28,7 +31,7 @@ export const VQService = {
     if (params?.sort) apiParams.sort = params.sort;
 
     logger.debug("[VQService] getList backend params:", apiParams);
-    const response = await api.get<VQListResponse>(ENDPOINTS.list, { params: apiParams });
+    const response = await api.get<VQListResponse>(ENDPOINTS.list, { ...config, params: apiParams });
 
 
 
@@ -80,9 +83,9 @@ export const VQService = {
     return applyClientPagination<VQListItem>(allItems, page, limit, response.total);
   },
 
-  getVQsByRfqNo: async (rfqNo: string): Promise<VQListResponse> => {
+  getVQsByRfqNo: async (rfqNo: string, config?: AxiosRequestConfig): Promise<VQListResponse> => {
     logger.info(`[VQService] Fetching VQs for RFQ No: ${rfqNo}`);
-    const response = await api.get<VQListResponse | VQListItem[]>(ENDPOINTS.list, { params: { rfq_no: rfqNo } });
+    const response = await api.get<VQListResponse | VQListItem[]>(ENDPOINTS.list, { ...config, params: { rfq_no: rfqNo } });
     
     // Safely extract array and wrap in VQListResponse (No pagination)
     const rawData = response;
@@ -97,10 +100,10 @@ export const VQService = {
     } as VQListResponse;
   },
 
-  getWaitingForRFQ: async (params?: VQListParams): Promise<VQPendingQueueResponse> => {
+  getWaitingForRFQ: async (params?: VQListParams, config?: AxiosRequestConfig): Promise<VQPendingQueueResponse> => {
     logger.info('[VQService] Fetching Waiting for RFQ list', params);
     type ApiResponse = VQPendingQueueResponse | { data: VQPendingQueueResponse };
-    const response = await api.get<ApiResponse>(ENDPOINTS.waitingForRfq, { params });
+    const response = await api.get<ApiResponse>(ENDPOINTS.waitingForRfq, { ...config, params });
     
     // Safely unwrap if the pagination payload is nested inside another data layer
     let result = response as VQPendingQueueResponse;
@@ -122,10 +125,10 @@ export const VQService = {
     return result;
   },
 
-  getWaitingForVQ: async (params?: VQListParams): Promise<VQPendingQueueResponse> => {
+  getWaitingForVQ: async (params?: VQListParams, config?: AxiosRequestConfig): Promise<VQPendingQueueResponse> => {
     logger.info('[VQService] Fetching Waiting for VQ list', params);
     type ApiResponse = VQPendingQueueResponse | { data: VQPendingQueueResponse };
-    const response = await api.get<ApiResponse>(ENDPOINTS.waitingForVq, { params });
+    const response = await api.get<ApiResponse>(ENDPOINTS.waitingForVq, { ...config, params });
     
     // Safely unwrap if the pagination payload is nested inside another data layer
     let result = response as VQPendingQueueResponse;
@@ -147,9 +150,10 @@ export const VQService = {
     return result;
   },
 
-  getById: async (id: number): Promise<VQListItem> => {
+  getById: async (id: number, config?: AxiosRequestConfig): Promise<VQListItem> => {
     logger.info(`[VQService] Fetching VQ Detail ${id}`);
-    return await api.get<VQListItem>(`${ENDPOINTS.list}/${id}`);
+    const response = await api.get<unknown>(`${ENDPOINTS.list}/${id}`, config);
+    return unwrapResponseData<VQListItem>(response);
   },
 
   create: async (data: VQCreateData): Promise<SuccessResponse> => {
@@ -173,14 +177,14 @@ export const VQService = {
     return await api.post<SuccessResponse>(`${ENDPOINTS.list}/${id}/cancel`, {});
   },
 
-  getModalWaitingForRFQ: async (params?: VQListParams): Promise<VQPendingQueueResponse> => {
+  getModalWaitingForRFQ: async (params?: VQListParams, config?: AxiosRequestConfig): Promise<VQPendingQueueResponse> => {
     logger.info('[VQService] Fetching Modal Waiting for RFQ', params);
-    return await api.get<VQPendingQueueResponse>(ENDPOINTS.modalWaitingForRfq, { params });
+    return await api.get<VQPendingQueueResponse>(ENDPOINTS.modalWaitingForRfq, { ...config, params });
   },
 
-  getModalWaitingForRFQVendor: async (id: number): Promise<VQPendingQueueResponse> => {
+  getModalWaitingForRFQVendor: async (id: number, config?: AxiosRequestConfig): Promise<VQPendingQueueResponse> => {
     logger.info(`[VQService] Fetching Modal Waiting for RFQ Vendor ${id}`);
-    return await api.get<VQPendingQueueResponse>(ENDPOINTS.modalWaitingForRfqVendor(id));
+    return await api.get<VQPendingQueueResponse>(ENDPOINTS.modalWaitingForRfqVendor(id), config);
   }
 };
 

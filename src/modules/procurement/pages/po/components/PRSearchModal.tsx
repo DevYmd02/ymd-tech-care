@@ -35,9 +35,9 @@ export const PRSearchModal: React.FC<PRSearchModalProps> = ({
   // 3. 🚩 Advanced Triple-Scan Discovery (Same as Source Selector)
   const { data: prResults, isLoading } = useQuery({
     queryKey: ['pr-waiting-for-qc-advanced'],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const { QCService } = await import('@/modules/procurement/services/qc.service');
-      const items = await QCService.getAdvancedReadyPRs();
+      const items = await QCService.getAdvancedReadyPRs({ signal });
       logger.info(`🔍 [PRSearchModal] Triple-Scan discovered ${items.length} ready PRs.`);
       return items;
     },

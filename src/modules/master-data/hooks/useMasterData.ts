@@ -17,7 +17,7 @@ const MASTER_DATA_GC_TIME = 30 * 60 * 1000;    // 30 minutes
 export function useBranches(enabled = true) {
     return useQuery({
         queryKey: ['master-branches'],
-        queryFn: MasterDataService.getBranches,
+        queryFn: () => MasterDataService.getBranches(),
         enabled,
         staleTime: MASTER_DATA_STALE_TIME,
         gcTime: MASTER_DATA_GC_TIME,
@@ -69,7 +69,7 @@ export function useLocations(enabled = true, limit = 1000) {
 export function useCurrencies(enabled = true) {
     return useQuery({
         queryKey: ['master-currencies'],
-        queryFn: MasterDataService.getCurrencies,
+        queryFn: () => MasterDataService.getCurrencies(),
         enabled,
         staleTime: MASTER_DATA_STALE_TIME,
         gcTime: MASTER_DATA_GC_TIME,
@@ -95,7 +95,7 @@ export function useTaxCodes(enabled = true) {
 export function useDepartments(enabled = true) {
     return useQuery({
         queryKey: ['master-departments'],
-        queryFn: MasterDataService.getDepartments,
+        queryFn: () => MasterDataService.getDepartments(),
         enabled,
         staleTime: MASTER_DATA_STALE_TIME,
         gcTime: MASTER_DATA_GC_TIME,
@@ -108,7 +108,7 @@ export function useDepartments(enabled = true) {
 export function useProjects(enabled = true) {
     return useQuery({
         queryKey: ['master-projects'],
-        queryFn: MasterDataService.getProjects,
+        queryFn: () => MasterDataService.getProjects(),
         enabled,
         staleTime: MASTER_DATA_STALE_TIME,
         gcTime: MASTER_DATA_GC_TIME,
@@ -133,7 +133,7 @@ export function useSaleAreas(enabled = true) {
 export function useEmployees(enabled = true) {
     return useQuery({
         queryKey: ['master-employees'],
-        queryFn: MasterDataService.getEmployees,
+        queryFn: () => MasterDataService.getEmployees(),
         enabled,
         staleTime: MASTER_DATA_STALE_TIME,
         gcTime: MASTER_DATA_GC_TIME,

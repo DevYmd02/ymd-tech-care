@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/shared/utils';
@@ -60,6 +60,8 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
 }) => {
     const [isAnimating, setIsAnimating] = useState(false);
     const [shouldRender, setShouldRender] = useState(false);
+    const triggerRef = useRef<HTMLElement | null>(null);
+    const modalRef = useRef<HTMLDivElement>(null);
 
     // 1. Handle Animation & Delayed Mounting/Unmounting
     useEffect(() => {
@@ -76,13 +78,47 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
         }
     }, [isOpen]);
 
-    // 2. Handle Escape Key Execution
+    // 2. Save trigger element on open, restore focus on close
+    useEffect(() => {
+        if (isOpen) {
+            triggerRef.current = document.activeElement as HTMLElement;
+            const timer = setTimeout(() => modalRef.current?.focus(), 50);
+            return () => clearTimeout(timer);
+        } else {
+            const timer = setTimeout(() => {
+                triggerRef.current?.focus();
+                triggerRef.current = null;
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [isOpen]);
+
+    // 3. Handle Escape Key + Focus Trap
     useEffect(() => {
         if (!isOpen) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 onClose();
+                return;
+            }
+
+            if (e.key === 'Tab' && modalRef.current) {
+                const focusable = Array.from(
+                    modalRef.current.querySelectorAll<HTMLElement>(
+                        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                    )
+                );
+                if (focusable.length === 0) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
             }
         };
 
@@ -141,7 +177,13 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                         ? "opacity-100 translate-y-0 scale-100" 
                         : "opacity-0 translate-y-8 scale-95"
                 )}
+                ref={modalRef}
+                tabIndex={-1}
                 onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="modal-title"
+                aria-describedby={subtitle ? "modal-subtitle" : undefined}
             >
                 {/* Header Section */}
                 {variant === 'window' ? (
@@ -152,13 +194,14 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                     )}>
                         <div className="flex items-center space-x-3">
                             {titleIcon}
-                            <span className="uppercase font-black tracking-tighter">{title}</span>
+                            <span id="modal-title" className="uppercase font-black tracking-tighter">{title}</span>
                         </div>
                         <div className="flex items-center space-x-3">
                             {headerRight}
                             <button 
                                 type="button" 
                                 onClick={onClose} 
+                                aria-label="Close modal"
                                 className="bg-red-600 hover:bg-red-500 text-white rounded-md p-1 px-2 transition-all hover:scale-105 active:scale-95 shadow-sm flex items-center gap-1 group"
                             >
                                 <X size={16} className="group-hover:rotate-90 transition-transform" />
@@ -185,11 +228,11 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                                 </div>
                             )}
                             <div>
-                                <h2 className={cn("text-xl font-extrabold leading-tight", headerColor ? "text-white" : styles.text.primary)}>
+                                <h2 id="modal-title" className={cn("text-xl font-extrabold leading-tight", headerColor ? "text-white" : styles.text.primary)}>
                                     {title}
                                 </h2>
                                 {subtitle && (
-                                    <p className={cn("text-sm font-medium mt-1", headerColor ? "text-white/80" : "text-gray-500 dark:text-gray-400")}>
+                                    <p id="modal-subtitle" className={cn("text-sm font-medium mt-1", headerColor ? "text-white/80" : "text-gray-500 dark:text-gray-400")}>
                                         {subtitle}
                                     </p>
                                 )}
@@ -199,6 +242,7 @@ export const ModalLayout: React.FC<ModalLayoutProps> = ({
                             {headerRight}
                             <button 
                                 onClick={onClose}
+                                aria-label="Close modal"
                                 className={cn(
                                     "p-2 rounded-full transition-all duration-200",
                                     headerColor ? "text-white hover:bg-white/20" : "text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"

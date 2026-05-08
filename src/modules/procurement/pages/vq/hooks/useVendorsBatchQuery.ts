@@ -22,7 +22,14 @@ export const useVendorsBatchQuery = (vendorIds: number[]) => {
 
     const isLoading = queries.some((q) => q.isLoading);
 
+    // Stable fingerprint: recompute vendorMap only when actual data changes,
+    // not on every render (queries array ref is new every render from useQueries)
+    const dataFingerprint = queries
+        .map(q => q.data ? `${q.data.vendor_id ?? ''}:${q.data.vendor_name ?? ''}` : '')
+        .join('|');
+
     // Build lookup dictionary: Record<vendor_id, vendor_name>
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const vendorMap = useMemo(() => {
         const map: Record<string, string> = {};
         queries.forEach((q) => {
@@ -34,7 +41,7 @@ export const useVendorsBatchQuery = (vendorIds: number[]) => {
             }
         });
         return map;
-    }, [queries]);
+    }, [dataFingerprint]);
 
     return {
         isLoading,
