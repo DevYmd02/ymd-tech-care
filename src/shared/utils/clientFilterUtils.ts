@@ -17,7 +17,7 @@ import { logger } from '@/shared/utils';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 /** Primitive types allowed in filter params (mirrors mockUtils.FilterValue) */
-type FilterValue = string | number | boolean | undefined | null;
+export type FilterValue = string | number | boolean | undefined | null;
 
 /** Configuration for the client-side filter */
 interface ClientFilterOptions<T> {

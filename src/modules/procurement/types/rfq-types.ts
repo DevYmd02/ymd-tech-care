@@ -69,11 +69,8 @@ export interface RFQHeader {
         rfqVendors?: number;
     } | null;
     
-    // Relation Fields 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    rfqVendors?: any[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    vendors?: any[];
+    rfqVendors?: RFQVendor[];
+    vendors?: RFQVendor[];
 
     requested_by_user?: {
         employee_id: number;

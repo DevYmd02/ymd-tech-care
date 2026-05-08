@@ -78,6 +78,7 @@ export interface POHeader {
 
     // Aggregates for List View
     item_count?: number;
+    base_total_amount?: number;     // numeric(18,2) — Converted value in base currency
 }
 
 /**

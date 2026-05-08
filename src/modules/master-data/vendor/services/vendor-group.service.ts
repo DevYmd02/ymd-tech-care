@@ -19,9 +19,9 @@ export const VendorGroupService = {
             return localVendorGroups; 
         }
         try {
-            const response = await api.get<any>('/vendor-group', { params });
+            const response = await api.get<VendorGroupMaster[] | ListResponse<VendorGroupMaster>>('/vendor-group', { params });
             
-            const rawData = response?.data || response;
+            const rawData = response;
             const items = Array.isArray(rawData) ? rawData : (rawData?.items || []);
             return {
                 items: items,

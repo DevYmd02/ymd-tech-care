@@ -42,7 +42,7 @@ export const mapPRToRFQFormData = (
     return {
         pr_id: pr.pr_id,
         pr_no: pr.pr_no,
-        approved_pr_no: (pr as any).approved_pr_no || pr.av_no || (pr as any).approval_no || null,
+        approved_pr_no: (pr as unknown as Record<string, unknown>).approved_pr_no as string || pr.av_no || (pr as unknown as Record<string, unknown>).approval_no as string || null,
         branch_id: pr.branch_id,
         project_id: pr.project_id || null,
         purpose: pr.purpose || '',
@@ -62,7 +62,7 @@ export const mapPRToRFQFormData = (
             ? `${pr.remark}\n[PR: ${pr.pr_no}]` 
             : `Generated from PR: ${pr.pr_no}`,
 
-        target_delivery_date: ((pr as any).delivery_date || (pr as any).deliveryDate || pr.need_by_date || '').toString().split('T')[0] || '',
+        target_delivery_date: ((pr as unknown as Record<string, unknown>).delivery_date as string || (pr as unknown as Record<string, unknown>).deliveryDate as string || pr.need_by_date || '').toString().split('T')[0] || '',
 
         // ⚠️ Safety: Do NOT map IDs for new RFQ record
         rfqLines: (pr.lines || []).map((line, index) => {
@@ -98,7 +98,7 @@ export const mapPRToRFQFormData = (
                 required_receipt_type: line.required_receipt_type || 'FULL',
                 // Real API may use `needed_date`, `line_needed_date`, or the backend uses another key
                 target_delivery_date: (
-                    (line as any).delivery_date ||
+                    (line as unknown as Record<string, unknown>).delivery_date as string ||
                     line.needed_date ||
                     (line as unknown as Record<string, unknown>).line_needed_date as string ||
                     ''
@@ -209,30 +209,31 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     const [isPRSelectionModalOpen, setIsPRSelectionModalOpen] = useState(false);
     const [isApprovedPRModalOpen, setIsApprovedPRModalOpen] = useState(false);
 
-    const handleApprovedPRSelect = useCallback((record: any) => {
-        const approvedNo = record.approval_no || record.approved_pr_no || record.approval_id?.toString();
-        setValue('approved_pr_no', approvedNo, { shouldValidate: true, shouldDirty: true });
-        setValue('pr_approval_id', record.approval_id ? Number(record.approval_id) : undefined, { shouldDirty: true });
+    const handleApprovedPRSelect = useCallback((record: unknown) => {
+        const rec = record as Record<string, unknown>;
+        const approvedNo = String(rec.approval_no || rec.approved_pr_no || rec.approval_id || '');
+        setValue('approved_pr_no', approvedNo || null, { shouldValidate: true, shouldDirty: true });
+        setValue('pr_approval_id', rec.approval_id ? Number(rec.approval_id) : undefined, { shouldDirty: true });
         
         // 🆕 Extract AV approved delivery date with deep scanning — prioritizing PR's requested date
         // We favor the original PR date or need_by_date, as AV's 'delivery_date' often defaults to system dates in the backend
         const rawDate = activePR?.delivery_date || 
                         initialPR?.delivery_date || 
-                        record.need_by_date || 
-                        record.needByDate || 
-                        record.delivery_date || 
-                        record.deliveryDate || 
-                        record.due_date || 
-                        record.pr?.delivery_date || 
-                        record.pr?.need_by_date || '';
+                        rec.need_by_date || 
+                        rec.needByDate || 
+                        rec.delivery_date || 
+                        rec.deliveryDate || 
+                        rec.due_date || 
+                        (rec.pr as Record<string, unknown>)?.delivery_date || 
+                        (rec.pr as Record<string, unknown>)?.need_by_date || '';
         const finalAVDate = rawDate ? rawDate.toString().split('T')[0] : '';
         
         logger.info("💎 [DIAGNOSTIC] AV Selection Date Extraction (Adjusted Precedence):", {
-            record_id: record.approval_id,
+            record_id: rec.approval_id,
             rawDate,
             finalAVDate,
             activePR_date: activePR?.delivery_date,
-            all_keys: Object.keys(record)
+            all_keys: Object.keys(rec)
         });
 
         // 🎯 Header Level Update
@@ -241,15 +242,15 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         }
         
         // 🔄 SYNC LINES: If AV record has lines, override form lines
-        const avLines = record.prApprovalLines || record.lines || record.pr_approval_lines || [];
+        const avLines = (rec.prApprovalLines || rec.lines || rec.pr_approval_lines || []) as unknown[];
         
-        if (avLines.length > 0) {
+        if (avLines && Array.isArray(avLines) && avLines.length > 0) {
             logger.info("💎 [DIAGNOSTIC] AV Record sync lines start:", { count: avLines.length });
 
             // Get original PR lines to preserve item details
             const currentPrLines = originalPRLines || [];
 
-            const matchedLines: RFQLineValues[] = avLines.map((avLine: any, index: number) => {
+            const matchedLines: RFQLineValues[] = (avLines as unknown as Record<string, unknown>[]).map((avLine, index) => {
                 // 🛡️ DISAMBIGUATION: Separating source PR Line ID from this Approval Line's own ID
                 const prLineId = avLine.pr_line_id || avLine.item_id || 0; 
                 const avLineId = Number(avLine.id || avLine.approval_line_id || avLine.pr_approval_line_id || 0);
@@ -260,33 +261,35 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 // 💧 MASTER DATA FALLBACK: If both sources lack names, try master list
                 const masterItem = items.find(it => Number(it.item_id) === Number(avLine.item_id));
 
-                const qty = Number(avLine.approved_qty || avLine.qty || 0);
+                const avLineRec = avLine as Record<string, unknown>;
+                const qty = Number(avLineRec.approved_qty || avLineRec.qty || 0);
+                const estUnitPrice = Number(originalLine?.est_unit_price || avLineRec.est_unit_price || 0);
                 
                 return {
                     line_no: index + 1,
-                    item_code: originalLine?.item_code || avLine.item_code || masterItem?.item_code || '',
-                    item_name: originalLine?.item_name || avLine.item_name || avLine.description || masterItem?.item_name || '',
-                    description: originalLine?.description || avLine.description || masterItem?.item_name || '',
+                    item_code: originalLine?.item_code || (avLineRec.item_code as string) || masterItem?.item_code || '',
+                    item_name: originalLine?.item_name || (avLineRec.item_name as string) || (avLineRec.description as string) || masterItem?.item_name || '',
+                    description: originalLine?.description || (avLineRec.description as string) || masterItem?.item_name || '',
                     qty: qty, // 🎯 This is the new quantity from AV
-                    uom: originalLine?.uom || avLine.uom || masterItem?.unit_name || '',
-                    uom_id: originalLine?.uom_id || avLine.uom_id || 0,
+                    uom: originalLine?.uom || (avLineRec.uom as string) || masterItem?.unit_name || '',
+                    uom_id: originalLine?.uom_id || (avLineRec.uom_id as number) || 0,
                     required_receipt_type: originalLine?.required_receipt_type || 'FULL',
                     // 🎯 IMPROVED: Prefer Original Line (PR) date if AV line date is ambiguous
                     target_delivery_date: (
                         originalLine?.target_delivery_date || 
-                        avLine.delivery_date || 
-                        avLine.line_needed_date || 
-                        avLine.need_by_date || 
+                        avLineRec.delivery_date || 
+                        avLineRec.line_needed_date || 
+                        avLineRec.need_by_date || 
                         finalAVDate || 
                         ''
                     ).toString().split('T')[0] || '', 
                     note_to_vendor: originalLine?.note_to_vendor || '',
-                    item_id: originalLine?.item_id || avLine.item_id || masterItem?.item_id,
+                    item_id: originalLine?.item_id || (avLineRec.item_id as number) || masterItem?.item_id,
                     pr_line_id: prLineId ? Number(prLineId) : undefined,
                     // 🔗 Record ID of the PR Approval Line (CRITICAL FOR BACKEND)
                     approval_line_id: avLineId > 0 ? avLineId : undefined,
-                    est_unit_price: originalLine?.est_unit_price || avLine.est_unit_price,
-                    est_amount: qty * (originalLine?.est_unit_price || avLine.est_unit_price || 0)
+                    est_unit_price: estUnitPrice,
+                    est_amount: qty * estUnitPrice
                 };
             });
             
@@ -362,11 +365,11 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 if (records && records.length > 0) {
                     // Match by pr_approval_id if available, otherwise fallback to first (historical)
                     const match = prApprovalId 
-                        ? records.find((r: any) => Number(r.approval_id) === Number(prApprovalId))
+                        ? records.find((r: Record<string, unknown>) => Number(r.approval_id) === Number(prApprovalId))
                         : records[0];
 
                     if (match) {
-                        const foundNo = match.approval_no || match.approved_pr_no;
+                        const foundNo = String(match.approval_no || match.approved_pr_no || '');
                         logger.info(`✅ [useRFQForm] Restored AV No: ${foundNo}`);
                         setValue('approved_pr_no', foundNo, { shouldValidate: true });
                     }
@@ -448,18 +451,18 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     ? rfqRes.rfqLines 
                     : (rfqRes.lines && rfqRes.lines.length > 0)
                         ? rfqRes.lines
-                        : (rfqRes as any).rfq_lines || (rfqRes as any).rfq_line || (rfqRes as any).items || (rfqRes as any).rfq_items || [];
+                        : (rfqRes as unknown as Record<string, unknown>).rfq_lines as RFQLine[] || (rfqRes as unknown as Record<string, unknown>).rfq_line as RFQLine[] || (rfqRes as unknown as Record<string, unknown>).items as RFQLine[] || (rfqRes as unknown as Record<string, unknown>).rfq_items as RFQLine[] || [];
 
                 // 🚀 AGGRESSIVE RESCUE: Check if lines from backend are "Broken" (No ID, No Code)
-                const isBroken = sourceLines.length > 0 && sourceLines.every((l: any) => !l.item_id && !l.item_code);
+                const isBroken = sourceLines.length > 0 && sourceLines.every((l: unknown) => !(l as Record<string, unknown>).item_id && !(l as Record<string, unknown>).item_code);
                 
                 if ((sourceLines.length === 0 || isBroken) && rfqRes.pr_id) {
                     logger.warn(`🛟 [useRFQForm] RFQ ${editId} has ${isBroken ? 'BROKEN' : 'NO'} lines. Forcing Rescue from PR: ${rfqRes.pr_id}`);
                     try {
                         const prData = await PRService.getDetail(Number(rfqRes.pr_id));
-                        const rescuedLines = prData?.lines || (prData as any)?.pr_lines || (prData as any)?.items || [];
+                        const rescuedLines = prData?.lines || (prData as unknown as Record<string, unknown>)?.pr_lines as RFQLine[] || (prData as unknown as Record<string, unknown>)?.items as RFQLine[] || [];
                         if (rescuedLines.length > 0) {
-                            sourceLines = rescuedLines;
+                            sourceLines = rescuedLines as RFQLine[];
                             logger.info(`✅ [useRFQForm] Successfully rescued ${sourceLines.length} lines from PR.`);
                         }
                     } catch (e) {
@@ -498,45 +501,45 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 const sourceLines = rfq.rfqLines || [];
                 
                 // Hydrate vendor details if missing from backend
-                const vendorMap = new Map<number, any>();
+                const vendorMap = new Map<number, Record<string, unknown>>();
                 (rfq.vendors || []).forEach(v => {
-                    if (v.vendor_id) vendorMap.set(Number(v.vendor_id), v);
+                    if (v.vendor_id) vendorMap.set(Number(v.vendor_id), v as unknown as Record<string, unknown>);
                 });
                 (rfq.rfqVendors || []).forEach(v => {
                     const vendorId = Number(v.vendor_id);
                     const existing = vendorMap.get(vendorId) || {};
-                    vendorMap.set(vendorId, { ...existing, ...v });
+                    vendorMap.set(vendorId, { ...existing, ...(v as unknown as Record<string, unknown>) });
                 });
 
-                const enhancedVendors = await Promise.all(Array.from(vendorMap.values()).map(async (v) => {
+                const enhancedVendors = (await Promise.all(Array.from(vendorMap.values()).map(async (v) => {
                     const isSent = v.status === 'SENT' || v.status === 'RESPONDED';
-                    const hasEmail = Boolean(v.email_sent_to || (v as any).email);
-                    if (v.vendor_name && v.vendor_code && (isSent ? hasEmail : true)) return v;
+                    const hasEmail = Boolean(v.email_sent_to || (v as unknown as Record<string, unknown>).email);
+                    if (v.vendor_name && v.vendor_code && (isSent ? hasEmail : true)) return v as unknown as RFQVendor & { vendor_code?: string; vendor_name?: string };
                     
                     try {
-                        const vendorDetail = await VendorService.getById(v.vendor_id);
+                        const vendorDetail = await VendorService.getById(v.vendor_id as number);
                         if (vendorDetail) {
                             return {
                                 ...v,
-                                vendor_name: vendorDetail.vendor_name || v.vendor_name || '',
-                                vendor_code: vendorDetail.vendor_code || v.vendor_code || '',
+                                vendor_name: vendorDetail.vendor_name || v.vendor_name as string || '',
+                                vendor_code: vendorDetail.vendor_code || v.vendor_code as string || '',
                                 email_sent_to: v.email_sent_to || vendorDetail.email || null,
-                            };
+                            } as unknown as RFQVendor & { vendor_code?: string; vendor_name?: string };
                         }
                     } catch {
                          logger.warn('Failed to fetch vendor detail for id', v.vendor_id);
                     }
-                    return v;
-                }));
+                    return v as unknown as RFQVendor & { vendor_code?: string; vendor_name?: string };
+                }))) as Array<RFQVendor & { vendor_code?: string; vendor_name?: string }>;
 
                 setTrackingVendors(enhancedVendors);
 
                 const mappedVendors: RFQVendorValues[] = enhancedVendors.map((v) => ({
-                    vendor_id: v.vendor_id,
+                    vendor_id: v.vendor_id as number,
                     vendor_code: v.vendor_code || '',
                     vendor_name: v.vendor_name || '',
                     vendor_name_display: v.vendor_code ? `${v.vendor_code} - ${v.vendor_name}` : v.vendor_name || '',
-                    status: v.status,
+                    status: v.status as string,
                     is_existing: true,
                 }));
 
@@ -549,14 +552,14 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     const masterUnit = units.find(u => Number(u.unit_id) === uom_id || u.id === uom_id);
 
                     const item_code = line.item_code || line.itemCode || line.product_code || 
-                                     (line.item as any)?.item_code || (line.product as any)?.product_code || 
+                                     (line.item as unknown as Record<string, unknown>)?.item_code as string || (line.product as unknown as Record<string, unknown>)?.product_code as string || 
                                      masterItem?.item_code || '';
                     
                     const item_name = line.item_name || line.itemName || line.product_name || 
-                                     (line.item as any)?.item_name || (line.product as any)?.product_name || 
+                                     (line.item as unknown as Record<string, unknown>)?.item_name as string || (line.product as unknown as Record<string, unknown>)?.product_name as string || 
                                      masterItem?.item_name || '';
                     
-                    const uom       = line.uom || masterUnit?.unit_name || (masterItem as any)?.unit_name || '';
+                    const uom       = line.uom || masterUnit?.unit_name || (masterItem as unknown as Record<string, unknown>)?.unit_name as string || '';
 
                     return {
                         line_no: i + 1,
@@ -566,13 +569,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                         qty: line.qty,
                         uom,
                         uom_id: uom_id,
-                        required_receipt_type: (line as any).required_receipt_type || 'FULL',
+                        required_receipt_type: (line as unknown as Record<string, unknown>).required_receipt_type as string || 'FULL',
                         target_delivery_date: line.target_delivery_date?.split('T')[0] || '',
                         note_to_vendor: line.note_to_vendor || '',
                         item_id: item_id,
                         pr_line_id: line.pr_line_id || undefined,
                         approval_line_id: line.approval_line_id || undefined,
-                        rfq_line_id: (line as any).rfq_line_id || undefined,
+                        rfq_line_id: (line as unknown as Record<string, unknown>).rfq_line_id as number || undefined,
                     };
                 });
 
@@ -602,12 +605,12 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     ...getRFQDefaultFormValues(),
                     rfq_no: rfq.rfq_no,
                     requested_by: creatorName,
-                    requested_by_user_id: (rfq.requested_by_user as any)?.employee_id || rfq.created_by_user_id || undefined,
+                    requested_by_user_id: (rfq.requested_by_user as unknown as Record<string, unknown>)?.employee_id as number || rfq.created_by_user_id || undefined,
                     rfq_date: rfq.rfq_date?.split('T')[0] || new Date().toLocaleDateString('en-CA'),
                     pr_id: rfq.pr_id || null,
                     pr_no: fetchedPrNo,
-                    pr_approval_id: rfq.pr_approval_id || (rfq as any).approval_id || null,
-                    approved_pr_no: rfq.approved_pr_no || (rfq as any).approval_no || (rfq as any).av_no || null,
+                    pr_approval_id: rfq.pr_approval_id || (rfq as unknown as Record<string, unknown>).approval_id as number || null,
+                    approved_pr_no: rfq.approved_pr_no || (rfq as unknown as Record<string, unknown>).approval_no as string || (rfq as unknown as Record<string, unknown>).av_no as string || null,
                     branch_id: rfq.branch_id ? Number(rfq.branch_id) : 0,
                     status: (rfq.status as RFQStatus) || 'DRAFT',
                     quotation_due_date: rfq.quotation_due_date?.split('T')[0] || '',
@@ -865,8 +868,8 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                         uom_id: Number(line.uom_id || 1),
                     };
                     // 💧 Preserve ID for edit updates to prevent duplicating lines
-                    if ((line as any).rfq_line_id) {
-                        dto.rfq_line_id = Number((line as any).rfq_line_id);
+                    if ((line as unknown as Record<string, unknown>).rfq_line_id) {
+                        dto.rfq_line_id = Number((line as unknown as Record<string, unknown>).rfq_line_id);
                     }
                     // Optional fields — only add if present
                     if (line.item_id) dto.item_id = Number(line.item_id);
@@ -885,12 +888,12 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             const resolvedRequestedByUserId = editId 
                 ? (stagedPayload.requested_by_user_id ? Number(stagedPayload.requested_by_user_id) 
                   : (rfq?.created_by_user_id ? Number(rfq.created_by_user_id) 
-                  : ((rfq as any)?.requested_by_user_id ? Number((rfq as any).requested_by_user_id) 
+                  : ((rfq as unknown as Record<string, unknown>)?.requested_by_user_id ? Number((rfq as unknown as Record<string, unknown>).requested_by_user_id) 
                   : (rfq?.requested_by_user?.employee_id ? Number(rfq.requested_by_user.employee_id) 
                   : (user?.id ? Number(user.id) : undefined))))) // 🚨 Absolute Fallback to satisfy backend
                 : (user?.id ? Number(user.id) : undefined);
             const resolvedRequestedByName = editId 
-                ? (stagedPayload.requested_by ? String(stagedPayload.requested_by) : (rfq?.created_by_name || (rfq as any)?.requested_by || user?.employee?.employee_fullname || undefined))
+                ? (stagedPayload.requested_by ? String(stagedPayload.requested_by) : (rfq?.created_by_name || (rfq as unknown as Record<string, unknown>)?.requested_by as string || user?.employee?.employee_fullname || undefined))
                 : (user?.employee?.employee_fullname ? String(user.employee.employee_fullname) : undefined);
 
             // 🔍 Debug Audit Log for backend updates
@@ -953,10 +956,10 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             logger.info("💎 [DIAGNOSTIC] Final RFQ Save Payload:", JSON.stringify(payload, null, 2));
 
             if (editId) {
-                await RFQService.update(editId, payload);
+                await RFQService.update(editId, payload as unknown as Record<string, unknown>);
                 toast('บันทึกการแก้ไข RFQ สำเร็จ', 'success');
             } else {
-                await RFQService.create(payload);
+                await RFQService.create(payload as unknown as Record<string, unknown>);
                 toast('สร้าง RFQ สำเร็จ', 'success');
             }
 

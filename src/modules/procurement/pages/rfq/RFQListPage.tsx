@@ -370,8 +370,14 @@ export default function RFQListPage() {
                 const updatePayload: any = {
                     requested_by_user_id: Number(sendingRFQ.requested_by_user?.employee_id || (sendingRFQ as any).requested_by_user_id || 1),
                     rfq_date: sendingRFQ.rfq_date,
+                    quotation_due_date: sendingRFQ.quotation_due_date || sendingRFQ.rfq_date,
                     pr_id: Number(sendingRFQ.pr_id || 0),
+                    pr_approval_id: Number(sendingRFQ.pr_approval_id || (sendingRFQ as any).pr_approval?.approval_id || (sendingRFQ as any).prApprovalId || 0),
                     branch_id: Number(sendingRFQ.branch_id || 1),
+                    rfq_base_currency_code: sendingRFQ.rfq_base_currency_code || 'THB',
+                    rfq_quote_currency_code: sendingRFQ.rfq_quote_currency_code || 'THB',
+                    rfq_exchange_rate: Number(sendingRFQ.rfq_exchange_rate || 1),
+                    rfq_exchange_rate_date: sendingRFQ.rfq_exchange_rate_date || sendingRFQ.rfq_date,
                     requested_by: (sendingRFQ as any).requested_by || 
                                   (sendingRFQ.requested_by_user 
                                       ? `${sendingRFQ.requested_by_user.employee_firstname_th} ${sendingRFQ.requested_by_user.employee_lastname_th}`.trim() 

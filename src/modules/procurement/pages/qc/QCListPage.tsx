@@ -390,10 +390,10 @@ export default function QCListPage() {
                     {/* Mobile View: Cards (shared MobileListContainer + MobileListCard) */}
                     <MobileListContainer
                         isLoading={isLoading}
-                        isEmpty={!data?.data.length}
+                        isEmpty={!data?.data || data.data.length === 0}
                         pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                     >
-                        {data?.data.map((item) => (
+                        {data?.data?.map((item) => (
                             <MobileListCard
                                 key={item.qc_id}
                                 title={item.qc_no}

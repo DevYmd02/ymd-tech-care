@@ -80,7 +80,8 @@ export const QCService = {
 
     // 🎯 HYBRID PAGINATION: Always apply client-side slicing even for mock responses
     const allItems = extractArrayFromResponse<QCListItem>(response).map(item => {
-      const dId = item.department_id || (item as any).dept_id || (item as any).dept_id;
+      const rawItem = item as unknown as Record<string, unknown>;
+      const dId = item.department_id || rawItem.dept_id;
       const deptName = dId ? masterDataCache.getDepartmentName(Number(dId)) : '';
       return {
         ...item,
@@ -113,11 +114,11 @@ export const QCService = {
     return items;
   },
 
-  getVQsWaitingForQC: async (rfqId: number): Promise<any[]> => {
+  getVQsWaitingForQC: async (rfqId: number): Promise<Record<string, unknown>[]> => {
     logger.info(`[QCService] Fetching VQs for RFQ ID waiting for QC: ${rfqId}`);
-    const response = await api.get<any>(`/qc/vendor/${rfqId}/waiting-for-qc`);
+    const response = await api.get<Record<string, unknown>>(`/qc/vendor/${rfqId}/waiting-for-qc`);
     logger.debug("[QCService] getVQsWaitingForQC response received");
-    return extractArrayFromResponse<any>(response);
+    return extractArrayFromResponse<Record<string, unknown>>(response);
   },
 
 
@@ -173,7 +174,7 @@ export const QCService = {
         ]);
 
         const items2 = extractArrayFromResponse<QCListItem>(items2Res);
-        const items3 = extractArrayFromResponse<any>(items3Res);
+        const items3 = extractArrayFromResponse<Record<string, unknown>>(items3Res);
         
         const mergedMap = new Map<string, IReadyForPOPR>();
 
@@ -188,8 +189,9 @@ export const QCService = {
             const key = qc.pr_no;
             if (key && mergedMap.has(key)) {
                 const existing = mergedMap.get(key)!;
+                const rawQC = qc as unknown as Record<string, unknown>;
                 const winnerVqId = Number(qc.winning_vq_id || qc.vq_header_id || 0);
-                const winnerVendorId = Number(qc.winning_vendor_id || (qc as any).vendor_id || 0);
+                const winnerVendorId = Number(qc.winning_vendor_id || rawQC.vendor_id || 0);
                 
                 // 🎯 DATA ENRICHMENT: If the PR record lacks vendor/amount (which is common in waiting list),
                 // overlay it with the "Awarded" data from the discovered QC.
@@ -208,7 +210,7 @@ export const QCService = {
                 if (!hasThisQC) {
                     if (!existing.qcHeaders) existing.qcHeaders = [];
                     existing.qcHeaders.push({
-                        qc_id: Number(qc.qc_id || (qc as any).id || 0),
+                        qc_id: Number(qc.qc_id || rawQC.id || 0),
                         qc_no: qc.qc_no || 'QC-UNKNOWN',
                         pr_id: existing.pr_id,
                         winning_vq_id: winnerVqId,
@@ -223,8 +225,8 @@ export const QCService = {
 
         // 3. Authority Overlay (Approved PRs)
         items3.forEach(pr => {
-            const key = pr.pr_no || `ID_${pr.pr_id}`;
-            if (key && !mergedMap.has(key)) {
+            const key = String(pr.pr_no || `ID_${pr.pr_id || ''}`);
+            if (key && key !== 'ID_' && !mergedMap.has(key)) {
                 const qcs = (pr.qcHeaders as IReadyForPOPR['qcHeaders']) || [];
                 const readyPrKeys = new Set(items1.map(i => i.pr_no || `ID_${i.pr_id}`));
                 
@@ -235,23 +237,23 @@ export const QCService = {
                 if (!isApproved && !isDiscoveryStatus) return;
 
                 mergedMap.set(key, {
-                    pr_id: Number(pr.pr_id),
-                    pr_no: pr.pr_no,
-                    base_currency_code: pr.pr_base_currency_code || 'THB',
+                    pr_id: Number(pr.pr_id || 0),
+                    pr_no: String(pr.pr_no || ''),
+                    base_currency_code: String(pr.pr_base_currency_code || 'THB'),
                     pr_base_total_amount: Number(pr.pr_base_total_amount || pr.total_amount || 0),
-                    requester_name: pr.requester_name || '-',
+                    requester_name: String(pr.requester_name || '-'),
                     preferred_vendor: pr.preferred_vendor_id ? {
                         vendor_id: Number(pr.preferred_vendor_id),
-                        vendor_name: pr.vendor_name || 'ไม่ระบุชื่อผู้ขาย'
+                        vendor_name: (pr.vendor_name as string) || 'ไม่ระบุชื่อผู้ขาย'
                     } : null,
-                    qcHeaders: qcs as any
+                    qcHeaders: qcs as IReadyForPOPR['qcHeaders']
                 });
             }
         });
 
         const mergedResult = Array.from(mergedMap.values()).filter(pr => {
-            const key = pr.pr_no || `ID_${pr.pr_id}`;
-            const isReadyByAPI = items1.some(i => (i.pr_no || `ID_${i.pr_id}`) === key);
+            const key = String(pr.pr_no || `ID_${pr.pr_id || ''}`);
+            const isReadyByAPI = items1.some(i => String(i.pr_no || `ID_${i.pr_id || ''}`) === key);
             if (isReadyByAPI) return true;
             const qcs = pr.qcHeaders || [];
             return qcs.some(h => (h.raw_status || h.status) === 'DRAFT');

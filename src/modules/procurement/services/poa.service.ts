@@ -9,6 +9,7 @@ import type { POAFormData } from '@/modules/procurement/schemas/poa-schemas';
 import { logger } from '@/shared/utils';
 import type { SuccessResponse } from '@/shared/types/api.types';
 import { extractArrayFromResponse, applyClientFilters } from '@/shared/utils/clientFilterUtils';
+import type { FilterValue } from '@/shared/utils/clientFilterUtils';
 import type { POStatus } from '@/modules/procurement/schemas/po-schemas';
 import { EmployeeService } from '@/modules/master-data/employee/services/employee.service';
 import { BranchService } from '@/modules/master-data/company/services/org-branch.service';
@@ -112,52 +113,75 @@ interface POHeaderResponse {
     target_currency?: string;
     baseCurrencyCode?: string;
     targetCurrency?: string;
+    // Nested support for different API versions
+    poHeader?: POHeaderResponse;
+    po_header?: POHeaderResponse;
+    // Additional fields seen in raw responses
+    approval_emp_name?: string;
+    created_by_id?: number | string;
+    created_at?: string;
+    total_amount?: number;
+    base_total_amount?: number;
+    grand_total?: number;
+    net_amount?: number;
+    net_amt?: number;
+    amount?: number;
+    total?: number;
 }
+
+// ---------------------------------------------------------------------------
+// Standard Types for Mapping
+// ---------------------------------------------------------------------------
+type EmployeeLookupMap = Record<string, string>;
+type BranchLookupMap = Record<string, string>;
+type TaxCodeLookupMap = Record<string, { tax_code?: string; tax_name: string; tax_rate: number }>;
+type UOMLookupMap = Record<string, string>;
 
 /**
  * Standardizes the response from both List and Detail endpoints.
  * Backend often returns nested poHeader or inconsistent field names.
  */
 const mapPOAResponseToListItem = (
-    item: any, 
-    employeeMap?: Record<string, string>, 
-    branchMap?: Record<string, string>, 
-    taxCodeMap?: Record<string, any>,
-    uomMap?: Record<string, string>
+    item: Record<string, unknown> | POHeaderResponse, 
+    employeeMap?: EmployeeLookupMap, 
+    branchMap?: BranchLookupMap, 
+    taxCodeMap?: TaxCodeLookupMap,
+    uomMap?: UOMLookupMap
 ): POListItem => {
-    const poHeader = (item.poHeader as POHeaderResponse) || (item.po_header as POHeaderResponse) || item || {};
+    const poHeader = (item as POHeaderResponse).poHeader || (item as POHeaderResponse).po_header || (item as POHeaderResponse);
+    
     // 🎯 PRIORITY: Prefer snake_case (our enriched version) over camelCase (raw backend version)
-    const lines = item.po_lines || item.poLines || poHeader.po_lines || poHeader.poLines || item.lines || [];
+    const lines = (item.po_lines || item.poLines || poHeader.po_lines || poHeader.poLines || item.lines || []) as POALineResponse[];
 
-    const status = normalizePOStatus(item.status || poHeader.status);
-    const poaNoValue = String(item.approval_no || item.poa_no || poHeader.poa_no || poHeader.approval_no || '-');
+    const status = normalizePOStatus(String(item.status || poHeader.status || ''));
+    const poaNoValue = String(item.approval_no || item.poa_no || (poHeader as POHeaderResponse).poa_no || (poHeader as POHeaderResponse).approval_no || '-');
     const isHistorical = poaNoValue && poaNoValue !== '-';
 
     const recovered = {
         tax_name: String(
-            (item.tax_name && !['-','undefined'].includes(item.tax_name)) ? item.tax_name : 
+            (item.tax_name && !['-','undefined'].includes(String(item.tax_name))) ? item.tax_name : 
             (taxCodeMap && (poHeader.tax_code_id || item.tax_code_id) && taxCodeMap[String(poHeader.tax_code_id || item.tax_code_id).toLowerCase()]) ? 
                 (taxCodeMap[String(poHeader.tax_code_id || item.tax_code_id).toLowerCase()]?.tax_code || taxCodeMap[String(poHeader.tax_code_id || item.tax_code_id).toLowerCase()]?.tax_name) : 
-            (poHeader.tax_name && !['-','undefined'].includes(poHeader.tax_name)) ? poHeader.tax_name :
+            (poHeader.tax_name && !['-','undefined'].includes(String(poHeader.tax_name))) ? poHeader.tax_name :
             '-'
         ),
         created_by_name: String(
-            (item.approval_emp_name && !['-','undefined'].includes(item.approval_emp_name)) ? item.approval_emp_name :
+            (item.approval_emp_name && !['-','undefined'].includes(String(item.approval_emp_name))) ? item.approval_emp_name :
             (employeeMap && item.created_by && employeeMap[String(item.created_by).toLowerCase()]) ? employeeMap[String(item.created_by).toLowerCase()] :
             (employeeMap && poHeader.created_by && employeeMap[String(poHeader.created_by).toLowerCase()]) ? employeeMap[String(poHeader.created_by).toLowerCase()] :
             (employeeMap && item.create_by && employeeMap[String(item.create_by).toLowerCase()]) ? employeeMap[String(item.create_by).toLowerCase()] :
             (employeeMap && poHeader.create_by && employeeMap[String(poHeader.create_by).toLowerCase()]) ? employeeMap[String(poHeader.create_by).toLowerCase()] :
             (employeeMap && item.created_by_id && employeeMap[String(item.created_by_id).toLowerCase()]) ? employeeMap[String(item.created_by_id).toLowerCase()] :
-            (item.created_by_name && !['-','undefined'].includes(item.created_by_name)) ? item.created_by_name : 
-            (poHeader.created_by_name && !['-','undefined'].includes(poHeader.created_by_name)) ? poHeader.created_by_name : 
-            (item.preparer_name && !['-','undefined'].includes(item.preparer_name)) ? item.preparer_name :
-            (poHeader.preparer_name && !['-','undefined'].includes(poHeader.preparer_name)) ? poHeader.preparer_name :
+            (item.created_by_name && !['-','undefined'].includes(String(item.created_by_name))) ? item.created_by_name : 
+            (poHeader.created_by_name && !['-','undefined'].includes(String(poHeader.created_by_name))) ? poHeader.created_by_name : 
+            (item.preparer_name && !['-','undefined'].includes(String(item.preparer_name))) ? item.preparer_name :
+            (poHeader.preparer_name && !['-','undefined'].includes(String(poHeader.preparer_name))) ? poHeader.preparer_name :
             '-'
         ),
         branch_name: String(
             (branchMap && item.branch_id && branchMap[String(item.branch_id).toLowerCase()]) ? branchMap[String(item.branch_id).toLowerCase()] :
-            (item.branch_name && !['-','undefined'].includes(item.branch_name)) ? item.branch_name :
-            (poHeader.branch_name && !['-','undefined'].includes(poHeader.branch_name)) ? poHeader.branch_name :
+            (item.branch_name && !['-','undefined'].includes(String(item.branch_name))) ? item.branch_name :
+            (poHeader.branch_name && !['-','undefined'].includes(String(poHeader.branch_name))) ? poHeader.branch_name :
             '-'
         ),
         payment_term_days: Number(item.payment_term_days || poHeader.payment_term_days || 0),
@@ -192,7 +216,7 @@ const mapPOAResponseToListItem = (
             ? Number(l.approved_qty ?? l.qty_approved ?? (hasApprovalQty ? 0 : (l.qty ?? l.qty_ordered ?? 0)))
             : Number(l.approved_qty ?? l.qty_approved ?? l.remaining_qty ?? l.qty_ordered ?? l.qty ?? 0);
         
-        const unit_price = Number(l.unit_price ?? (poHeader.po_lines?.[idx] as any)?.unit_price ?? 0);
+        const unit_price = Number(l.unit_price ?? (poHeader.po_lines?.[idx] as POALineResponse)?.unit_price ?? 0);
         
         // 🎯 DEEP SCAN FIX: Use parseDiscountAmount to handle percentage strings (e.g. "2%")
         const lineGross = qty_ordered * unit_price;
@@ -210,10 +234,10 @@ const mapPOAResponseToListItem = (
             discount_expression: discount_expr,
             net_amount: Number(lineGross - disc_amt),
             uom_name: String(
-                (l.uom_name && !['-','undefined'].includes(l.uom_name)) ? l.uom_name :
+                (l.uom_name && !['-','undefined'].includes(String(l.uom_name))) ? l.uom_name :
                 (uomMap && l.uom_id && uomMap[String(l.uom_id).toLowerCase()]) ? uomMap[String(l.uom_id).toLowerCase()] :
-                (l.unit_name && !['-','undefined'].includes(l.unit_name)) ? l.unit_name :
-                (poHeader.po_lines?.[idx] as any)?.uom_name || '-'
+                (l.unit_name && !['-','undefined'].includes(String(l.unit_name))) ? l.unit_name :
+                (poHeader.po_lines?.[idx] as POALineResponse)?.uom_name || '-'
             ),
             // 🎯 AV PATTERN: Do NOT force is_approved to true if not explicitly set.
             // This allows the form hook to properly filter out non-actionable rows.
@@ -222,7 +246,7 @@ const mapPOAResponseToListItem = (
         };
     });
 
-    const mappedResult = {
+    const mappedResult: POListItem = {
         ...item,
         po_id: item.approval_id || item.po_header_id || item.po_id || poHeader.po_header_id || poHeader.po_id || 0,
         po_header_id: Number(item.po_header_id || item.po_id || poHeader.po_header_id || poHeader.po_id || 0),
@@ -235,17 +259,17 @@ const mapPOAResponseToListItem = (
             if (normalized === 'PENDING_APPROVAL' && poaNoValue && poaNoValue !== '-') {
                 normalized = 'APPROVED';
             }
-            return normalized as any;
+            return normalized as POStatus;
         })(),
         ...recovered,
-        po_lines: mappedLines,
+        po_lines: mappedLines as unknown as import('@/modules/procurement/types').POLine[],
         total_amount: (() => {
             if (status === 'REJECTED') return 0;
 
             const rate = Number(recovered.exchange_rate || 1);
             
             // 🎯 Line-level calculation (Original Currency)
-            const subTotalOriginal = (mappedLines || []).reduce((sum: number, l: any) => {
+            const subTotalOriginal = (mappedLines || []).reduce((sum: number, l) => {
                 return sum + Number(l.net_amount || 0);
             }, 0);
             const taxRate = Number(recovered.tax_rate ?? 7);
@@ -285,8 +309,8 @@ const mapPOAResponseToListItem = (
     } as unknown as POListItem;
     
     // 🎯 Final Fixup: Sync base_total_amount for UI compatibility
-    if (!(mappedResult as any).base_total_amount || (mappedResult as any).base_total_amount === 0) {
-        (mappedResult as any).base_total_amount = mappedResult.total_amount;
+    if (!mappedResult.base_total_amount || mappedResult.base_total_amount === 0) {
+        mappedResult.base_total_amount = mappedResult.total_amount;
     }
     
     return mappedResult;
@@ -349,56 +373,52 @@ export const POAService = {
         const rawPendingPOs    = (poRes.status === 'fulfilled') ? extractArrayFromResponse<POListItem>(poRes.value) : [];
         const rawRejectedPOs   = (poRejectedRes.status === 'fulfilled') ? extractArrayFromResponse<POListItem>(poRejectedRes.value) : [];
 
-        // DIAGNOSTIC LOG (Temporary)
-        if (rawApprovalItems && rawApprovalItems.length > 0) {
-            logger.debug('[POA List Raw Data] First item keys:', Object.keys(rawApprovalItems[0]));
-            logger.debug('[POA List Raw Data] Item 0 values:', JSON.stringify(rawApprovalItems[0]));
-        }
-        
         // 2. Build Robust Lookup Maps
         const employeeMap: Record<string, string> = {};
         if (empRes.status === 'fulfilled') {
-            (empRes.value as any[] || []).forEach((emp: any) => {
+            const empItems = empRes.value as unknown as Record<string, unknown>[] || [];
+            empItems.forEach((emp) => {
                 const id = String(emp.employee_pk || emp.employee_id || emp.id || '').toLowerCase();
-                if (id) employeeMap[id] = emp.employee_fullname || emp.fullname || emp.name || '';
+                if (id) employeeMap[id] = String(emp.employee_fullname || emp.fullname || emp.name || '');
             });
         }
 
         const branchMap: Record<string, string> = {};
         if (branchRes.status === 'fulfilled') {
-            const bItems = (branchRes.value as any)?.items || branchRes.value || [];
-            if (Array.isArray(bItems)) {
-                bItems.forEach((b: any) => {
-                    const id = String(b.branch_pk || b.branch_id || b.id || '').toLowerCase();
-                    if (id) branchMap[id] = b.branch_name;
-                });
-            }
+            const bValue = branchRes.value as unknown as { items?: Record<string, unknown>[] } | Record<string, unknown>[];
+            const bItems = Array.isArray(bValue) ? bValue : (bValue?.items || []);
+            bItems.forEach((b) => {
+                const id = String(b.branch_pk || b.branch_id || b.id || '').toLowerCase();
+                if (id) branchMap[id] = String(b.branch_name || '');
+            });
         }
 
-        const taxCodeMap: Record<string, any> = {};
+        const taxCodeMap: TaxCodeLookupMap = {};
         if (taxRes.status === 'fulfilled') {
-            (taxRes.value as any[] || []).forEach((t: any) => {
+            const taxItems = taxRes.value as unknown as Record<string, unknown>[] || [];
+            taxItems.forEach((t) => {
                 const id = String(t.tax_id || t.tax_code_id || t.id || '').toLowerCase();
-                if (id) taxCodeMap[id] = t;
+                if (id) taxCodeMap[id] = {
+                    tax_code: String(t.tax_code || t.code || ''),
+                    tax_name: String(t.tax_name || t.name || ''),
+                    tax_rate: Number(t.tax_rate ?? 0)
+                };
             });
         }
         
         const uomMap: Record<string, string> = {};
         if (uomRes.status === 'fulfilled') {
-            const uItems = (uomRes.value as any)?.items || uomRes.value || [];
-            if (Array.isArray(uItems)) {
-                uItems.forEach((u: any) => {
-                    const id = String(u.uom_id || u.unit_id || u.id || '').toLowerCase();
-                    if (id) uomMap[id] = u.uom_name || u.unit_name || u.name || '';
-                });
-            }
+            const uValue = uomRes.value as unknown as { items?: Record<string, unknown>[] } | Record<string, unknown>[];
+            const uItems = Array.isArray(uValue) ? uValue : (uValue?.items || []);
+            uItems.forEach((u) => {
+                const id = String(u.uom_id || u.unit_id || u.id || '').toLowerCase();
+                if (id) uomMap[id] = String(u.uom_name || u.unit_name || u.name || '');
+            });
         }
 
          // 3. Normalize and Combine
-        // Approval items come from the raw /po-approval endpoint, so they need full mapping.
         const approvalItems: POListItem[] = rawApprovalItems.map(item => {
             const mapped = mapPOAResponseToListItem(item, employeeMap, branchMap, taxCodeMap, uomMap);
-            // 🎯 AV PATTERN: Raw ID + String row_key
             const rawId = Number(item.approval_id || item.id || 0);
             return {
                 ...mapped,
@@ -408,7 +428,6 @@ export const POAService = {
             };
         });
         
-        // 🎯 AV PATTERN: Calculate remaining totals for pending items by matching history
         const approvedHistoryTotalMap = new Map<string, number>();
         approvalItems.forEach(h => {
             const sum = Number(approvedHistoryTotalMap.get(h.po_no) || 0);
@@ -425,7 +444,6 @@ export const POAService = {
                 const rawId = Number(item.po_id || mapped.po_id || 0);
                 const poNo = String(mapped.po_no || '');
                 
-                // 🎯 AV PATTERN: Subtract historical totals from the pending PO row
                 const historicalSum = approvedHistoryTotalMap.get(poNo) || 0;
                 const originalTotal = Number(mapped.total_amount || 0);
                 const remTotal      = Math.max(0, originalTotal - historicalSum);
@@ -435,7 +453,7 @@ export const POAService = {
                     row_key: `pending-${rawId}`,
                     po_id: rawId,
                     poa_no: '-', 
-                    status: 'PENDING_APPROVAL' as any,
+                    status: 'PENDING_APPROVAL' as POStatus,
                     total_amount: remTotal,
                     base_total_amount: remTotal
                 };
@@ -446,31 +464,20 @@ export const POAService = {
             return {
                 ...mapped,
                 status: 'REJECTED',
-                total_amount: 0 // Business rule: Rejected shows 0 in list to avoid confusion
+                total_amount: 0
             };
         });
 
-        // ---------------------------------------------------------------------------
-        // 4. Deduplicate & Combine (Strict Logic — NO DUPLICATES ALLOWED)
-        // ---------------------------------------------------------------------------
         const listMap = new Map<string, POListItem>();
-        const seenPoIds = new Set<number>();
-
-        // 4.1 Process Official Approval Records first (Primary Source of truth for status)
         approvalItems.forEach((item: POListItem) => {
             const poaNo = String(item.poa_no || '').trim();
             const poNo = String(item.po_no || '').trim();
-            const poId = item.po_id ? Number(item.po_id) : undefined;
-
-            // Use Trimmed POA Number as primary map key, or fallback to trimmed PO Number
             const uniqueKey = (poaNo && poaNo !== '-') ? poaNo : poNo;
             if (uniqueKey) {
                 listMap.set(uniqueKey, item);
-                if (poId) seenPoIds.add(poId);
             }
         });
 
-        // 4.2 Merge Pending/Rejected POs
         [...pendingPOItems, ...rejectedPOItems].forEach((item: POListItem) => {
             const poNo = String(item.po_no || '').trim();
             const poaNo = String(item.poa_no || '').trim();
@@ -497,38 +504,17 @@ export const POAService = {
         });
 
         const combinedItems = Array.from(listMap.values());
-        
-        // 🔍 MEGA DIAGNOSTIC LOG (Finding the 0-item bug)
-        logger.debug(`[POAService] FINAL COMBINED PRE-FILTER: ${combinedItems.length} items`);
-        combinedItems.forEach((item, idx) => {
-            if (idx < 10) {
-                logger.debug(`[POAService] Item[${idx}] PO: ${item.po_no}, Status: "${item.status}", Type: ${typeof item.status}`);
-            }
-        });
-
-        // ---------------------------------------------------------------------------
-        // 5. Client-Side Filtering & Pagination (Hybrid Fallback)
-        // ---------------------------------------------------------------------------
         const filterParams = { ...params };
         if (filterParams.status === 'ALL') delete filterParams.status;
-
-        // Ensure status is compared correctly (trimmed and uppercase)
         if (filterParams.status) {
-            filterParams.status = String(filterParams.status).trim().toUpperCase() as any;
+            filterParams.status = String(filterParams.status).trim().toUpperCase() as POStatus;
         }
         
-        logger.debug(`[POAService] Applying filter with params:`, JSON.stringify(filterParams));
-
-        const result = applyClientFilters<POListItem>(combinedItems, filterParams as any, {
+        const result = applyClientFilters<POListItem>(combinedItems, filterParams as unknown as Record<string, FilterValue>, {
             searchableFields: ['po_no', 'poa_no', 'vendor_name', 'pr_no', 'qc_no'],
             dateField: 'po_date',
             exactMatchFields: ['status']
         });
-
-        logger.debug(`[POAService] CLIENT FILTER RESULT: total=${result.total}, data.length=${result.data.length}`);
-        if (result.data.length > 0) {
-            logger.debug(`[POAService] Result[0] Status: "${result.data[0].status}"`);
-        }
 
         return result;
     },
@@ -538,14 +524,9 @@ export const POAService = {
         logger.info(`[POAService] Fetching POA Detail: ${id}, Context: ${context}`);
 
         const numericId = Number(id);
-        
-        // 🎯 AV PATTERN: Distinguish context explicitly
-        // If context is POA, we fetch the historical record.
-        // If context is PO (default), we fetch the actionable approval screen.
         const isHistory = context === 'POA' || (typeof id === 'string' && id.startsWith('approved'));
         const actualId = typeof id === 'string' ? Number(id.replace(/^(approved|pending)-/, '')) : numericId;
 
-        // 1. Parallel fetch for registries and detail
         const [res, emps, branches, taxes, uoms] = await Promise.allSettled([
             api.get<Record<string, unknown>>(isHistory ? ENDPOINTS.detail(actualId) : ENDPOINTS.poDetail(actualId)),
             EmployeeService.getAll(),
@@ -556,98 +537,88 @@ export const POAService = {
 
         const employeeMap: Record<string, string> = {};
         if (emps.status === 'fulfilled') {
-            (emps.value as any[] || []).forEach((emp: any) => {
+            const empItems = emps.value as unknown as Record<string, unknown>[] || [];
+            empItems.forEach((emp) => {
                 const eid = String(emp.employee_pk || emp.employee_id || emp.id || '').toLowerCase();
-                if (eid) employeeMap[eid] = emp.employee_fullname || emp.fullname || emp.name || '';
+                if (eid) employeeMap[eid] = String(emp.employee_fullname || emp.fullname || emp.name || '');
             });
         }
 
         const branchMap: Record<string, string> = {};
         if (branches.status === 'fulfilled') {
-            const bItems = (branches.value as any)?.items || branches.value || [];
-            if (Array.isArray(bItems)) {
-                bItems.forEach((b: any) => {
-                    const bid = String(b.branch_pk || b.branch_id || b.id || '').toLowerCase();
-                    if (bid) branchMap[bid] = b.branch_name;
-                });
-            }
+            const bValue = branches.value as unknown as { items?: Record<string, unknown>[] } | Record<string, unknown>[];
+            const bItems = Array.isArray(bValue) ? bValue : (bValue?.items || []);
+            bItems.forEach((b) => {
+                const bid = String(b.branch_pk || b.branch_id || b.id || '').toLowerCase();
+                if (bid) branchMap[bid] = String(b.branch_name || '');
+            });
         }
 
-        const taxCodeMap: Record<string, any> = {};
+        const taxCodeMap: TaxCodeLookupMap = {};
         if (taxes.status === 'fulfilled') {
-            (taxes.value as any[] || []).forEach((t: any) => {
+            const taxItems = taxes.value as unknown as Record<string, unknown>[] || [];
+            taxItems.forEach((t) => {
                 const tid = String(t.tax_id || t.tax_code_id || t.id || '').toLowerCase();
-                if (tid) taxCodeMap[tid] = t;
+                if (tid) taxCodeMap[tid] = {
+                    tax_code: String(t.tax_code || t.code || ''),
+                    tax_name: String(t.tax_name || t.name || ''),
+                    tax_rate: Number(t.tax_rate ?? 0)
+                };
             });
         }
         
         const uomMap: Record<string, string> = {};
         if (uoms.status === 'fulfilled') {
-            const uItems = (uoms.value as any)?.items || uoms.value || [];
-            if (Array.isArray(uItems)) {
-                uItems.forEach((u: any) => {
-                    const uid = String(u.uom_id || u.unit_id || u.id || '').toLowerCase();
-                    if (uid) uomMap[uid] = u.uom_name || u.unit_name || u.name || '';
-                });
-            }
+            const uValue = uoms.value as unknown as { items?: Record<string, unknown>[] } | Record<string, unknown>[];
+            const uItems = Array.isArray(uValue) ? uValue : (uValue?.items || []);
+            uItems.forEach((u) => {
+                const uid = String(u.uom_id || u.unit_id || u.id || '').toLowerCase();
+                if (uid) uomMap[uid] = String(u.uom_name || u.unit_name || u.name || '');
+            });
         }
 
-        const approvalRes = res.status === 'fulfilled' ? res.value : {};
-        
-        // 🎯 AV PATTERN: Raw ID Mapping (Legacy 1B/2B offsets removed)
-        let poHeaderId = Number(approvalRes.po_header_id || approvalRes.po_id || (approvalRes.poHeader as any)?.po_header_id || actualId);
-        
-        // Ensure po_header_id is correctly prioritized
+        const approvalRes = (res.status === 'fulfilled' ? res.value : {}) as POHeaderResponse;
+        let poHeaderId = Number(approvalRes.po_header_id || approvalRes.po_id || (approvalRes.poHeader as POHeaderResponse)?.po_header_id || actualId);
         if (!isHistory && poHeaderId === 0) poHeaderId = actualId;
 
-        // 1. Fetch Base PO and ALL Approval History for this PO
-        let poRes: any = {};
-        let allApprovalHistory: any[] = [];
+        let poRes: POListItem = {} as POListItem;
+        let allApprovalHistory: Record<string, unknown>[] = [];
         
         try {
-            // 🎯 CRITICAL FIX: ALWAYS fetch via POService.getById to trigger ItemMaster hydration
-            // Raw API responses from /po-approval or /po/id (initial fetch) often lack item_code/item_name.
             poRes = await POService.getById(poHeaderId);
-            
-            // 🎯 Fetch all past approvals for this PO to calculate remaining balances
-            const poNo = poRes.po_no || (approvalRes.poHeader as any)?.po_no || approvalRes.po_no;
+            const poNo = poRes.po_no || (approvalRes.poHeader as POHeaderResponse)?.po_no || approvalRes.po_no;
             if (poNo && poNo !== '-') {
                 const historyRes = await api.get<Record<string, unknown>>(ENDPOINTS.list, { params: { po_no: poNo, limit: 1000 } });
-                const rawHistory = extractArrayFromResponse(historyRes);
+                const rawHistory = extractArrayFromResponse<Record<string, unknown>>(historyRes);
                 
-                // 🎯 Exact match filtering for the PO Number
-                allApprovalHistory = rawHistory.filter((h: any) => 
-                    String(h.poHeader?.po_no || h.po_no || '').trim() === poNo.trim()
-                );
+                allApprovalHistory = rawHistory.filter((h) => 
+                    String((h as POHeaderResponse).poHeader?.po_no || (h as POHeaderResponse).po_no || '').trim() === String(poNo || '').trim()
+                ) as Record<string, unknown>[];
             }
         } catch (error) {
             logger.error(`[POAService] Could not fetch base PO or History for ${poHeaderId}`, error);
         }
 
-        // 2. Calculate Cumulative Approved Quantities per Line from PREVIOUS rounds
         const currentRoundId = Number(id || approvalRes.id || 0);
         const currentPoaNo   = String(approvalRes.approval_no || approvalRes.poa_no || '').trim();
         
-        const approvedSumMap: Record<number, number> = {};
+        const approvedSumMap: Record<string, number> = {};
         const seenHistoryIds = new Set<number>();
 
-        // 2. Extract Base Lines FIRST to avoid ReferenceErrors during history summation
-        const poHeaderDetail = (approvalRes.poHeader as any) || (approvalRes.po_header as any) || approvalRes || {};
-        const parentLines = poRes.po_lines || poRes.poLines || [];
-        const poaLinesRaw = approvalRes.poLines || approvalRes.po_lines || poHeaderDetail.po_lines || poHeaderDetail.poLines || approvalRes.lines || [];
+        const poHeaderDetail = (approvalRes.poHeader as POHeaderResponse) || (approvalRes.po_header as POHeaderResponse) || approvalRes || {};
+        const parentLines = poRes.po_lines || [];
+        const poaLinesRaw = approvalRes.po_lines || poHeaderDetail.po_lines || approvalRes.lines || [];
         const poaLines = Array.isArray(poaLinesRaw) ? poaLinesRaw : [];
 
-        // 🎯 MAPS for Robust Matching & Metadata Recovery
-        const parentIdMap = new Map<number, any>();
-        const parentCodeMap = new Map<string, any>();
-        parentLines.forEach((p: any) => {
-            const pid = p.id || p.po_line_id;
-            if (pid) parentIdMap.set(pid, p);
-            if (p.item_code) parentCodeMap.set(p.item_code, p);
+        const parentIdMap = new Map<string, Record<string, unknown>>();
+        const parentCodeMap = new Map<string, Record<string, unknown>>();
+        parentLines.forEach((p) => {
+            const pid = String(p.po_line_id || p.id || '');
+            if (pid) parentIdMap.set(pid, p as unknown as Record<string, unknown>);
+            if (p.item_code) parentCodeMap.set(String(p.item_code), p as unknown as Record<string, unknown>);
         });
 
-        // 🎯 SUMMATION: Identify which PO line each historical record belongs to
-        allApprovalHistory.forEach((h: any) => {
+        allApprovalHistory.forEach((h) => {
             const hId   = Number(h.id || 0);
             const poaNo = String(h.approval_no || h.poa_no || '').trim();
 
@@ -658,37 +629,32 @@ export const POAService = {
 
             if (!poaNo || poaNo === '-') return;
 
-            const hLines = h.po_lines || h.lines || [];
-            hLines.forEach((l: any) => {
-                let lid = l.po_line_id || l.id;
+            const hLines = (h.po_lines || h.lines || []) as Record<string, unknown>[];
+            hLines.forEach((l) => {
+                let lid = String(l.po_line_id || l.id || '');
                 
-                // 🎯 Match by Code if ID is missing/mismatched (Common in history)
                 if (!parentIdMap.has(lid) && l.item_code) {
-                    const matchByCode = parentCodeMap.get(l.item_code);
-                    if (matchByCode) lid = matchByCode.id || matchByCode.po_line_id;
+                    const matchByCode = parentCodeMap.get(String(l.item_code));
+                    if (matchByCode) lid = String(matchByCode.po_line_id || matchByCode.id || '');
                 }
-
+                
                 if (lid && parentIdMap.has(lid)) {
                     approvedSumMap[lid] = (approvedSumMap[lid] || 0) + Number(l.approved_qty || l.qty_approved || 0);
                 }
             });
         });
-
-        logger.debug(`[POAService] Approved Summation Map for PO ${poHeaderId}:`, approvedSumMap);
         
         const sourceLines = (poaLines.length > 0) ? poaLines : parentLines;
 
-        const finalLines = sourceLines.map((l: any, idx: number) => {
-            const lid = l.po_line_id || l.id;
+        const finalLines = (sourceLines as Record<string, unknown>[]).map((l: Record<string, unknown>, idx: number) => {
+            const lid = String(l.po_line_id || l.id || '');
             
-            // 🎯 Metadata Recovery: History often loses names/codes, pull from Parent PO
             let parentLine = parentIdMap.get(lid);
-            if (!parentLine && l.item_code) parentLine = parentCodeMap.get(l.item_code);
-            if (!parentLine) parentLine = parentLines[idx];
+            if (!parentLine && l.item_code) parentLine = parentCodeMap.get(String(l.item_code));
+            if (!parentLine) parentLine = parentLines[idx] as unknown as Record<string, unknown>;
             
             const originalQty = Number(parentLine?.qty ?? parentLine?.qty_ordered ?? l.qty ?? l.qty_ordered ?? 0);
             
-            // 🎯 ENHANCE line with metadata from Parent PO
             const enriched = {
                 ...l,
                 item_code: l.item_code || parentLine?.item_code || '-',
@@ -698,7 +664,6 @@ export const POAService = {
                 qty: originalQty,
             };
 
-            // 🎯 History Mode
             if (isHistory) {
                 const poaQty = Number(l.approved_qty ?? l.qty_approved ?? 0);
                 return {
@@ -710,8 +675,7 @@ export const POAService = {
                 };
             }
 
-            // 🎯 Approval Mode (Actionable)
-            const actualLid = lid || (parentLine ? (parentLine.id || parentLine.po_line_id) : undefined);
+            const actualLid = lid || (parentLine ? String(parentLine.po_line_id || parentLine.id || '') : '');
             const approvedSoFar = actualLid ? (approvedSumMap[actualLid] || 0) : 0;
             const remQty = Math.max(0, originalQty - approvedSoFar);
             
@@ -726,8 +690,6 @@ export const POAService = {
             };
         });
 
-        // 🎯 AV PATTERN: Sanitize Parent PO data before merging
-        // For history records, we MUST NOT inherit financial totals from the parent PO
         const sanitizedPoRes = isHistory ? {
             ...poRes,
             total_amount: undefined,
@@ -742,65 +704,39 @@ export const POAService = {
         const finalApprovalRes = { ...approvalRes };
         const finalPoRes       = { ...sanitizedPoRes };
         
-        // 🎯 SANITIZE: Remove any "stray" line arrays to ensure mapPOAResponseToListItem 
-        // uses our enriched finalLines (po_lines).
-        delete (finalApprovalRes as any).poLines;
-        delete (finalApprovalRes as any).lines;
-        delete (finalPoRes as any).poLines;
-        delete (finalPoRes as any).lines;
+        delete (finalApprovalRes as Record<string, unknown>).po_lines;
+        delete (finalApprovalRes as Record<string, unknown>).lines;
+        delete (finalPoRes as Record<string, unknown>).po_lines;
+        delete (finalPoRes as Record<string, unknown>).lines;
 
-        const merged: Record<string, any> = {
+        const merged: Record<string, unknown> = {
             ...finalPoRes,
             ...finalApprovalRes,
-            // 🎯 Our enriched and filtered lines become the ONLY source of truth
             po_lines: finalLines,
-            poHeader: sanitizedPoRes.poHeader || sanitizedPoRes.po_header || sanitizedPoRes || {},
+            poHeader: (sanitizedPoRes as POHeaderResponse).poHeader || (sanitizedPoRes as POHeaderResponse).po_header || sanitizedPoRes || {},
         };
 
         const result = mapPOAResponseToListItem(merged, employeeMap, branchMap, taxCodeMap, uomMap);
-        
-        logger.info(`[POAService] Final Hydrated Result for ${id}:`, {
-            po_no: result.po_no,
-            remaining_check: result.po_lines?.[0], // Debug first line
-        });
-
         return result;
     },
 
-    /** Update PO details (quantity, remark) before approval */
     update: async (id: number, data: Partial<POAFormData>): Promise<SuccessResponse> => {
-        logger.info(`[POAService] Updating PO before approval: ${id}`);
         return await api.put<SuccessResponse>(ENDPOINTS.update(id), data);
     },
 
-    /** Approve PO */
     approve: async (id: number): Promise<SuccessResponse> => {
-        logger.info(`[POAService] Approving PO: ${id}`);
         return await api.post<SuccessResponse>(ENDPOINTS.approve(id), {});
     },
 
-    /** Reject/Cancel PO */
     reject: async (id: number, reject_reason?: string): Promise<SuccessResponse> => {
-        logger.info(`[POAService] Rejecting PO: ${id}`);
         return await api.post<SuccessResponse>(ENDPOINTS.reject(id), { reject_reason });
     },
 
-    /** 
-     * Unified approval submission (matching the new backend /po-approval)
-     * Matches the structure of the Postman test
-     */
     submitApproval: async (data: POAApprovalPayload): Promise<SuccessResponse> => {
-        logger.info(`[POAService] Submitting POA Approval/Rejection:`, data);
-        if (!data.status) {
-            logger.error('[POAService] Status is missing from approval payload');
-        }
         return await api.post<SuccessResponse>(ENDPOINTS.submit, data);
     },
     
-    /** Bulk Approve POs (if API supports, otherwise loop) */
     bulkApprove: async (ids: number[]): Promise<SuccessResponse[]> => {
-        logger.info(`[POAService] Bulk Approving POs:`, ids);
-        // Implementing sequentially to ensure compatibility if bulk endpoint isn't ready
         const results = [];
         for (const id of ids) {
             results.push(await POAService.approve(id));

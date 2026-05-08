@@ -37,7 +37,7 @@ export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> =
                 logger.info(`[ApprovedPRSelectionModal] Launching PRECISION REGISTRY CHECK for PR ${prNo} (ID: ${prId})`);
                 
                 // 🎯 PHASE 1: Fetch candidate AV records
-                const avRecords = await RFQService.getPRApprovalDetail(prId);
+                const avRecords = (await RFQService.getPRApprovalDetail(prId)) as unknown as ExtendedApprovalHeader[];
                 
                 // 🎯 PHASE 2: Parallel Precision Query against the RFQ Registry
                 // We ask the RFQ System directly: "Has AV-XXXX been used yet?"
@@ -71,8 +71,8 @@ export const ApprovedPRSelectionModal: React.FC<ApprovedPRSelectionModalProps> =
 
                 registryResults.forEach(res => {
                     if (res.isUsed) {
-                        const avNo = res.av.approval_no || res.av.approved_pr_no || '';
-                        if (avNo) usedNos.add(avNo);
+                        const foundNo = String(res.av.approval_no || res.av.approved_pr_no || '');
+                        if (foundNo) usedNos.add(foundNo);
                         if (res.av.approval_id) usedIds.add(res.av.approval_id);
                     }
                 });

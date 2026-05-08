@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useForm, useWatch, type Path, type SubmitHandler, type FieldErrors, type FieldError } from 'react-hook-form';
+import { useForm, useWatch, type Path, type SubmitHandler, type FieldErrors, type FieldError, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { VendorService } from '../services/vendor.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
@@ -54,7 +54,7 @@ export function useVendorForm({
         getValues,
         formState: { errors, isSubmitting } 
     } = useForm<VendorSchemaType>({
-        resolver: zodResolver(VendorSchema) as any,
+        resolver: zodResolver(VendorSchema) as Resolver<VendorSchemaType>,
         defaultValues: initialVendorFormData,
         mode: 'onChange' 
     });
@@ -208,7 +208,8 @@ export function useVendorForm({
             finalValue = checked;
         }
 
-        setValue(name as Path<VendorFormData>, finalValue, { shouldValidate: true, shouldDirty: true });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setValue(name as Path<VendorSchemaType>, finalValue as any, { shouldValidate: true, shouldDirty: true });
     };
 
     const addBankAccount = () => {
@@ -315,13 +316,13 @@ export function useVendorForm({
         
         const current = [...getValues('addresses')];
         if (current[index]) {
-            current[index] = { ...current[index], [field]: finalValue };
+            current[index] = { ...current[index], [field]: finalValue } as VendorAddressFormItem;
             
             const isSameAsRegistered = getValues('sameAsRegistered');
             
             if (index === 0 && isSameAsRegistered && 
                 !['isMain', 'addressType', 'id'].includes(field)) {
-                current[1] = { ...current[1], [field]: finalValue };
+                current[1] = { ...current[1], [field]: finalValue } as VendorAddressFormItem;
             }
         }
         setValue('addresses', current, { shouldDirty: true, shouldValidate: true });
@@ -373,7 +374,7 @@ export function useVendorForm({
                 ? 'คุณต้องการบันทึกการแก้ไขข้อมูลเจ้าหนี้ใช่หรือไม่?' 
                 : 'คุณต้องการบันทึกข้อมูลเจ้าหนี้ใช่หรือไม่?',
             confirmText: headerTitle === 'แก้ไขข้อมูลเจ้าหนี้' ? 'ยืนยันการแก้ไข' : 'ยืนยัน',
-            cancelText: 'ยกเลิก',
+            cancelText: 'กดยกเลิก',
             variant: 'info'
         });
 
@@ -426,7 +427,7 @@ export function useVendorForm({
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        await rhfHandleSubmit(onSubmit as any, (invalidErrors) => {
+        await rhfHandleSubmit(onSubmit as SubmitHandler<VendorSchemaType>, (invalidErrors) => {
             logger.error('Validation Errors:', invalidErrors);
 
             // 1. 🎯 Auto-Scroll to first error field
@@ -438,7 +439,7 @@ export function useVendorForm({
                 
                 if (errorElement) {
                     errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    if ('focus' in errorElement) (errorElement as any).focus();
+                    if ('focus' in errorElement) (errorElement as HTMLElement).focus();
                 } else if (firstErrorKey.includes('.')) {
                     // Handle nested fields (e.g., addresses[0].address)
                     const nestedElement = document.querySelector(`[name="${firstErrorKey}"]`);
@@ -447,14 +448,17 @@ export function useVendorForm({
             }
 
             // 2. 📝 Human-friendly Error Summary
-            const extractMessages = (errs: any): string[] => {
+            const extractMessages = (errs: FieldErrors<VendorSchemaType>): string[] => {
                 let messages: string[] = [];
                 for (const key in errs) {
-                    const error = errs[key];
-                    if (error?.message && typeof error.message === 'string') {
+                    const error = errs[key as keyof FieldErrors<VendorSchemaType>];
+                    if (!error) continue;
+
+                    if ('message' in error && typeof error.message === 'string') {
                         messages.push(error.message);
-                    } else if (typeof error === 'object' && error !== null) {
-                        messages = messages.concat(extractMessages(error));
+                    } else if (typeof error === 'object') {
+                        // Recursively handle nested errors (arrays)
+                        messages = messages.concat(extractMessages(error as FieldErrors<VendorSchemaType>));
                     }
                 }
                 return Array.from(new Set(messages));
@@ -469,7 +473,7 @@ export function useVendorForm({
                         errorMessages.map((msg: string, i: number) => React.createElement('li', { key: i }, msg))
                     )
                 );
-                toast(React.createElement(ErrorToastUI) as any, 'error');
+                toast(React.createElement(ErrorToastUI) as unknown as string, 'error');
             } else {
                 toast('กรุณาตรวจสอบข้อมูลที่ระบุให้ครบถ้วน', 'error');
             }
