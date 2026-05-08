@@ -62,7 +62,7 @@ export const AVFormSummary: React.FC<AVFormSummaryProps> = () => {
         return {
             ...line,
             qty: approvedQty,
-            discount: discount // Override with recalculated discount
+            line_discount_raw: String(discount) // 🎯 CRITICAL: Set this so usePRCalculations picks it up
         };
     }) as PRLineFormData[];
 

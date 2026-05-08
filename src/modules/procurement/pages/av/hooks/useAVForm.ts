@@ -179,6 +179,8 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
           .find((avL: ApprovalLine) => Number(avL.pr_line_id) === Number(line.pr_line_id));
 
         const qty = Number(line.qty || line.requested_qty || 0);
+        const isExistingAV = !!avDetails?.approval_id || !!itemArg?.approval_id;
+        const isApproved = isExistingAV ? !!matchedAVLine : true;
 
         return {
           pr_line_id: line.pr_line_id,
@@ -198,8 +200,8 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
           est_unit_price: Number(line.est_unit_price || line.unit_price || line.price || 0),
           total_amount: Number(line.est_amount || line.line_total || line.line_net_amount || 0),
           est_amount: Number(line.est_amount || line.line_total || line.line_net_amount || 0),
-          is_approved: !!matchedAVLine || source.status === 'APPROVED',
-          approved_qty: matchedAVLine ? Number(matchedAVLine.approved_qty) : qty,
+          is_approved: isApproved, 
+          approved_qty: matchedAVLine ? Number(matchedAVLine.approved_qty) : (isApproved ? qty : 0),
           remark: matchedAVLine?.remarks || '',
           status: line.status || '',
           remaining_qty: Number(line.remaining_qty || 0),

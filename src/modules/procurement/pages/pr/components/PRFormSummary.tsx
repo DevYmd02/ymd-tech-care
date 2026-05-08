@@ -14,17 +14,15 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ isViewMode = false
     const lines = useWatch({ control, name: 'lines' }) as PRLineFormData[] | undefined;
     const vatRate = Number(useWatch({ control, name: 'pr_tax_rate' }) ?? 0);
     const discountInput = useWatch({ control, name: 'pr_discount_raw' }) ?? '';
-    
-    const subTotalState = useWatch({ control, name: 'pr_sub_total' });
-    const discountAmountState = useWatch({ control, name: 'pr_discount_amount' });
-    const taxAmountState = useWatch({ control, name: 'pr_tax_amount' });
-    const grandTotalState = useWatch({ control, name: 'total_amount' });
 
 
 
-    // Use calculation hook for line-level discount sum
     const {
-        totalLineDiscount
+        subtotal,
+        totalLineDiscount,
+        globalDiscountAmount,
+        vatAmount,
+        grandTotal
     } = usePRCalculations({
         lines: lines || [],
         vatRate,
@@ -46,7 +44,7 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ isViewMode = false
                 <div className="flex justify-between items-center">
                   <span className={labelClass}>รวม</span>
                   <input 
-                    value={subTotalState?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}
+                    value={subtotal?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     readOnly 
                     className={`w-32 ${inputReadonlyClass} bg-yellow-50 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-600 text-gray-900 dark:text-yellow-200`} 
                   />
@@ -67,14 +65,14 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ isViewMode = false
                     <span className="text-gray-400 dark:text-gray-500">-</span>
                     {/* Field 2: Read-only — calculated discount amount from this input */}
                     <input 
-                      value={discountAmountState?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}
+                      value={globalDiscountAmount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                       readOnly 
                       className={`w-24 ${inputReadonlyClass}`} 
                     />
                     <span className="text-gray-400 dark:text-gray-500">-</span>
                     {/* Field 3: Read-only — total discount (line discounts + global discount) */}
                     <input 
-                      value={((discountAmountState || 0) + totalLineDiscount).toLocaleString(undefined, { minimumFractionDigits: 2 })} 
+                      value={((globalDiscountAmount || 0) + totalLineDiscount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 
                       readOnly 
                       className={`w-28 ${inputReadonlyClass} text-red-500 dark:text-red-400 font-medium`} 
                     />
@@ -97,7 +95,7 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ isViewMode = false
                     )}
                     {vatRate > 0 && <span className="text-gray-400 dark:text-gray-500">-</span>}
                     <input 
-                      value={taxAmountState?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'} 
+                      value={vatAmount?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'} 
                       readOnly 
                       className={`w-28 ${inputReadonlyClass}`} 
                     />
@@ -108,7 +106,7 @@ export const PRFormSummary: React.FC<PRFormSummaryProps> = ({ isViewMode = false
                 <div className="flex justify-between items-center pt-2 border-t border-gray-300 dark:border-gray-600">
                   <span className="font-bold text-gray-700 dark:text-gray-300">รวมทั้งสิ้น</span>
                   <input 
-                    value={grandTotalState?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}
+                    value={grandTotal?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     readOnly 
                     className="w-32 h-8 px-2 text-right font-bold bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-400 dark:border-yellow-600 rounded text-blue-600 dark:text-yellow-200" 
                   />
