@@ -113,7 +113,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
     const { toast } = useToast();
     const isEdit = !!editId;
 
-    const [step, setStep] = useState<1 | 2>(1);
+    const [step, setStep] = useState<1 | 2 | 3>(1);
     const [createdEmployee, setCreatedEmployee] = useState<EmployeeMaster | null>(null);
 
     const {

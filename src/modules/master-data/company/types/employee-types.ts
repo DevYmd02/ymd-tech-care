@@ -58,3 +58,19 @@ export interface IEmployee {
   };
   emp_type?: string | boolean;
 }
+
+export interface IEmployeeSignature {
+  emp_signature_id: number;
+  employee_id: number;
+  signature_url: string;
+  signature_name: string | null;
+  is_active: boolean;
+  is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IUploadSignatureResponse {
+  message: string;
+  data: IEmployeeSignature;
+}
