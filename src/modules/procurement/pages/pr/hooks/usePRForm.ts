@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import type { FieldErrors, Path, FieldPathValue, Resolver, SubmitHandler } from 'react-hook-form';
 import {
   PRFormSchema,
@@ -21,7 +21,6 @@ import type { WarehouseListItem, Currency } from '@/modules/master-data/types/ma
 import { usePRActions } from './usePRActions';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
-import { usePRCalculations } from './usePRCalculations';
 import { usePRHydration } from './usePRHydration';
 
 const PR_CONFIG = {
@@ -256,34 +255,10 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
   // CALCULATION ENGINE (REACTIVE SYNC)
   // ====================================================================================
   
-  const watchedLinesForCalc = useWatch({ control, name: 'lines' }) as PRLineFormData[] | undefined;
-  const watchedDiscountRaw = useWatch({ control, name: 'pr_discount_raw' });
-  const watchedTaxRate = useWatch({ control, name: 'pr_tax_rate' });
-  const watchedTaxId = useWatch({ control, name: 'pr_tax_code_id' });
+  // 🎯 Calculations are now derived on-the-fly in UI components (Issue #3 fix)
+  // The summary fields (sub_total, tax_amount, etc.) are now calculated directly in PRFormSummary.
 
-  const {
-      subtotal,
-      globalDiscountAmount,
-      vatAmount,
-      grandTotal
-  } = usePRCalculations({
-      lines: watchedLinesForCalc || [],
-      vatRate: watchedTaxRate || 0,
-      globalDiscountInput: watchedDiscountRaw || ''
-  });
 
-  useEffect(() => {
-    // STRICT TAX GUARDRAIL: VAT is strictly 0 unless a tax code is selected
-    const isActiveTax = watchedTaxId && String(watchedTaxId) !== '';
-    const finalVatAmount = isActiveTax ? vatAmount : 0;
-    const finalGrandTotal = subtotal - globalDiscountAmount + finalVatAmount;
-
-    // Inject calculated values back into the form state securely
-    setValue('pr_sub_total', Number(subtotal.toFixed(2)), { shouldDirty: true, shouldValidate: true });
-    setValue('pr_discount_amount', Number(globalDiscountAmount.toFixed(2)), { shouldDirty: true, shouldValidate: true });
-    setValue('pr_tax_amount', Number(finalVatAmount.toFixed(2)), { shouldDirty: true, shouldValidate: true });
-    setValue('total_amount', Number(finalGrandTotal.toFixed(2)), { shouldDirty: true, shouldValidate: true });
-  }, [subtotal, globalDiscountAmount, vatAmount, grandTotal, setValue, watchedLinesForCalc, watchedTaxRate, watchedTaxId]);
 
   const addLine = useCallback(() => append(createEmptyPRLine()), [append]);
   
@@ -308,55 +283,19 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     const currentLines = watch('lines');
     const line = { ...currentLines[index] };
     
-    if (field === 'line_discount_raw') {
-      const input = String(value || '');
-      const totalBeforeDiscount = (line.est_unit_price || 0) * (line.qty || 0);
-      let discAmount = 0;
-      if (input.trim().endsWith('%')) {
-        const percent = parseFloat(input.replace('%', ''));
-        if (!isNaN(percent)) discAmount = totalBeforeDiscount * (percent / 100);
-      } else {
-        discAmount = parseFloat(input) || 0;
-      }
-      const finalDiscount = discAmount > totalBeforeDiscount ? totalBeforeDiscount : discAmount;
+    if (field === 'est_unit_price') {
+      const unitPrice = parseFloat(String(value || 0)) || 0;
       
-      const discountPath = `lines.${index}.discount` as Path<PRFormData>;
-      const amountPath = `lines.${index}.est_amount` as Path<PRFormData>;
-      
-      setValue(discountPath, finalDiscount as FieldPathValue<PRFormData, typeof discountPath>);
-      setValue(amountPath, (totalBeforeDiscount - finalDiscount) as FieldPathValue<PRFormData, typeof amountPath>);
-    } else if (field === 'qty' || field === 'est_unit_price') {
-      const qty = field === 'qty' ? (parseFloat(String(value || 0)) || 0) : (line.qty || 0);
-      const unitPrice = field === 'est_unit_price' ? (parseFloat(String(value || 0)) || 0) : (line.est_unit_price || 0);
-      
-      const totalBeforeDiscount = qty * unitPrice;
-      let discAmount = 0;
-      const input = line.line_discount_raw || '';
-      if (input.trim().endsWith('%')) {
-        const percent = parseFloat(input.replace('%', ''));
-        if (!isNaN(percent)) discAmount = totalBeforeDiscount * (percent / 100);
-      } else {
-        discAmount = parseFloat(input) || 0;
-      }
-      const finalDiscount = discAmount > totalBeforeDiscount ? totalBeforeDiscount : discAmount;
-      
-      const discountPath = `lines.${index}.discount` as Path<PRFormData>;
-      const amountPath = `lines.${index}.est_amount` as Path<PRFormData>;
-      
-      setValue(discountPath, finalDiscount as FieldPathValue<PRFormData, typeof discountPath>);
-      setValue(amountPath, (totalBeforeDiscount - finalDiscount) as FieldPathValue<PRFormData, typeof amountPath>);
-
       // W-04: Price variance warning when user edits est_unit_price
-      if (field === 'est_unit_price') {
-        const stdCost = line._standard_cost;
-        if (stdCost && stdCost > 0 && unitPrice > 0) {
-          const variance = Math.abs(unitPrice - stdCost) / stdCost;
-          if (variance > 0.15) {
-            toast(`⚠️ ราคาเบี่ยงเบน ${(variance * 100).toFixed(0)}% จาก Standard Cost (${stdCost.toLocaleString()})`, 'warning');
-          }
+      const stdCost = line._standard_cost;
+      if (stdCost && stdCost > 0 && unitPrice > 0) {
+        const variance = Math.abs(unitPrice - stdCost) / stdCost;
+        if (variance > 0.15) {
+          toast(`⚠️ ราคาเบี่ยงเบน ${(variance * 100).toFixed(0)}% จาก Standard Cost (${stdCost.toLocaleString()})`, 'warning');
         }
       }
     }
+
   }, [setValue, watch, toast]);
 
   const handleClearLines = useCallback(async () => {

@@ -71,7 +71,6 @@ let isUnauthorizedHandling = false;
 
 api.interceptors.response.use(
   (response) => {
-    // ... existing success logic ...
     const method = response.config.method?.toUpperCase() || 'UNKNOWN';
     const url = response.config.url;
     logger.debug(`✅ [API] [${method}] ${url}`);
@@ -88,40 +87,16 @@ api.interceptors.response.use(
       return Promise.reject(response);
     }
 
-    let finalData = resBody;
-    if (resBody && typeof resBody === 'object') {
-      if (resBody.data !== undefined && ('success' in resBody || Object.keys(resBody).length <= 3)) {
-        finalData = resBody.data;
-      }
-      if (finalData && typeof finalData === 'object' && !Array.isArray(finalData)) {
-        if (finalData.data !== undefined && !Array.isArray(finalData.data) && !('total' in finalData)) {
-          finalData = finalData.data;
-        } else if (finalData.header !== undefined && typeof finalData.header === 'object' && !Array.isArray(finalData.header)) {
-          const keys = Object.keys(finalData);
-          const hasLines = keys.some(k => 
-            k.toLowerCase().includes('line') || 
-            k.toLowerCase().includes('item') || 
-            k.toLowerCase().includes('detail')
-          );
-          if (!hasLines) {
-            finalData = finalData.header;
-          } else {
-            finalData = { 
-              ...(finalData.header as Record<string, unknown>), 
-              ...finalData 
-            };
-          }
-        }
-      }
-      if (finalData && typeof finalData === 'object' && Array.isArray(finalData.items) && finalData.data === undefined) {
-        finalData.data = finalData.items;
-      }
-      if (finalData && typeof finalData === 'object' && Array.isArray(finalData.data) && finalData.items === undefined) {
-        finalData.items = finalData.data;
+    // 🎯 Basic Unwrapping: Return the .data property if it's a standard envelope
+    // We keep this basic check to avoid breaking simple list/get calls across the app.
+    if (resBody && typeof resBody === 'object' && resBody.data !== undefined) {
+      // If it's a pagination object or has a specific success flag, it's likely the envelope
+      if ('success' in resBody || 'total' in resBody || Object.keys(resBody).length <= 3) {
+        return resBody.data;
       }
     }
 
-    return finalData;
+    return resBody;
   },
   (error) => {
     const method = error.config?.method?.toUpperCase() || 'UNKNOWN';

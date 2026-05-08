@@ -112,8 +112,10 @@ export default function AVListPage() {
             ]);
 
             const pendingPRs = pendingRes || [];
-            const approvalRecords = approvalRes?.data || [];
-            const allPendingPRs = allPendingPRsRes?.data || allPendingPRsRes || [];
+            // 🎯 FIXED: Support both { data: [] } and direct array responses from AVService
+            const approvalRecords = (Array.isArray(approvalRes) ? approvalRes : approvalRes?.data) || [];
+            const allPendingPRs = (Array.isArray(allPendingPRsRes) ? allPendingPRsRes : allPendingPRsRes?.data) || [];
+
 
             // 🎯 NEW: Merged Set of IDs that are "Pending" in the main PR table
             const pendingPRIdSet = new Set<number>([
@@ -124,19 +126,19 @@ export default function AVListPage() {
 
 
 
-            // Build a map of pr_id -> approval record for fast lookup
-            // This is the GROUND TRUTH of what has been processed
+            // 🎯 FIXED: DO NOT collapse records by pr_id. The user wants to see EVERY AV record separately.
             const approvalByPRId = new Map<number, ApprovalHeader>();
+            // (Keep this map only for the 'fullyHandled' check below to identify if ANY approval exists)
             for (const rec of approvalRecords) {
                 const prId = Number(rec.pr_id);
                 if (!isNaN(prId)) {
-                    // Keep the LATEST record if multiple exist for same PR
                     const existing = approvalByPRId.get(prId);
                     if (!existing || rec.approval_id > existing.approval_id) {
                         approvalByPRId.set(prId, rec);
                     }
                 }
             }
+
 
             // PRs that have been FULLY processed (approved/rejected — no more pending items)
             // 🎯 FIX: A PR is only "fully handled" if it's NOT in the pendingPRs list.

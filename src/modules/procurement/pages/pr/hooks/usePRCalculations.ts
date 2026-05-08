@@ -42,7 +42,7 @@ export const usePRCalculations = (props?: UsePRCalculationsProps): PRCalculation
       const price = Number(line?.est_unit_price) || 0;
       const gross = qty * price;
       
-      const lineDiscount = Number(line?.discount) || 0;
+      const lineDiscount = parseDiscountAmount(line?.line_discount_raw, gross);
       const lineTotal = calculateLineTotal(qty, price, lineDiscount);
 
       acc.totalGross += gross;

@@ -4,6 +4,7 @@ import { FileBox, Eraser, Plus, Trash2, Search, AlertTriangle } from 'lucide-rea
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
 import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
+import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
 
 interface PRFormLinesProps {
     lines: FieldArrayWithId<PRFormData, "lines", "id">[];
@@ -85,8 +86,9 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                     <tbody>
                         {lines.map((field, index) => {
                             const line = watchedLines[index] || {};
-                            const lineDiscount = line.discount || 0;
-                            const lineTotal = ((line.qty || 0) * (line.est_unit_price || 0)) - lineDiscount;
+                            const gross = (line.qty || 0) * (line.est_unit_price || 0);
+                            const lineDiscount = parseDiscountAmount(line.line_discount_raw, gross);
+                            const lineTotal = gross - lineDiscount;
                             
                             // 🛑 Detect Duplicate Line item_id
                             const isDuplicateItem = watchedLines.some((l, idx) => 
@@ -240,12 +242,12 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                     
                                     <td className={tdBaseClass}>
                                         <div className="px-2 text-right text-gray-700 dark:text-gray-300">
-                                            {line.discount ? line.discount.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '-'}
+                                            {lineDiscount ? lineDiscount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
                                         </div>
                                     </td>
                                     
                                     <td className={`${tdBaseClass} text-right font-bold pr-2 text-gray-700 dark:text-gray-300`}>
-                                        {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                        {lineTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                     </td>
                                     
                                     {/* Action Buttons: Search, Eraser, Trash */}
