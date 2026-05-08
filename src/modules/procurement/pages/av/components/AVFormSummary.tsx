@@ -62,7 +62,8 @@ export const AVFormSummary: React.FC<AVFormSummaryProps> = () => {
         return {
             ...line,
             qty: approvedQty,
-            line_discount_raw: String(discount) // 🎯 CRITICAL: Set this so usePRCalculations picks it up
+            discount: discount, // 🎯 FIX: Also update the numeric discount field so usePRCalculations picks it up
+            line_discount_raw: String(discount) 
         };
     }) as PRLineFormData[];
 
