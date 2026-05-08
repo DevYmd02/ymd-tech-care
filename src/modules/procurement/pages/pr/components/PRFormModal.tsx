@@ -40,7 +40,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     handleSubmit,
     handleFormError,
     formMethods,
-    user
+    user,
+    isLoading
   } = usePRForm({ isOpen, onClose, id, onSuccess });
 
   const { register, control, watch, setValue, formState: { errors } } = formMethods;
@@ -70,6 +71,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     <WindowFormLayout
       isOpen={isOpen}
       onClose={onClose}
+      isLoading={isLoading}
       title={readOnly ? "รายละเอียดใบขอซื้อ (Purchase Requisition Details)" : (isEditMode ? "แก้ไขใบขอซื้อ (Edit Purchase Requisition)" : "สร้างใบขอซื้อ (Create Purchase Requisition)")}
       titleIcon={<div className="bg-red-500 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} /></div>}
       headerColor="bg-blue-600 [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden"
