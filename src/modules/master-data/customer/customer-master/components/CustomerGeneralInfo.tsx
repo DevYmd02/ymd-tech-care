@@ -1,7 +1,8 @@
-import { useState, useEffect, type ChangeEvent } from 'react';
+import { useState, useEffect } from 'react';
+import { useFormContext } from 'react-hook-form';
 import { Users } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import type { CustomerFormData } from '@customer/customer-master/types/customer-types';
+import type { CustomerSchemaType } from '@customer/customer-master/types/customer-schema';
 
 import { BusinessTypeService } from '@customer/business-type/services/business-type.service';
 import { CustomerTypeService } from '@customer/customer-type/services/customer-type.service';
@@ -14,13 +15,8 @@ import type { CustomerGroup } from '@customer/customer-group/types/customer-grou
 import type { CustomerBillingGroup } from '@customer/billing-group/types/billing-group.types';
 import { logger } from '@/shared/utils';
 
-interface CustomerGeneralInfoProps {
-    formData: CustomerFormData;
-    onChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
-    errors: { [key: string]: string };
-}
-
-export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGeneralInfoProps) {
+export function CustomerGeneralInfo() {
+    const { register, formState: { errors } } = useFormContext<CustomerSchemaType>();
     const [businessTypes, setBusinessTypes] = useState<CustomerBusinessType[]>([]);
     const [customerTypes, setCustomerTypes] = useState<CustomerType[]>([]);
     const [customerGroups, setCustomerGroups] = useState<CustomerGroup[]>([]);
@@ -58,21 +54,16 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
                 <div className="space-y-1">
                     <label className={styles.label}>รหัสลูกค้า <span className="text-red-500">*</span></label>
                     <input 
-                        name="customer_code" 
-                        value={formData.customer_code} 
-                        onChange={onChange} 
+                        {...register('customer_code')}
                         className={`${styles.input} ${errors.customer_code ? 'border-red-500' : ''}`}
                         placeholder="เช่น CUST-0001" 
-                        required
                     />
-                    {errors.customer_code && <p className="text-xs text-red-500">{errors.customer_code}</p>}
+                    {errors.customer_code && <p className="text-xs text-red-500">{errors.customer_code.message}</p>}
                 </div>
                 <div className="space-y-1">
                     <label className={styles.label}>เลขประจำตัวผู้เสียภาษี</label>
                     <input 
-                        name="tax_id" 
-                        value={formData.tax_id} 
-                        onChange={onChange} 
+                        {...register('tax_id')}
                         className={styles.input} 
                         placeholder="13 digits" 
                     />
@@ -82,20 +73,16 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
                 <div className="space-y-1 md:col-span-2">
                     <label className={styles.label}>ชื่อลูกค้า (ไทย) <span className="text-red-500">*</span></label>
                     <input 
-                        name="customer_name_th" 
-                        value={formData.customer_name_th} 
-                        onChange={onChange} 
+                        {...register('customer_name_th')}
                         className={`${styles.input} ${errors.customer_name_th ? 'border-red-500' : ''}`} 
                         placeholder="บริษัท เอบีซี จำกัด" 
-                        required
                     />
+                    {errors.customer_name_th && <p className="text-xs text-red-500">{errors.customer_name_th.message}</p>}
                 </div>
                 <div className="space-y-1 md:col-span-2">
                     <label className={styles.label}>ชื่อลูกค้า (อังกฤษ)</label>
                     <input 
-                        name="customer_name_en" 
-                        value={formData.customer_name_en} 
-                        onChange={onChange} 
+                        {...register('customer_name_en')}
                         className={styles.input} 
                         placeholder="ABC Company Limited" 
                     />
@@ -105,9 +92,7 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
                 <div className="space-y-1">
                     <label className={styles.label}>ประเภทธุรกิจลูกหนี้</label>
                     <select 
-                        name="business_type_id" 
-                        value={formData.business_type_id || ''} 
-                        onChange={onChange} 
+                        {...register('business_type_id')}
                         className={styles.input}
                     >
                         <option value="">-- เลือก --</option>
@@ -119,12 +104,10 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
                     </select>
                 </div>
                 <div className="space-y-1">
-                    <label className={styles.label}>ประเภทลูกหนี้</label>
+                    <label className={styles.label}>ประเภทลูกหนี้ <span className="text-red-500">*</span></label>
                     <select 
-                        name="customer_type_id" 
-                        value={formData.customer_type_id || ''} 
-                        onChange={onChange} 
-                        className={styles.input}
+                        {...register('customer_type_id')}
+                        className={`${styles.input} ${errors.customer_type_id ? 'border-red-500' : ''}`}
                     >
                         <option value="">-- เลือก --</option>
                         {customerTypes.map(item => (
@@ -133,15 +116,14 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
                             </option>
                         ))}
                     </select>
+                    {errors.customer_type_id && <p className="text-xs text-red-500">{errors.customer_type_id.message}</p>}
                 </div>
 
                 <div className="space-y-1">
-                    <label className={styles.label}>กลุ่มลูกหนี้</label>
+                    <label className={styles.label}>กลุ่มลูกหนี้ <span className="text-red-500">*</span></label>
                     <select 
-                        name="customer_group_id" 
-                        value={formData.customer_group_id || ''} 
-                        onChange={onChange} 
-                        className={styles.input}
+                        {...register('customer_group_id')}
+                        className={`${styles.input} ${errors.customer_group_id ? 'border-red-500' : ''}`}
                     >
                         <option value="">-- เลือก --</option>
                         {customerGroups.map(item => (
@@ -150,13 +132,12 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
                             </option>
                         ))}
                     </select>
+                    {errors.customer_group_id && <p className="text-xs text-red-500">{errors.customer_group_id.message}</p>}
                 </div>
                 <div className="space-y-1">
                     <label className={styles.label}>กลุ่มวางบิล</label>
                     <select 
-                        name="billing_group_id" 
-                        value={formData.billing_group_id || ''} 
-                        onChange={onChange} 
+                        {...register('billing_group_id')}
                         className={styles.input}
                     >
                         <option value="">-- เลือก --</option>
@@ -174,9 +155,7 @@ export function CustomerGeneralInfo({ formData, onChange, errors }: CustomerGene
                         <div className="relative">
                             <input 
                                 type="checkbox" 
-                                name="vat_registered" 
-                                checked={formData.vat_registered} 
-                                onChange={onChange} 
+                                {...register('vat_registered')}
                                 className="sr-only peer" 
                             />
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>

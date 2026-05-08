@@ -1,128 +1,140 @@
 import React, { useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import api from '@core/api/api';
-import { logger } from '@utils';
-import { MasterDataContext, type MasterDataContextType } from '@core/contexts/MasterDataContext';
-import { masterDataCache } from '@/shared/utils/master-data-cache';
-import { useEffect } from 'react';
+import { useIsFetching, useQueryClient } from '@tanstack/react-query';
+import { 
+    useUnits, 
+    useBranches, 
+    useWarehouses, 
+    useEmployees, 
+    useDepartments 
+} from '@/modules/master-data/hooks/useMasterData';
+import { 
+    MasterDataContext, 
+    type MasterDataContextType,
+    UnitsContext,
+    BranchesContext,
+    WarehousesContext,
+    EmployeesContext,
+    DepartmentsContext,
+    MasterDataLoadingContext,
+    MasterDataRefetchContext
+} from '@core/contexts/MasterDataContext';
+
+// =============================================================================
+// ATOMIC DATA PROVIDERS
+// =============================================================================
+
+/** Helper to extract array from various query response shapes */
+const extractList = (data: unknown) => {
+    if (Array.isArray(data)) return data;
+    const d = data as Record<string, unknown>; // Specific cast for safe property access
+    if (d?.items && Array.isArray(d.items)) return d.items;
+    if (d?.data && Array.isArray(d.data)) return d.data;
+    return [];
+};
+
+const UnitsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { data } = useUnits();
+    const units = useMemo(() => extractList(data), [data]);
+    return <UnitsContext.Provider value={units}>{children}</UnitsContext.Provider>;
+};
+
+const BranchesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { data } = useBranches();
+    const branches = useMemo(() => extractList(data), [data]);
+    return <BranchesContext.Provider value={branches}>{children}</BranchesContext.Provider>;
+};
+
+const WarehousesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { data } = useWarehouses();
+    const warehouses = useMemo(() => extractList(data), [data]);
+    return <WarehousesContext.Provider value={warehouses}>{children}</WarehousesContext.Provider>;
+};
+
+const EmployeesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { data } = useEmployees();
+    const employees = useMemo(() => extractList(data), [data]);
+    return <EmployeesContext.Provider value={employees}>{children}</EmployeesContext.Provider>;
+};
+
+const DepartmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { data } = useDepartments();
+    const departments = useMemo(() => extractList(data), [data]);
+    return <DepartmentsContext.Provider value={departments}>{children}</DepartmentsContext.Provider>;
+};
+
+// =============================================================================
+// MAIN COMPOSER PROVIDER
+// =============================================================================
 
 /**
- * @file MasterDataProvider.tsx
- * @description Centralized provider for frequently used Master Data (Units, Branches, Warehouses)
- * @purpose Implements "Pre-flight" caching strategy to prevent redundant API calls across components.
+ * Legacy Support Provider to maintain MasterDataContext.
+ * This bundles atomic context values into one object for backward compatibility.
+ * @deprecated Use individual hooks (useUnits, useBranches, etc.) instead.
  */
+const LegacyMasterDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const units = React.useContext(UnitsContext);
+    const branches = React.useContext(BranchesContext);
+    const warehouses = React.useContext(WarehousesContext);
+    const employees = React.useContext(EmployeesContext);
+    const departments = React.useContext(DepartmentsContext);
+    const isFetching = React.useContext(MasterDataLoadingContext);
+    const refetchAll = React.useContext(MasterDataRefetchContext);
 
-export const MasterDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    // 1. Fetch Units (UOM)
-    const { data: units = [], isLoading: loadingUnits, refetch: refetchUnits } = useQuery({
-        queryKey: ['master', 'units'],
-        queryFn: async () => {
-            try {
-                const res = await api.get<unknown>('/uom');
-                const list = (res as Record<string, unknown>)?.items || (res as Record<string, unknown>)?.data || (Array.isArray(res) ? res : []);
-                return Array.isArray(list) ? (list as Record<string, unknown>[]) : [];
-            } catch (err) {
-                logger.error('MasterDataProvider: Failed to fetch units', err);
-                return [];
-            }
-        },
-        staleTime: 30 * 60 * 1000, // 30 minutes
-    });
-
-    // 2. Fetch Branches
-    const { data: branches = [], isLoading: loadingBranches, refetch: refetchBranches } = useQuery({
-        queryKey: ['master', 'branches'],
-        queryFn: async () => {
-            try {
-                const res = await api.get<unknown>('/org-branches');
-                const data = (res as Record<string, unknown>)?.data || res;
-                return Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
-            } catch (err) {
-                logger.error('MasterDataProvider: Failed to fetch branches', err);
-                return [];
-            }
-        },
-        staleTime: 30 * 60 * 1000,
-    });
-
-    // 3. Fetch Warehouses
-    const { data: warehouses = [], isLoading: loadingWarehouses, refetch: refetchWarehouses } = useQuery({
-        queryKey: ['master', 'warehouses'],
-        queryFn: async () => {
-            try {
-                const res = await api.get<unknown>('/warehouse');
-                const data = (res as Record<string, unknown>)?.data || res;
-                return Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
-            } catch (err) {
-                logger.error('MasterDataProvider: Failed to fetch warehouses', err);
-                return [];
-            }
-        },
-        staleTime: 30 * 60 * 1000,
-    });
-
-    // 4. Fetch Employees
-    const { data: employees = [], isLoading: loadingEmployees, refetch: refetchEmployees } = useQuery({
-        queryKey: ['master', 'employees'],
-        queryFn: async () => {
-            try {
-                const res = await api.get<unknown>('/employees');
-                const list = (res as Record<string, unknown>)?.items || (res as Record<string, unknown>)?.data || (Array.isArray(res) ? res : []);
-                return Array.isArray(list) ? (list as Record<string, unknown>[]) : [];
-            } catch (err) {
-                logger.error('MasterDataProvider: Failed to fetch employees', err);
-                return [];
-            }
-        },
-        staleTime: 10 * 60 * 1000, // 10 minutes (shorter TTL as employees might change more often)
-    });
-
-    // 5. Fetch Departments
-    const { data: departments = [], isLoading: loadingDepartments, refetch: refetchDepartments } = useQuery({
-        queryKey: ['master', 'departments'],
-        queryFn: async () => {
-            try {
-                const res = await api.get<unknown>('/department');
-                const list = (res as Record<string, unknown>)?.items || (res as Record<string, unknown>)?.data || (Array.isArray(res) ? res : []);
-                return Array.isArray(list) ? (list as Record<string, unknown>[]) : [];
-            } catch (err) {
-                logger.error('MasterDataProvider: Failed to fetch departments', err);
-                return [];
-            }
-        },
-        staleTime: 30 * 60 * 1000,
-    });
-
-    const isLoading = loadingUnits || loadingBranches || loadingWarehouses || loadingEmployees || loadingDepartments;
-
-    // Sync with global singleton cache for services
-    useEffect(() => { if (units.length) masterDataCache.set('units', units); }, [units]);
-    useEffect(() => { if (branches.length) masterDataCache.set('branches', branches); }, [branches]);
-    useEffect(() => { if (warehouses.length) masterDataCache.set('warehouses', warehouses); }, [warehouses]);
-    useEffect(() => { if (employees.length) masterDataCache.set('employees', employees); }, [employees]);
-    useEffect(() => { if (departments.length) masterDataCache.set('departments', departments); }, [departments]);
-
-    const refetchAll = useCallback(() => {
-        refetchUnits();
-        refetchBranches();
-        refetchWarehouses();
-        refetchEmployees();
-        refetchDepartments();
-    }, [refetchUnits, refetchBranches, refetchWarehouses, refetchEmployees, refetchDepartments]);
-
-    const value = useMemo<MasterDataContextType>(() => ({
+    const legacyValue = useMemo<MasterDataContextType>(() => ({
         units,
         branches,
         warehouses,
         employees,
         departments,
-        isLoading,
+        isLoading: isFetching,
         refetchAll
-    }), [units, branches, warehouses, employees, departments, isLoading, refetchAll]);
+    }), [units, branches, warehouses, employees, departments, isFetching, refetchAll]);
 
     return (
-        <MasterDataContext.Provider value={value}>
+        <MasterDataContext.Provider value={legacyValue}>
             {children}
         </MasterDataContext.Provider>
     );
 };
+
+export const MasterDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const queryClient = useQueryClient();
+    
+    // 🎯 FIX: Avoid short-circuiting hook calls to prevent "Conditional Hook Call" warnings
+    const fetchingMaster = useIsFetching({ queryKey: ['master'] }) > 0;
+    const fetchingBranches = useIsFetching({ queryKey: ['master-branches'] }) > 0;
+    const fetchingUnits = useIsFetching({ queryKey: ['master-units'] }) > 0;
+    const isFetching = fetchingMaster || fetchingBranches || fetchingUnits;
+    
+    // Global Refetch Handler
+    const refetchAll = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: ['master'] });
+        queryClient.invalidateQueries({ queryKey: ['master-branches'] });
+        queryClient.invalidateQueries({ queryKey: ['master-units'] });
+        queryClient.invalidateQueries({ queryKey: ['master-warehouses'] });
+        queryClient.invalidateQueries({ queryKey: ['master-employees'] });
+        queryClient.invalidateQueries({ queryKey: ['master-departments'] });
+    }, [queryClient]);
+
+    return (
+        <MasterDataRefetchContext.Provider value={refetchAll}>
+            <MasterDataLoadingContext.Provider value={isFetching}>
+                <UnitsProvider>
+                    <BranchesProvider>
+                        <WarehousesProvider>
+                            <EmployeesProvider>
+                                <DepartmentsProvider>
+                                    <LegacyMasterDataProvider>
+                                        {children}
+                                    </LegacyMasterDataProvider>
+                                </DepartmentsProvider>
+                            </EmployeesProvider>
+                        </WarehousesProvider>
+                    </BranchesProvider>
+                </UnitsProvider>
+            </MasterDataLoadingContext.Provider>
+        </MasterDataRefetchContext.Provider>
+    );
+};
+
+

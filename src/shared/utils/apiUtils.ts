@@ -18,7 +18,23 @@ export const unwrapResponseData = <T>(response: unknown): T => {
     
     // 🎯 If the result contains a .header property (common in detail responses), unwrap it too
     if (unwrapped && unwrapped.header !== undefined && typeof unwrapped.header === 'object' && !Array.isArray(unwrapped.header)) {
-        return unwrapped.header as T;
+        // 🎯 STABILITY FIX: In document details (PR, SO, PO), lines/items are often siblings of 'header'.
+        const keys = Object.keys(unwrapped);
+        const hasLines = keys.some(k => 
+          k.toLowerCase().includes('line') || 
+          k.toLowerCase().includes('item') || 
+          k.toLowerCase().includes('detail')
+        );
+
+        if (!hasLines) {
+            return unwrapped.header as T;
+        } else {
+            // Flatten header fields into top level while preserving siblings (lines/items)
+            return {
+                ...(unwrapped.header as Record<string, unknown>),
+                ...unwrapped
+            } as T;
+        }
     }
     
     if (unwrapped && unwrapped.data !== undefined) {

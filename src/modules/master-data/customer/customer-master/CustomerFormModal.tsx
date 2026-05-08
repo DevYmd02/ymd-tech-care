@@ -1,8 +1,8 @@
 import { Save } from 'lucide-react';
+import { FormProvider } from 'react-hook-form';
 import { styles } from '@/shared/constants/styles';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import { DialogFormLayout } from '@ui';
-import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { CustomerGeneralInfo } from '@customer/customer-master/components/CustomerGeneralInfo';
 import { CustomerAddressList } from '@customer/customer-master/components/CustomerAddressList';
 import { CustomerPaymentConditions } from '@customer/customer-master/components/CustomerPaymentConditions';
@@ -12,7 +12,7 @@ import { useCustomerForm } from '@customer/customer-master/hooks/useCustomerForm
 interface CustomerFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    id?: number; // Standardized to 'id'
+    id?: number; 
     initialData?: CustomerMaster | null;
     onSuccess?: () => void;
 }
@@ -25,21 +25,17 @@ export function CustomerFormModal(props: CustomerFormModalProps) {
         initialData
     } = props;
     const isEdit = !!id || !!initialData;
-    const { toast } = useToast();
-    
     const {
-        formData,
-        errors,
+        methods,
+        onSubmit,
         isLoading,
-        isSubmitting,
         headerTitle,
-        handleChange,
-        handleSameAsRegisteredChange,
+        addressFields,
         addAddress,
         removeAddress,
-        updateAddress,
-        handleSubmit,
-    } = useCustomerForm({ ...props, id, toast });
+    } = useCustomerForm({ ...props, id });
+
+    const { register, formState: { isSubmitting } } = methods;
 
     // Footer Content
     const FormFooter = (
@@ -48,9 +44,7 @@ export function CustomerFormModal(props: CustomerFormModalProps) {
                 <div className="relative">
                     <input 
                         type="checkbox" 
-                        name="is_active" 
-                        checked={formData.is_active} 
-                        onChange={handleChange} 
+                        {...register('is_active')}
                         className="sr-only peer" 
                     />
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-green-500 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
@@ -91,24 +85,23 @@ export function CustomerFormModal(props: CustomerFormModalProps) {
             footer={FormFooter}
             isLoading={isLoading}
         >
-             <form id="customer-form" onSubmit={handleSubmit} className="space-y-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
-                    <CustomerGeneralInfo formData={formData} onChange={handleChange} errors={errors} />
-                    <div className="space-y-6">
-                        <CustomerContactInfo formData={formData} onChange={handleChange} />
-                        <CustomerPaymentConditions formData={formData} onChange={handleChange} />
+            <FormProvider {...methods}>
+                <form id="customer-form" onSubmit={methods.handleSubmit(onSubmit)} className="space-y-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
+                        <CustomerGeneralInfo />
+                        <div className="space-y-6">
+                            <CustomerContactInfo />
+                            <CustomerPaymentConditions />
+                        </div>
                     </div>
-                </div>
 
-                <CustomerAddressList
-                    formData={formData}
-                    errors={errors}
-                    addAddress={addAddress}
-                    removeAddress={removeAddress}
-                    updateAddress={updateAddress}
-                    handleSameAsRegisteredChange={handleSameAsRegisteredChange}
-                />
-            </form>
+                    <CustomerAddressList
+                        addressFields={addressFields}
+                        addAddress={addAddress}
+                        removeAddress={removeAddress}
+                    />
+                </form>
+            </FormProvider>
         </DialogFormLayout>
     );
 }
