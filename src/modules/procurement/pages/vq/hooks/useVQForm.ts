@@ -268,6 +268,8 @@ export const useVQForm = (
   // Reset form when modal opens
   useEffect(() => {
     if (!isOpen) {
+        rfqAbortControllerRef.current?.abort();
+        rfqAbortControllerRef.current = null;
         hasInitialized.current = false;
         return;
     }

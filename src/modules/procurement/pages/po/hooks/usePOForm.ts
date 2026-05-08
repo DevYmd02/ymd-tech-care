@@ -170,19 +170,13 @@ export const usePOForm = ({
     });
 
     // ── Default Currency Sync ─────────────────────────────────────────────
+    // Set THB defaults immediately on open — don't wait for currencies to load,
+    // so the field is never blank while master data is in-flight.
     useEffect(() => {
-        if (isOpen && !isLoadingCurrencies && currencies.length > 0 && !poId && !isHydrating) {
-            const currentCurrency = getValues('currency_code');
-            const currentTarget = getValues('target_currency');
-            
-            if (!currentCurrency || currentCurrency === '') {
-                setValue('currency_code', 'THB');
-            }
-            if (!currentTarget || currentTarget === '') {
-                setValue('target_currency', 'THB');
-            }
-        }
-    }, [isOpen, isLoadingCurrencies, currencies, setValue, getValues, poId, isHydrating]);
+        if (!isOpen || poId || isHydrating) return;
+        if (!getValues('currency_code')) setValue('currency_code', 'THB');
+        if (!getValues('target_currency')) setValue('target_currency', 'THB');
+    }, [isOpen, poId, isHydrating, setValue, getValues]);
 
     // ── VQ Inheritance Query ──────────────────
     const { data: inheritedQC } = useQuery({
@@ -437,11 +431,20 @@ export const usePOForm = ({
 
     useEffect(() => {
         if (!isOpen) {
+            docAbortControllerRef.current?.abort();
+            docAbortControllerRef.current = null;
             hasHydratedInitial.current = false;
-            reset(); 
+            reset();
             logger.debug("♻️ PO Form Session Reset: Memory & Data Cleared");
         }
     }, [isOpen, reset]);
+
+    useEffect(() => {
+        return () => {
+            docAbortControllerRef.current?.abort();
+            docAbortControllerRef.current = null;
+        };
+    }, []);
 
     useEffect(() => {
         if (!isOpen || hasHydratedInitial.current || isHydrating) return;

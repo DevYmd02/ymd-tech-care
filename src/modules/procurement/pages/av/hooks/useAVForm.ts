@@ -283,6 +283,13 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
     }
   }, [isOpen, id, isMasterDataLoading, warehouses.length, masterItems.length, masterUnits.length, loadPRData, approvalItem]);
 
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+    };
+  }, []);
+
   const updateLine = useCallback((index: number, field: keyof AVLineFormData, value: string | number | boolean | undefined) => {
     const path = `lines.${index}.${field}` as Path<AVFormData>;
     setValue(path, value as FieldPathValue<AVFormData, typeof path>);

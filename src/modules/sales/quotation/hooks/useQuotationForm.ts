@@ -24,9 +24,11 @@ import {
     calculateLineTotal 
 } from '@sales/shared/utils/sales-calculations';
 import { useQuotationModals } from './useQuotationModals';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 
 export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: QuotationHeader) => {
     const isEdit = !!id;
+    const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     // 🏷️ Extracted Modal States
@@ -189,6 +191,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
 
             // Build id → {code, name} map
             const itemMap = new Map<number, { item_code: string; item_name: string }>();
+            let failedCount = 0;
             results.forEach((result, i) => {
                 if (result.status === 'fulfilled' && result.value) {
                     const data = result.value;
@@ -197,9 +200,14 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                         item_name: data.item_name || '',
                     });
                 } else {
+                    failedCount++;
                     logger.warn(`⚠️ [QuotationForm] Failed to fetch item detail for ID: ${missingIds[i]}`);
                 }
             });
+
+            if (failedCount > 0) {
+                toast(`ไม่สามารถโหลดข้อมูลสินค้าได้ ${failedCount} รายการ กรุณาตรวจสอบอีกครั้ง`, 'warning');
+            }
 
             // Patch back into form
             const currentLines = getValues('lines');
@@ -214,6 +222,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             });
         } catch (err) {
             logger.error('[QuotationForm] Enrichment process failed:', err);
+            toast('ไม่สามารถโหลดข้อมูลสินค้าได้ กรุณาปิดแล้วเปิดใบเสนอราคาใหม่อีกครั้ง', 'error');
         }
     }, [setValue, getValues]);
 
@@ -393,6 +402,8 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     // 🧹 Concern 1: Explicit Cleanup when modal closes
     useEffect(() => {
         if (!isOpen) {
+            pricingAbortControllerRef.current?.abort();
+            pricingAbortControllerRef.current = null;
             if (lastInitializedId.current !== null) {
                 logger.info('🧹 [QuotationForm] Modal closed. Resetting form to defaults.');
                 reset(getQuotationDefaultValues());
@@ -400,6 +411,13 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             lastInitializedId.current = null;
         }
     }, [isOpen, reset]);
+
+    useEffect(() => {
+        return () => {
+            pricingAbortControllerRef.current?.abort();
+            pricingAbortControllerRef.current = null;
+        };
+    }, []);
 
     // 🔄 Concern 2: Syncing with Fetched/Initial Data (Hydration)
     useEffect(() => {

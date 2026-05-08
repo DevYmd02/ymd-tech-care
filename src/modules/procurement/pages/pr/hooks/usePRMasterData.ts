@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState, useRef } from 'react';
+import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useWarehouses, useProjects, useTaxCodes, useCurrencies, useUnits } from '@/modules/master-data/hooks/useMasterData';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 import type { ItemListItem, CostCenter, Project, WarehouseListItem, UnitListItem, Currency } from '@/modules/master-data/types/master-data-types';
@@ -89,6 +89,13 @@ export const usePRMasterData = (enabled = true) => {
         } finally {
             setIsSearchingProducts(false);
         }
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            searchControllerRef.current?.abort();
+            searchControllerRef.current = null;
+        };
     }, []);
 
     return {
