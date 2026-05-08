@@ -1,18 +1,14 @@
-import { type ChangeEvent } from 'react';
+import { useFormContext } from 'react-hook-form';
 import { CreditCard } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import type { CustomerFormData } from '@customer/customer-master/types/customer-types';
+import type { CustomerSchemaType } from '@customer/customer-master/types/customer-schema';
 import { useState, useEffect } from 'react';
 import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
 import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/price-level-name.types';
 import { logger } from '@/shared/utils';
 
-interface CustomerPaymentConditionsProps {
-    formData: CustomerFormData;
-    onChange: (e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
-}
-
-export function CustomerPaymentConditions({ formData, onChange }: CustomerPaymentConditionsProps) {
+export function CustomerPaymentConditions() {
+    const { register, formState: { errors } } = useFormContext<CustomerSchemaType>();
     const [priceLevels, setPriceLevels] = useState<PriceLevelName[]>([]);
 
     useEffect(() => {
@@ -39,33 +35,29 @@ export function CustomerPaymentConditions({ formData, onChange }: CustomerPaymen
                 <div className="space-y-1">
                     <label className={styles.label}>Credit Term (Day)</label>
                     <input 
-                        name="credit_term" 
+                        {...register('credit_term')}
                         type="number"
-                        value={formData.credit_term === 0 ? '' : formData.credit_term} 
-                        onChange={onChange} 
                         onFocus={(e) => e.target.select()}
-                        className={styles.input} 
+                        className={`${styles.input} ${errors.credit_term ? 'border-red-500' : ''}`} 
                         placeholder="0" 
                     />
+                    {errors.credit_term && <p className="text-xs text-red-500">{errors.credit_term.message}</p>}
                 </div>
                 <div className="space-y-1">
                     <label className={styles.label}>Credit Limit (Amount)</label>
                     <input 
-                        name="credit_limit" 
+                        {...register('credit_limit')}
                         type="number"
-                        value={formData.credit_limit === 0 ? '' : formData.credit_limit} 
-                        onChange={onChange} 
                         onFocus={(e) => e.target.select()}
-                        className={styles.input} 
+                        className={`${styles.input} ${errors.credit_limit ? 'border-red-500' : ''}`} 
                         placeholder="0" 
                     />
+                    {errors.credit_limit && <p className="text-xs text-red-500">{errors.credit_limit.message}</p>}
                 </div>
                 <div className="space-y-1">
                     <label className={styles.label}>วิธีชำระเงิน</label>
                     <input 
-                        name="payment_method_id" 
-                        value={formData.payment_method_id} 
-                        onChange={onChange} 
+                        {...register('payment_method_id')}
                         className={styles.input} 
                         placeholder="เงินโอน / เช็ค" 
                     />
@@ -73,9 +65,7 @@ export function CustomerPaymentConditions({ formData, onChange }: CustomerPaymen
                 <div className="space-y-1">
                     <label className={styles.label}>ระดับการขาย</label>
                     <select 
-                        name="price_level_id" 
-                        value={formData.price_level_id} 
-                        onChange={onChange} 
+                        {...register('price_level_id')}
                         className={styles.input}
                     >
                         <option value="">-- เลือก --</option>

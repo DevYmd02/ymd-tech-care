@@ -63,44 +63,36 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              // ============================================================
-              // VENDOR CHUNKING STRATEGY - Optimized for ERP Scale
-              // ============================================================
-              
-              // 1. Core Framework (React)
+              // Group 1: Framework Core
               if (
                 id.includes('react') || 
                 id.includes('react-dom') || 
-                id.includes('react-router')
+                id.includes('react-router') ||
+                id.includes('@tanstack/react-query') ||
+                id.includes('react-hook-form') ||
+                id.includes('@hookform') ||
+                id.includes('zod')
               ) {
-                return 'vendor-react';
+                return 'vendor-core';
               }
               
-              // 2. Charts (Very Heavy)
-              if (id.includes('recharts')) {
-                return 'vendor-charts';
+              // Group 2: Visualization
+              if (id.includes('recharts') || id.includes('lucide')) {
+                return 'vendor-visuals';
               }
               
-              // 3. Icons
-              if (id.includes('lucide')) return 'vendor-icons';
-              
-              // 4. Forms & Validation
-              if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) {
-                return 'vendor-forms';
+              // Group 3: UI Extras
+              if (
+                id.includes('@tanstack/react-table') ||
+                id.includes('sweetalert2') ||
+                id.includes('react-hot-toast')
+              ) {
+                return 'vendor-ui-libs';
               }
 
-              // 5. Data Fetching & Table
-              if (id.includes('@tanstack/react-query')) return 'vendor-query';
-              if (id.includes('@tanstack/react-table')) return 'vendor-table';
-
-              // 6. Utilities
+              // Group 4: Utilities
               if (id.includes('axios') || id.includes('date-fns')) {
                 return 'vendor-utils';
-              }
-              
-              // 7. Other UI libs
-              if (id.includes('sweetalert2') || id.includes('react-hot-toast')) {
-                return 'vendor-ui-extra';
               }
             }
           },

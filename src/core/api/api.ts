@@ -84,13 +84,66 @@ api.interceptors.response.use(
       }
     }
 
-    // Standardized Response Unwrapping
+    // =========================================================================
+    // Standardized Response Handling (Robust Unwrapping)
+    // =========================================================================
     const resBody = response.data;
-    if (resBody && typeof resBody === 'object' && resBody.success === true && resBody.data !== undefined) {
-      return resBody.data;
+    
+    // 1. Explicit Error Check (success: false)
+    if (resBody && typeof resBody === 'object' && resBody.success === false) {
+      return Promise.reject(response);
     }
 
-    return resBody;
+    let finalData = resBody;
+
+    // 2. Unwrap standard envelopes { success: true, data: ... } or { data: ... }
+    if (resBody && typeof resBody === 'object') {
+      // Handle { success: true, data: ... }
+      if (resBody.data !== undefined && ('success' in resBody || Object.keys(resBody).length <= 3)) {
+        finalData = resBody.data;
+      }
+      
+      // Handle nested data { data: { data: ... } } or { data: { header: ... } }
+      if (finalData && typeof finalData === 'object' && !Array.isArray(finalData)) {
+        if (finalData.data !== undefined && !Array.isArray(finalData.data) && !('total' in finalData)) {
+          finalData = finalData.data;
+        } else if (finalData.header !== undefined && typeof finalData.header === 'object' && !Array.isArray(finalData.header)) {
+          // 🎯 STABILITY FIX: In document details (PR, SO, PO), lines/items are often siblings of 'header'.
+          // Instead of returning ONLY header (which strips lines) or ONLY the wrapper (which nests header),
+          // we flatten the header fields into the top level while preserving sibling arrays.
+          const keys = Object.keys(finalData);
+          const hasLines = keys.some(k => 
+            k.toLowerCase().includes('line') || 
+            k.toLowerCase().includes('item') || 
+            k.toLowerCase().includes('detail')
+          );
+          
+          if (!hasLines) {
+            // Standard case: just a header wrapper, return it directly
+            finalData = finalData.header;
+          } else {
+            // Detail case: header + lines as siblings. Merge them to prevent data loss.
+            finalData = { 
+              ...(finalData.header as Record<string, unknown>), 
+              ...finalData 
+            };
+            // Note: we keep the 'header' key in there just in case, but fields are now flat.
+          }
+        }
+      }
+
+      // 3. Normalize Paginated Lists (data vs items)
+      // If we have 'items' but no 'data' (array), add 'data' for consistency (used by PR module)
+      if (finalData && typeof finalData === 'object' && Array.isArray(finalData.items) && finalData.data === undefined) {
+        finalData.data = finalData.items;
+      }
+      // If we have 'data' (array) but no 'items', add 'items' for consistency (used by Master Data)
+      if (finalData && typeof finalData === 'object' && Array.isArray(finalData.data) && finalData.items === undefined) {
+        finalData.items = finalData.data;
+      }
+    }
+
+    return finalData;
   },
   (error) => {
     // Centralized Logging for Error
@@ -150,6 +203,7 @@ interface NestErrorPayload {
   message?: string | string[];
   error?: string;
   errors?: string[] | { [key: string]: string | string[] }[];
+  success?: boolean;
   retryAfter?: number; // 💡 Seconds until lockout expires
   attemptsRemaining?: number; // 💡 Number of failed attempts left before lockout
 }
@@ -184,15 +238,17 @@ export const extractErrorMessage = (error: unknown): string => {
 // TYPE DEFINITION OVERRIDES
 // =============================================================================
 
-// Strictly override the methods that return AxiosResponse to return Promise<T>
-// This matches our interceptor behavior which unwraps the response.data
-
 export interface ApiClient extends Omit<AxiosInstance, 'get' | 'put' | 'post' | 'delete' | 'patch'> {
+  /** Returns the unwrapped data payload (T or Items[]) */
   get<T>(url: string, config?: CustomAxiosConfig): Promise<T>;
-  delete<T>(url: string, config?: CustomAxiosConfig): Promise<T>;
-  post<T, D = unknown>(url: string, data?: D, config?: CustomAxiosConfig): Promise<T>;
-  put<T, D = unknown>(url: string, data?: D, config?: CustomAxiosConfig): Promise<T>;
-  patch<T, D = unknown>(url: string, data?: D, config?: CustomAxiosConfig): Promise<T>;
+  /** Returns the unwrapped data payload (T or success/message envelope if no data) */
+  delete<T = unknown>(url: string, config?: CustomAxiosConfig): Promise<T>;
+  /** Returns the unwrapped data payload (T or success/message envelope if no data) */
+  post<T = unknown, D = unknown>(url: string, data?: D, config?: CustomAxiosConfig): Promise<T>;
+  /** Returns the unwrapped data payload (T or success/message envelope if no data) */
+  put<T = unknown, D = unknown>(url: string, data?: D, config?: CustomAxiosConfig): Promise<T>;
+  /** Returns the unwrapped data payload (T or success/message envelope if no data) */
+  patch<T = unknown, D = unknown>(url: string, data?: D, config?: CustomAxiosConfig): Promise<T>;
 }
 
 if (import.meta.env.DEV) {
