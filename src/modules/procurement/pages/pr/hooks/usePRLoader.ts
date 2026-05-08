@@ -2,7 +2,7 @@
  * @file usePRLoader.ts
  * @description P3-FIX: Extracted from usePRForm.ts — responsible for initial form population:
  *   - Edit mode:  fetch PR details via PRService.getDetail(id)
- *   - Create mode: generate a new document number via PRService.generateNextDocumentNo()
+ *   - Create mode: reset form with default values (backend auto-generates pr_no)
  *
  * This hook fires only when the modal transitions from closed → open, then calls
  * the provided `onLoaded(formData)` callback so usePRForm can reset its RHF state.
@@ -139,17 +139,9 @@ export const usePRLoader = ({
           if (isMounted) setIsLoading(false);
         }
       } else {
-        // ── Create mode: generate next PR number ────────────────────────────
-        try {
-          const nextPRNo = await PRService.generateNextDocumentNo();
-          if (isMounted) {
-            reset({ ...getPRDefaultFormValues(user), pr_no: nextPRNo.document_no });
-          }
-        } catch (err) {
-          logger.error('[usePRLoader] Failed to generate PR No — using fallback:', err);
-          if (isMounted) {
-            reset({ ...getPRDefaultFormValues(user), pr_no: 'DRAFT-TEMP' });
-          }
+        // ── Create mode: Just reset with defaults ───────────────────────────
+        if (isMounted) {
+          reset({ ...getPRDefaultFormValues(user), pr_no: '(รอรันเลข)' });
         }
       }
     };

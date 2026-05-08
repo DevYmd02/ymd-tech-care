@@ -4,7 +4,7 @@
  */
 
 import { Controller } from 'react-hook-form';
-import { Save, User, MapPin, Building2, CalendarDays, FileText, Plus, Trash2, Check, Lock, ShieldCheck, KeyRound, CheckCircle2 } from 'lucide-react';
+import { Save, User, MapPin, Building2, CalendarDays, FileText, Plus, Trash2, Check, Lock, ShieldCheck, KeyRound, CheckCircle2, Image as ImageIcon } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout, CustomDateInput } from '@ui';
 import { SavingOverlay } from '@/shared/components/ui/feedback/SavingOverlay';
@@ -12,6 +12,7 @@ import { useEmployeeForm } from './hooks/useEmployeeForm';
 import type { EmployeeAddress, EmployeeMaster } from '@company/types/employee.types';
 import type { EmployeeDeptMaster } from '@company/types/employee-dept.types';
 import type { PositionMaster } from '@company/types/position.types';
+import { EmployeeSignatureManager } from '@/modules/master-data/employee/components/EmployeeSignatureManager';
 
 interface EmployeeFormModalProps {
     isOpen: boolean;
@@ -89,7 +90,11 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
         <DialogFormLayout
             isOpen={isOpen}
             onClose={handleClose}
-            title={step === 1 ? (isEdit ? 'แก้ไขข้อมูลพนักงาน' : 'เพิ่มพนักงานใหม่') : (isEdit ? 'แก้ไขบัญชีผู้ใช้' : 'กำหนดบัญชีผู้ใช้')}
+            title={
+                step === 1 ? (isEdit ? 'แก้ไขข้อมูลพนักงาน' : 'เพิ่มพนักงานใหม่') : 
+                step === 2 ? (isEdit ? 'แก้ไขบัญชีผู้ใช้' : 'กำหนดบัญชีผู้ใช้') : 
+                'จัดการลายเซ็น'
+            }
             width="max-w-[1200px]"
             footer={
                 <div className="flex items-center justify-between w-full px-6 py-4 border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
@@ -146,6 +151,17 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                     </button>
                                 )}
 
+                                {isEdit && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setStep(3)}
+                                        className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg font-semibold flex items-center gap-2 border border-indigo-200 transition-all"
+                                    >
+                                        <ImageIcon className="w-4 h-4" />
+                                        จัดการลายเซ็น
+                                    </button>
+                                )}
+
                                 <button
                                     type="submit"
                                     onClick={handleSave}
@@ -161,7 +177,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                 </button>
                             </div>
                         </>
-                    ) : (
+                    ) : step === 2 ? (
                         <>
                             <button
                                 type="button"
@@ -184,6 +200,16 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                 ยืนยันกำหนดรหัสผ่าน
                             </button>
                         </>
+                    ) : (
+                        <div className="flex justify-end w-full">
+                            <button
+                                type="button"
+                                onClick={() => setStep(1)}
+                                className="px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                            >
+                                กลับไปหน้าข้อมูลพนักงาน
+                            </button>
+                        </div>
                     )}
                 </div>
             }
@@ -202,10 +228,17 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                         </div>
                         <div className={`h-[2px] w-12 bg-gray-200 dark:bg-gray-700 ${step > 1 ? 'bg-emerald-300 dark:bg-emerald-500/50' : ''}`} />
                         <div className="flex items-center gap-2">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${step === 2 ? 'bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-500/10' : 'bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-600'}`}>
-                                2
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${step === 2 ? 'bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-500/10' : step > 2 ? 'bg-emerald-500 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-600'}`}>
+                                {step > 2 ? <Check className="w-4 h-4" /> : '2'}
                             </div>
-                            <span className={`text-sm font-bold ${step === 2 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-600'}`}>กำหนดบัญชีผู้ใช้</span>
+                            <span className={`text-sm font-bold ${step === 2 ? 'text-indigo-600 dark:text-indigo-400' : step > 2 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-600'}`}>กำหนดบัญชีผู้ใช้</span>
+                        </div>
+                        <div className={`h-[2px] w-12 bg-gray-200 dark:bg-gray-700 ${step > 2 ? 'bg-emerald-300 dark:bg-emerald-500/50' : ''}`} />
+                        <div className="flex items-center gap-2">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${step === 3 ? 'bg-indigo-600 text-white shadow-lg ring-4 ring-indigo-500/10' : 'bg-gray-200 dark:bg-gray-800 text-gray-500 dark:text-gray-600'}`}>
+                                3
+                            </div>
+                            <span className={`text-sm font-bold ${step === 3 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-600'}`}>จัดการลายเซ็น</span>
                         </div>
                     </div>
                 )}
@@ -348,14 +381,14 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                     <div>
                                         <label className={styles.label}>แผนก <span className="text-red-500">*</span></label>
-                                        <select {...register('emp_dept_id', { setValueAs: (v) => v === "" ? null : Number(v) })} className={styles.input}>
+                                        <select {...register('emp_dept_id', { setValueAs: (v: string) => v === "" ? null : Number(v) })} className={styles.input}>
                                             <option value="">-- เลือกแผนก --</option>
                                             {departments.map((dept: EmployeeDeptMaster) => <option key={dept.emp_dept_id || dept.id} value={dept.emp_dept_id || dept.id}>{dept.emp_dept_code || dept.dept_code} - {dept.emp_dept_name || dept.dept_name}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className={styles.label}>ตำแหน่ง <span className="text-red-500">*</span></label>
-                                        <select {...register('position_id', { setValueAs: (v) => v === "" ? null : Number(v) })} className={styles.input}>
+                                        <select {...register('position_id', { setValueAs: (v: string) => v === "" ? null : Number(v) })} className={styles.input}>
                                             <option value="">-- เลือกตำแหน่ง --</option>
                                             {positions.map((pos: PositionMaster) => <option key={pos.position_id} value={pos.position_id}>{pos.position_code} - {pos.position_name}</option>)}
                                         </select>
@@ -371,7 +404,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                     </div>
                                     <div>
                                         <label className={styles.label}>ผู้บังคับบัญชา (Superior)</label>
-                                        <select {...register('employee_head_id', { setValueAs: (v) => v === "" ? null : Number(v) })} className={styles.input}>
+                                        <select {...register('employee_head_id', { setValueAs: (v: string) => v === "" ? null : Number(v) })} className={styles.input}>
                                             <option value="">-- เลือกผู้บังคับบัญชา --</option>
                                             {heads.map((h: EmployeeMaster) => (
                                                 <option key={h.id} value={h.id}>
@@ -409,7 +442,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                     </div>
                                     <div>
                                         <label className={styles.label}>สถานะ</label>
-                                        <select {...register('employee_status', { setValueAs: (v) => v === "" ? null : Number(v) })} className={styles.input}>
+                                        <select {...register('employee_status', { setValueAs: (v: string) => v === "" ? null : Number(v) })} className={styles.input}>
                                             {EMP_STATUS_OPTIONS.map(o => <option key={o.value} value={Number(o.value)}>{o.label}</option>)}
                                         </select>
                                     </div>
@@ -425,7 +458,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                 </div>
                             </section>
                         </div>
-                    ) : (
+                    ) : step === 2 ? (
                         <div className="max-w-md mx-auto py-10 animate-in slide-in-from-right duration-500">
                             <div className="text-center mb-10">
                                 <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white dark:border-gray-800 shadow-sm">
@@ -489,6 +522,13 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                     {accountErrors.confirmPassword && <p className="text-red-500 text-[10px] mt-1">{accountErrors.confirmPassword.message}</p>}
                                 </div>
                             </div>
+                        </div>
+                    ) : (
+                        <div className="animate-in slide-in-from-right duration-500 max-w-4xl mx-auto py-6">
+                            <EmployeeSignatureManager 
+                                employeeId={editId || createdEmployee?.id || createdEmployee?.employee_id || 0} 
+                                onClose={() => setStep(1)}
+                            />
                         </div>
                     )}
                 </div>

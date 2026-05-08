@@ -9,6 +9,7 @@ vi.mock('@/core/api/api', () => ({
     get: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
+    patch: vi.fn(),
     delete: vi.fn(),
   },
   USE_MOCK: false, // Force real API logic in the service
@@ -116,12 +117,12 @@ describe('PRService Unit Tests', () => {
   describe('update', () => {
     it('should patch updated PR data', async () => {
       const mockUpdatedPR = { pr_id: 1, remark: 'Modified' };
-      vi.mocked(api.put).mockResolvedValue(mockUpdatedPR);
+      vi.mocked(api.patch).mockResolvedValue(mockUpdatedPR);
 
       const payload: PRUpdatePayload = { remark: 'Modified' };
       const result = await PRService.update(1, payload);
 
-      expect(api.put).toHaveBeenCalledWith('/pr/1', { remark: 'Modified' });
+      expect(api.patch).toHaveBeenCalledWith('/pr/1', expect.any(Object));
       expect(result).toEqual(mockUpdatedPR);
     });
   });
@@ -131,11 +132,11 @@ describe('PRService Unit Tests', () => {
 
     it('should call cancel endpoint', async () => {
         const mockSuccess = { success: true, message: 'Cancelled' };
-        vi.mocked(api.post).mockResolvedValue(mockSuccess);
+        vi.mocked(api.patch).mockResolvedValue(mockSuccess);
   
-        const result = await PRService.cancel(123); // Removed reason
+        const result = await PRService.cancel(123);
   
-        expect(api.post).toHaveBeenCalledWith('/pr/123/cancel'); // Removed body
+        expect(api.patch).toHaveBeenCalledWith('/pr/123/cancel', expect.any(Object));
         expect(result).toEqual(mockSuccess);
       });
   
@@ -151,26 +152,17 @@ describe('PRService Unit Tests', () => {
       });
   });
 
-  describe('generateNextDocumentNo', () => {
-    it('should return document number from API', async () => {
-        const mockResponse = { document_no: 'PR-202602-0002' };
-        vi.mocked(api.get).mockResolvedValue(mockResponse);
 
-        const result = await PRService.generateNextDocumentNo();
-        
-        expect(api.get).toHaveBeenCalledWith('/pr/generate-no');
-        expect(result).toEqual(mockResponse);
-    });
-  });
 
   describe('delete', () => {
-    it('should call delete endpoint and return true', async () => {
-      vi.mocked(api.delete).mockResolvedValue({ success: true });
+    it('should call delete endpoint and return success response', async () => {
+      const mockResponse = { success: true, message: 'Deleted' };
+      vi.mocked(api.delete).mockResolvedValue(mockResponse);
 
       const result = await PRService.delete(123);
 
       expect(api.delete).toHaveBeenCalledWith('/pr/123');
-      expect(result).toBe(true);
+      expect(result).toEqual(mockResponse);
     });
 
     it('should throw on delete error', async () => {

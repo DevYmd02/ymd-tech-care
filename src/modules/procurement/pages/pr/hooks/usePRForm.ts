@@ -184,16 +184,11 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
   useEffect(() => {
     if (isOpen && !id && !isMasterDataLoading && !prevIsOpenRef.current) {
         prevIsOpenRef.current = true;
-        PRService.generateNextDocumentNo().then(nextPRNo => {
-            reset({ 
-              ...getPRDefaultFormValues(user), 
-              pr_no: nextPRNo.document_no,
-              credit_days: '',
-              payment_term_days: ''
-            });
-        }).catch(err => {
-            logger.error('[usePRForm] Failed to generate PR No:', err);
-            reset({ ...getPRDefaultFormValues(user), pr_no: 'DRAFT-TEMP' });
+        reset({ 
+          ...getPRDefaultFormValues(user), 
+          pr_no: '(รอรันเลข)', // UI Placeholder
+          credit_days: '',
+          payment_term_days: ''
         });
     } else if (!isOpen) {
         prevIsOpenRef.current = false;
@@ -562,7 +557,6 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
         // ═══════════════════════════════════════════════════════════════════════
         const payload: CreatePRPayload = {
           // ── HEADER (Aligned with Postman) ──
-          ...(data.pr_no && data.pr_no !== '(auto-generated)' && !data.pr_no.startsWith('DRAFT-TEMP') && { pr_no: data.pr_no }),
           pr_date: data.pr_date,
           need_by_date: data.need_by_date,
           branch_id: Number(data.branch_id || 1),
@@ -842,6 +836,6 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleDelete,
     handleVoid, control, reset, formMethods, user,
-    isLoading: isMasterDataLoading || isPRLoading || isActionLoading
+    isLoading: isMasterDataLoading || isPRLoading // Only data loading, excluding isActionLoading to prevent UI overlap
   };
 };

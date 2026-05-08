@@ -35,14 +35,13 @@ const ENDPOINTS = {
   convert: (id: number) => `/pr/${id}/convert`,
   attachments: (id: number) => `/pr/${id}/attachments`,
   attachment: (id: number, attachmentId: string) => `/pr/${id}/attachments/${attachmentId}`,
-  generateNo: '/pr/generate-no',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Known DTO fields — used for leak detection before sending to backend
 // ═══════════════════════════════════════════════════════════════════════════════
 const KNOWN_DTO_FIELDS = [
-  'pr_no', 'pr_date', 'need_by_date', 'requester_user_id', 'branch_id',
+  'pr_date', 'need_by_date', 'requester_user_id', 'branch_id',
   'project_id', 'cost_center_id', 'preferred_vendor_id',
   'pr_tax_code_id', 'remark', 'status',
   'pr_base_currency_code', 'pr_quote_currency_code',
@@ -610,12 +609,6 @@ export const PRService = {
   deleteAttachment: async (id: number, attachmentId: string): Promise<SuccessResponse> => {
     logger.info(`[PRService] Deleting attachment ${attachmentId} for PR: ${id}`);
     const response = await api.delete<SuccessResponse>(ENDPOINTS.attachment(id, attachmentId));
-    return response;
-  },
-
-  generateNextDocumentNo: async (): Promise<{ document_no: string }> => {
-    logger.info('[PRService] Generating next document number');
-    const response = await api.get<{ document_no: string }>(ENDPOINTS.generateNo);
     return response;
   },
 
