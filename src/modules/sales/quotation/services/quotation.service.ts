@@ -1,5 +1,12 @@
 import api, { USE_MOCK, extractErrorMessage } from '@core/api/api';
 import { logger } from '@utils';
+import { 
+    normalizeId, 
+    normalizeDate, 
+    normalizeCustomerName
+} from '@/shared/utils/data-mapping.utils';
+import { sanitizePayload, cleanPayload } from '@/shared/utils/payload.utils';
+import { masterDataCache } from '@/shared/utils/master-data-cache';
 import type { QuotationFormData, QuotationHeader, QuotationListItem, QuotationLineData, RawQuotationData, RawQuotationLine } from '@sales/quotation/types/quotation.types';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import { applyClientFilters, extractArrayFromResponse, type PaginatedResponse } from '@utils/clientFilterUtils';
@@ -24,6 +31,27 @@ const ENDPOINTS = {
     detail: (id: string | number) => `/sale-quotation/${id}`,
     create: '/sale-quotation',
 };
+
+/**
+ * Whitelist for Quotation Header fields (DTO)
+ * Prevents "400 Bad Request" due to UI-only fields leakage
+ */
+const KNOWN_DTO_FIELDS = [
+    'sq_no', 'sq_date', 'valid_until', 'customer_id', 'branch_id', 'lead_id',
+    'quote_currency_code', 'base_currency_code', 'exchange_rate', 'exchange_rate_date',
+    'status', 'sq_status', 'remarks', 'payment_term_days', 'onhold',
+    'tax_code_id', 'sale_area_id', 'emp_sale_id', 'emp_dept_id', 'project_id', 'job_id',
+    'discount_expression', 'discount_amount', 'sub_total', 'vat_amount', 'total_amount',
+    'sq_lines'
+];
+
+/**
+ * Whitelist for Quotation Line fields
+ */
+const KNOWN_LINE_DTO_FIELDS = [
+    'sq_line_id', 'item_id', 'note', 'qty', 'uom_id', 
+    'unit_price', 'discount_expression', 'tax_code_id'
+];
 
 export class QuotationService {
     /**
@@ -51,37 +79,32 @@ export class QuotationService {
 
         // Normalize Response Helper (Map Backend Field Names to Frontend)
         const normalizeItem = (item: QuotationListItem): QuotationHeader => {
-            // Safe-access 'id' from index signature with type check
-            const rawId = item.id;
-            const finalId = (typeof rawId === 'string' || typeof rawId === 'number') 
-                ? rawId 
-                : item.sq_id;
-
+            const id = normalizeId(item.id || item.sq_id);
             return {
-                id: finalId,
-                sq_id: item.sq_id,
-                sq_no: item.sq_no,
-                date: item.sq_date || '',
-                customer_id: item.customer_id,
-                customer_name: String(item.customer_name_th || item.customer_name || `Customer ID: ${item.customer_id}`),
-                customer_code: item.customer_code || '',
-                // 📡 Explicitly map relation IDs to satisfy backend 'connect' mandatory requirements
+                id,
+                sq_id: id,
+                sq_no: String(item.sq_no || ''),
+                date: normalizeDate(item.sq_date),
+                customer_id: normalizeId(item.customer_id),
+                customer_name: normalizeCustomerName(item) || `Customer ID: ${item.customer_id}`,
+                customer_code: String(item.customer_code || ''),
                 branch_id: item.branch_id ? Number(item.branch_id) : null,
+                branch_name: (typeof masterDataCache.getBranchName(item.branch_id as number | string) === 'string' ? masterDataCache.getBranchName(item.branch_id as number | string) : '') as string,
                 lead_id: item.lead_id || null,
-                // 🔍 Data Integrity: Prioritize base_total_amount (.99) over total_amount (.90)
                 total_amount: Number(item.quote_total_amount || 0),
                 base_total_amount: Number(item.base_total_amount || item.total_amount || 0),
                 currency: item.quote_currency_code || 'THB',
-                status: item.status as QuotationHeader['status'],
-                expiry_date: item.valid_until || '',
+                status: (item.status || item.sq_status) as QuotationHeader['status'],
+                expiry_date: normalizeDate(item.valid_until),
                 workflow_status: item.sq_status || '',
                 sq_status: item.sq_status || '',
-                // 📡 Explicitly map business tracking IDs from list item to header object
                 sale_area_id: item.sale_area_id ? Number(item.sale_area_id) : (item.emp_area_id ? Number(item.emp_area_id) : null),
                 emp_sale_id: item.emp_sale_id ? Number(item.emp_sale_id) : null,
+                emp_sale_name: (typeof masterDataCache.getEmployeeName(item.emp_sale_id as number | string) === 'string' ? masterDataCache.getEmployeeName(item.emp_sale_id as number | string) : '') as string,
                 emp_dept_id: item.emp_dept_id ? Number(item.emp_dept_id) : null,
+                emp_dept_name: (typeof masterDataCache.getDepartmentName(item.emp_dept_id as number | string) === 'string' ? masterDataCache.getDepartmentName(item.emp_dept_id as number | string) : '') as string,
                 project_id: item.project_id ? Number(item.project_id) : null,
-                lines: (item.saleQuotationLines || item.lines) as QuotationLineData[],
+                lines: (item.saleQuotationLines || item.lines || []) as QuotationLineData[],
                 rawData: item as Record<string, unknown>
             };
         };
@@ -235,10 +258,12 @@ export class QuotationService {
 
             const result: QuotationFormData = {
                 ...safeRaw,
-                sq_id: raw.sq_id,
-                sq_no: raw.sq_no || '',
-                sq_date: raw.sq_date || '',
-                customer_id: raw.customer_id || 0,
+                sq_id: normalizeId(raw.sq_id),
+                sq_no: String(raw.sq_no || ''),
+                sq_date: normalizeDate(raw.sq_date),
+                customer_id: normalizeId(raw.customer_id),
+                 branch_id: normalizeId(raw.branch_id),
+                 branch_name: (masterDataCache.getBranchName(raw.branch_id as number | string) || '') as string,
                 currency_code: (() => {
                     const q = String(raw.quote_currency_code || raw.quote_currency?.currency_code || raw.quote_currency?.code || raw.currency_code || raw.currency || raw.id_currency || raw.currency_id || raw.currency_id_code || 'THB');
                     const b = String(raw.base_currency_code || raw.base_currency?.currency_code || raw.base_currency?.code || raw.currency_code || 'THB');
@@ -247,8 +272,8 @@ export class QuotationService {
                 base_currency_code: String(raw.base_currency_code || raw.base_currency?.currency_code || raw.base_currency?.code || 'THB'),
                 quote_currency_code: String(raw.quote_currency_code || raw.quote_currency?.currency_code || raw.quote_currency?.code || 'THB'),
                 exchange_rate: Number(raw.exchange_rate || raw.rate || raw.exchangeRate || 1),
-                exchange_rate_date: String(raw.exchange_rate_date || raw.sq_date || raw.date || ''),
-                status: String(raw.status || 'DRAFT'),
+                exchange_rate_date: normalizeDate(raw.exchange_rate_date || raw.sq_date || raw.date),
+                status: String(raw.status || raw.sq_status || 'DRAFT'),
                 sub_total: Number(raw.sub_total || 0),
                 discount_expression: String(raw.discount_expression || raw.discount_input || raw.discount_rate_expression || '0'),
                 discount_amount: Number(raw.discount_amount || raw.quote_discount_amount || 0),
@@ -257,12 +282,14 @@ export class QuotationService {
                 payment_term_days: Number(pick('payment_term_days', 'payment_term', 'credit_term', 'credit_days') || 0),
                 onhold: raw.onhold || 'N',
                 remarks: raw.remarks || '',
-                tax_code_id: pick('tax_code_id', 'tax_id', 'vat_id', 'id_tax') !== undefined ? Number(pick('tax_code_id', 'tax_id', 'vat_id', 'id_tax')) : undefined,
-                sale_area_id: pick('sale_area_id', 'emp_area_id', 'area_id', 'id_area') !== undefined ? Number(pick('sale_area_id', 'emp_area_id', 'area_id', 'id_area')) : undefined,
-                emp_sale_id: pick('emp_sale_id', 'sale_id', 'emp_id_sale', 'id_sale') !== undefined ? Number(pick('emp_sale_id', 'sale_id', 'emp_id_sale', 'id_sale')) : undefined,
-                emp_dept_id: pick('emp_dept_id', 'dept_id', 'department_id', 'id_dept') !== undefined ? Number(pick('emp_dept_id', 'dept_id', 'department_id', 'id_dept')) : undefined,
-                project_id: pick('project_id', 'job_id', 'id_project', 'project') !== undefined ? Number(pick('project_id', 'job_id', 'id_project', 'project')) : undefined,
-                job_id: pick('job_id', 'project_id', 'id_project') !== undefined ? Number(pick('job_id', 'project_id', 'id_project')) : undefined,
+                tax_code_id: (String(pick('tax_code_id', 'tax_id', 'vat_id', 'id_tax') ?? '') || '') as string,
+                sale_area_id: (String(pick('sale_area_id', 'emp_area_id', 'area_id', 'id_area') ?? '') || '') as string,
+                emp_sale_id: (String(pick('emp_sale_id', 'sale_id', 'emp_id_sale', 'id_sale') ?? '') || '') as string,
+                emp_sale_name: (typeof masterDataCache.getEmployeeName(pick('emp_sale_id', 'sale_id', 'emp_id_sale', 'id_sale') as number | string) === 'string' ? masterDataCache.getEmployeeName(pick('emp_sale_id', 'sale_id', 'emp_id_sale', 'id_sale') as number | string) : '') as string,
+                emp_dept_id: (String(pick('emp_dept_id', 'dept_id', 'department_id', 'id_dept') ?? '') || '') as string,
+                emp_dept_name: (typeof masterDataCache.getDepartmentName(pick('emp_dept_id', 'dept_id', 'department_id', 'id_dept') as number | string) === 'string' ? masterDataCache.getDepartmentName(pick('emp_dept_id', 'dept_id', 'department_id', 'id_dept') as number | string) : '') as string,
+                project_id: (String(pick('project_id', 'job_id', 'id_project', 'project') ?? '') || '') as string,
+                job_id: (String(pick('job_id', 'project_id', 'id_project') ?? '') || '') as string,
                 lines: Array.isArray(rawLines) ? (rawLines as RawQuotationLine[]).map(line => {
                     const sourceVal = line.price_source !== undefined ? line.price_source : line.source;
                     const sourceNameRaw = line.price_source_name || line.source_name || line.sourceName || '';
@@ -294,10 +321,25 @@ export class QuotationService {
     }
 
     /**
+     * Helper to sanitize data using whitelist
+     */
+    static sanitizeData(data: Record<string, unknown>): Record<string, unknown> {
+        // Sanitize Lines first
+        if (Array.isArray(data.sq_lines)) {
+            data.sq_lines = data.sq_lines.map(line => 
+                sanitizePayload(line, KNOWN_LINE_DTO_FIELDS)
+            );
+        }
+        
+        // Sanitize Header
+        return cleanPayload(sanitizePayload(data, KNOWN_DTO_FIELDS)) as Record<string, unknown>;
+    }
+
+    /**
      * Helper for Payload Transformation (Backend-Exact Matching)
      */
     private static preparePayload(data: QuotationFormValues) {
-        // 🧪 Helper for ISO Date Formatting (YYYY-MM-DDT00:00:00.000Z) with fallback detection
+        // 🧪 Helper for ISO Date Formatting
         const toISOString = (dateInput?: string | null | Date) => {
             if (!dateInput) return null;
             try {
@@ -309,11 +351,36 @@ export class QuotationService {
             }
         };
 
-        // 🧪 Map lines to "sq_lines" with backend-exact fields
-        const sq_lines = (data.lines || []).map((line: QuotationLineData) => {
-            const lineId = Number(line.sq_line_id);
-            return {
-                sq_line_id: (lineId && !isNaN(lineId)) ? lineId : undefined, 
+        // 🧪 Dynamic Payload Construction
+        const payload: Record<string, unknown> = {
+            status: data.status || 'DRAFT',
+            sq_status: (data as QuotationFormValues).sq_status || data.status || 'DRAFT',
+            remarks: data.remarks || '',
+            payment_term_days: Number(data.payment_term_days) || 0,
+            onhold: data.onhold || 'N',
+            base_currency_code: data.base_currency_code || data.currency_code || 'THB',
+            quote_currency_code: data.quote_currency_code || data.currency_code || 'THB',
+            exchange_rate: Number(data.exchange_rate ?? 1),
+            discount_expression: data.discount_expression !== undefined ? data.discount_expression : '0',
+            sq_date: toISOString(data.sq_date),
+            valid_until: toISOString(data.valid_until),
+            exchange_rate_date: toISOString(data.exchange_rate_date || data.sq_date || new Date())
+        };
+
+        // Standard IDs
+        if (data.customer_id) payload.customer_id = Number(data.customer_id);
+        if (data.branch_id) payload.branch_id = Number(data.branch_id);
+        if (data.lead_id) payload.lead_id = data.lead_id;
+        if (data.sale_area_id) payload.sale_area_id = Number(data.sale_area_id);
+        if (data.emp_sale_id) payload.emp_sale_id = Number(data.emp_sale_id);
+        if (data.emp_dept_id) payload.emp_dept_id = Number(data.emp_dept_id);
+        if (data.project_id) payload.project_id = Number(data.project_id);
+        if (data.tax_code_id) payload.tax_code_id = Number(data.tax_code_id);
+
+        // Lines
+        if (data.lines && data.lines.length > 0) {
+            payload.sq_lines = data.lines.map((line: QuotationLineData) => ({
+                sq_line_id: line.sq_line_id ? Number(line.sq_line_id) : undefined,
                 item_id: Number(line.item_id),
                 note: line.note || '',
                 qty: Number(line.qty) || 0,
@@ -321,59 +388,10 @@ export class QuotationService {
                 unit_price: Number(line.unit_price) || 0,
                 discount_expression: line.discount_expression || '0',
                 tax_code_id: line.tax_code_id ? Number(line.tax_code_id) : undefined
-            };
-        });
-
-        // 🧪 Dynamic Payload Construction
-        // 🛡️ PROTECTION: Instead of sending 'null' for missing fields (which triggers Prisma 'connect' errors),
-        // we OMIT those fields entirely so the backend preserves current data.
-        const payload: Partial<RawQuotationData> & Record<string, unknown> = {
-            status: data.status || 'DRAFT',
-            sq_status: (data as QuotationFormValues).sq_status || data.status || 'DRAFT',
-            remarks: data.remarks || '',
-            payment_term_days: Number(data.payment_term_days) || 0,
-            onhold: data.onhold || 'N',
-            // 🛡️ Fix: Use fallback chain to ensure currency and rate aren't reset to THB/1 during partial updates
-            base_currency_code: data.base_currency_code || data.currency_code || 'THB',
-            quote_currency_code: data.quote_currency_code || data.currency_code || 'THB',
-            exchange_rate: Number(data.exchange_rate ?? 1),
-            discount_expression: data.discount_expression !== undefined ? data.discount_expression : '0',
-        };
-
-        // 📡 Conditional Field Inclusion (Only if present and not 0/null/undefined for IDs)
-        if (data.sq_date) payload.sq_date = toISOString(data.sq_date) || undefined;
-        if (data.valid_until) payload.valid_until = toISOString(data.valid_until) || undefined;
-
-        // 🛡️ Ensure exchange_rate_date is never empty for the backend, defaulting to today or sq_date if necessary
-        const xrDate = data.exchange_rate_date || data.sq_date || new Date().toISOString().split('T')[0];
-        payload.exchange_rate_date = toISOString(xrDate) || undefined;
-        
-        // 🛡️ PROTECTION: Only include relation IDs if they are valid positive numbers
-        const isValidId = (id: unknown): boolean => {
-            if (id === null || id === undefined || id === '') return false;
-            const num = Number(id);
-            return !isNaN(num) && num > 0;
-        };
-
-        // Standard IDs
-        if (isValidId(data.customer_id)) payload.customer_id = Number(data.customer_id);
-        if (isValidId(data.branch_id)) payload.branch_id = Number(data.branch_id);
-        if (data.lead_id) payload.lead_id = data.lead_id;
-        
-        // 📡 Relation IDs: Omit them entirely if invalid (Backend fails on both null and undefined inside connect)
-        if (isValidId(data.sale_area_id)) payload.sale_area_id = Number(data.sale_area_id);
-        
-        if (isValidId(data.emp_sale_id)) payload.emp_sale_id = Number(data.emp_sale_id);
-        if (isValidId(data.emp_dept_id)) payload.emp_dept_id = Number(data.emp_dept_id);
-        if (isValidId(data.project_id)) payload.project_id = Number(data.project_id);
-        if (isValidId(data.tax_code_id)) payload.tax_code_id = Number(data.tax_code_id);
-
-        // 🛡️ PROTECTION: Only include sq_lines if they actually exist in input data
-        if (data.lines && data.lines.length > 0) {
-            payload.sq_lines = sq_lines;
+            }));
         }
 
-        return payload;
+        return this.sanitizeData(payload);
     }
 
     /**
@@ -381,7 +399,6 @@ export class QuotationService {
      */
     static async create(data: QuotationFormValues): Promise<void> {
         const payload = this.preparePayload(data);
-        
         logger.info('🚀 [QuotationService] CREATE PAYLOAD:', payload);
 
         try {
@@ -397,33 +414,20 @@ export class QuotationService {
      * อัปเดตข้อมูล Quotation
      */
     static async update(id: string | number, data: Partial<QuotationFormValues>): Promise<void> {
-        // 🧪 Robust Update Logic: Backend requires a full payload for PATCH.
-        // If data is partial (e.g. status only), we fetch current data and merge.
         let finalFormValues: QuotationFormValues;
 
         if (!data.lines || !data.sq_date || !data.customer_id) {
-            logger.debug(`[QuotationService] Partial update detected for ID ${id}. Fetching full data to merge...`);
             const currentData = await this.getById(id);
-            
             if (!currentData) {
-                // 🛡️ Resilience: If we can't fetch current detail data (e.g. API returning empty), 
-                // we still try to proceed with a partial update using only the provided data.
-                // This allows status-only updates (like Send for Approval) to potentially work.
-                logger.info(`💡 [QuotationService] Detail API unavailable for ID ${id}. Proceeding with localized payload hydration.`);
                 finalFormValues = data as unknown as QuotationFormValues;
             } else {
-                // Standard Merge Logic
-                finalFormValues = {
-                    ...currentData,
-                    ...data
-                } as unknown as QuotationFormValues;
+                finalFormValues = { ...currentData, ...data } as unknown as QuotationFormValues;
             }
         } else {
             finalFormValues = data as QuotationFormValues;
         }
 
         const payload = this.preparePayload(finalFormValues);
-        
         logger.info(`🚀 [QuotationService] UPDATE (PATCH) PAYLOAD for ID ${id}:`, payload);
 
         try {

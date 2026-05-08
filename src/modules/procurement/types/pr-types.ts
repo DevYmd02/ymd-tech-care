@@ -26,6 +26,7 @@ export interface PRHeader {
   pr_id: number;                    // INTEGER @id
   pr_no: string;                    // VARCHAR(50) - เลขที่เอกสาร PR-202601-0001
   branch_id: number;            // INTEGER
+  branch_name?: string;         // Added for display
   requester_user_id: number;    // INTEGER
   requester_name: string;           // VARCHAR(200)
   pr_date: string;                  // DATE - วันที่ขอซื้อ

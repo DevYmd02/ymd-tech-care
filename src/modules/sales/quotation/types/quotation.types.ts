@@ -100,6 +100,7 @@ export interface QuotationFormData {
     lead_id?: string | number | null;
     customer_id: string | number;
     branch_id?: string | number | null;
+    branch_name?: string;
     currency_code: string;
     isMulticurrency?: boolean;
     base_currency_code?: string;
@@ -121,7 +122,9 @@ export interface QuotationFormData {
     item_id?: string | number | null;
     sale_area_id?: string | number | null;
     emp_sale_id?: string | number | null;
+    emp_sale_name?: string;
     emp_dept_id?: string | number | null;
+    emp_dept_name?: string;
     project_id?: string | number | null;
     job_id?: string | number | null;
     sq_status?: string;

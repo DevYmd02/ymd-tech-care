@@ -1,5 +1,7 @@
 import api from '@core/api/api';
 import { logger } from '@utils';
+import { masterDataCache } from '@/shared/utils/master-data-cache';
+import { sanitizePayload } from '@/shared/utils/payload.utils';
 import { 
     normalizeId, 
     normalizeDate, 
@@ -9,6 +11,19 @@ import {
 } from '@/shared/utils/data-mapping.utils';
 import type { DeliveryFormData } from '../types/delivery.types';
 import type { SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
+
+/** Fields allowed by the backend DTO for Delivery Header */
+const KNOWN_DELIVERY_DTO_FIELDS = [
+    'delivery_date', 'docu_date', 'status', 'ship_to_address', 'ship_method',
+    'carrier', 'tracking_no', 'remarks', 'ship_by_emp', 'so_id', 'customer_id',
+    'branch_id', 'warehouse_id', 'deliveryLines'
+];
+
+/** Fields allowed by the backend DTO for Delivery Lines */
+const KNOWN_DELIVERY_LINE_FIELDS = [
+    'item_id', 'qty_shipped', 'uom_id', 'remarks', 'so_line_id', 
+    'warehouse_id', 'location_id', 'lot_id', 'serial_no', 'delivery_line_id'
+];
 
 // ============================================================
 // List Params & Header Interface
@@ -58,7 +73,6 @@ export const DeliveryService = {
             const total = Array.isArray(response) ? response.length : (response as { data: unknown[]; total: number }).total || 0;
 
             // 🚀 Optimization: Batch Enrichment (Fix N+1)
-            // 1. Identify unique SO IDs that need enrichment (missing so_no)
             const soIdMap: Record<string, string> = {};
             const uniqueSoIdsToFetch = new Set<string>();
 
@@ -74,7 +88,6 @@ export const DeliveryService = {
                 }
             });
 
-            // 2. Fetch all missing SO details in parallel
             if (uniqueSoIdsToFetch.size > 0) {
                 await Promise.all(Array.from(uniqueSoIdsToFetch).map(async (id) => {
                     try {
@@ -88,7 +101,6 @@ export const DeliveryService = {
                 }));
             }
 
-            // 3. Map synchronously using the pre-fetched map
             const mappedData = rawData.map((item) => {
                 const customerObj = (item.customer || item.customer_header || item.customer_ref || {}) as Record<string, unknown>;
                 const soObj = (item.sale_order || item.so || item.so_header || item.sale_order_header || {}) as Record<string, unknown>;
@@ -136,12 +148,10 @@ export const DeliveryService = {
 
             const r = (rRaw['delivery'] || rRaw['delivery_header'] || rRaw) as Record<string, unknown>;
 
-            // Format dates
             r['delivery_date'] = normalizeDate(r['delivery_date']);
             r['docu_date'] = normalizeDate(r['docu_date']);
             r['updated_at'] = normalizeDate(r['updated_at']);
 
-            // Nested objects
             const customerObj = (r['customer'] || r['customer_header'] || {}) as Record<string, unknown>;
             const soObj = (r['sale_order'] || r['so_header'] || r['so'] || {}) as Record<string, unknown>;
             const branchObj = (r['branch'] || r['branch_header'] || {}) as Record<string, unknown>;
@@ -150,7 +160,7 @@ export const DeliveryService = {
 
             r['customer_id'] = normalizeId(r['customer_id'] || customerObj['customer_id'] || customerObj['id']);
             r['customer_name'] = normalizeCustomerName(r);
-            // 🚀 Shared SO Data Discovery (Enrich both header and lines)
+            
             const rawSoId = String(r['so_id'] || soObj['so_id'] || soObj['id'] || r['sale_order_id'] || r['so_header_id'] || '');
             let sharedSoData: Record<string, unknown> | null = null;
             
@@ -175,10 +185,8 @@ export const DeliveryService = {
                 } catch { /* ignore */ }
             }
 
-            // Force all IDs to be strings for Form Validation (Prevents "expected string, received number")
             r['so_id'] = rawSoId;
 
-            // 🚀 Enrich Customer info if still missing
             const rawCustId = r['customer_id'];
             if (rawCustId && !r['customer_name']) {
                 try {
@@ -198,7 +206,6 @@ export const DeliveryService = {
                 `${empObj['employee_firstname_th'] || ''} ${empObj['employee_lastname_th'] || ''}`.trim() || ''
             );
 
-            // Map lines
             let rawLinesData = (
                 r['delivery_lines'] || r['deliveryLines'] || r['lines'] || r['items'] || r['delivery_line'] || []
             ) as unknown;
@@ -222,7 +229,6 @@ export const DeliveryService = {
                 let itemCode = normalizeItemCode(l);
                 let itemName = normalizeItemName(l);
 
-                // Re-enrich item if missing
                 if ((!itemCode || !itemName) && itemId) {
                     try {
                         const masterRes = await api.get<unknown>(`/item-master/${itemId}`);
@@ -234,7 +240,6 @@ export const DeliveryService = {
                     } catch { /* ignore */ }
                 }
 
-                // Lot
                 const lotIdVal = l['lot_id'];
                 const lotObj = (typeof lotIdVal === 'object' && lotIdVal !== null)
                     ? (lotIdVal as Record<string, unknown>)
@@ -252,7 +257,6 @@ export const DeliveryService = {
                     } catch { /* ignore */ }
                 }
 
-                // 🚀 Enrichment: Get ordered qty from SO if missing
                 let qtyOrdered = Number(
                     l['qty_ordered'] || l['ordered_qty'] || l['qty_order'] || 
                     l['so_qty'] || l['order_qty'] || l['qtyOrdered'] || 0
@@ -276,12 +280,10 @@ export const DeliveryService = {
                         sharedSoData['details'] || []
                     ) as Record<string, unknown>[];
 
-                    // 1. Try match by soLineId
                     let matchedSoLine = soLineId ? soLines.find(sl => 
                         String(sl.id || sl.so_line_id || sl.sale_order_line_id || sl.uuid || sl.detail_id) === soLineId
                     ) : null;
 
-                    // 2. Fallback: match by item_id if unique
                     if (!matchedSoLine && itemId) {
                         const sameItemLines = soLines.filter(sl => String(sl.item_id || sl.id) === itemId);
                         if (sameItemLines.length === 1) {
@@ -334,32 +336,40 @@ export const DeliveryService = {
             // Enrich branch name if missing
             const rawBranchId = r['branch_id'];
             if (rawBranchId && !r['branch_name']) {
-                try {
-                    const branchRes = await api.get<Record<string, unknown>>(`/org-branches/${rawBranchId}`);
-                    const branchData = (branchRes['data'] as Record<string, unknown>) || branchRes;
-                    if (branchData) {
-                        r['branch_name'] = String(branchData['branch_name'] || branchData['name'] || '');
-                    }
-                } catch { /* ignore */ }
+                const cachedName = masterDataCache.getBranchName(rawBranchId as string | number);
+                if (cachedName) {
+                    r['branch_name'] = cachedName;
+                } else {
+                    try {
+                        const branchRes = await api.get<Record<string, unknown>>(`/org-branches/${rawBranchId}`);
+                        const branchData = (branchRes['data'] as Record<string, unknown>) || branchRes;
+                        if (branchData) {
+                            r['branch_name'] = String(branchData['branch_name'] || branchData['name'] || '');
+                        }
+                    } catch { /* ignore */ }
+                }
             }
 
             // Enrich ship_by_emp_name if missing
             const rawEmpId = r['ship_by_emp'];
             if (rawEmpId && !r['ship_by_emp_name']) {
-                try {
-                    const empRes = await api.get<Record<string, unknown>>(`/employees/${rawEmpId}`);
-                    const empData = (empRes['data'] as Record<string, unknown>) || empRes;
-                    if (empData) {
-                        r['ship_by_emp_name'] = String(
-                            empData['employee_fullname'] ||
-                            `${empData['employee_firstname_th'] || ''} ${empData['employee_lastname_th'] || ''}`.trim()
-                        );
-                    }
-                } catch { /* ignore */ }
+                const cachedName = masterDataCache.getEmployeeName(rawEmpId as string | number);
+                if (cachedName) {
+                    r['ship_by_emp_name'] = cachedName;
+                } else {
+                    try {
+                        const empRes = await api.get<Record<string, unknown>>(`/employees/${rawEmpId}`);
+                        const empData = (empRes['data'] as Record<string, unknown>) || empRes;
+                        if (empData) {
+                            r['ship_by_emp_name'] = String(
+                                empData['employee_fullname'] ||
+                                `${empData['employee_firstname_th'] || ''} ${empData['employee_lastname_th'] || ''}`.trim()
+                            );
+                        }
+                    } catch { /* ignore */ }
+                }
             }
 
-            // 🚀 CRITICAL: We return the cleaned/mapped object 'r' 
-            // This ensures all IDs are Strings as expected by the Zod Schema in the frontend
             return r as unknown as DeliveryFormData;
         } catch (error) {
             logger.error(`[DeliveryService] getById ${id} failed:`, error);
@@ -488,14 +498,11 @@ export const DeliveryService = {
         logger.debug('[DeliveryService] getPendingDeliveryDetail soId:', soId);
         try {
             const response = await api.get<Record<string, unknown> | Record<string, unknown>[]>(`/delivery/${soId}/pending-deliveries`);
-            // Response might be an object or an array. If array, take first.
             const r = Array.isArray(response) ? (response.length > 0 ? response[0] : null) : response;
             if (!r) return null;
 
-            // Map lines
             const rawLines = (r['saleOrderLines'] || r['lines'] || []) as Record<string, unknown>[];
             
-            // We'll use Promise.all to handle potential async enrichment
             const lines = await Promise.all(rawLines.map(async (l) => {
                 const item = (l['item'] || l['item_master'] || {}) as Record<string, unknown>;
                 const uom = (l['uom'] || l['unit'] || {}) as Record<string, unknown>;
@@ -509,7 +516,6 @@ export const DeliveryService = {
                 let uomId = String(l['uom_id'] || uom['uom_id'] || uom['id'] || '');
                 let uomName = String(l['uom_name'] || uom['uom_name'] || uom['name'] || uom['unit_name'] || '');
 
-                // Enrichment: If item_id exists but code/name are missing, fetch from master data
                 if (itemId && (!itemCode || !itemName)) {
                     try {
                         const { ItemMasterService } = await import('@master-data/inventory/services/item-master.service');
@@ -536,7 +542,6 @@ export const DeliveryService = {
                 const lotId = l['lot_id'] ? String(l['lot_id']) : '';
                 let lotNo = String(l['lot_no'] || '');
 
-                // Enrichment: If lot_id exists but lot_no is missing
                 if (lotId && !lotNo) {
                     try {
                         const { LotNoService } = await import('@master-data/inventory/services/inventory-master.service');
@@ -551,7 +556,6 @@ export const DeliveryService = {
 
                 const qtyOrdered = Number(l['qty'] || l['qty_ordered'] || l['quantity'] || 0);
                 const remainingQtyVal = Number(l['remaining_qty'] || l['remaining_quantity'] || 0);
-                // If API explicitly returns 0 for a pending delivery, fallback to qtyOrdered
                 const remainingQty = remainingQtyVal > 0 ? remainingQtyVal : qtyOrdered;
 
                 return {
@@ -562,7 +566,7 @@ export const DeliveryService = {
                     item_name: itemName,
                     qty_ordered: qtyOrdered,
                     remaining_qty: remainingQty,
-                    qty_shipped: remainingQty, // Default to remaining
+                    qty_shipped: remainingQty,
                     uom_id: uomId,
                     uom_name: uomName,
                     warehouse_id: warehouseId,
@@ -611,7 +615,7 @@ export const DeliveryService = {
             return !isNaN(num) ? num : String(id);
         };
 
-        const payload: Record<string, unknown> = {
+        const transformed: Record<string, unknown> = {
             delivery_date: toISOString(raw['delivery_date']) || new Date().toISOString(),
             docu_date: toISOString(raw['docu_date']) || new Date().toISOString(),
             status: raw['status'] || 'DRAFT',
@@ -623,22 +627,19 @@ export const DeliveryService = {
             ship_by_emp: mapId(raw['ship_by_emp']) || null,
         };
 
-        if (isValidId(raw['so_id'])) payload['so_id'] = mapId(raw['so_id']);
-        if (isValidId(raw['customer_id'])) payload['customer_id'] = mapId(raw['customer_id']);
-        if (isValidId(raw['branch_id'])) payload['branch_id'] = mapId(raw['branch_id']);
-        if (isValidId(raw['warehouse_id'])) payload['warehouse_id'] = mapId(raw['warehouse_id']);
-        // Only ship_by_emp is allowed by the strict backend
+        if (isValidId(raw['so_id'])) transformed['so_id'] = mapId(raw['so_id']);
+        if (isValidId(raw['customer_id'])) transformed['customer_id'] = mapId(raw['customer_id']);
+        if (isValidId(raw['branch_id'])) transformed['branch_id'] = mapId(raw['branch_id']);
+        if (isValidId(raw['warehouse_id'])) transformed['warehouse_id'] = mapId(raw['warehouse_id']);
 
         if (raw.lines && Array.isArray(raw.lines)) {
-            payload.deliveryLines = (raw.lines as Record<string, unknown>[]).map((line) => {
+            transformed.deliveryLines = (raw.lines as Record<string, unknown>[]).map((line) => {
                 const l: Record<string, unknown> = {
                     item_id: mapId(line['item_id']),
                     qty_shipped: Number(line['qty_shipped'] || 0),
                     uom_id: mapId(line['uom_id']),
                     remarks: line['remarks'] || '',
                 };
-
-                // Backend rejects delivery_id inside deliveryLines array items
 
                 if (isValidId(line['so_line_id'])) l['so_line_id'] = mapId(line['so_line_id']);
                 if (isValidId(line['warehouse_id'])) l['warehouse_id'] = mapId(line['warehouse_id']);
@@ -650,10 +651,10 @@ export const DeliveryService = {
                     l.delivery_line_id = mapId(line.delivery_line_id);
                 }
 
-                return l;
+                return sanitizePayload(l, KNOWN_DELIVERY_LINE_FIELDS);
             });
         }
 
-        return payload;
+        return sanitizePayload(transformed, KNOWN_DELIVERY_DTO_FIELDS);
     },
 };

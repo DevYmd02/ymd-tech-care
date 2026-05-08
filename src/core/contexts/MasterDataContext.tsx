@@ -9,6 +9,8 @@ export interface MasterDataContextType {
     units: Record<string, unknown>[];
     branches: Record<string, unknown>[];
     warehouses: Record<string, unknown>[];
+    employees: Record<string, unknown>[];
+    departments: Record<string, unknown>[];
     isLoading: boolean;
     refetchAll: () => void;
 }

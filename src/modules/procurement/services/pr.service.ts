@@ -4,6 +4,8 @@ import { USE_MOCK } from '@/core/api/api';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { VendorListResponse, VendorListItem } from '@/modules/master-data/vendor/types/vendor-types';
 import type { ApprovalListResponse } from '@/modules/procurement/types/av-types';
+import { sanitizePayload, cleanPayload } from '@/shared/utils/payload.utils';
+import { masterDataCache } from '@/shared/utils/master-data-cache';
 import type {
   PRListParams,
   PRListResponse,
@@ -39,25 +41,25 @@ const ENDPOINTS = {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Known DTO fields — used for leak detection before sending to backend
 // ═══════════════════════════════════════════════════════════════════════════════
-const KNOWN_DTO_FIELDS = new Set([
+const KNOWN_DTO_FIELDS = [
   'pr_no', 'pr_date', 'need_by_date', 'requester_user_id', 'branch_id',
-  'project_id', 'cost_center_id', 'preferred_vendor_id', // 🎯 FIX: Added for explicit recognition
+  'project_id', 'cost_center_id', 'preferred_vendor_id',
   'pr_tax_code_id', 'remark', 'status',
   'pr_base_currency_code', 'pr_quote_currency_code',
   'pr_exchange_rate', 'pr_exchange_rate_date',
   'pr_discount_raw', 'payment_term_days', 'credit_days',
   'vendor_quote_no', 'shipping_method', 'lines',
   'requester_name', 'delivery_date',  
-  'version' // 🎯 Backend expects version for Optimistic Concurrency Control
-]);
+  'version'
+];
 
-// NOTE: 'remark' is NOT allowed on lines per backend DTO (whitelist: true + forbidNonWhitelisted: true)
-const KNOWN_LINE_DTO_FIELDS = new Set([
-  'pr_line_id', 'id', // 🎯 FIX: Added for explicit recognition during updates
+// NOTE: 'remark' is NOT allowed on lines per backend DTO
+const KNOWN_LINE_DTO_FIELDS = [
+  'pr_line_id', 'id',
   'line', 'item_id', 'qty', 'est_unit_price', 'uom_id',
   'line_discount_raw', 'line_no', 'description', 'warehouse_id',
   'location', 'required_receipt_type'
-]);
+];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🔒 INTERNAL SPEED CACHE (Phase 1 Optimization)
@@ -264,7 +266,9 @@ export const PRService = {
                 return {
                     ...item,
                     vendor_code: vendorCode,
-                    vendor_name: vendorName
+                    vendor_name: vendorName,
+                    branch_name: (masterDataCache.getBranchName(item.branch_id) || '') as string,
+                    requester_name: (item.requester_name || masterDataCache.getEmployeeName(item.requester_user_id) || '') as string
                 };
             });
 
@@ -372,7 +376,9 @@ export const PRService = {
     // Merge lines into the header object as expected by UI
     let finalResult: PRHeaderExtended = {
         ...data,
-        lines: lines.length > 0 ? lines : (data.lines || [])
+        lines: lines.length > 0 ? lines : (data.lines || []),
+        branch_name: (masterDataCache.getBranchName(data.branch_id) || '') as string,
+        requester_name: (data.requester_name || masterDataCache.getEmployeeName(data.requester_user_id) || '') as string
     };
 
     logger.debug('[PRService.getDetail] Hydrated: pr_no=', finalResult.pr_no, 'lines=', finalResult.lines?.length ?? 0);
@@ -390,6 +396,21 @@ export const PRService = {
     }
 
     return finalResult;
+  },
+
+  /**
+   * Helper to sanitize data using whitelist
+   */
+  sanitizeData(data: Record<string, unknown>): Record<string, unknown> {
+    // Sanitize Lines first
+    if (Array.isArray(data.lines)) {
+      data.lines = data.lines.map(line => 
+        sanitizePayload(line, KNOWN_LINE_DTO_FIELDS)
+      );
+    }
+    
+    // Sanitize Header
+    return cleanPayload(sanitizePayload(data, KNOWN_DTO_FIELDS)) as Record<string, unknown>;
   },
 
 
@@ -417,21 +438,23 @@ export const PRService = {
     });
 
     // ─── Forbidden field leak detector ───────────────────────────────────
-    const unknownHeaderFields = Object.keys(payload).filter(k => !KNOWN_DTO_FIELDS.has(k));
+    const unknownHeaderFields = Object.keys(payload).filter(k => !KNOWN_DTO_FIELDS.includes(k));
     if (unknownHeaderFields.length > 0) {
       logger.error('🚨 [PRService] PAYLOAD CONTAINS UNKNOWN HEADER FIELDS — will cause 400:', unknownHeaderFields);
     }
 
     // Check line items for unknown fields too
     if (payload.lines?.[0]) {
-      const unknownLineFields = Object.keys(payload.lines[0]).filter(k => !KNOWN_LINE_DTO_FIELDS.has(k));
+      const unknownLineFields = Object.keys(payload.lines[0]).filter(k => !KNOWN_LINE_DTO_FIELDS.includes(k));
       if (unknownLineFields.length > 0) {
         logger.error('🚨 [PRService] LINE ITEMS CONTAIN UNKNOWN FIELDS — will cause 400:', unknownLineFields);
       }
     }
     
+    const sanitizedPayload = PRService.sanitizeData(payload as unknown as Record<string, unknown>);
+    
     try {
-      const response = await api.post<PRHeader>(ENDPOINTS.list, payload);
+      const response = await api.post<PRHeader>(ENDPOINTS.list, sanitizedPayload);
       logger.info('✅ [PRService] PR Created Successfully!', {
         pr_id: response.pr_id,
         pr_no: response.pr_no,
@@ -494,14 +517,16 @@ export const PRService = {
     logger.info(`[PRService] Updating PR: ${id}`);
     logger.debug('🔧 [PRService] UPDATE WIRE-READY JSON:', JSON.stringify(payload, null, 2));
     
-    // ─── Forbidden field leak detector for updates too ───────────────────
-    const unknownFields = Object.keys(payload).filter(k => !KNOWN_DTO_FIELDS.has(k));
+    // ─── Forbidden field leak detector ───────────────────────────────────
+    const unknownFields = Object.keys(payload).filter(k => !KNOWN_DTO_FIELDS.includes(k));
     if (unknownFields.length > 0) {
       logger.error('🚨 [PRService] UPDATE PAYLOAD CONTAINS UNKNOWN FIELDS:', unknownFields);
     }
 
+    const sanitizedPayload = PRService.sanitizeData(payload as unknown as Record<string, unknown>);
+
     try {
-      const response = await api.patch<PRHeader>(ENDPOINTS.detail(id), payload);
+      const response = await api.patch<PRHeader>(ENDPOINTS.detail(id), sanitizedPayload);
       logger.info('✅ [PRService] PR Updated Successfully!', { pr_id: id });
       clearPRServiceAVCache();
       return response;
