@@ -50,19 +50,41 @@ export const DeliveryService = {
             const rawData = Array.isArray(response) ? response : (response as { data: Record<string, unknown>[]; total: number }).data || [];
             const total = Array.isArray(response) ? response.length : (response as { data: unknown[]; total: number }).total || 0;
 
-            const mappedData = rawData.map((item) => {
-                const customerObj = (item.customer || {}) as Record<string, unknown>;
-                const soObj = (item.sale_order || item.so || {}) as Record<string, unknown>;
+            const mappedData = await Promise.all(rawData.map(async (item) => {
+                const customerObj = (item.customer || item.customer_header || item.customer_ref || {}) as Record<string, unknown>;
+                const soObj = (item.sale_order || item.so || item.so_header || item.sale_order_header || {}) as Record<string, unknown>;
+
+                let soNo = String(item.so_no || soObj.so_no || soObj.no || item.sale_order_no || '');
+                const soId = String(item.so_id || soObj.so_id || soObj.id || '');
+
+                // 🚀 Enrichment: If so_no is missing but so_id exists, fetch it from Sales Order service
+                if (!soNo && soId) {
+                    try {
+                        const soRes = await api.get<Record<string, unknown>>(`/sale-order/${soId}`);
+                        const soDataRaw = (soRes['data'] as Record<string, unknown>) || soRes;
+                        const soData = (soDataRaw['sale_order'] || soDataRaw['so_header'] || soDataRaw) as Record<string, unknown>;
+                        if (soData) {
+                            soNo = String(soData['so_no'] || '');
+                        }
+                    } catch { /* ignore */ }
+                }
 
                 return {
                     ...item,
                     delivery_id: String(item.delivery_id || item.id || ''),
                     delivery_no: String(item.delivery_no || ''),
                     delivery_date: item.delivery_date ? String(item.delivery_date).split('T')[0] : '',
-                    so_id: String(item.so_id || soObj.so_id || soObj.id || ''),
-                    so_no: String(item.so_no || soObj.so_no || ''),
+                    so_id: soId,
+                    so_no: soNo,
                     customer_id: String(item.customer_id || customerObj.customer_id || customerObj.id || ''),
-                    customer_name: String(item.customer_name || customerObj.customer_name_th || customerObj.customer_name || customerObj.name || ''),
+                    customer_name: String(
+                        item.customer_name || 
+                        customerObj.customer_name_th || 
+                        customerObj.customer_name || 
+                        customerObj.name || 
+                        customerObj.name_th || 
+                        ''
+                    ),
                     branch_id: String(item.branch_id || ''),
                     status: item.status || 'DRAFT',
                     tracking_no: String(item.tracking_no || ''),
@@ -71,7 +93,7 @@ export const DeliveryService = {
                     docu_date: item.docu_date ? String(item.docu_date).split('T')[0] : '',
                     rawData: item,
                 } as DeliveryHeader;
-            });
+            }));
 
             return { data: mappedData, total };
         } catch (error) {
@@ -108,11 +130,49 @@ export const DeliveryService = {
 
             r['customer_id'] = String(r['customer_id'] || customerObj['customer_id'] || customerObj['id'] || '');
             r['customer_name'] = String(r['customer_name'] || customerObj['customer_name_th'] || customerObj['customer_name'] || customerObj['name'] || '');
-            r['so_id'] = String(r['so_id'] || soObj['so_id'] || soObj['id'] || '');
-            r['so_no'] = String(r['so_no'] || soObj['so_no'] || '');
+            // 🚀 Shared SO Data Discovery (Enrich both header and lines)
+            const rawSoId = String(r['so_id'] || soObj['so_id'] || soObj['id'] || r['sale_order_id'] || r['so_header_id'] || '');
+            let sharedSoData: Record<string, unknown> | null = null;
+            
+            if (rawSoId && rawSoId !== '0') {
+                try {
+                    const soRes = await api.get<Record<string, unknown>>(`/sale-order/${rawSoId}`);
+                    const soDataRaw = (soRes['data'] as Record<string, unknown>) || soRes;
+                    sharedSoData = (soDataRaw['sale_order'] || soDataRaw['so_header'] || soDataRaw) as Record<string, unknown>;
+                    
+                    if (sharedSoData) {
+                        if (!r['so_no']) r['so_no'] = String(sharedSoData['so_no'] || '');
+                        if (!r['customer_id']) r['customer_id'] = String(sharedSoData['customer_id'] || '');
+                        if (!r['branch_id']) r['branch_id'] = String(sharedSoData['branch_id'] || '');
+                        
+                        if (!r['customer_name']) {
+                            const cObj = (sharedSoData['customer'] || sharedSoData['customer_header'] || {}) as Record<string, unknown>;
+                            r['customer_name'] = String(
+                                sharedSoData['customer_name'] || cObj['customer_name_th'] || cObj['customer_name'] || cObj['name'] || ''
+                            );
+                        }
+                    }
+                } catch { /* ignore */ }
+            }
+
+            // Force all IDs to be strings for Form Validation (Prevents "expected string, received number")
+            r['so_id'] = rawSoId;
+
+            // 🚀 Enrich Customer info if still missing
+            const rawCustId = r['customer_id'];
+            if (rawCustId && !r['customer_name']) {
+                try {
+                    const custRes = await api.get<Record<string, unknown>>(`/customer-master/${rawCustId}`);
+                    const custData = (custRes['data'] as Record<string, unknown>) || custRes;
+                    if (custData) {
+                        r['customer_name'] = String(custData['customer_name_th'] || custData['customer_name'] || custData['name'] || '');
+                    }
+                } catch { /* ignore */ }
+            }
+
             r['branch_id'] = String(r['branch_id'] || branchObj['branch_id'] || branchObj['id'] || '');
             r['warehouse_id'] = String(r['warehouse_id'] || warehouseObj['warehouse_id'] || warehouseObj['id'] || '');
-            r['ship_by_emp'] = String(r['ship_by_emp'] || empObj['id'] || empObj['employee_id'] || '');
+            r['ship_by_emp'] = String(r['ship_by_emp'] || r['ship_by_employee_id'] || r['ship_by_employee'] || empObj['id'] || empObj['employee_id'] || '');
             r['ship_by_emp_name'] = String(
                 r['ship_by_emp_name'] || empObj['employee_fullname'] ||
                 `${empObj['employee_firstname_th'] || ''} ${empObj['employee_lastname_th'] || ''}`.trim() || ''
@@ -172,14 +232,69 @@ export const DeliveryService = {
                     } catch { /* ignore */ }
                 }
 
+                // 🚀 Enrichment: Get ordered qty from SO if missing
+                let qtyOrdered = Number(
+                    l['qty_ordered'] || l['ordered_qty'] || l['qty_order'] || 
+                    l['so_qty'] || l['order_qty'] || l['qtyOrdered'] || 0
+                );
+                let remainingQty = Number(
+                    l['remaining_qty'] || l['qty_pending'] || l['pending_qty'] || 
+                    l['qtyRemaining'] || l['remainingQty'] || 0
+                );
+                
+                const soLineId = String(
+                    l['so_line_id'] || l['sale_order_line_id'] || l['so_item_id'] || 
+                    l['ref_line_id'] || l['so_detail_id'] || l['detail_id'] || ''
+                );
+
+                if (qtyOrdered === 0 && sharedSoData) {
+                    const soLines = (
+                        sharedSoData['sale_order_lines'] || 
+                        sharedSoData['saleOrderLines'] || 
+                        sharedSoData['lines'] || 
+                        sharedSoData['items'] || 
+                        sharedSoData['details'] || []
+                    ) as Record<string, unknown>[];
+
+                    // 1. Try match by soLineId
+                    let matchedSoLine = soLineId ? soLines.find(sl => 
+                        String(sl.id || sl.so_line_id || sl.sale_order_line_id || sl.uuid || sl.detail_id) === soLineId
+                    ) : null;
+
+                    // 2. Fallback: match by item_id if unique
+                    if (!matchedSoLine && itemId) {
+                        const sameItemLines = soLines.filter(sl => String(sl.item_id || sl.id) === itemId);
+                        if (sameItemLines.length === 1) {
+                            matchedSoLine = sameItemLines[0];
+                        }
+                    }
+
+                    if (matchedSoLine) {
+                        qtyOrdered = Number(
+                            matchedSoLine.qty || 
+                            matchedSoLine.quantity || 
+                            matchedSoLine.qty_ordered || 
+                            matchedSoLine.qty_order || 0
+                        );
+                        if (remainingQty === 0) {
+                            remainingQty = Number(
+                                matchedSoLine.remaining_qty || matchedSoLine.qty_pending || 
+                                matchedSoLine.pending_qty || qtyOrdered
+                            );
+                        }
+                    }
+                }
+
                 return {
                     ...l,
                     delivery_line_id: String(l['delivery_line_id'] || l['id'] || ''),
                     delivery_id: String(l['delivery_id'] || ''),
-                    so_line_id: l['so_line_id'] ? String(l['so_line_id']) : undefined,
+                    so_line_id: soLineId,
                     item_id: itemId,
                     item_code: itemCode,
                     item_name: itemName,
+                    qty_ordered: qtyOrdered,
+                    remaining_qty: remainingQty,
                     qty_shipped: Number(l['qty_shipped'] || l['qty'] || l['quantity'] || 0),
                     uom_id: String(l['uom_id'] || uom['uom_id'] || uom['id'] || ''),
                     uom_name: String(l['uom_name'] || uom['uom_name'] || uom['name'] || ''),
@@ -223,18 +338,9 @@ export const DeliveryService = {
                 } catch { /* ignore */ }
             }
 
-            if (r !== rRaw) {
-                const criticalFields = [
-                    'customer_id', 'customer_name', 'so_id', 'so_no', 'branch_id', 'branch_name',
-                    'warehouse_id', 'ship_by_emp', 'ship_by_emp_name', 'lines',
-                    'delivery_date', 'docu_date'
-                ];
-                criticalFields.forEach(field => {
-                    if (r[field] !== undefined) rRaw[field] = r[field];
-                });
-            }
-
-            return rRaw as unknown as DeliveryFormData;
+            // 🚀 CRITICAL: We return the cleaned/mapped object 'r' 
+            // This ensures all IDs are Strings as expected by the Zod Schema in the frontend
+            return r as unknown as DeliveryFormData;
         } catch (error) {
             logger.error(`[DeliveryService] getById ${id} failed:`, error);
             return null;
@@ -475,9 +581,14 @@ export const DeliveryService = {
         };
 
         const isValidId = (id: unknown): boolean => {
-            if (id === null || id === undefined || id === '' || id === 0) return false;
+            if (id === null || id === undefined || id === '' || id === 0 || id === '0') return false;
+            return true;
+        };
+
+        const mapId = (id: unknown) => {
+            if (!id) return undefined;
             const num = Number(id);
-            return !isNaN(num) && num > 0;
+            return !isNaN(num) ? num : String(id);
         };
 
         const payload: Record<string, unknown> = {
@@ -489,37 +600,34 @@ export const DeliveryService = {
             carrier: raw['carrier'] || '',
             tracking_no: raw['tracking_no'] || '',
             remarks: raw['remarks'] || '',
+            ship_by_emp: mapId(raw['ship_by_emp']) || null,
         };
 
-        if (isValidId(raw['so_id'])) payload['so_id'] = Number(raw['so_id']);
-        if (isValidId(raw['customer_id'])) payload['customer_id'] = Number(raw['customer_id']);
-        if (isValidId(raw['branch_id'])) payload['branch_id'] = Number(raw['branch_id']);
-        if (isValidId(raw['warehouse_id'])) payload['warehouse_id'] = Number(raw['warehouse_id']);
-        if (isValidId(raw['ship_by_emp'])) payload['ship_by_emp'] = Number(raw['ship_by_emp']);
+        if (isValidId(raw['so_id'])) payload['so_id'] = mapId(raw['so_id']);
+        if (isValidId(raw['customer_id'])) payload['customer_id'] = mapId(raw['customer_id']);
+        if (isValidId(raw['branch_id'])) payload['branch_id'] = mapId(raw['branch_id']);
+        if (isValidId(raw['warehouse_id'])) payload['warehouse_id'] = mapId(raw['warehouse_id']);
+        // Only ship_by_emp is allowed by the strict backend
 
         if (raw.lines && Array.isArray(raw.lines)) {
-            const headerDeliveryId = Number(raw['delivery_id'] || 0);
             payload.deliveryLines = (raw.lines as Record<string, unknown>[]).map((line) => {
                 const l: Record<string, unknown> = {
-                    item_id: Number(line['item_id']),
+                    item_id: mapId(line['item_id']),
                     qty_shipped: Number(line['qty_shipped'] || 0),
-                    uom_id: Number(line['uom_id']),
+                    uom_id: mapId(line['uom_id']),
                     remarks: line['remarks'] || '',
                 };
 
-                if (isUpdate) {
-                    const dId = headerDeliveryId || Number(line['delivery_id'] || 0);
-                    if (dId > 0) l['delivery_id'] = dId;
-                }
+                // Backend rejects delivery_id inside deliveryLines array items
 
-                if (isValidId(line['so_line_id'])) l['so_line_id'] = Number(line['so_line_id']);
-                if (isValidId(line['warehouse_id'])) l['warehouse_id'] = Number(line['warehouse_id']);
-                if (isValidId(line['location_id'])) l['location_id'] = Number(line['location_id']);
-                if (isValidId(line['lot_id'])) l['lot_id'] = Number(line['lot_id']);
+                if (isValidId(line['so_line_id'])) l['so_line_id'] = mapId(line['so_line_id']);
+                if (isValidId(line['warehouse_id'])) l['warehouse_id'] = mapId(line['warehouse_id']);
+                if (isValidId(line['location_id'])) l['location_id'] = mapId(line['location_id']);
+                if (isValidId(line['lot_id'])) l['lot_id'] = mapId(line['lot_id']);
                 if (line['serial_no']) l['serial_no'] = String(line['serial_no']);
 
-                if (isUpdate && line.delivery_line_id && !isNaN(Number(line.delivery_line_id))) {
-                    l.delivery_line_id = Number(line.delivery_line_id);
+                if (isUpdate && line.delivery_line_id && isValidId(line.delivery_line_id)) {
+                    l.delivery_line_id = mapId(line.delivery_line_id);
                 }
 
                 return l;

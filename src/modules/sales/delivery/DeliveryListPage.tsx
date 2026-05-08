@@ -178,16 +178,16 @@ export default function DeliveryListPage() {
                         {info.getValue() || '-'}
                     </span>
                 ),
-                size: 160,
+                size: 150,
             }),
             columnHelper.accessor('so_no', {
                 header: 'เลขที่ SO',
                 cell: (info) => (
-                    <span className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm">
+                    <span className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm whitespace-nowrap">
                         {info.getValue() || '-'}
                     </span>
                 ),
-                size: 140,
+                size: 170,
             }),
             columnHelper.accessor('delivery_date', {
                 header: 'วันที่จัดส่ง',
@@ -205,10 +205,12 @@ export default function DeliveryListPage() {
                     const nameFromLookup = customerMap.get(String(customerId));
                     const displayName = nameFromLookup || info.getValue() || 'ไม่ระบุ';
                     return (
-                        <span className="font-bold text-slate-700 dark:text-slate-100">{displayName}</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-100 truncate block" title={displayName}>
+                            {displayName}
+                        </span>
                     );
                 },
-                size: 240,
+                size: 200,
             }),
             columnHelper.accessor('tracking_no', {
                 header: 'Tracking No.',
@@ -217,7 +219,7 @@ export default function DeliveryListPage() {
                         {info.getValue() || '-'}
                     </span>
                 ),
-                size: 150,
+                size: 130,
             }),
             columnHelper.accessor('status', {
                 header: () => <div className="flex justify-center w-full text-center">สถานะ</div>,
@@ -226,7 +228,7 @@ export default function DeliveryListPage() {
                         <DeliveryStatusBadge status={info.getValue()} />
                     </div>
                 ),
-                size: 140,
+                size: 110,
             }),
             columnHelper.display({
                 id: 'actions',
@@ -281,7 +283,7 @@ export default function DeliveryListPage() {
                         </div>
                     );
                 },
-                size: 220,
+                size: 190,
             }),
         ],
         [columnHelper, page, limit, handleUpdateStatus, customerMap]

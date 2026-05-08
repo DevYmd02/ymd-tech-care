@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { Save, Truck, Printer, Loader2 } from 'lucide-react';
 import { logger } from '@utils';
 import { FormProvider } from 'react-hook-form';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';
 import { WindowFormLayout } from '@ui';
 import { extractErrorMessage } from '@/core/api/api';
@@ -112,16 +112,18 @@ export function DeliveryFormModal({
     const { watch } = methods;
 
     const handleSelectEmployee = (emp: IEmployee) => {
-        methods.setValue('ship_by_emp', String(emp.id || ''), { shouldDirty: true });
+        const empId = String(emp.id || '');
+        methods.setValue('ship_by_emp', empId, { shouldDirty: true, shouldValidate: true });
         methods.setValue(
             'ship_by_emp_name',
             `${emp.employee_firstname_th || ''} ${emp.employee_lastname_th || ''}`.trim(),
-            { shouldDirty: true }
+            { shouldDirty: true, shouldValidate: true }
         );
     };
 
     const { confirm } = useConfirmation();
     const { handleSubmit } = methods;
+    const queryClient = useQueryClient();
 
     // --------------------------------------------------------
     // Form Submit
@@ -135,6 +137,13 @@ export function DeliveryFormModal({
             } else {
                 await DeliveryService.create(data as unknown as DeliveryFormData);
             }
+
+            // 🚀 CRITICAL: Invalidate cache to ensure fresh data on next open
+            if (id) {
+                queryClient.invalidateQueries({ queryKey: ['delivery', id] });
+            }
+            queryClient.invalidateQueries({ queryKey: ['deliveries'] });
+
             toast(`บันทึกรายการจัดส่งสินค้า ${isEdit ? 'สำเร็จ' : 'เรียบร้อยแล้ว'}`, 'success');
             onSuccess?.();
             onClose();
@@ -235,7 +244,7 @@ export function DeliveryFormModal({
                         <form
                             id="delivery-form"
                             onSubmit={handleSubmit(onFormSubmit)}
-                            className={`max-w-[1400px] mx-auto space-y-6 ${isViewOnly ? 'pointer-events-none opacity-90' : ''}`}
+                            className={`max-w-[1400px] mx-auto space-y-6 ${isViewOnly ? 'opacity-95' : ''}`}
                         >
                             {/* 1. Header */}
                             <div className={cardClass}>

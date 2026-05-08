@@ -53,8 +53,16 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms }: UseDeliveryFo
                     ...getDeliveryDefaultValues(),
                     ...(initialData || {}),
                 });
-                isInitializedRef.current = true;
+                if (hasData) {
+                    isInitializedRef.current = true;
+                }
             }
+        } else if (hasData) {
+            // 🔄 Re-sync if data updates (e.g. after background refetch)
+            reset({
+                ...getDeliveryDefaultValues(),
+                ...(initialData || {}),
+            });
         }
     }, [isOpen, initialData, reset, id]);
 
