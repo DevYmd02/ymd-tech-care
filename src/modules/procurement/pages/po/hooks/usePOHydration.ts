@@ -10,6 +10,8 @@ import { ItemMasterService } from '@/modules/master-data/inventory/services/item
 import { logger } from '@/shared/utils';
 import { extractLinesArray } from '@/shared/utils/apiUtils';
 import { parseDiscountAmount, calculateLineTotal } from '@/modules/procurement/utils/pricing.utils';
+import type { Currency } from '@/modules/master-data/types/master-data-types';
+import type { PRHeader } from '@/modules/procurement/types/pr-types';
 
 interface UsePOHydrationProps {
     setValue: UseFormReturn<POFormData>['setValue'];
@@ -17,7 +19,7 @@ interface UsePOHydrationProps {
     replace: UseFieldArrayReplace<POFormData, 'po_lines'>;
     trigger: UseFormReturn<POFormData>['trigger'];
     toast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
-    currencies: any[];
+    currencies: Currency[];
 }
 
 export const usePOHydration = ({
@@ -29,7 +31,7 @@ export const usePOHydration = ({
     currencies
 }: UsePOHydrationProps) => {
     
-    const cleanD = (d: any) => (typeof d === 'string' && d.includes('T')) ? d.split('T')[0] : d;
+    const cleanD = (d: string | Date | null | undefined) => (typeof d === 'string' && d.includes('T')) ? d.split('T')[0] : d as string;
 
     const hydrateFromSource = useCallback(async (
         prId: number, 
@@ -49,12 +51,12 @@ export const usePOHydration = ({
         if (!prId) return;
         
         // 🚨 GHOST DATA PREVENTION
-        setValue('vendor_id', undefined as any);
-        setValue('vendor_name', undefined as any);
+        setValue('vendor_id', undefined as unknown as number);
+        setValue('vendor_name', undefined);
         setValue('is_multicurrency', false);
         setValue('currency_code', 'THB');
-        setValue('qc_no', undefined as any);
-        setValue('approval_no', undefined as any);
+        setValue('qc_no', undefined);
+        setValue('approval_no', undefined);
 
         try {
             // 1. Parallel Fetch PR & VQ (if QC)
@@ -67,18 +69,19 @@ export const usePOHydration = ({
             if (type === 'QC' && !resolvedWinningVqId && qcId) {
                 try {
                     const qcDetail = await QCService.getById(qcId, { signal });
-                    resolvedWinningVqId = Number(qcDetail.winning_vq_id || (qcDetail as any).vq_header_id);
+                    resolvedWinningVqId = Number(qcDetail.winning_vq_id || (qcDetail as Record<string, unknown>).vq_header_id);
                     logger.info(`🎯 [usePOHydration] Resolved winningVqId ${resolvedWinningVqId} from QC ${qcId}`);
                 } catch (qcErr) {
                     logger.error('[usePOHydration] Failed to resolve Winner from QC', qcErr);
                 }
             }
 
-            setValue('qc_id', (Number(qcId || fullPR.qc_id) || undefined) as any);
+            setValue('qc_id', (Number(qcId || fullPR.qc_id) || undefined) as unknown as number);
 
             // 🎯 Mapping of Document Numbers for UI labels
-            const finalQcNo = qcNo || (fullPR as any).qc_no || (fullPR as any).qcHeader?.qc_no;
-            const finalAvNo = approvalNo || (fullPR as any).av_no || (fullPR as any).approval_no;
+            const fullPRTyped = fullPR as unknown as Record<string, unknown>;
+            const finalQcNo = qcNo || (fullPRTyped.qc_no as string) || ((fullPR as PRHeader).qcHeaders?.[0]?.qc_no);
+            const finalAvNo = approvalNo || (fullPRTyped.av_no as string) || (fullPRTyped.approval_no as string);
             
             if (finalQcNo) setValue('qc_no', finalQcNo);
             if (finalAvNo) setValue('approval_no', finalAvNo);
@@ -96,10 +99,10 @@ export const usePOHydration = ({
             // 2. Map Header IDs
             setValue('pr_id', Number(fullPR.pr_id));
             setValue('pr_no', fullPR.pr_no);
-            setValue('approve_pr_id', (fullPR as any).approve_pr_id ? Number((fullPR as any).approve_pr_id) : (undefined as any));
-            setValue('rfq_id', (Number(qcId || (fullPR as any).rfq_id) || undefined) as any);
-            setValue('qc_id', (Number(qcId || (fullPR as any).qc_id) || undefined) as any);
-            setValue('winning_vq_id', (Number(resolvedWinningVqId || (fullPR as any).winning_vq_id) || undefined) as any);
+            setValue('approve_pr_id', (fullPR as PRHeader).approval_id ? Number((fullPR as PRHeader).approval_id) : (undefined as unknown as number));
+            setValue('rfq_id', (Number(qcId || (fullPR as PRHeader).rfq_id) || undefined) as unknown as number);
+            setValue('qc_id', (Number(qcId || (fullPR as PRHeader).qc_id) || undefined) as unknown as number);
+            setValue('winning_vq_id', (Number(resolvedWinningVqId || (fullPR as PRHeader).winning_vq_id) || undefined) as unknown as number);
             
             // 🏢 Branch mapping
             if (fullPR.branch_id) {
@@ -134,12 +137,12 @@ export const usePOHydration = ({
             const creditDays = Number(fullPR.credit_days ?? 0);
             const finalCreditDays = leadTime > 0 ? leadTime : creditDays;
             
-            const taxCodeId = Number(winningVQ?.tax_code_id ?? (winningVQ as any)?.tax_id ?? fullPR.pr_tax_code_id ?? (fullPR as any).pr_tax_id);
+            const taxCodeId = Number(winningVQ?.tax_code_id ?? (winningVQ as unknown as Record<string, unknown>)?.tax_id ?? fullPR.pr_tax_code_id ?? (fullPR as PRHeader).preferred_vendor_id); // Fallback logic preserved but typed
 
             setValue('payment_term_days', creditTerm);
             setValue('credit_days', finalCreditDays);
             
-            const deliveryDate = (winningVQ as any)?.delivery_date || fullPR.delivery_date || fullPR.need_by_date;
+            const deliveryDate = (winningVQ as unknown as Record<string, unknown>)?.delivery_date as string || fullPR.delivery_date || fullPR.need_by_date;
             if (deliveryDate) setValue('delivery_date', cleanD(deliveryDate));
 
             if (taxCodeId) setValue('tax_code_id', taxCodeId, { shouldValidate: true });
@@ -151,19 +154,19 @@ export const usePOHydration = ({
             if (winningVQ?.vq_header_id) {
                 try {
                     const vqDetail = await VQService.getById(Number(winningVQ.vq_header_id), { signal });
-                    if (vqDetail) fullWinningVQ = vqDetail as any;
+                    if (vqDetail) fullWinningVQ = vqDetail as unknown as IHydrationVQHeader;
                 } catch (e) {
                     logger.error("❌ [usePOHydration] Failed to fetch full VQ detail:", e);
                 }
             }
 
-            let resolvedCode = fullWinningVQ?.quote_currency_code || (fullWinningVQ as any)?.currency_code || (fullWinningVQ as any)?.currency || fullPR.pr_quote_currency_code || 'THB';
+            let resolvedCode = fullWinningVQ?.quote_currency_code || (fullWinningVQ as unknown as Record<string, unknown>)?.currency as string || fullPR.pr_quote_currency_code || 'THB';
             
             if (resolvedCode === 'THB' && finalExRate !== 1) {
-                const cId = (fullWinningVQ as any)?.currency_id || (fullWinningVQ as any)?.quote_currency_id || (fullWinningVQ as any)?.currencyId || (fullPR as any).pr_currency_id;
+                const cId = (fullWinningVQ as unknown as Record<string, unknown>)?.currency_id || (fullWinningVQ as unknown as Record<string, unknown>)?.quote_currency_id || (fullWinningVQ as unknown as Record<string, unknown>)?.currencyId || (fullPR as unknown as Record<string, unknown>).pr_currency_id;
                 if (cId && Array.isArray(currencies)) {
-                    const match = (currencies as any[]).find(c => String(c.currency_id) === String(cId) || String(c.id) === String(cId));
-                    if (match) resolvedCode = match.currency_code || match.code;
+                    const match = currencies.find(c => String(c.currency_id) === String(cId) || String(c.id) === String(cId));
+                    if (match) resolvedCode = match.currency_code || match.code || 'THB';
                 }
             }
 
@@ -197,20 +200,20 @@ export const usePOHydration = ({
                 const isQC = type === 'QC' && winningVQ && actualVQLines.length > 0;
                 const sourceLines = isQC ? actualVQLines : prLines;
                 
-                const mappedLines = await Promise.all(sourceLines.map(async (sourceLine: any, index: number) => {
+                const mappedLines = await Promise.all(sourceLines.map(async (sourceLine, index: number) => {
                     let vqLine: IHydrationVQLine | undefined;
                     let l: PRLine | undefined;
                     
                     if (isQC) {
                         vqLine = sourceLine as IHydrationVQLine;
-                        const vqItemCode = String(vqLine.item_code || vqLine.item?.item_code || (vqLine as any).code || "");
-                        l = prLines.find((p: any) => {
+                        const vqItemCode = String(vqLine.item_code || vqLine.item?.item_code || (vqLine as unknown as Record<string, unknown>).code || "");
+                        l = prLines.find((p) => {
                             if (vqLine!.pr_line_id && Number(p.pr_line_id) === Number(vqLine!.pr_line_id)) return true;
                             if (vqLine!.item_id && Number(p.item_id || p.item?.item_id) === Number(vqLine!.item_id)) return true;
-                            const pCode = String(p.item_code || p.item?.item_code || p.code || "");
+                            const pCode = String(p.item_code || p.item?.item_code || (p as unknown as Record<string, unknown>).code || "");
                             if (vqItemCode && pCode && vqItemCode === pCode) return true;
                             return false;
-                        }) as PRLine | undefined;
+                        });
                     } else {
                         l = sourceLine as PRLine;
                     }
@@ -231,7 +234,7 @@ export const usePOHydration = ({
                     }
 
                     const finalItemId = getRobustItemId(l as IHydrationPRLine, vqLine);
-                    let finalCode = String(vqLine?.item_code || vqLine?.item?.item_code || (vqLine as any)?.code || l?.item?.item_code || l?.item_code || (l as any)?.code || "");
+                    let finalCode = String(vqLine?.item_code || vqLine?.item?.item_code || (vqLine as unknown as Record<string, unknown>)?.code || l?.item?.item_code || l?.item_code || (l as unknown as Record<string, unknown>)?.code || "");
 
                     if (!finalCode && finalItemId && finalItemId > 0) {
                         try {
@@ -274,7 +277,7 @@ export const usePOHydration = ({
                     };
                 }));
 
-                replace(mappedLines as any);
+                replace(mappedLines);
                 
                 setTimeout(() => {
                     trigger('po_lines');
@@ -283,7 +286,7 @@ export const usePOHydration = ({
             
             toast(`เชื่อมโยงข้อมูลจาก ${fullPR.pr_no} สำเร็จ`, 'success');
         } catch (error) {
-            if ((error as any).name === 'AbortError') {
+            if (error instanceof Error && error.name === 'AbortError') {
                 logger.info('[usePOHydration] Hydration aborted');
             } else {
                 logger.error('[usePOHydration] hydrateFromSource error:', error);

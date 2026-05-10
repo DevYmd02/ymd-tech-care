@@ -42,7 +42,7 @@ export interface AVCombinedRecord {
     total_amount?: number;
 
     // Approval Header Fields
-    approval_id?: number;
+    approval_id?: number | string;
     approval_no?: string;
     av_no?: string;
     approval_date?: string;

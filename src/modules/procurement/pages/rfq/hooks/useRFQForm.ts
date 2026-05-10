@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useForm, useFieldArray, type FieldErrors } from 'react-hook-form';
+import { useForm, useFieldArray, type FieldErrors, type FieldError } from 'react-hook-form';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -42,7 +42,7 @@ export const mapPRToRFQFormData = (
     return {
         pr_id: pr.pr_id,
         pr_no: pr.pr_no,
-        approved_pr_no: (pr as unknown as Record<string, unknown>).approved_pr_no as string || pr.av_no || (pr as unknown as Record<string, unknown>).approval_no as string || null,
+        approved_pr_no: pr.approved_pr_no || pr.av_no || pr.approval_no || null,
         branch_id: pr.branch_id,
         project_id: pr.project_id || null,
         purpose: pr.purpose || '',
@@ -62,7 +62,7 @@ export const mapPRToRFQFormData = (
             ? `${pr.remark}\n[PR: ${pr.pr_no}]` 
             : `Generated from PR: ${pr.pr_no}`,
 
-        target_delivery_date: ((pr as unknown as Record<string, unknown>).delivery_date as string || (pr as unknown as Record<string, unknown>).deliveryDate as string || pr.need_by_date || '').toString().split('T')[0] || '',
+        target_delivery_date: (pr.delivery_date || pr.deliveryDate || pr.need_by_date || '').toString().split('T')[0] || '',
 
         // ⚠️ Safety: Do NOT map IDs for new RFQ record
         rfqLines: (pr.lines || []).map((line, index) => {
@@ -98,9 +98,9 @@ export const mapPRToRFQFormData = (
                 required_receipt_type: line.required_receipt_type || 'FULL',
                 // Real API may use `needed_date`, `line_needed_date`, or the backend uses another key
                 target_delivery_date: (
-                    (line as unknown as Record<string, unknown>).delivery_date as string ||
+                    line.delivery_date ||
                     line.needed_date ||
-                    (line as unknown as Record<string, unknown>).line_needed_date as string ||
+                    line.line_needed_date ||
                     ''
                 ).toString().split('T')[0] || '',
                 note_to_vendor:  line.remark || '',
@@ -219,10 +219,10 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         // We favor the original PR date or need_by_date, as AV's 'delivery_date' often defaults to system dates in the backend
         const rawDate = activePR?.delivery_date || 
                         initialPR?.delivery_date || 
-                        rec.need_by_date || 
+                        (rec as unknown as PRHeader).need_by_date || 
                         rec.needByDate || 
-                        rec.delivery_date || 
-                        rec.deliveryDate || 
+                        (rec as unknown as PRHeader).delivery_date || 
+                        (rec as unknown as PRHeader).deliveryDate || 
                         rec.due_date || 
                         (rec.pr as Record<string, unknown>)?.delivery_date || 
                         (rec.pr as Record<string, unknown>)?.need_by_date || '';
@@ -365,7 +365,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 if (records && records.length > 0) {
                     // Match by pr_approval_id if available, otherwise fallback to first (historical)
                     const match = prApprovalId 
-                        ? records.find((r: Record<string, unknown>) => Number(r.approval_id) === Number(prApprovalId))
+                        ? records.find((r) => Number(r.approval_id) === Number(prApprovalId))
                         : records[0];
 
                     if (match) {
@@ -447,14 +447,14 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 if (!rfqRes) return;
 
                 // 🎯 BRANCH A: Extract Initial Lines from RFQ
-                let sourceLines = (rfqRes.rfqLines && rfqRes.rfqLines.length > 0) 
+                let sourceLines: RFQLine[] = (rfqRes.rfqLines && rfqRes.rfqLines.length > 0) 
                     ? rfqRes.rfqLines 
                     : (rfqRes.lines && rfqRes.lines.length > 0)
                         ? rfqRes.lines
                         : (rfqRes as unknown as Record<string, unknown>).rfq_lines as RFQLine[] || (rfqRes as unknown as Record<string, unknown>).rfq_line as RFQLine[] || (rfqRes as unknown as Record<string, unknown>).items as RFQLine[] || (rfqRes as unknown as Record<string, unknown>).rfq_items as RFQLine[] || [];
 
                 // 🚀 AGGRESSIVE RESCUE: Check if lines from backend are "Broken" (No ID, No Code)
-                const isBroken = sourceLines.length > 0 && sourceLines.every((l: unknown) => !(l as Record<string, unknown>).item_id && !(l as Record<string, unknown>).item_code);
+                const isBroken = sourceLines.length > 0 && sourceLines.every((l) => !l.item_id && !l.item_code);
                 
                 if ((sourceLines.length === 0 || isBroken) && rfqRes.pr_id) {
                     logger.warn(`🛟 [useRFQForm] RFQ ${editId} has ${isBroken ? 'BROKEN' : 'NO'} lines. Forcing Rescue from PR: ${rfqRes.pr_id}`);
@@ -508,12 +508,12 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 (rfq.rfqVendors || []).forEach(v => {
                     const vendorId = Number(v.vendor_id);
                     const existing = vendorMap.get(vendorId) || {};
-                    vendorMap.set(vendorId, { ...existing, ...(v as unknown as Record<string, unknown>) });
+                    vendorMap.set(vendorId, { ...existing, ...v });
                 });
 
                 const enhancedVendors = (await Promise.all(Array.from(vendorMap.values()).map(async (v) => {
                     const isSent = v.status === 'SENT' || v.status === 'RESPONDED';
-                    const hasEmail = Boolean(v.email_sent_to || (v as unknown as Record<string, unknown>).email);
+                    const hasEmail = Boolean(v.email_sent_to || v.email);
                     if (v.vendor_name && v.vendor_code && (isSent ? hasEmail : true)) return v as unknown as RFQVendor & { vendor_code?: string; vendor_name?: string };
                     
                     try {
@@ -521,10 +521,10 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                         if (vendorDetail) {
                             return {
                                 ...v,
-                                vendor_name: vendorDetail.vendor_name || v.vendor_name as string || '',
-                                vendor_code: vendorDetail.vendor_code || v.vendor_code as string || '',
+                                vendor_name: vendorDetail.vendor_name || v.vendor_name || '',
+                                vendor_code: vendorDetail.vendor_code || v.vendor_code || '',
                                 email_sent_to: v.email_sent_to || vendorDetail.email || null,
-                            } as unknown as RFQVendor & { vendor_code?: string; vendor_name?: string };
+                            } as RFQVendor & { vendor_code?: string; vendor_name?: string };
                         }
                     } catch {
                          logger.warn('Failed to fetch vendor detail for id', v.vendor_id);
@@ -552,11 +552,11 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     const masterUnit = units.find(u => Number(u.unit_id) === uom_id || u.id === uom_id);
 
                     const item_code = line.item_code || line.itemCode || line.product_code || 
-                                     (line.item as unknown as Record<string, unknown>)?.item_code as string || (line.product as unknown as Record<string, unknown>)?.product_code as string || 
+                                     (line.item as Record<string, unknown>)?.item_code as string || (line.product as Record<string, unknown>)?.product_code as string || 
                                      masterItem?.item_code || '';
                     
                     const item_name = line.item_name || line.itemName || line.product_name || 
-                                     (line.item as unknown as Record<string, unknown>)?.item_name as string || (line.product as unknown as Record<string, unknown>)?.product_name as string || 
+                                     (line.item as Record<string, unknown>)?.item_name as string || (line.product as Record<string, unknown>)?.product_name as string || 
                                      masterItem?.item_name || '';
                     
                     const uom       = line.uom || masterUnit?.unit_name || (masterItem as unknown as Record<string, unknown>)?.unit_name as string || '';
@@ -569,7 +569,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                         qty: line.qty,
                         uom,
                         uom_id: uom_id,
-                        required_receipt_type: (line as unknown as Record<string, unknown>).required_receipt_type as string || 'FULL',
+                        required_receipt_type: line.required_receipt_type || 'FULL',
                         target_delivery_date: line.target_delivery_date?.split('T')[0] || '',
                         note_to_vendor: line.note_to_vendor || '',
                         item_id: item_id,
@@ -813,23 +813,24 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
             }
         }
         // Helper สำหรับดึง message จาก Object ลึกๆ
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const extractErrorMessages = (errors: any): string[] => {
+        const extractErrorMessages = (errors: FieldErrors<RFQFormValues>): string[] => {
             let messages: string[] = [];
-            for (const key in errors) {
-                const error = errors[key];
-                if (error?.message && typeof error.message === 'string') {
+            Object.values(errors).forEach((error) => {
+                if (!error) return;
+                
+                const fieldError = error as FieldError;
+                if (fieldError.message && typeof fieldError.message === 'string') {
                     // 🛡️ ระบบกรองคำภาษาอังกฤษที่อาจหลุดมา
-                    let msg = error.message;
+                    let msg = fieldError.message;
                     const lowerMsg = msg.toLowerCase();
                     if (lowerMsg.includes('invalid input') || lowerMsg.includes('expected number') || lowerMsg.includes('received string') || lowerMsg.includes('received nan')) {
                         msg = 'กรุณาระบุข้อมูลให้ถูกต้อง';
                     }
                     messages.push(msg);
-                } else if (typeof error === 'object' && error !== null) {
-                    messages = messages.concat(extractErrorMessages(error));
+                } else if (typeof error === 'object') {
+                    messages = messages.concat(extractErrorMessages(error as FieldErrors<RFQFormValues>));
                 }
-            }
+            });
             return Array.from(new Set(messages));
         };
 

@@ -91,7 +91,7 @@ api.interceptors.response.use(
     // If it contains keys that are not part of a standard envelope (like 'id', 'name', etc.), 
     // we treat the whole object as the data payload.
     if (resBody && typeof resBody === 'object' && resBody.data !== undefined) {
-      const envelopeKeys = ['success', 'message', 'statusCode', 'status', 'total', 'page', 'limit', 'count', 'error', 'pageSize', 'totalPages' ];
+      const envelopeKeys = ['success', 'message', 'statusCode', 'status', 'total', 'page', 'limit', 'count', 'error', 'pageSize', 'totalPages'];
       const bodyKeys = Object.keys(resBody);
       
       // If there are keys that are NOT in our envelope whitelist (excluding 'data' itself),
@@ -175,6 +175,7 @@ interface NestErrorPayload {
   statusCode?: number;
   message?: string | string[];
   error?: string;
+  errorCode?: string; // 💡 Unique error identifier (e.g., 'AUTH_INVALID_PASSWORD')
   errors?: string[] | { [key: string]: string | string[] }[];
   success?: boolean;
   retryAfter?: number; // 💡 Seconds until lockout expires
@@ -205,6 +206,17 @@ export const extractErrorMessage = (error: unknown): string => {
   }
   
   return 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+};
+
+/**
+ * 💡 Extract machine-readable error code for frontend mapping/i18n
+ */
+export const getErrorCode = (error: unknown): string | null => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as NestErrorPayload | undefined;
+    return data?.errorCode || null;
+  }
+  return null;
 };
 
 // =============================================================================

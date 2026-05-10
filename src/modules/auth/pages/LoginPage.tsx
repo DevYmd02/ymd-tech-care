@@ -12,7 +12,7 @@ import { AuthLayout, AuthInput, AuthLabel, AuthButton } from '@/shared/layouts/A
 import { BrandLogo } from '@/shared/components/system/BrandLogo';
 import { ROUTES } from '@/core/config/routes';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
-import { USE_MOCK, extractErrorMessage } from '@/core/api/api';
+import { USE_MOCK, extractErrorMessage, getErrorCode } from '@/core/api/api';
 import axios from 'axios';
 
 interface TranslationSet {
@@ -44,6 +44,9 @@ const LoginPage = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
 
+    // 💡 Configuration
+    const MAX_ATTEMPTS = 3;
+
     // Translation Mapping
     const translations: Record<'TH' | 'EN', TranslationSet> = {
         TH: {
@@ -59,8 +62,14 @@ const LoginPage = () => {
             footer: '© 2024 YMD Tech Care. สงวนลิขสิทธิ์.',
             autoLogin: 'เลือกเข้าสู่ระบบอัตโนมัติ (Dev Mode)',
             apiErrors: {
+                'AUTH_USER_NOT_FOUND': 'ไม่พบชื่อผู้ใช้งานในระบบ',
+                'AUTH_INVALID_PASSWORD': 'รหัสผ่านไม่ถูกต้อง',
+                'AUTH_ACCOUNT_LOCKED': 'บัญชีถูกระงับชั่วคราว ลองใหม่ได้ใน {time}',
+                'AUTH_ATTEMPTS_WARNING': 'ระบุรหัสผ่านผิด เหลือโอกาสอีก {count} ครั้ง',
+                'TOO_MANY_ATTEMPTS': 'คุณระบุรหัสผ่านผิดเกินกำหนด กรุณาลองใหม่ในภายหลัง',
                 'Username not found': 'ไม่พบชื่อผู้ใช้งานในระบบ',
                 'Invalid password': 'รหัสผ่านไม่ถูกต้อง',
+                'Too many attempts': 'คุณระบุรหัสผ่านผิดเกินกำหนด กรุณาลองใหม่ในภายหลัง',
                 'Network Error': 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้',
                 'Locked': 'บัญชีถูกระงับชั่วคราว ลองใหม่ได้ใน {time}',
                 'LastAttempt': 'ระวัง! หากผิดอีกครั้งบัญชีจะถูกระงับชั่วคราว',
@@ -80,8 +89,14 @@ const LoginPage = () => {
             footer: '© 2024 YMD Tech Care. All rights reserved.',
             autoLogin: 'Auto Login (Dev Mode)',
             apiErrors: {
+                'AUTH_USER_NOT_FOUND': 'Username not found',
+                'AUTH_INVALID_PASSWORD': 'Invalid password',
+                'AUTH_ACCOUNT_LOCKED': 'Account locked. Retry available in {time}',
+                'AUTH_ATTEMPTS_WARNING': 'Invalid password. {count} attempts remaining',
+                'TOO_MANY_ATTEMPTS': 'Too many attempts. Please try again later.',
                 'Username not found': 'Username not found',
                 'Invalid password': 'Invalid password',
+                'Too many attempts': 'Too many attempts. Please try again later.',
                 'Network Error': 'Network Error',
                 'Locked': 'Account locked. Retry available in {time}',
                 'LastAttempt': 'Warning! One more failed attempt will lock your account.',
@@ -91,6 +106,24 @@ const LoginPage = () => {
     };
 
     const t = translations[language];
+
+    // 💡 Restore Lockout on Username Change (F5 Persistence)
+    React.useEffect(() => {
+        const cleanUser = username.trim().toLowerCase();
+        if (cleanUser) {
+            const lockoutUntil = sessionStorage.getItem(`lockout_until_${cleanUser}`);
+            if (lockoutUntil) {
+                const remainingMs = parseInt(lockoutUntil, 10) - Date.now();
+                if (remainingMs > 0) {
+                    setIsLocked(true);
+                    setLockoutSeconds(Math.ceil(remainingMs / 1000));
+                    setError(t.apiErrors['TOO_MANY_ATTEMPTS']);
+                } else {
+                    sessionStorage.removeItem(`lockout_until_${cleanUser}`);
+                }
+            }
+        }
+    }, [username, t.apiErrors]);
 
     // 💡 Lockout Countdown Timer Effect
     React.useEffect(() => {
@@ -103,12 +136,18 @@ const LoginPage = () => {
             setIsLocked(false);
             setLockoutSeconds(null);
             setError(null);
+            // Reset attempts and lockout after period ends
+            const cleanUser = username.trim().toLowerCase();
+            if (cleanUser) {
+                sessionStorage.removeItem(`login_attempts_${cleanUser}`);
+                sessionStorage.removeItem(`lockout_until_${cleanUser}`);
+            }
         }
 
         return () => {
             if (timer) clearInterval(timer);
         };
-    }, [lockoutSeconds]);
+    }, [lockoutSeconds, username]);
 
     const formatTime = (seconds: number) => {
         const mm = Math.floor(seconds / 60);
@@ -122,39 +161,81 @@ const LoginPage = () => {
         setError(null);
 
         try {
-            // 💡 Sanitize input (Perfection Point #1)
+            // 💡 Sanitize input
             const cleanUsername = username.trim();
             const cleanPassword = password.trim();
+            const ATTEMPT_KEY = `login_attempts_${cleanUsername.toLowerCase()}`;
             
             await login({ username: cleanUsername, password: cleanPassword });
+            
+            // Clear attempts on success
+            sessionStorage.removeItem(ATTEMPT_KEY);
         } catch (err) {
-            let errorMsg = extractErrorMessage(err);
+            const cleanUsername = username.trim();
+            const ATTEMPT_KEY = `login_attempts_${cleanUsername.toLowerCase()}`;
+            const errorCode = getErrorCode(err);
+            const rawErrorMsg = extractErrorMessage(err);
+            let finalErrorKey = errorCode || rawErrorMsg;
+            let currentRemaining: number | null = null;
             
             if (axios.isAxiosError(err)) {
-                // 💡 423 Locked Handling
-                if (err.response?.status === 423) {
-                    const data = err.response.data as { retryAfter?: number };
-                    const retryAfter = data && typeof data === 'object' && 'retryAfter' in data 
-                        ? data.retryAfter : 60;
+                // 1. Check for Lockout (423 or 401 with specific message)
+                const data = err.response?.data as { attemptsRemaining?: number; message?: string; retryAfter?: number };
+                const message = data?.message || '';
+
+                if (err.response?.status === 423 || message.toLowerCase().includes('too many attempts')) {
+                    finalErrorKey = 'TOO_MANY_ATTEMPTS';
+                    const retryAfter = data?.retryAfter || 60;
+                    const secondsMatch = message.match(/(\d+)\s*seconds/i);
                     
                     setIsLocked(true);
-                    setLockoutSeconds(retryAfter || 60);
-                    errorMsg = 'Locked'; 
+                    setLockoutSeconds(secondsMatch ? parseInt(secondsMatch[1], 10) : retryAfter);
                 } 
-                // 💡 401 Unauthorized with attemptsRemaining
+                // 2. Handle Attempt Counting (401)
                 else if (err.response?.status === 401) {
-                    const data = err.response.data as { attemptsRemaining?: number };
+                    let remaining: number | null = null;
+
+                    // Use Backend data if available
                     if (data && typeof data === 'object' && 'attemptsRemaining' in data) {
-                        const remaining = data.attemptsRemaining;
-                        setAttemptsRemaining(remaining ?? null);
+                        remaining = data.attemptsRemaining ?? null;
+                    } 
+                    // Fallback: Frontend Session Tracking
+                    else {
+                        const currentFailures = parseInt(sessionStorage.getItem(ATTEMPT_KEY) || '0', 10) + 1;
+                        sessionStorage.setItem(ATTEMPT_KEY, currentFailures.toString());
+                        remaining = Math.max(0, MAX_ATTEMPTS - currentFailures);
+                    }
+
+                    setAttemptsRemaining(remaining);
+                    currentRemaining = remaining;
+
+                    if (remaining === 0) {
+                        finalErrorKey = 'TOO_MANY_ATTEMPTS';
+                        setIsLocked(true);
+                        const duration = 60;
+                        setLockoutSeconds(duration);
+                        // Save lockout expiration to sessionStorage for F5 persistence
+                        sessionStorage.setItem(`lockout_until_${cleanUsername.toLowerCase()}`, (Date.now() + duration * 1000).toString());
+                    } else {
+                        // Always show count if > 0
+                        finalErrorKey = 'AUTH_ATTEMPTS_WARNING';
+                        // If it's the very last one, we can still use the special warning message if you prefer
                         if (remaining === 1) {
-                            errorMsg = 'LastAttempt';
+                             // Option: Use a stronger warning for the last attempt
+                             // finalErrorKey = 'LastAttempt'; 
                         }
                     }
                 }
             }
 
-            const translatedMsg = t.apiErrors[errorMsg] || t.apiErrors.default || errorMsg;
+            // 🎯 Final Translation Logic
+            let translatedMsg = t.apiErrors[finalErrorKey] || t.apiErrors.default;
+            
+            // Handle placeholders
+            if (finalErrorKey === 'AUTH_ATTEMPTS_WARNING' && currentRemaining !== null) {
+                translatedMsg = translatedMsg.replace('{count}', String(currentRemaining));
+            }
+
             setError(translatedMsg);
         } finally {
             setIsLoading(false);

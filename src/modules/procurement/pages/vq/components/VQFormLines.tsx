@@ -21,9 +21,9 @@ export interface VQFormLinesProps {
         taxRate?: number;
     };
     fields: FieldArrayWithId<QuotationFormData, "vq_lines", "id">[];
-    append: (value: any) => void;
+    append: (value: QuotationFormData['vq_lines'][0]) => void;
     remove: (index?: number | number[]) => void;
-    insert: (index: number, value: any) => void;
+    insert: (index: number, value: QuotationFormData['vq_lines'][0]) => void;
 }
 
 export const VQFormLines: React.FC<VQFormLinesProps> = ({

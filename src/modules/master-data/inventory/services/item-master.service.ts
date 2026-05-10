@@ -13,7 +13,21 @@ import type { SuccessResponse } from '@/shared/types/api.types';
 /**
  * Maps raw backend item fields to frontend ItemListItem fields cautiously.
  */
-function mapItemFields(raw: Partial<ItemListItem> & Record<string, unknown>): ItemListItem {
+/**
+ * Raw data structures from backend for mapping.
+ */
+interface RawItemListItem extends Partial<ItemListItem>, Record<string, unknown> {}
+interface RawItemDetail extends Record<string, unknown> {
+    item_id?: number;
+    id?: number;
+    item_code?: string;
+    item_name?: string;
+}
+
+/**
+ * Maps raw backend item fields to frontend ItemListItem fields cautiously.
+ */
+function mapItemFields(raw: RawItemListItem): ItemListItem {
   // Extract fields with defaults to ensure ItemListItem compliance without 'as any'
   return {
     id: Number(raw.id || 0),
@@ -57,7 +71,10 @@ function mapItemFields(raw: Partial<ItemListItem> & Record<string, unknown>): It
 /**
  * Maps raw backend item fields to full ItemMaster fields for hydrate forms cautiously.
  */
-function mapItemDetailFields(raw: Record<string, unknown>): ItemMaster {
+/**
+ * Maps raw backend item fields to full ItemMaster fields for hydrate forms cautiously.
+ */
+function mapItemDetailFields(raw: RawItemDetail): ItemMaster {
   return {
     item_id: Number(raw.item_id || raw.id || 0),
     item_code: String(raw.item_code || ''),
@@ -178,7 +195,7 @@ export const ItemMasterService = {
       const rawArray = Array.isArray(response) ? response : (response.data || response.items || []);
 
       // Map backend uom_id/uom_name → frontend unit_id/unit_name
-      const itemsArray = rawArray.map((item) => mapItemFields(item as unknown as Record<string, unknown>));
+      const itemsArray = rawArray.map((item: unknown) => mapItemFields(item as RawItemListItem));
 
       return {
         items: itemsArray,
@@ -196,10 +213,10 @@ export const ItemMasterService = {
     if (USE_MOCK) {
       const item = mockItems.find(i => i.item_id === id);
       // Map to full detail safe defaults
-      return item ? mapItemDetailFields(item as unknown as Record<string, unknown>) : null;
+      return item ? mapItemDetailFields(item as unknown as RawItemDetail) : null;
     }
     try {
-      const raw = await api.get<Record<string, unknown>>(`/item-master/${id}`, config);
+      const raw = await api.get<RawItemDetail>(`/item-master/${id}`, config);
       if (!raw) return null;
       return mapItemDetailFields(raw);
     } catch (error) {

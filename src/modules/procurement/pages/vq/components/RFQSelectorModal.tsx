@@ -33,7 +33,7 @@ export const RFQSelectorModal: React.FC<RFQSelectorModalProps> = ({ isOpen, onCl
     const rfqs: RFQHeader[] = useMemo(() => {
         const rawItems = rfqResponse?.data; 
         if (!Array.isArray(rawItems)) return [];
-        return rawItems as any[];
+        return rawItems as unknown as RFQHeader[];
     }, [rfqResponse]);
 
     return (

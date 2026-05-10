@@ -30,8 +30,8 @@ export interface QuotationHeader {
     quotation_expiry_date?: string;     // DATE (backend: quotation_expiry_date)
     
     vendor_id: number | null;           // Relation ID
-    rfq_id: number | null;              // Relation ID
     pr_id: number | null;               // Relation ID
+    rfq_id: number | null;              // Relation ID
     rfq_vendor_id?: number | null;      // Relation ID
     pr_approval_id?: number | null;     // 🎯 Corrected: ID Reference to pr_approval
 
@@ -64,9 +64,10 @@ export interface QuotationHeader {
     created_by?: number;
     updated_by?: number | null;
 
-    // UI Layout Helpers / Legacy Fallbacks (Backward Compatibility)
     // @deprecated Use vq_header_id
     quotation_id?: number;
+    /** Alias for vq_header_id used in some API responses */
+    vq_id?: number;
     // @deprecated Use base_total_amount
     total_amount?: number | string;
     // @deprecated Use base_currency_code

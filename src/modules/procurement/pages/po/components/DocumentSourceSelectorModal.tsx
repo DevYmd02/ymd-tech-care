@@ -54,7 +54,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
 
                 const [specializedData, allApprovedPRs, allCompletedQCs, targetedQCRes] = await Promise.all([
                     QCService.getReadyForPO({ signal }),
-                    PRService.getList({ status: 'ALL' as any, limit: 100 }, { signal }), // 🎯 Metadata Registry (No 'q' to bypass backend search bug)
+                    PRService.getList({ status: 'ALL' as const, limit: 100 }, { signal }), // 🎯 Metadata Registry (No 'q' to bypass backend search bug)
                     QCService.getList(qcParams, { signal }),
                     // 🎯 DIAGNOSTIC TRACE: Specifically look for the missing QC regardless of status
                     trimmedQuery.startsWith('QC-') ? QCService.getList({ qc_no: trimmedQuery, limit: 10 }, { signal }) : Promise.resolve(null)
@@ -90,12 +90,13 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                 // 🔍 Pre-build maps from broad PR scan for cross-reference
                 const prStatusMap = new Map<string, string>();
                 const prRequesterMap = new Map<string, string>();
-                items2.forEach((item: any) => {
+                items2.forEach((item) => {
                     const prNo = item.pr_no || `ID_${item.pr_id}`;
                     if (prNo) {
                         prStatusMap.set(prNo, item.status);
                         // Try all possible name fields
-                        const name = item.requester_name || item.created_by_name || item.user_name || item.requester?.name;
+                        const itemAny = item as unknown as Record<string, unknown>;
+                        const name = item.requester_name || item.created_by_name || (itemAny.user_name as string) || (itemAny.requester as Record<string, unknown>)?.name as string;
                         if (name) prRequesterMap.set(prNo, name);
                     }
                 });
@@ -104,7 +105,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
 
                 // Priority 2: Broad QC Scan (Fixes search by QC Number and handles DRAFTs)
                 items3.forEach(qc => {
-                    const qcAny = qc as any;
+                    const qcAny = qc as unknown as Record<string, unknown>;
                     const prNo = qc.pr_no || `ID_${qc.pr_id}`;
                     const key = prNo || `QC_${qc.qc_no || qc.qc_id}`;
                     
@@ -117,7 +118,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                     // 🛡️ AUTHORITY FILTER: Supplemental scans should NOT add APPROVED items that backend items1 ignored.
                     // If an APPROVED doc is missing from specialized list, it's likely already converted or not ready.
                     // We ONLY supplement for true DRAFTs or PARTIAL discovery.
-                    const currentPrStatus = prStatusMap.get(prNo || '') || (qc as any).pr_status;
+                    const currentPrStatus = prStatusMap.get(prNo || '') || (qc as unknown as Record<string, unknown>).pr_status as string;
                     if (currentPrStatus === 'APPROVED' && !readyPrKeys.has(key)) return;
                     if (qc.status !== 'DRAFT' && !readyPrKeys.has(key)) return;
 
@@ -139,7 +140,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                                 pr_id: qc.pr_id || 0,
                                 winning_vq_id: winnerVqId,
                                 winning_vendor_id: winnerVendorId,
-                                status: effectiveStatus as unknown as any, 
+                                status: effectiveStatus as string, 
                                 raw_status: qc.status,
                                 created_at: qc.created_at || ''
                             }]
@@ -157,7 +158,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                                 pr_id: existing.pr_id,
                                 winning_vq_id: winnerVqId,
                                 winning_vendor_id: winnerVendorId,
-                                status: effectiveStatus as unknown as any,
+                                status: effectiveStatus as string,
                                 raw_status: qc.status,
                                 created_at: qc.created_at || ''
                             });
@@ -187,7 +188,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                         // Map qcs to include raw_status for discovery logic
                         const richQcs = qcs.map(h => ({
                             ...h,
-                            raw_status: (h as any).status // Preserve raw status
+                            raw_status: (h as unknown as Record<string, unknown>).status as string // Preserve raw status
                         }));
 
                         mergedMap.set(key, {
@@ -200,7 +201,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                                 vendor_id: pr.preferred_vendor_id,
                                 vendor_name: pr.vendor_name || 'ไม่ระบุชื่อผู้ขาย'
                             } : null,
-                            qcHeaders: richQcs as any
+                            qcHeaders: richQcs as IReadyForPOPR['qcHeaders']
                         } as IReadyForPOPR);
                     } else if (key) {
                         // 🔍 ENRICHMENT: Even if it's already there, if the name is missing, fill it in from PR Scan

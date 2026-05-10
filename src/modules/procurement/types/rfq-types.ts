@@ -117,6 +117,7 @@ export interface RFQLine {
     note_to_vendor: string | null;      // TEXT - หมายเหตุ (จาก Golden Payload)
     discount_raw?: string;              // Legacy/Utility field for mapping
     status?: string | null;             // Utility field for mapping
+    required_receipt_type?: string;     // Added for mapping
     
     // 💧 @Agent_UI_Hydrator: Fallback fields for strict type-safe hydration
     itemCode?: string;                  
@@ -147,7 +148,15 @@ export interface RFQVendor {
     email_sent_to: string | null;       // VARCHAR(200) - อีเมลที่ส่งไป
     response_date: string | null;       // TIMESTAMP - วันเวลาที่ผู้ขายตอบกลับ
     status: RFQVendorStatus;            // VARCHAR(50) - PENDING, SENT, RESPONDED, NO_RESPONSE, DECLINED
-    remark: string | null;              // TEXT
+    remark: string | null;              // TEXT - หมายเหตุเพิ่มเติม
+    
+    // 💧 Joined fields from vendor table
+    vendor_name?: string;
+    vendor_code?: string;
+    /** camelCase alias for rfq_vendor_id */
+    rfqVendorId?: number;
+    /** generic alias for rfq_vendor_id */
+    id?: number;
 }
 
 

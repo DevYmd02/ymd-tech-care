@@ -3,7 +3,7 @@ import type { AxiosRequestConfig } from 'axios';
 import { USE_MOCK } from '@/core/api/api';
 import type { QCListParams, QCListResponse, CreateQCPayload, SubmitQCWinnerData, IReadyForPOPR } from '@/modules/procurement/schemas/qc-schemas';
 import type { QCListItem } from '@/modules/procurement/schemas/qc-schemas';
-import type { RFQHeader } from '@/modules/procurement/types';
+import type { RFQHeader, VQListItem } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils';
 import { sanitizePayload, cleanPayload } from '@/shared/utils/payload.utils';
 import { masterDataCache } from '@/shared/utils/master-data-cache';
@@ -114,11 +114,11 @@ export const QCService = {
     return items;
   },
 
-  getVQsWaitingForQC: async (rfqId: number): Promise<Record<string, unknown>[]> => {
+  getVQsWaitingForQC: async (rfqId: number): Promise<VQListItem[]> => {
     logger.info(`[QCService] Fetching VQs for RFQ ID waiting for QC: ${rfqId}`);
-    const response = await api.get<Record<string, unknown>>(`/qc/vendor/${rfqId}/waiting-for-qc`);
+    const response = await api.get<VQListItem[]>(`/qc/vendor/${rfqId}/waiting-for-qc`);
     logger.debug("[QCService] getVQsWaitingForQC response received");
-    return extractArrayFromResponse<Record<string, unknown>>(response);
+    return extractArrayFromResponse<VQListItem>(response);
   },
 
 

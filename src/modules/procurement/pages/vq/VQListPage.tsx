@@ -9,7 +9,7 @@
 import { useState, useMemo, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
-import { Eye, Edit, FileText, Search, Plus, XCircle } from 'lucide-react';
+import { Eye, Edit, FileText, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, VQStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 
@@ -237,21 +237,25 @@ export default function VQListPage() {
         vendors: Array<{ vendor_id: number; vendor_name: string }>;
     }
 
-    const groupedWaitingRfqData = useMemo(() => {
-        const rawData = waitingRfqData?.data ?? [];
+    const groupedWaitingRfqData = useMemo<GroupedPendingRFQ[]>(() => {
+        const rawData = (waitingRfqData?.data as unknown as RFQHeader[]) ?? [];
         if (!Array.isArray(rawData)) return [];
 
-        return rawData.map((rfq: any) => ({
+        return rawData.map((rfq) => ({
             ...rfq,
-            vendorCount: rfq.vendors?.length || 0
-        }));
+            vendorCount: (rfq.vendors || rfq.rfqVendors)?.length || 0,
+            vendors: (rfq.vendors || rfq.rfqVendors || []).map(v => ({
+                vendor_id: v.vendor_id,
+                vendor_name: v.vendor_name || ''
+            }))
+        } as GroupedPendingRFQ));
     }, [waitingRfqData?.data]);
 
 
 
     const createdVqKeys = useMemo(() => {
         const set = new Set<string>();
-        (allVqsData?.data ?? []).forEach((vq: any) => {
+        ((allVqsData?.data as VQListItem[]) ?? []).forEach((vq) => {
             const rfqId = vq.rfq_id || vq.rfq?.rfq_id;
             const rfqNo = vq.rfq_no || vq.rfq?.rfq_no;
             const vendorId = vq.vendor_id || vq.vendor?.vendor_id;
@@ -263,16 +267,16 @@ export default function VQListPage() {
     }, [allVqsData?.data]);
 
     const flattenedWaitingVqData = useMemo(() => {
-        const rawData = waitingVqData?.data ?? [];
+        const rawData = (waitingVqData?.data as unknown as RFQHeader[]) ?? [];
         if (!Array.isArray(rawData)) return [];
 
         const flattened: VQPendingQueueItem[] = [];
 
-        rawData.forEach((item: any) => {
+        rawData.forEach((item) => {
             // Case 1: Nested (RFQ with vendors array) - This is what the current implementation expects
             const nestedVendors = item.vendors || item.rfqVendors || [];
             if (nestedVendors.length > 0) {
-                nestedVendors.forEach((v: any) => {
+                nestedVendors.forEach((v) => {
                     const hasVq = createdVqKeys.has(`${item.rfq_id}-${v.vendor_id}`) || 
                                   createdVqKeys.has(`${item.rfq_no}-${v.vendor_id}`);
 
@@ -280,29 +284,35 @@ export default function VQListPage() {
 
                     // 🎯 FILTER: Only show SENT vendors that don't have a VQ created yet
                     if (isSent && !hasVq) {
+                        const rawItem = item as unknown as Record<string, unknown>;
                         flattened.push({
                             rfq_vendor_id: v.rfq_vendor_id || v.rfqVendorId || v.id,
-                            pr_id: item.pr_id,
-                            pr_no: item.pr_no,
+                            pr_id: item.pr_id || 0,
+                            pr_no: item.pr_no || '',
                             rfq_id: item.rfq_id,
                             rfq_no: item.rfq_no,
                             vendor_id: v.vendor_id,
-                            vendor_name: v.vendor_name,
-                            status: v.status,
+                            vendor_name: v.vendor_name || '',
+                            status: v.status || '',
                             created_at: item.created_at,
-                            pr_approval_id: item.pr_approval_id || item.av_id || (item as any).approval_id || (item as any).approvalId,
+                            pr_approval_id: item.pr_approval_id || Number(rawItem.av_id || rawItem.approval_id || rawItem.approvalId || 0),
                         } as VQPendingQueueItem);
                     }
                 });
-            } else if (item.rfq_vendor_id || item.vendor_id) {
+            } else {
                 // Case 2: Flat (Backend might return individual vendor-rfq pairs)
-                const hasVq = createdVqKeys.has(`${item.rfq_id}-${item.vendor_id}`) || 
-                              createdVqKeys.has(`${item.rfq_no}-${item.vendor_id}`);
+                const flatItem = item as unknown as Record<string, unknown>;
+                const vendorId = Number(flatItem.vendor_id || 0);
+                const rfqId = Number(flatItem.rfq_id || 0);
+                const rfqNo = String(flatItem.rfq_no || '');
 
-                const isSent = item.status === 'SENT';
+                const hasVq = createdVqKeys.has(`${rfqId}-${vendorId}`) || 
+                              createdVqKeys.has(`${rfqNo}-${vendorId}`);
+
+                const isSent = flatItem.status === 'SENT';
 
                 if (isSent && !hasVq) {
-                    flattened.push(item as VQPendingQueueItem);
+                    flattened.push(item as unknown as VQPendingQueueItem);
                 }
             }
         });
@@ -385,12 +395,12 @@ export default function VQListPage() {
     
     // 1. Extract IDs from active lists for current view mode (Strict No Over-fetching)
     const visibleVendorIds = useMemo(() => {
-        const list = activeTab === 'ALL' 
+        const list: Array<{ vendor_id?: number | null }> = activeTab === 'ALL' 
             ? (data?.data ?? []) 
             : activeTab === 'WAITING_VQ' 
-                ? flattenedWaitingVqData 
-                : (waitingRfqData?.data ?? []);
-        return Array.from(new Set(list.map((item: any) => item.vendor_id).filter(Boolean))) as number[];
+                ? (flattenedWaitingVqData as VQPendingQueueItem[]) 
+                : ((waitingRfqData?.data as unknown as RFQHeader[]) ?? []);
+        return Array.from(new Set(list.map((item) => item.vendor_id).filter(Boolean))) as number[];
     }, [activeTab, data?.data, flattenedWaitingVqData, waitingRfqData?.data]);
 
     // 2. Fetch Batch
@@ -423,6 +433,7 @@ export default function VQListPage() {
         }
     }), [filters.page, filters.limit, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, vendorMap]);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const groupedRfqColumns = useMemo<ColumnDef<GroupedPendingRFQ, any>[]>(() => [
         {
             id: 'index',
@@ -700,7 +711,7 @@ export default function VQListPage() {
                         {activeTab === 'WAITING_RFQ' && (
                             <SmartTable
                                 data={groupedWaitingRfqData}
-                                columns={groupedRfqColumns as ColumnDef<any>[]}
+                                columns={groupedRfqColumns as ColumnDef<GroupedPendingRFQ, unknown>[]}
                                 isLoading={isWaitingRfqLoading}
                                 pagination={{
                                     pageIndex: filters.page,
@@ -724,7 +735,7 @@ export default function VQListPage() {
                             pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                         >
                             {(data?.data ?? []).map((item, index) => {
-                            const vendorDisplay = item.vendor_name || item.vendor?.vendor_name || (item.vendor_id ? (vendorMap[item.vendor_id] || '-') : '-');
+                            const vendorDisplay = item.vendor_name || item.vendor?.vendor_name || (item.vendor_id ? (vendorMap[String(item.vendor_id)] || '-') : '-');
                             
                             const rfqDisplay = item.rfq_no || item.rfq?.rfq_no || (item.rfq_id ? <RFQNoDisplay rfqId={item.rfq_id} /> : '-');
                             
@@ -803,9 +814,9 @@ export default function VQListPage() {
                                 isEmpty={!filteredData.length}
                                 pagination={totalCount ? { page: filters.page, total: totalCount, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                             >
-                                {filteredData.map((item: any, index: number) => (
+                                {filteredData.map((item, index) => (
                                     <MobileListCard
-                                        key={`${activeTab}-${activeTab === 'WAITING_VQ' ? item.rfq_vendor_id : (item.rfq_no || item.rfq_id || index)}`}
+                                        key={`${activeTab}-${activeTab === 'WAITING_VQ' ? (item as VQPendingQueueItem).rfq_vendor_id : ((item as unknown as Record<string, unknown>).rfq_no as string || (item as unknown as Record<string, unknown>).rfq_id as number || index)}`}
                                         title={<span className="text-gray-400 dark:text-slate-500 italic text-base">รอดำเนินการ</span>}
                                         subtitle={formatThaiDate(item.created_at)}
                                         statusBadge={
@@ -816,52 +827,41 @@ export default function VQListPage() {
                                             ) : undefined
                                         }
                                         details={activeTab === 'WAITING_VQ' ? [
-                                            { label: 'ผู้ขาย:', value: item.vendor_name || (item.vendor_id ? vendorMap[item.vendor_id] : '-') || '-' },
-                                            { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-purple-600 dark:text-purple-400">{item.rfq_no || '-'}</span> },
-                                            { label: 'PR อ้างอิง:', value: item.pr_no || '-' },
+                                            { label: 'ผู้ขาย:', value: (item as VQPendingQueueItem).vendor_name || ((item as VQPendingQueueItem).vendor_id ? vendorMap[String((item as VQPendingQueueItem).vendor_id)] : '-') || '-' },
+                                            { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-purple-600 dark:text-purple-400">{(item as VQPendingQueueItem).rfq_no || '-'}</span> },
+                                            { label: 'PR อ้างอิง:', value: (item as VQPendingQueueItem).pr_no || '-' },
                                         ] : [
-                                            { label: 'จำนวนผู้ขาย:', value: <span className="font-bold text-blue-600 dark:text-blue-400">{item.vendorCount || 0} ราย</span> },
-                                            { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-purple-600 dark:text-purple-400">{item.rfq_no || '-'}</span> },
-                                            { label: 'PR อ้างอิง:', value: item.pr_no || '-' },
+                                            { label: 'จำนวนผู้ขาย:', value: <span className="font-bold text-blue-600 dark:text-blue-400">{(item as unknown as GroupedPendingRFQ).vendorCount || 0} ราย</span> },
+                                            { label: 'RFQ อ้างอิง:', value: <span className="font-semibold text-purple-600 dark:text-purple-400">{(item as unknown as GroupedPendingRFQ).rfq_no || '-'}</span> },
+                                            { label: 'PR อ้างอิง:', value: (item as unknown as GroupedPendingRFQ).pr_no || '-' },
                                         ]}
                                         actions={
                                             activeTab === 'WAITING_VQ' ? (
-                                                <div className="flex flex-col gap-2 w-full mt-2">
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedRfqVendorId(item.rfq_vendor_id!);
-                                                            setIsCancelModalOpen(true);
-                                                        }}
-                                                        className="w-full bg-red-50 hover:bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-red-200 dark:border-red-800 shadow-sm"
-                                                    >
-                                                        <XCircle size={14} /> ยกเลิก
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            const rfqInit: Partial<RFQHeader> = {
-                                                                rfq_id: item.rfq_id,
-                                                                rfq_no: item.rfq_no,
-                                                            };
-                                                            
-                                                            setInitialRFQForCreate({ 
-                                                                ...rfqInit, 
-                                                                vendor_id: item.vendor_id, 
-                                                                rfq_vendor_id: item.rfq_vendor_id 
-                                                            } as RFQHeader);
-                                                            
-                                                            setSelectedVqId(null);
-                                                            setIsViewMode(false);
-                                                            setIsVqModalOpen(true);
-                                                        }}
-                                                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
-                                                    >
-                                                        <Plus size={14} strokeWidth={2.5} /> สร้างใบเสนอราคา
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    onClick={() => {
+                                                        const rfqItem = item as VQPendingQueueItem;
+                                                        setInitialRFQForCreate({ 
+                                                            rfq_id: rfqItem.rfq_id, 
+                                                            rfq_no: rfqItem.rfq_no,
+                                                            vendor_id: rfqItem.vendor_id, 
+                                                            rfq_vendor_id: rfqItem.rfq_vendor_id,
+                                                            pr_approval_id: rfqItem.pr_approval_id
+                                                        } as RFQHeader);
+                                                        setSelectedVqId(null);
+                                                        setIsViewMode(false);
+                                                        setIsVqModalOpen(true);
+                                                    }}
+                                                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1 shadow-sm"
+                                                >
+                                                    <Plus size={14} /> สร้างใบเสนอราคา
+                                                </button>
                                             ) : (
                                                 <button
-                                                    onClick={() => handleOpenTracking(item.rfq_id, item.rfq_no)}
-                                                    className="w-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1 mt-2 border border-blue-200 dark:border-blue-800 shadow-sm"
+                                                    onClick={() => {
+                                                        const raw = item as unknown as Record<string, unknown>;
+                                                        handleOpenTracking(raw.rfq_id as number, raw.rfq_no as string);
+                                                    }}
+                                                    className="w-full bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1 border border-gray-200 dark:border-slate-600"
                                                 >
                                                     <Eye size={14} /> ดูรายละเอียด
                                                 </button>

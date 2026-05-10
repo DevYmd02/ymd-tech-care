@@ -33,20 +33,22 @@ export const useQCForm = (onSuccess?: () => void, onClose?: () => void) => {
   const onInvalid = (errors: FieldErrors<CreateQCFormValues>) => {
     logger.error('Form Validation Errors:', errors);
     
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const extractErrorMessages = (errs: any): string[] => {
+    const extractErrorMessages = (errs: FieldErrors<CreateQCFormValues> | Record<string, unknown>): string[] => {
       let messages: string[] = [];
       for (const key in errs) {
-        const error = errs[key];
-        if (error?.message && typeof error.message === 'string') {
-          let msg = error.message;
-          const lowerMsg = msg.toLowerCase();
-          if (lowerMsg.includes('invalid input') || lowerMsg.includes('expected number') || lowerMsg.includes('received string') || lowerMsg.includes('received nan')) {
-            msg = 'กรุณาระบุข้อมูลให้ถูกต้อง';
+        const error = (errs as Record<string, unknown>)[key];
+        
+        if (error && typeof error === 'object') {
+          if ('message' in error && typeof error.message === 'string') {
+            let msg = error.message;
+            const lowerMsg = msg.toLowerCase();
+            if (lowerMsg.includes('invalid input') || lowerMsg.includes('expected number') || lowerMsg.includes('received string') || lowerMsg.includes('received nan')) {
+              msg = 'กรุณาระบุข้อมูลให้ถูกต้อง';
+            }
+            messages.push(msg);
+          } else {
+            messages = messages.concat(extractErrorMessages(error as Record<string, unknown>));
           }
-          messages.push(msg);
-        } else if (typeof error === 'object' && error !== null) {
-          messages = messages.concat(extractErrorMessages(error));
         }
       }
       return Array.from(new Set(messages));

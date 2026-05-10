@@ -76,6 +76,11 @@ export interface PRHeader {
   suggested_vendor?: string;        // Alternative key for vendor name
   vendor_id?: string | number;      // FK → vendor (for fallback display)
   av_no?: string;                   // Approval Voucher Number
+  approval_no?: string;             // Alias for AV number
+  approved_pr_no?: string;          // Alias for AV number
+  approval_id?: number | string;    // Approval ID
+  deliveryDate?: string;            // Legacy alias for delivery_date
+  approval_status?: string;         // Status of the approval process
 
 
   // Relations (populated by API)
@@ -174,6 +179,8 @@ export interface PRLine {
     discount_amount: number;
   };
   location_name?: string;
+  delivery_date?: string;
+  line_needed_date?: string;
 }
 
 /** PRLineExtended - PR Line with VQ metadata for hydration */

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
@@ -10,7 +10,9 @@ import { POAService } from '@/modules/procurement/services';
 import { GRNFormSchema, type GRNFormValues } from '../schemas/grn.schemas';
 import { useWarehouses, useDepartments, useCurrencies, useEmployees } from '@master-data/hooks/useMasterData';
 import type { CreateGRNPayload } from '../../../types/grn-types';
+import type { POLine } from '../../../types/po-types';
 import { calculateLineTotal } from '@/modules/procurement/utils/pricing.utils';
+import type { Resolver } from 'react-hook-form';
 
 interface UseGRNFormProps {
     isOpen: boolean;
@@ -25,20 +27,20 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess }: UseGRNFo
 
     // ── Master Data Hooks ────────────────────────────────────────────────────
     const { data: warehouseResponse } = useWarehouses(isOpen);
-    const warehouses = (warehouseResponse as any)?.items || (warehouseResponse as any)?.data || [];
+    const warehouses = useMemo(() => warehouseResponse?.items || [], [warehouseResponse]);
 
     const { data: departmentResponse } = useDepartments(isOpen);
-    const departments = (departmentResponse as any)?.data || (departmentResponse as any)?.items || departmentResponse || [];
+    const departments = useMemo(() => departmentResponse || [], [departmentResponse]);
 
     const { data: currencyResponse } = useCurrencies(isOpen);
-    const currencies = (currencyResponse as any)?.data || (currencyResponse as any)?.items || currencyResponse || [];
+    const currencies = useMemo(() => currencyResponse || [], [currencyResponse]);
 
     const { data: employeeResponse } = useEmployees(isOpen);
-    const employees = (employeeResponse as any)?.items || (employeeResponse as any)?.data || [];
+    const employees = useMemo(() => employeeResponse || [], [employeeResponse]);
 
     // ── Form Setup ───────────────────────────────────────────────────────────
     const methods = useForm<GRNFormValues>({
-        resolver: zodResolver(GRNFormSchema) as any,
+        resolver: zodResolver(GRNFormSchema) as Resolver<GRNFormValues>,
         defaultValues: {
             grn_no: 'GRN2024-xxx',
             received_date: new Date().toISOString().split('T')[0],
@@ -49,7 +51,7 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess }: UseGRNFo
     });
 
     const { control, reset, setValue } = methods;
-    const { fields, replace, remove } = useFieldArray({
+    const { fields, replace, remove, append } = useFieldArray({
         control,
         name: 'items',
     });
@@ -71,24 +73,27 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess }: UseGRNFo
         if (poDetail) {
             // Populate items from PO (Using Remaining Qty)
             if (poDetail.po_lines) {
-                const poItems = poDetail.po_lines.map((line: any) => ({
-                    po_line_id: line.po_line_id,
-                    item_id: line.item_id,
-                    item_code: line.item_code || '',
-                    item_name: line.item_name || '',
-                    qty_ordered: line.qty || 0,
-                    qty_received: line.remaining_qty ?? ((line.qty || 0) - (line.qty_received || 0)),
-                    accepted_qty: line.remaining_qty ?? ((line.qty || 0) - (line.qty_received || 0)),
-                    rejected_qty: 0,
-                    uom_id: String(line.uom_id || ''),
-                    uom_name: line.uom_name || 'PCS',
-                    unit_price: line.unit_price || 0,
-                    line_total: calculateLineTotal(line.remaining_qty ?? ((line.qty || 0) - (line.qty_received || 0)), line.unit_price || 0),
-                    qc_status: 'PASS',
-                    lot_id: '',
-                    lot_code: '',
-                    remark: ''
-                }));
+                const poItems = poDetail.po_lines.map((line: POLine) => {
+                    const qtyToReceive = line.remaining_qty ?? ((line.qty || 0) - (line.qty_received || 0));
+                    return {
+                        po_line_id: line.po_line_id || 0,
+                        item_id: line.item_id,
+                        item_code: line.item_code || '',
+                        item_name: line.item_name || '',
+                        qty_ordered: line.qty || 0,
+                        qty_received: Number(qtyToReceive) || 0,
+                        accepted_qty: Number(qtyToReceive) || 0,
+                        rejected_qty: 0,
+                        uom_id: String(line.uom_id || ''),
+                        uom_name: line.uom_name || 'PCS',
+                        unit_price: line.unit_price || 0,
+                        line_total: calculateLineTotal(Number(qtyToReceive) || 0, line.unit_price || 0),
+                        qc_status: 'PASS',
+                        lot_id: '',
+                        lot_code: '',
+                        remark: ''
+                    };
+                });
                 replace(poItems);
             }
 
@@ -98,16 +103,16 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess }: UseGRNFo
                 setValue('isMulticurrency', true);
                 setValue('curr_type_code', poCurrencyCode);
                 setValue('exchange_rate', poDetail.exchange_rate || 1);
-                setValue('rate_date', poDetail.exchange_rate_date || new Date().toISOString().split('T')[0]);
+                setValue('rate_date', (poDetail as unknown as Record<string, unknown>).exchange_rate_date as string || new Date().toISOString().split('T')[0]);
                 
-                const matchedCurr = (currencies as any[]).find(c => (c.code || c.currency_code) === poCurrencyCode);
-                if (matchedCurr) setValue('curr_id', String(matchedCurr.id || matchedCurr.currency_id));
+                const matchedCurr = currencies.find(c => (c.currency_code || (c as unknown as Record<string, unknown>).code) === poCurrencyCode);
+                if (matchedCurr) setValue('curr_id', String(matchedCurr.currency_id || matchedCurr.id));
             } else {
                 setValue('isMulticurrency', false);
                 setValue('curr_type_code', 'THB');
                 setValue('exchange_rate', 1);
-                const thb = (currencies as any[]).find(c => (c.code || c.currency_code) === 'THB');
-                if (thb) setValue('curr_id', String(thb.id || thb.currency_id));
+                const thb = currencies.find(c => (c.currency_code || (c as unknown as Record<string, unknown>).code) === 'THB');
+                if (thb) setValue('curr_id', String(thb.currency_id || thb.id));
             }
 
             // Defaults for Header
@@ -190,6 +195,7 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess }: UseGRNFo
         isMulticurrency,
         items,
         onFormSubmit,
-        handleRemoveLine: remove,
+        append,
+        remove,
     };
 }

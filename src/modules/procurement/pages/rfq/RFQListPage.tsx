@@ -13,12 +13,12 @@ import { FileText, Eye, Send, Edit, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, RFQStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@/shared/utils';
 // Services & Types
 import { RFQService, PRService, AVService } from '@/modules/procurement/services';
-import type { RFQFilterCriteria, RFQHeader, RFQStatus, SendRFQToVendorPayload } from '@/modules/procurement/types';
+import type { RFQFilterCriteria, RFQHeader, RFQStatus, SendRFQToVendorPayload, PRHeader, ApprovalHeader } from '@/modules/procurement/types';
 import { RFQFormModal, RFQSendConfirmModal } from './components';
 
 
@@ -58,7 +58,7 @@ const deriveRFQCounter = (item: RFQHeader) => {
     // 🔒 FIX: Prioritize 'sent_vendors_count' (REQUIRED field) over legacy 'vendor_sent'
     // This ensures that when the backend is updated, the frontend picks up the new value correctly.
     const total = item.vendor_total ?? item.vendor_count ?? item.rfqVendors?.length ?? 0;
-    const sentCount = item.sent_vendors_count ?? item.vendor_sent ?? item.rfqVendors?.filter((v: any) => 
+    const sentCount = item.sent_vendors_count ?? item.vendor_sent ?? item.rfqVendors?.filter((v) => 
         ['SENT', 'RESPONDED', 'DECLINED', 'CLOSED'].includes(String(v.status || '').toUpperCase())
     ).length ?? 0;
     
@@ -142,21 +142,22 @@ const AVNumberCell = ({ prNo, fallbackNo, approvalId }: { prNo?: string | null, 
         
         // 🎯 Precision Match: If we have an ID, find the exact matching approval
         if (approvalId) {
-            const match = (approvalList as any[]).find((a: any) => Number(a.approval_id) === Number(approvalId) || a.id === approvalId);
-            if (match) return match.approval_no || match.approved_pr_no;
+            const match = (approvalList as unknown as ApprovalHeader[]).find((a) => Number(a.approval_id) === Number(approvalId));
+            if (match) return match.approval_no;
         }
 
         // 🎯 String Match Fallback: If we have a fallback number but no ID (Common in List API)
         if (fallbackNo && !approvalId) {
-             const match = (approvalList as any[]).find((a: any) => 
-                (a.approval_no || a.approved_pr_no) === fallbackNo
+             const match = (approvalList as unknown as ApprovalHeader[]).find((a) => 
+                a.approval_no === fallbackNo
              );
-             if (match) return match.approval_no || match.approved_pr_no;
+             if (match) return match.approval_no;
         }
 
         // 🛡️ Robust Fallback: If there's ONLY ONE AV record for this PR, it's safe to assume it's the one.
         if (approvalList.length === 1 && !approvalId) {
-            return approvalList[0].approval_no || (approvalList[0] as any).approved_pr_no;
+            const first = approvalList[0] as unknown as ApprovalHeader;
+            return first.approval_no;
         }
 
         // ❌ Strict: If there are MULTIPLE AVs (e.g. 0008, 0009) and no ID/Number match, return null.
@@ -254,11 +255,11 @@ export default function RFQListPage() {
         const dateEnd = filters.date_end ? new Date(filters.date_end) : null;
         
         if (searchPR) {
-            list = list.filter((pr: any) => pr.pr_no && pr.pr_no.toLowerCase().includes(searchPR));
+            list = list.filter((pr) => pr.pr_no && pr.pr_no.toLowerCase().includes(searchPR));
         }
 
         if (dateStart || dateEnd) {
-            list = list.filter((pr: any) => {
+            list = list.filter((pr) => {
                 if (!pr.pr_date) return false;
                 const prDate = new Date(pr.pr_date);
                 prDate.setHours(0, 0, 0, 0); // Normalize to start of day
@@ -290,7 +291,7 @@ export default function RFQListPage() {
     // Modal States (RFQ Form only — QT modal removed, belongs to QT page)
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedRFQId, setSelectedRFQId] = useState<number | null>(null);
-    const [initialPRForCreate, setInitialPRForCreate] = useState<any | null>(null);
+    const [initialPRForCreate, setInitialPRForCreate] = useState<PRHeader | null>(null);
     const [isReadOnly, setIsReadOnly] = useState(false);
     const [isInviteMode, setIsInviteMode] = useState(false);
 
@@ -307,7 +308,7 @@ export default function RFQListPage() {
         setIsModalOpen(true);
     };
 
-    const handleCreateWithPR = useCallback((pr: any) => {
+    const handleCreateWithPR = useCallback((pr: PRHeader) => {
         setInitialPRForCreate(pr);
         setSelectedRFQId(null);
         setIsReadOnly(false);
@@ -364,21 +365,21 @@ export default function RFQListPage() {
                 toast(`ส่ง RFQ ${rfqNo} เรียบร้อยแล้ว`, 'success');
             }
 
-            // 🌟 🌊 Status Update Chain (Front workaround)
             if (String(sendingRFQ.status || '').toUpperCase() === 'DRAFT' && failures.length < batchData.length) {
                 // If at least 1 sent successfully
-                const updatePayload: any = {
-                    requested_by_user_id: Number(sendingRFQ.requested_by_user?.employee_id || (sendingRFQ as any).requested_by_user_id || 1),
+                const rfqData = sendingRFQ as unknown as Record<string, unknown>;
+                const updatePayload: Record<string, unknown> = {
+                    requested_by_user_id: Number(sendingRFQ.requested_by_user?.employee_id || rfqData.requested_by_user_id || 1),
                     rfq_date: sendingRFQ.rfq_date,
                     quotation_due_date: sendingRFQ.quotation_due_date || sendingRFQ.rfq_date,
                     pr_id: Number(sendingRFQ.pr_id || 0),
-                    pr_approval_id: Number(sendingRFQ.pr_approval_id || (sendingRFQ as any).pr_approval?.approval_id || (sendingRFQ as any).prApprovalId || 0),
+                    pr_approval_id: Number(sendingRFQ.pr_approval_id || (rfqData.pr_approval as Record<string, unknown>)?.approval_id || rfqData.prApprovalId || 0),
                     branch_id: Number(sendingRFQ.branch_id || 1),
                     rfq_base_currency_code: sendingRFQ.rfq_base_currency_code || 'THB',
                     rfq_quote_currency_code: sendingRFQ.rfq_quote_currency_code || 'THB',
                     rfq_exchange_rate: Number(sendingRFQ.rfq_exchange_rate || 1),
                     rfq_exchange_rate_date: sendingRFQ.rfq_exchange_rate_date || sendingRFQ.rfq_date,
-                    requested_by: (sendingRFQ as any).requested_by || 
+                    requested_by: rfqData.requested_by || 
                                   (sendingRFQ.requested_by_user 
                                       ? `${sendingRFQ.requested_by_user.employee_firstname_th} ${sendingRFQ.requested_by_user.employee_lastname_th}`.trim() 
                                       : 'System'),
@@ -421,22 +422,23 @@ export default function RFQListPage() {
             cell: (info) => {
                 const item = info.row.original;
                 const prNumber = item.ref_pr_no || item.pr_no || item.pr?.pr_no;
+                const itemData = item as unknown as Record<string, unknown>;
 
                 return (
                     <div className="flex flex-col py-2 gap-1.5">
                         <span 
                             className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline cursor-pointer transition-colors" 
-                            title={info.getValue()}
+                            title={info.getValue() as string}
                             onClick={() => handleView(item.rfq_id)}
                         >
-                            {info.getValue()}
+                            {info.getValue() as string}
                         </span>
                         <div className="flex flex-wrap items-center gap-1.5">
                             <PRNumberCell prId={item.pr_id} fallbackNo={prNumber} />
                             <AVNumberCell 
                                 prNo={prNumber} 
-                                fallbackNo={item.approved_pr_no || (item as any).ref_approved_pr_no || (item as any).refApprovedPrNo || (item as any).pr_approval_no || (item as any).approval_no || (item as any).pr_approval?.approval_no} 
-                                approvalId={item.pr_approval_id || (item as any).pr_approval?.approval_id}
+                                fallbackNo={String(item.approved_pr_no || itemData.ref_approved_pr_no || itemData.refApprovedPrNo || itemData.pr_approval_no || itemData.approval_no || (itemData.pr_approval as Record<string, unknown>)?.approval_no || '')} 
+                                approvalId={Number(item.pr_approval_id || (itemData.pr_approval as Record<string, unknown>)?.approval_id || 0)}
                             />
                         </div>
                     </div>
@@ -606,7 +608,7 @@ export default function RFQListPage() {
         }),
     ], [columnHelper, filters.page, filters.limit, handleView, handleEdit, handleSendRFQ]);
 
-    const prColumnHelper = createColumnHelper<any>();
+    const prColumnHelper = createColumnHelper<PRHeader>();
 
     const waitingCreateColumns = useMemo(() => [
         prColumnHelper.display({
@@ -653,7 +655,7 @@ export default function RFQListPage() {
             id: 'purpose',
             header: 'วัตถุประสงค์ / หมายเหตุ',
             cell: ({ row }) => {
-                const item = row.original as any;
+                const item = row.original;
                 const displayRemark = item.remark || item.purpose || '-';
                 return (
                     <div className="max-w-[250px] truncate py-2 text-gray-500 dark:text-gray-400" title={displayRemark}>
@@ -668,7 +670,7 @@ export default function RFQListPage() {
             id: 'total_amount',
             header: () => <div className="flex justify-end items-center h-full w-full">ยอดรวม</div>,
             cell: ({ row }) => {
-                const item = row.original as any;
+                const item = row.original;
                 const amount = item.total_amount != null ? item.total_amount : item.pr_base_total_amount;
                 const displayTotal = amount != null && amount !== ''
                     ? Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -849,8 +851,8 @@ export default function RFQListPage() {
                         )}
                         {activeTab === 'WAITING_CREATE' && (
                             <SmartTable
-                                data={currentWaitingCreatePageData as any[]}
-                                columns={waitingCreateColumns as any}
+                                data={currentWaitingCreatePageData as PRHeader[]}
+                                columns={waitingCreateColumns as ColumnDef<PRHeader>[]}
                                 isLoading={isWaitingCreateLoading}
                                 pagination={{
                                     pageIndex: filters.page,
@@ -953,7 +955,7 @@ export default function RFQListPage() {
                             isEmpty={!currentWaitingCreatePageData.length}
                             pagination={waitingCreateData.length ? { page: filters.page, total: waitingCreateData.length, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                         >
-                            {currentWaitingCreatePageData.map((item: any) => {
+                            {currentWaitingCreatePageData.map((item: PRHeader) => {
                                 const amount = item.total_amount != null ? item.total_amount : item.pr_base_total_amount;
                                 const displayTotal = amount != null && amount !== ''
                                     ? Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
