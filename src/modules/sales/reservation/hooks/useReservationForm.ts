@@ -64,6 +64,62 @@ interface DiscoveryAQLine extends AQLine {
     [key: string]: unknown;
 }
 
+/**
+ * 🕵️ Smart Recovery for Reservation: Automatically detect price sources if missing
+ */
+async function recoverReservationPriceSources(
+    lines: ReservationLineValues[], 
+    customerId: number, 
+    branchId: number,
+    setLines: (lines: ReservationLineValues[]) => void
+) {
+    if (!lines || lines.length === 0 || !customerId || !branchId) return;
+
+    const updatedLines = [...lines];
+    let hasChanges = false;
+
+    const promises = updatedLines.map(async (line, index) => {
+        // Skip if already has a source name
+        if (line.price_source_name && line.price_source_name !== '') return;
+
+        try {
+            const result = await import('@sales/quotation/services/pricing.service').then(m => m.PricingService.calculatePrice({
+                itemId: line.item_id,
+                qty: line.qty_reserved,
+                customerId,
+                branchId
+            }));
+
+            if (result) {
+                const priceDiff = Math.abs(Number(result.unitPrice) - Number(line.unit_price));
+                if (priceDiff < 0.01) {
+                    updatedLines[index] = {
+                        ...line,
+                        price_source: result.source,
+                        price_source_name: result.sourceName,
+                        price_level_priority: result.priority
+                    };
+                    hasChanges = true;
+                } else {
+                    updatedLines[index] = {
+                        ...line,
+                        price_source: 3,
+                        price_source_name: 'MANUAL'
+                    };
+                    hasChanges = true;
+                }
+            }
+        } catch {
+            // Silent fail for recovery
+        }
+    });
+
+    await Promise.all(promises);
+    if (hasChanges) {
+        setLines(updatedLines);
+    }
+}
+
 
 
 export const useReservationForm = (isOpen: boolean, id?: string, initialData?: Partial<ReservationFormValues>) => {
@@ -118,6 +174,15 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                             ...data,
                             reservation_id: data.reservation_id || id,
                         });
+                        // 🕵️ Trigger Smart Recovery for missing sources in Edit mode
+                        if (data.customer_id && data.branch_id) {
+                            void recoverReservationPriceSources(
+                                data.lines || [],
+                                Number(data.customer_id),
+                                Number(data.branch_id),
+                                (newLines) => setValue('lines', newLines)
+                            );
+                        }
                         lastInitializedId.current = id;
                     }
                 } catch (error) {
@@ -133,7 +198,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         };
 
         loadData();
-    }, [isOpen, id, reset, initialData, toast]);
+    }, [isOpen, id, reset, initialData, toast, setValue]);
 
 
     // Master Data Hook
@@ -294,6 +359,12 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             
             updatedLine.line_discount = calculatedLD;
             updatedLine.line_total = calculateLineTotal(qty, price, calculatedLD);
+
+            // If user manually changed the unit_price, mark as MANUAL (3)
+            if (field === 'unit_price') {
+                updatedLine.price_source = 3;
+                updatedLine.price_source_name = 'MANUAL';
+            }
         }
         
         newLines[index] = updatedLine;
@@ -721,9 +792,18 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                         line_total: calculateLineTotal(qtyToUse, price, calculatedLD),
                         tax_code_id: qLine.tax_code_id ? Number(qLine.tax_code_id) : (detail.tax_code_id ? Number(detail.tax_code_id) : undefined),
                         note: String(qLine.note || ''),
-                        price_source: qLine.price_source !== undefined ? Number(qLine.price_source) : undefined,
-                        price_source_name: String(qLine.price_source_name || ''),
-                        price_level_priority: qLine.price_level_priority !== undefined ? Number(qLine.price_level_priority) : (qLine.priority !== undefined ? Number(qLine.priority) : undefined),
+                        price_source: qLine.price_source !== undefined ? Number(qLine.price_source) : (matchingAQLine?.price_source !== undefined ? Number(matchingAQLine.price_source) : undefined),
+                        price_source_name: (() => {
+                            const name = String(qLine.price_source_name || matchingAQLine?.price_source_name || '').trim();
+                            if (name && name !== 'null' && name !== 'undefined' && name !== '-') return name;
+                            
+                            const s = qLine.price_source !== undefined ? Number(qLine.price_source) : (matchingAQLine?.price_source !== undefined ? Number(matchingAQLine.price_source) : undefined);
+                            if (s === 1) return 'PRICE_LIST';
+                            if (s === 2) return 'PRICE_LEVEL';
+                            if (s === 3) return 'MANUAL';
+                            return '';
+                        })(),
+                        price_level_priority: qLine.price_level_priority !== undefined ? Number(qLine.price_level_priority) : (qLine.priority !== undefined ? Number(qLine.priority) : (matchingAQLine?.price_level_priority !== undefined ? Number(matchingAQLine.price_level_priority) : undefined)),
                     };
                 });
                 
@@ -764,6 +844,16 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                 const finalLines = type === 'AQ' ? mappedLines.filter(l => l.qty_reserved > 0) : mappedLines;
                 
                 setValue('lines', finalLines, { shouldDirty: true, shouldValidate: true });
+
+                // 🕵️ Trigger Smart Recovery for missing sources in Reservation view
+                if (detail.customer_id && detail.branch_id) {
+                    void recoverReservationPriceSources(
+                        finalLines, 
+                        Number(detail.customer_id), 
+                        Number(detail.branch_id),
+                        (newLines) => setValue('lines', newLines)
+                    );
+                }
             }
 
             toast(`ซิงค์ข้อมูลจาก ${val} สำเร็จ`, 'success');

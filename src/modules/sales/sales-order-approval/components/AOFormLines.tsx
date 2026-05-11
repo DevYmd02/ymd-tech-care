@@ -1,16 +1,20 @@
 import React from 'react';
 import { Package, CheckSquare, Square } from 'lucide-react';
 import type { AOLineFormData } from '../schemas/ao.schema';
+import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
+import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/price-level-name.types';
 
 interface Props {
   lines: AOLineFormData[];
   updateLine: (index: number, field: keyof AOLineFormData, value: unknown) => void;
+  priceLevelNames?: PriceLevelName[];
   readOnly?: boolean;
 }
 
 export const AOFormLines: React.FC<Props> = ({
   lines,
   updateLine,
+  priceLevelNames = [],
   readOnly = false,
 }) => {
   const toggleAll = (checked: boolean) => {
@@ -176,8 +180,16 @@ export const AOFormLines: React.FC<Props> = ({
                     </td>
 
                     {/* Unit Price */}
-                    <td className={`${tdClass} text-right font-bold text-blue-600 dark:text-blue-400 font-mono`}>
+                    <td className={`${tdClass} text-right font-bold text-blue-600 dark:text-blue-400`}>
                       {fmt(Number(line.unit_price))}
+                      <div className="flex justify-end mt-1">
+                        <PriceSourceBadge 
+                          priceSourceName={line.price_source_name}
+                          priceLevelPriority={line.price_level_priority}
+                          priceLevelNames={priceLevelNames}
+                          unitPrice={line.unit_price}
+                        />
+                      </div>
                     </td>
 
                     {/* Discount */}
@@ -191,7 +203,7 @@ export const AOFormLines: React.FC<Props> = ({
                     </td>
 
                     {/* Net Total */}
-                    <td className={`${tdClass} text-right font-bold font-mono ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'} bg-emerald-50/10 dark:bg-emerald-900/5`}>
+                    <td className={`${tdClass} text-right font-bold ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'} bg-emerald-50/10 dark:bg-emerald-900/5`}>
                       {fmt(Number(line.approved_net_amount))}
                     </td>
 

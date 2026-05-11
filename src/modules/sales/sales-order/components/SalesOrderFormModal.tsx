@@ -14,6 +14,7 @@ import { WindowFormLayout } from '@ui';
 import { useBranches, useUnits, useWarehouses, useLocations, useCurrencies, useTaxCodes, useDepartments, useProjects, useSaleAreas } from '@master-data/hooks/useMasterData';
 import { extractErrorMessage } from '@/core/api/api';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
+import { usePriceLevelName } from '@sales-master/pages/price-level-name/hooks/usePriceLevelName';
 import { useSalesOrderForm } from '../hooks';
 import { SalesOrderService } from '../services/sales-order.service';
 import type { SalesOrderFormValues } from '../schemas/sales-order.schemas';
@@ -106,6 +107,8 @@ export function SalesOrderFormModal({
 
     const { data: locationResponse } = useLocations(isOpen);
     const locations = locationResponse?.items || [];
+
+    const { allItems: priceLevelNames } = usePriceLevelName(isOpen);
 
     // 💡 Load Sales Order Detail when editing
     const { data: soDetail, isFetching: isFetchingDetail } = useQuery({
@@ -317,6 +320,7 @@ export function SalesOrderFormModal({
                                         uoms={uoms}
                                         warehouses={warehouses}
                                         locations={locations}
+                                        priceLevelNames={priceLevelNames}
                                         readOnly={effectiveIsViewOnly}
                                         onAddLine={handleAddLine}
                                         onRemoveLine={handleRemoveLine}

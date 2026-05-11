@@ -7,6 +7,7 @@ import type { ReservationLineData } from '../../types/reservation.types';
 import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
 import { formatNumber } from '@/shared/utils';
+import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
 
 interface ReservationLineTableProps {
     lines: ReservationLineData[];
@@ -285,31 +286,14 @@ export function ReservationLineTable({
                                             className={`${compactInputClass} text-right font-medium bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
                                         />
                                         
-                                        {/* 🏷️ Price Source Badge */}
-                                        {(() => {
-                                            const source = String(line.price_source_name || '').toUpperCase();
-                                            if (!source) return null;
-
-                                            const config: Record<string, { label: string; class: string }> = {
-                                                'MANUAL': { label: 'Manual', class: 'bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-900/30' },
-                                                'PRICE_LEVEL': { label: 'Price Level', class: 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-950/20 dark:text-purple-400 dark:border-purple-900/30' },
-                                                'PRICE_LIST': { label: 'Price List', class: 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30' },
-                                            };
-
-                                            const item = { ...(config[source] || { label: source, class: 'bg-gray-50 text-gray-600 border-gray-200' }) };
-
-                                            // 🏆 Enhancement: If it's Price Level, show the Level No & Name
-                                            if (source === 'PRICE_LEVEL' && line.price_level_priority) {
-                                                const levelName = priceLevelNames.find(l => (Number(l.level_no) || Number(l.levelNo)) === Number(line.price_level_priority))?.name;
-                                                item.label = `Price Level ${line.price_level_priority}${levelName ? ` - ${levelName}` : ''}`;
-                                            }
-
-                                            return (
-                                                <div className={`mt-1 flex items-center justify-end gap-1 px-1.5 py-0.5 rounded border text-[10px] font-bold uppercase tracking-tight whitespace-nowrap ${item.class}`}>
-                                                    {item.label}
-                                                </div>
-                                            );
-                                        })()}
+                                        <div className="flex justify-end">
+                                            <PriceSourceBadge 
+                                                priceSourceName={line.price_source_name}
+                                                priceLevelPriority={line.price_level_priority}
+                                                priceLevelNames={priceLevelNames}
+                                                unitPrice={line.unit_price}
+                                            />
+                                        </div>
                                     </td>
 
                                     <td className="px-2 py-2">

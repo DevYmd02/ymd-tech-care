@@ -307,7 +307,8 @@ export class QuotationService {
                     return {
                         ...line,
                         price_source: sourceVal !== undefined ? Number(sourceVal) : undefined,
-                        price_source_name: finalName || undefined
+                        price_source_name: finalName || undefined,
+                        price_level_priority: line.price_level_priority !== undefined ? Number(line.price_level_priority) : (line.priority !== undefined ? Number(line.priority) : undefined)
                     } as QuotationLineData;
                 }) : []
             };
@@ -367,15 +368,15 @@ export class QuotationService {
             exchange_rate_date: toISOString(data.exchange_rate_date || data.sq_date || new Date())
         };
 
-        // Standard IDs
-        if (data.customer_id) payload.customer_id = Number(data.customer_id);
-        if (data.branch_id) payload.branch_id = Number(data.branch_id);
+        // Standard IDs (Use explicit null/undefined check to allow 0)
+        if (data.customer_id !== undefined && data.customer_id !== null) payload.customer_id = Number(data.customer_id);
+        if (data.branch_id !== undefined && data.branch_id !== null) payload.branch_id = Number(data.branch_id);
         if (data.lead_id) payload.lead_id = data.lead_id;
-        if (data.sale_area_id) payload.sale_area_id = Number(data.sale_area_id);
-        if (data.emp_sale_id) payload.emp_sale_id = Number(data.emp_sale_id);
-        if (data.emp_dept_id) payload.emp_dept_id = Number(data.emp_dept_id);
-        if (data.project_id) payload.project_id = Number(data.project_id);
-        if (data.tax_code_id) payload.tax_code_id = Number(data.tax_code_id);
+        if (data.sale_area_id !== undefined && data.sale_area_id !== null) payload.sale_area_id = Number(data.sale_area_id);
+        if (data.emp_sale_id !== undefined && data.emp_sale_id !== null) payload.emp_sale_id = Number(data.emp_sale_id);
+        if (data.emp_dept_id !== undefined && data.emp_dept_id !== null) payload.emp_dept_id = Number(data.emp_dept_id);
+        if (data.project_id !== undefined && data.project_id !== null) payload.project_id = Number(data.project_id);
+        if (data.tax_code_id !== undefined && data.tax_code_id !== null) payload.tax_code_id = Number(data.tax_code_id);
 
         // Lines
         if (data.lines && data.lines.length > 0) {
@@ -387,7 +388,7 @@ export class QuotationService {
                 uom_id: Number(line.uom_id),
                 unit_price: Number(line.unit_price) || 0,
                 discount_expression: line.discount_expression || '0',
-                tax_code_id: line.tax_code_id ? Number(line.tax_code_id) : undefined
+                tax_code_id: line.tax_code_id ? Number(line.tax_code_id) : undefined,
             }));
         }
 

@@ -108,15 +108,14 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     const recoverMissingPriceSources = useCallback(async (lines: QuotationLineValues[], customerId: number, branchId: number) => {
         if (!lines || lines.length === 0 || !customerId || !branchId) return;
 
-        logger.info('🔍 [QuotationForm] Recovering price sources for existing records...');
+        logger.info('🔍 [QuotationForm] Checking price sources for recovery...', { lineCount: lines.length });
         
         const updatedLines = [...lines];
         let hasChanges = false;
 
-        // Process all lines that are missing a clear system source
         const promises = updatedLines.map(async (line, index) => {
-            // Already has a source that isn't Manual (could be from previous recovery or fresh save)
-            if (line.price_source_name && line.price_source_name !== 'MANUAL') return;
+            // 🛡️ Skip if already marked (especially if marked as MANUAL)
+            if (line.price_source_name && line.price_source_name !== '') return;
 
             try {
                 const result = await PricingService.calculatePrice({
@@ -127,9 +126,10 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 });
 
                 if (result) {
-                    // Match found! (Allow for small precision differences)
                     const priceDiff = Math.abs(Number(result.unitPrice) - Number(line.unit_price));
+                    
                     if (priceDiff < 0.01) {
+                        // Perfect match with a system source!
                         updatedLines[index] = {
                             ...line,
                             price_source: result.source,
@@ -138,9 +138,10 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                         };
                         hasChanges = true;
                     } else {
-                        // Prices differ, explicitly mark as MANUAL
+                        // Price differs from engine -> Definitely MANUAL
                         updatedLines[index] = {
                             ...line,
+                            price_source: 3,
                             price_source_name: 'MANUAL'
                         };
                         hasChanges = true;
@@ -154,9 +155,8 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         await Promise.all(promises);
 
         if (hasChanges) {
-            // Update form state silently
             setValue('lines', updatedLines, { shouldDirty: false });
-            logger.info('✨ [QuotationForm] Price sources recovered successfully');
+            logger.info('✨ [QuotationForm] Price sources updated (Metadata only)');
         }
     }, [setValue]);
 
@@ -224,7 +224,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             logger.error('[QuotationForm] Enrichment process failed:', err);
             toast('ไม่สามารถโหลดข้อมูลสินค้าได้ กรุณาปิดแล้วเปิดใบเสนอราคาใหม่อีกครั้ง', 'error');
         }
-    }, [setValue, getValues]);
+    }, [setValue, getValues, toast]);
 
     // 🛡️ Initialization Guard to prevent reset loops
     const lastInitializedId = useRef<string | null | 'new'>(null);
@@ -275,6 +275,9 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 const line = lineRaw as RawQuotationLine;
                 const qty = Number(line.qty || 0);
                 const unitPrice = Number(line.unit_price || 0);
+                
+                logger.info(`🧪 [QuotationForm] Mapping API Line: Item=${line.item_code}, Price=${unitPrice}, Source=${line.price_source_name || line.source_name || 'NONE'}`);
+
                 const discountInput = line.line_discount_input || line.discount_expression || '0';
                 let calcDiscount = Number(line.line_discount || 0);
                 
@@ -462,6 +465,10 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                 reset(mappedData);
                 lastInitializedId.current = detailId;
                 
+                // 🛡️ Prevent price refresh from triggering on initial load
+                lastCustomerRef.current = Number(mappedData.customer_id || 0);
+                lastBranchRef.current = Number(mappedData.branch_id || 0);
+                
                 void recoverMissingPriceSources(mappedData.lines, Number(mappedData.customer_id), Number(mappedData.branch_id));
                 void enrichLinesWithItemData(mappedData.lines || []);
             } else if (!id && lastInitializedId.current !== currentTarget) {
@@ -558,23 +565,16 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         name: lineIndices.map(i => `lines.${i}.line_total` as Path<QuotationFormValues>)
     });
     
-    const discountExpression = useMemo(() => discount_expression || '', [discount_expression]);
+    const discountExpression = useMemo(() => discount_expression || '0', [discount_expression]);
     const taxCodeId = useMemo(() => tax_code_id, [tax_code_id]);
+    const { isDirty } = methods.formState;
 
     useEffect(() => {
         // Line Totals & Header Subtotal
-        const currentSubTotal = getValues('sub_total');
         const calculatedSubTotal = (watchedLineTotals as (string | number | undefined)[] || []).reduce<number>((sum, val) => sum + (Number(val) || 0), 0);
         
-        if (currentSubTotal !== calculatedSubTotal) {
-            setValue('sub_total', calculatedSubTotal, { shouldValidate: true });
-        }
-
         // Header Discount
         const calculatedDiscount = calculateDiscountAmount(calculatedSubTotal, discountExpression);
-        if (getValues('discount_amount') !== calculatedDiscount) {
-            setValue('discount_amount', calculatedDiscount, { shouldValidate: true });
-        }
 
         // VAT Calculation (Calculated on SubTotal AFTER Discount)
         const safeTaxCodes = Array.isArray(taxCodes) ? taxCodes : [];
@@ -583,18 +583,27 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         
         const amountAfterDiscount = calculatedSubTotal - calculatedDiscount;
         const vatAmountValue = calculateVatAmount(amountAfterDiscount, taxRate);
-        
-        if (getValues('vat_amount') !== vatAmountValue) {
-            setValue('vat_amount', vatAmountValue, { shouldValidate: true });
-        }
-
-        // Final Total
         const totalAmountValue = calculateNetTotal(calculatedSubTotal, calculatedDiscount, vatAmountValue);
-        if (getValues('total_amount') !== totalAmountValue) {
-            setValue('total_amount', totalAmountValue, { shouldValidate: true });
+
+        // 🛡️ Rounding Guard: If form is NOT dirty (just loaded), preserve backend values if the diff is tiny (< 1)
+        // This prevents the frontend from "jittering" the total due to floating point precision or backend rounding rules.
+        const currentTotal = getValues('total_amount') || 0;
+        const currentSubTotal = getValues('sub_total') || 0;
+        const currentVat = getValues('vat_amount') || 0;
+        const currentDiscount = getValues('discount_amount') || 0;
+
+        const isRoundingDiff = !isDirty && currentTotal > 0 && Math.abs(currentTotal - totalAmountValue) < 1;
+
+        if (!isRoundingDiff) {
+            if (currentSubTotal !== calculatedSubTotal) setValue('sub_total', calculatedSubTotal, { shouldValidate: true });
+            if (currentDiscount !== calculatedDiscount) setValue('discount_amount', calculatedDiscount, { shouldValidate: true });
+            if (currentVat !== vatAmountValue) setValue('vat_amount', vatAmountValue, { shouldValidate: true });
+            if (currentTotal !== totalAmountValue) setValue('total_amount', totalAmountValue, { shouldValidate: true });
+        } else {
+            logger.debug('🛡️ [QuotationForm] Rounding Guard active. Preserving backend totals.', { currentTotal, calculatedTotal: totalAmountValue });
         }
 
-    }, [watchedLineTotals, discountExpression, taxCodeId, taxCodes, setValue, getValues]);
+    }, [watchedLineTotals, discountExpression, taxCodeId, taxCodes, setValue, getValues, isDirty]);
 
     // --------------------------------------------------------
     // Tax Propagation Logic
@@ -671,9 +680,9 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             setValue(`lines.${index}.line_discount`, calculatedLD);
             setValue(`lines.${index}.line_total`, lineTotal);
 
-            // If user manually changed the unit_price, clear the system source
+            // If user manually changed the unit_price, mark as MANUAL (3)
             if (field === 'unit_price') {
-                setValue(`lines.${index}.price_source`, undefined);
+                setValue(`lines.${index}.price_source`, 3);
                 setValue(`lines.${index}.price_source_name`, 'MANUAL');
             }
         }
@@ -685,6 +694,9 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         const { branch_id, customer_id } = getValues();
 
         if (!line?.item_id || !line.qty || !branch_id || !customer_id) return;
+        
+        // 🛡️ Critical: Do not auto-sync if manual override is present
+        if (line.price_source_name === 'MANUAL' || line.price_source === 3) return;
 
         setLoadingPriceLines(prev => new Set(prev).add(index));
 
@@ -756,6 +768,9 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         const promises = updatedLines.map(async (line, index) => {
             if (!line.item_id || line.item_id === 0) return;
 
+            // 🛡️ Critical: Do not auto-sync if manual override is present
+            if (line.price_source_name === 'MANUAL' || line.price_source === 3) return;
+
             // Case A: Missing Header Data -> Reset system sources
             if (customer_id === 0 || branch_id === 0) {
                 if (line.price_source_name && line.price_source_name !== 'MANUAL') {
@@ -770,6 +785,12 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
             }
 
             // Case B: Header Data Present -> Fetch from Pricing Engine
+            // 🛡️ GUARD: If the user manually set this price, DO NOT refresh it automatically
+            if (line.price_source_name === 'MANUAL') {
+                logger.debug(`[QuotationForm] Skipping price refresh for manual line ${index}`);
+                return;
+            }
+
             try {
                 const result = await PricingService.calculatePrice({
                     itemId: line.item_id,
@@ -782,15 +803,13 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                     const price = Number(result.unitPrice);
                     const qty = Number(line.qty) || 1;
                     const discExpr = line.discount_expression || '';
+                    const calcDiscount = calculateDiscountAmount(qty * price, discExpr);
                     
-                    // 🛡️ Defensive Check: Only overwrite if the pricing engine found a valid non-zero price
-                    // OR if the current price is already 0. We don't want to overwrite a manual price with 0
-                    // if the pricing engine simply doesn't have a rule for this item.
                     const currentPrice = Number(line.unit_price || 0);
                     const isNewPriceValid = price > 0;
+                    const priceDiff = Math.abs(currentPrice - price);
                     
-                    if (isNewPriceValid || currentPrice === 0) {
-                        const calcDiscount = calculateDiscountAmount(qty * price, discExpr);
+                    if (isNewPriceValid && (currentPrice === 0 || priceDiff < 0.01)) {
                         updatedLines[index] = {
                             ...line,
                             unit_price: price,
@@ -801,16 +820,16 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
                             line_total: calculateLineTotal(qty, price, calcDiscount)
                         };
                         hasChanges = true;
-                    } else {
-                        // Pricing engine returned 0 but we already have a manual/previous price.
-                        // We should at least clear the "Price List/Level" source if it was from the OLD customer.
-                        if (line.price_source_name && line.price_source_name !== 'MANUAL') {
+                    } else if (currentPrice > 0 && priceDiff >= 0.01) {
+                        // 🛡️ Manual price detected - preserve it
+                        if (line.price_source_name !== 'MANUAL') {
                             updatedLines[index] = {
                                 ...line,
-                                price_source: undefined,
-                                price_source_name: undefined,
+                                price_source: 3,
+                                price_source_name: 'MANUAL'
                             };
                             hasChanges = true;
+                            logger.info(`🚩 [QuotationForm] Manual price detected for line ${index}. Preserving ${currentPrice} over ${price}.`);
                         }
                     }
                 } else {

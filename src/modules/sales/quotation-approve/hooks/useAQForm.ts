@@ -305,6 +305,62 @@ function normalizeSQ(raw: unknown): SQForApproval | null {
   };
 }
 
+/**
+ * 🕵️ Smart Recovery for Approval: Automatically detect price sources if missing
+ */
+async function recoverApprovalPriceSources(
+    lines: any[], 
+    customerId: number, 
+    branchId: number,
+    setLines: (lines: any[]) => void
+) {
+    if (!lines || lines.length === 0 || !customerId || !branchId) return;
+
+    const updatedLines = [...lines];
+    let hasChanges = false;
+
+    const promises = updatedLines.map(async (line, index) => {
+        // Skip if already has a source name
+        if (line.price_source_name && line.price_source_name !== '') return;
+
+        try {
+            const result = await import('@sales/quotation/services/pricing.service').then(m => m.PricingService.calculatePrice({
+                itemId: line.item_id,
+                qty: line.qty,
+                customerId,
+                branchId
+            }));
+
+            if (result) {
+                const priceDiff = Math.abs(Number(result.unitPrice) - Number(line.unit_price));
+                if (priceDiff < 0.01) {
+                    updatedLines[index] = {
+                        ...line,
+                        price_source: result.source,
+                        price_source_name: result.sourceName,
+                        price_level_priority: result.priority
+                    };
+                    hasChanges = true;
+                } else {
+                    updatedLines[index] = {
+                        ...line,
+                        price_source: 3,
+                        price_source_name: 'MANUAL'
+                    };
+                    hasChanges = true;
+                }
+            }
+        } catch (err) {
+            // Silent fail for recovery
+        }
+    });
+
+    await Promise.all(promises);
+    if (hasChanges) {
+        setLines(updatedLines);
+    }
+}
+
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -701,6 +757,17 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         onhold: sq.onhold || 'N',
         lines: mappedLines,
       } as AQFormData);
+
+      // 🕵️ Trigger Smart Recovery for missing sources in Approval view
+      if (sq.customer_id && sq.branch_id) {
+          void recoverApprovalPriceSources(
+              mappedLines, 
+              Number(sq.customer_id), 
+              Number(sq.branch_id),
+              (newLines) => setValue('lines', newLines)
+          );
+      }
+
     } catch (err) {
       logger.error('[useAQForm] loadSQData failed:', err);
       showAlert('โหลดข้อมูลใบเสนอราคาไม่สำเร็จ');

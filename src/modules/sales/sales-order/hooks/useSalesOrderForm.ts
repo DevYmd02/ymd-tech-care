@@ -30,6 +30,63 @@ interface UseSalesOrderFormProps {
     uoms: UnitListItem[];
 }
 
+/**
+ * 🕵️ Smart Recovery for Sales Order: Automatically detect price sources if missing
+ */
+async function recoverSalesOrderPriceSources(
+    lines: SalesOrderLineValues[], 
+    customerId: number, 
+    branchId: number,
+    setLines: (lines: SalesOrderLineValues[]) => void
+) {
+    if (!lines || lines.length === 0 || !customerId || !branchId) return;
+
+    const updatedLines = [...lines];
+    let hasChanges = false;
+
+    const promises = updatedLines.map(async (line, index) => {
+        // Skip if already has a source name (respect MANUAL)
+        if (line.price_source_name && line.price_source_name !== '') return;
+
+        try {
+            const { PricingService } = await import('@sales/quotation/services/pricing.service');
+            const result = await PricingService.calculatePrice({
+                itemId: Number(line.item_id),
+                qty: Number(line.qty_ordered) || 1,
+                customerId,
+                branchId
+            });
+
+            if (result) {
+                const priceDiff = Math.abs(Number(result.unitPrice) - Number(line.unit_price));
+                if (priceDiff < 0.01) {
+                    updatedLines[index] = {
+                        ...line,
+                        price_source: result.source,
+                        price_source_name: result.sourceName,
+                        price_level_priority: result.priority
+                    };
+                    hasChanges = true;
+                } else {
+                    updatedLines[index] = {
+                        ...line,
+                        price_source: 3,
+                        price_source_name: 'MANUAL'
+                    };
+                    hasChanges = true;
+                }
+            }
+        } catch (err) {
+            logger.warn('[recoverSalesOrderPriceSources] Failed for line', index, err);
+        }
+    });
+
+    await Promise.all(promises);
+    if (hasChanges) {
+        setLines(updatedLines);
+    }
+}
+
 export function useSalesOrderForm({
     isOpen,
     id,
@@ -107,8 +164,18 @@ export function useSalesOrderForm({
                 ...initialData,
             });
             isInitializedRef.current = true;
+
+            // 🕵️ Recovery Trigger
+            if (initialData.customer_id && initialData.branch_id && initialData.lines) {
+                void recoverSalesOrderPriceSources(
+                    initialData.lines as SalesOrderLineValues[],
+                    Number(initialData.customer_id),
+                    Number(initialData.branch_id),
+                    (newLines) => setValue('lines', newLines)
+                );
+            }
         }
-    }, [isOpen, initialData, reset, id]);
+    }, [isOpen, initialData, reset, id, setValue]);
 
 
 
@@ -177,24 +244,34 @@ export function useSalesOrderForm({
     }, [watchedLineTotals, discount_input, tax_code_id, taxCodes, id, initialData, getValues]);
 
     // Update form values when totals change (ONLY if calculated from lines)
+    const { isDirty } = methods.formState;
+    
     useEffect(() => {
         if (totals.isStatic) return;
 
         const currentVals = getValues();
+        const currentTotal = Number(currentVals.total_amount || 0);
         
-        if (Number(currentVals.sub_total) !== totals.subTotal) {
-            setValue('sub_total', totals.subTotal, { shouldDirty: false });
+        // 🛡️ Rounding Guard: Preserve backend totals on load if difference is tiny (< 1.0)
+        const isRoundingDiff = !isDirty && currentTotal > 0 && Math.abs(currentTotal - totals.totalAmount) < 1;
+
+        if (!isRoundingDiff) {
+            if (Number(currentVals.sub_total) !== totals.subTotal) {
+                setValue('sub_total', totals.subTotal, { shouldDirty: false });
+            }
+            if (Number(currentVals.discount_amount) !== totals.discountAmount) {
+                setValue('discount_amount', totals.discountAmount, { shouldDirty: false });
+            }
+            if (Number(currentVals.vat_amount) !== totals.vatAmount) {
+                setValue('vat_amount', totals.vatAmount, { shouldDirty: false });
+            }
+            if (Number(currentVals.total_amount) !== totals.totalAmount) {
+                setValue('total_amount', totals.totalAmount, { shouldDirty: false });
+            }
+        } else {
+            logger.debug('🛡️ [useSalesOrderForm] Rounding Guard active. Preserving backend totals.');
         }
-        if (Number(currentVals.discount_amount) !== totals.discountAmount) {
-            setValue('discount_amount', totals.discountAmount, { shouldDirty: false });
-        }
-        if (Number(currentVals.vat_amount) !== totals.vatAmount) {
-            setValue('vat_amount', totals.vatAmount, { shouldDirty: false });
-        }
-        if (Number(currentVals.total_amount) !== totals.totalAmount) {
-            setValue('total_amount', totals.totalAmount, { shouldDirty: false });
-        }
-    }, [totals, setValue, getValues]);
+    }, [totals, setValue, getValues, isDirty]);
     
     // --------------------------------------------------------
     // Tax Propagation Logic
@@ -271,6 +348,12 @@ export function useSalesOrderForm({
             shouldValidate: true, 
             shouldDirty: true 
         });
+
+        // If user manually changed the unit_price, mark as MANUAL (3)
+        if (field === 'unit_price') {
+            setValue(`lines.${index}.price_source` as Path<SalesOrderFormValues>, 3 as never);
+            setValue(`lines.${index}.price_source_name` as Path<SalesOrderFormValues>, 'MANUAL' as never);
+        }
     };
 
     // --------------------------------------------------------
@@ -312,6 +395,57 @@ export function useSalesOrderForm({
             line.line_total = line.unit_price;
             
             setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
+
+            // 💰 Trigger price lookup immediately
+            handleLinePriceSync(index);
+        }
+    };
+
+    /**
+     * 💰 Sync price for a specific line using the pricing engine
+     */
+    const handleLinePriceSync = async (index: number) => {
+        const line = getValues(`lines.${index}`);
+        const customerId = Number(getValues('customer_id') || 0);
+        const branchId = Number(getValues('branch_id') || 0);
+
+        if (!line?.item_id || !customerId || !branchId) return;
+
+        try {
+            const { PricingService } = await import('@sales/quotation/services/pricing.service');
+            const result = await PricingService.calculatePrice({
+                itemId: Number(line.item_id),
+                qty: Number(line.qty_ordered) || 1,
+                customerId,
+                branchId
+            });
+
+            if (result) {
+                const currentPrice = Number(line.unit_price || 0);
+                const enginePrice = Number(result.unitPrice);
+                const priceDiff = Math.abs(currentPrice - enginePrice);
+
+                // If current price is 0 or matches the engine, use engine data
+                if (currentPrice === 0 || priceDiff < 0.01) {
+                    setValue(`lines.${index}.unit_price`, enginePrice, { shouldValidate: true });
+                    setValue(`lines.${index}.price_source`, result.source, { shouldValidate: true });
+                    setValue(`lines.${index}.price_source_name`, result.sourceName, { shouldValidate: true });
+                    setValue(`lines.${index}.price_level_priority`, result.priority, { shouldValidate: true });
+                    
+                    // Recalculate line total
+                    const qty = Number(line.qty_ordered) || 0;
+                    const discExpr = line.line_discount_input || '';
+                    const calcDisc = calculateDiscountAmount(qty * enginePrice, discExpr);
+                    setValue(`lines.${index}.line_discount`, calcDisc);
+                    setValue(`lines.${index}.line_total`, calculateLineTotal(qty, enginePrice, calcDisc));
+                } else {
+                    // Differing price -> MANUAL
+                    setValue(`lines.${index}.price_source`, 3);
+                    setValue(`lines.${index}.price_source_name`, 'MANUAL');
+                }
+            }
+        } catch (err) {
+            logger.warn('[handleLinePriceSync] Failed:', err);
         }
     };
 
@@ -408,9 +542,22 @@ export function useSalesOrderForm({
                         note: line.note || '',
                         tax_code_id: Number(rsData.tax_code_id || getValues('tax_code_id') || 0),
                         reservation_line_id: Number(line.id || 0),
+                        price_source: line.price_source !== undefined ? Number(line.price_source) : undefined,
+                        price_source_name: String(line.price_source_name || ''),
+                        price_level_priority: line.price_level_priority !== undefined ? Number(line.price_level_priority) : undefined,
                     }));
                     
                     setValue('lines', mappedLines, { shouldValidate: true, shouldDirty: true });
+
+                    // 🕵️ Trigger Smart Recovery for missing sources in Sales Order view
+                    if (rsData.customer_id && rsData.branch_id) {
+                        void recoverSalesOrderPriceSources(
+                            mappedLines, 
+                            Number(rsData.customer_id), 
+                            Number(rsData.branch_id),
+                            (newLines) => setValue('lines', newLines)
+                        );
+                    }
                 }
             }
         } catch (error) {

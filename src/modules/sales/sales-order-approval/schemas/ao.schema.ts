@@ -23,6 +23,9 @@ export const AOLineSchema = z.object({
   discount_expression: z.string().optional().default('0'),
   discount_amount: z.coerce.number().default(0),
   net_amount: z.coerce.number().default(0),
+  price_source: z.coerce.number().optional().nullable(),
+  price_source_name: z.string().optional().nullable(),
+  price_level_priority: z.coerce.number().optional().nullable(),
 
   // Inventory info (Read-only reference)
   warehouse_id: z.union([z.string(), z.number()]).optional().default(''),

@@ -121,6 +121,9 @@ function normalizeSO(raw: unknown): SOForApproval | null {
     lot_no: String(l.lot_no || ''),
     note: String(l.note || l.remarks || ''),
     remarks: String(l.remarks || l.note || ''),
+    price_source: l.price_source !== undefined && l.price_source !== null ? Number(l.price_source) : undefined,
+    price_source_name: String(l.price_source_name || ''),
+    price_level_priority: l.price_level_priority !== undefined && l.price_level_priority !== null ? Number(l.price_level_priority) : undefined,
   }));
 
 
@@ -190,6 +193,62 @@ function normalizeSO(raw: unknown): SOForApproval | null {
     status: (obj.status as SOForApproval['status']) || 'PENDING',
     lines,
   };
+}
+
+/**
+ * 🕵️ Smart Recovery for Sales Order Approval: Automatically detect price sources if missing
+ */
+async function recoverAOPriceSources(
+    lines: AOLineFormData[], 
+    customerId: number, 
+    branchId: number,
+    setValues: (lines: AOLineFormData[]) => void
+) {
+    if (!lines || lines.length === 0 || !customerId || !branchId) return;
+
+    const updatedLines = [...lines];
+    let hasChanges = false;
+
+    const promises = updatedLines.map(async (line, index) => {
+        // Skip if already has a source name
+        if (line.price_source_name && line.price_source_name !== '') return;
+
+        try {
+            const result = await import('@sales/quotation/services/pricing.service').then(m => m.PricingService.calculatePrice({
+                itemId: line.item_id,
+                qty: line.qty_ordered || 0,
+                customerId,
+                branchId
+            }));
+
+            if (result) {
+                const priceDiff = Math.abs(Number(result.unitPrice) - Number(line.unit_price));
+                if (priceDiff < 0.01) {
+                    updatedLines[index] = {
+                        ...line,
+                        price_source: result.source,
+                        price_source_name: result.sourceName,
+                        price_level_priority: result.priority
+                    };
+                    hasChanges = true;
+                } else {
+                    updatedLines[index] = {
+                        ...line,
+                        price_source: 3,
+                        price_source_name: 'MANUAL'
+                    };
+                    hasChanges = true;
+                }
+            }
+        } catch {
+            // Silent fail for recovery
+        }
+    });
+
+    await Promise.all(promises);
+    if (hasChanges) {
+        setValues(updatedLines);
+    }
 }
 
 export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: UseAOFormProps) => {
@@ -529,7 +588,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
       else if (discoveredAOLines.length > 0) soLinesSource = discoveredAOLines as SOLineForApproval[];
       else if (fallbackAOLines.length > 0) soLinesSource = fallbackAOLines as SOLineForApproval[];
 
-      const mappedLines = soLinesSource.map((soLine) => {
+      const mappedLines: AOLineFormData[] = soLinesSource.map((soLine) => {
         const aoLine = [...(discoveredAOLines as Record<string, unknown>[]), ...(fallbackAOLines as Record<string, unknown>[])].find(
           (al) => String(al.so_line_id || al.id) === String(soLine.so_line_id)
         );
@@ -570,6 +629,9 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
           lot_id: String(soLine.lot_id || ''),
           lot_no: String(soLine.lot_no || ''),
           remarks: String(aoLine?.remarks || soLine.note || soLine.remarks || ''),
+          price_source: soLine.price_source !== undefined && soLine.price_source !== null ? Number(soLine.price_source) : null,
+          price_source_name: String(soLine.price_source_name || ''),
+          price_level_priority: soLine.price_level_priority !== undefined && soLine.price_level_priority !== null ? Number(soLine.price_level_priority) : null,
         };
       });
 
@@ -638,13 +700,23 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
           : true,
         lines: mappedLines,
       } as AOFormData);
+
+      // 🕵️ Trigger Smart Recovery for missing sources in AO view
+      if (so.customer_id && so.branch_id) {
+          void recoverAOPriceSources(
+              mappedLines, 
+              Number(so.customer_id), 
+              Number(so.branch_id),
+              (newLines) => setValue('lines', newLines)
+          );
+      }
     } catch (err) {
       logger.error('[useAOForm] Error loading SO data:', err);
       showAlert('โหลดข้อมูลใบสั่งขายไม่สำเร็จ');
     } finally {
       setIsSubmitting(false);
     }
-  }, [reset, user, showAlert, currencies.length]);
+  }, [reset, user, showAlert, currencies.length, setValue]);
 
   useEffect(() => {
     if (isOpen) {
