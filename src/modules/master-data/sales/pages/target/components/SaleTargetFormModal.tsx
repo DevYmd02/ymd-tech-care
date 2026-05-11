@@ -28,8 +28,8 @@ import type {
 import type { EmployeeMaster } from '@/modules/master-data/company/types/employee.types';
 
 const employeeTargetSchema = z.object({
-    emp_id: z.string().min(1, 'กรุณาเลือกพนักงาน'),
-    period_id: z.string().min(1, 'กรุณาเลือกงวดเป้าหมาย'),
+    emp_id: z.number().min(1, 'กรุณาเลือกพนักงาน'),
+    period_id: z.number().min(1, 'กรุณาเลือกงวดเป้าหมาย'),
     period_target: z.number().min(0, 'กรุณากรอกยอดเป้าหมาย'),
     list_no: z.number(),
 });
@@ -56,8 +56,8 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
     } = useForm<EmployeeTargetValues>({
         resolver: zodResolver(employeeTargetSchema),
         defaultValues: {
-            emp_id: '',
-            period_id: '',
+            emp_id: 0,
+            period_id: 0,
             period_target: 0,
             list_no: 1,
         }
@@ -78,7 +78,17 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
 
                 // Fetch Employees
                 const empRes = await OrgEmployeeService.getList({ limit: 100 });
-                setEmployees(empRes.items || []);
+                
+                // 🎯 Robust extraction: Handle both array and paginated object formats
+                const allEmployees = Array.isArray(empRes) ? empRes : (empRes?.items || (empRes as unknown as { data: EmployeeMaster[] })?.data || []);
+                
+                // 🎯 Robust filtering: Case-insensitive and trim whitespace
+                const salesEmployees = allEmployees.filter(emp => {
+                    const type = emp.emp_type?.toString().trim().toUpperCase();
+                    return type === 'S';
+                });
+                
+                setEmployees(salesEmployees);
 
             } catch (err) {
                 logger.error('Failed to fetch dropdown data:', err);
@@ -93,8 +103,8 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                         const data = await SaleTargetService.get(editId);
                         if (data) {
                             reset({
-                                emp_id: data.emp_id,
-                                period_id: data.period_id,
+                                emp_id: Number(data.emp_id),
+                                period_id: Number(data.period_id),
                                 // Handle both string from API or number from internal mapping
                                 period_target: Number(data.period_target || data.amount || 0),
                                 list_no: data.list_no || 1,
@@ -107,8 +117,8 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                 fetchDetail();
             } else {
                 reset({
-                    emp_id: '',
-                    period_id: '',
+                    emp_id: 0,
+                    period_id: 0,
                     period_target: 0,
                     list_no: 1,
                 });
@@ -121,7 +131,7 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
             const payload: SaleTargetFormData = {
                 emp_id: values.emp_id,
                 period_id: values.period_id,
-                period_target: values.period_target.toString(), // Convert to String for API
+                period_target: values.period_target, 
                 list_no: values.list_no
             };
 
@@ -176,14 +186,22 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                         render={({ field }) => (
                             <select
                                 {...field}
+                                value={field.value || 0}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
                                 className={`${styles.input} ${errors.emp_id ? 'border-red-500' : ''}`}
                             >
-                                <option value="">เลือกพนักงาน</option>
-                                {employees.map(emp => (
-                                    <option key={emp.id} value={emp.id}>
-                                        {`[${emp.employee_code}] ${emp.employee_name}`}
-                                    </option>
-                                ))}
+                                <option value="0">เลือกพนักงาน</option>
+                                {employees.map(emp => {
+                                    const displayName = emp.employee_name || 
+                                                       `${emp.employee_firstname_th || ''} ${emp.employee_lastname_th || ''}`.trim() || 
+                                                       emp.employee_code;
+                                    const val = Number(emp.employee_id || emp.id);
+                                    return (
+                                        <option key={val} value={val}>
+                                            {`[${emp.employee_code}] ${displayName}`}
+                                        </option>
+                                    );
+                                })}
                             </select>
                         )}
                     />
@@ -199,14 +217,19 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                         render={({ field }) => (
                             <select
                                 {...field}
+                                value={field.value || 0}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
                                 className={`${styles.input} ${errors.period_id ? 'border-red-500' : ''}`}
                             >
-                                <option value="">เลือกงวดเป้าหมาย</option>
-                                {periods.map(p => (
-                                    <option key={p.period_id} value={p.period_id}>
-                                        {`งวดวันที่ ${new Date(p.begin_date).toLocaleDateString('th-TH')} - ${new Date(p.end_date).toLocaleDateString('th-TH')}`}
-                                    </option>
-                                ))}
+                                <option value="0">เลือกงวดเป้าหมาย</option>
+                                {periods.map(p => {
+                                    const pVal = Number(p.period_id || (p as unknown as { id: number }).id);
+                                    return (
+                                        <option key={pVal} value={pVal}>
+                                            {`งวดวันที่ ${new Date(p.begin_date).toLocaleDateString('th-TH')} - ${new Date(p.end_date).toLocaleDateString('th-TH')}`}
+                                        </option>
+                                    );
+                                })}
                             </select>
                         )}
                     />

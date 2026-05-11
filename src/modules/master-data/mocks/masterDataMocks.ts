@@ -181,8 +181,8 @@ export const mockSalesChannels: SalesChannelListItem[] = [
 
 export const mockSalesTargets: SalePeriodListItem[] = [
     { 
-        period_id: '1', 
-        period_target: '1000000', 
+        period_id: 1, 
+        period_target: 1000000, 
         begin_date: '2026-01-01', 
         end_date: '2026-03-31', 
         close_status: false, 

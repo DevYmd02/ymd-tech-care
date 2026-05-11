@@ -7,22 +7,23 @@ import type { BaseMasterData } from '@/shared/types/common-master.types';
 
 export interface SaleTargetMaster extends BaseMasterData {
     id: number;
-    emp_id: string; // UUID from Employee
+    target_id?: number; // Integer ID from Backend (Primary Key)
+    emp_id: number; // Integer ID from Employee
     employee_code?: string;
     employee_name?: string;
-    period_id: string; // UUID (Period)
+    period_id: number; // Integer ID (Period)
     target_name?: string; // Period name (optional display)
-    period_target: string; // Backend expects string for Money
+    period_target: number; // Backend expects number
     amount: number; // For table display compatibility
     list_no: number;
     is_active: boolean;
 }
 
 export interface SaleTargetFormData {
-    emp_id: string; // UUID
+    emp_id: number; // Integer
     list_no: number;
-    period_id: string; // UUID (Period)
-    period_target: string; // String for Money (e.g., "55555.55")
+    period_id: number; // Integer
+    period_target: number; // Number
 }
 
 export interface SaleTargetFilters {
