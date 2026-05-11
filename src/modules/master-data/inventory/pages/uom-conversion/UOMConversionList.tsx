@@ -7,6 +7,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { RefreshCcw, Edit2, Trash2 } from 'lucide-react';
 import { UOMConversionFormModal } from './UOMConversionFormModal';
 import { UOMConversionService } from '@/modules/master-data/inventory/services/uom-conversion.service';
+import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import type { UOMConversionListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
@@ -71,8 +73,31 @@ export default function UOMConversionList() {
     const { data: response, isLoading, refetch } = useQuery({
         queryKey: ['uom-conversions', filters],
         queryFn: async () => {
+            // Fetch raw conversion data
             const result = await UOMConversionService.getAll();
             let items = result.items || [];
+
+            // Fetch master data for lookup if needed
+            // (Optimization: Only fetch if we have items with missing names)
+            const needsLookup = items.some(i => !i.item_code || !i.from_unit_name);
+            
+            if (needsLookup) {
+                const [unitsRes, itemsRes] = await Promise.all([
+                    UnitService.getAll(),
+                    ItemMasterService.getAll({ limit: 1000 }) // Fetch a reasonable chunk
+                ]);
+
+                const unitMap = new Map(unitsRes.items?.map(u => [u.unit_id, u]));
+                const itemMap = new Map(itemsRes.items?.map(i => [i.item_id, i]));
+
+                items = items.map(i => ({
+                    ...i,
+                    item_code: i.item_code || itemMap.get(i.item_id)?.item_code || '',
+                    item_name: i.item_name || itemMap.get(i.item_id)?.item_name || '',
+                    from_unit_name: i.from_unit_name || unitMap.get(i.from_unit_id)?.unit_name || unitMap.get(i.from_unit_id)?.unit_code || '',
+                    to_unit_name: i.to_unit_name || unitMap.get(i.to_unit_id)?.unit_name || unitMap.get(i.to_unit_id)?.unit_code || '',
+                }));
+            }
             
             // Client-side filtering
             if (filters.status !== 'ALL') {
@@ -181,7 +206,7 @@ export default function UOMConversionList() {
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' 
                             : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                     }`}>
-                        {getValue() ? 'ใช่' : 'ไม่'}
+                        {getValue() ? 'ใช้งาน' : 'ไม่ใช้งาน'}
                     </span>
                 </div>
             ),

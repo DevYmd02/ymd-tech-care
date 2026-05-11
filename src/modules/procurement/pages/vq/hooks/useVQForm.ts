@@ -301,8 +301,9 @@ export const useVQForm = (
         // --- VIEW / EDIT MODE: Fetch Existing VQ and Master Items ---
         Promise.all([
             VQService.getById(vqId),
-            MasterDataService.getItems().catch(() => [])
-        ]).then(async ([response, itemsRes]) => {
+            MasterDataService.getItems().catch(() => []),
+            VQService.getLines(vqId).catch(() => [])
+        ]).then(async ([response, itemsRes, fetchedLines]) => {
             const masterItems = Array.isArray(itemsRes) ? itemsRes : [];
             
             // @Agent_Payload_Parser - Data Normalization (Unwrap Array/Object) 
@@ -332,10 +333,14 @@ export const useVQForm = (
                     const rfqDetail = (rfqDetailResData?.data ?? rfqDetailRes) as ExtendedRFQHeader | null;
                     const vendorDetail = (vendorDetailResData?.data ?? vendorDetailRes) as VendorMaster | null;
                     
-                    const vqRawLines = data.vqLines || data.vq_lines || data.lines || data.items || [];
+                    // 3. Extract VQ Lines from various possible keys
+                    const vqLinesFromHeader = data.vqLines || data.vq_lines || data.lines || data.items || [];
+                    const vqRawLines = vqLinesFromHeader.length > 0 ? vqLinesFromHeader : (fetchedLines || []);
                     const vqHasNoLines = !Array.isArray(vqRawLines) || vqRawLines.length === 0;
-                    
-                    if (rfqDetail && (data.status === 'PENDING' || vqHasNoLines)) {
+
+                    // 4. Hydration Logic: Prefer saved VQ lines, fallback to RFQ lines ONLY if VQ is empty/pending
+                    // status 'PENDING' usually means it's a new draft from RFQ that hasn't been saved with its own lines yet.
+                    if (rfqDetail && (vqHasNoLines || data.status === 'PENDING')) {
                         apiLines = (rfqDetail.lines && rfqDetail.lines.length > 0) ? rfqDetail.lines : (rfqDetail.rfqLines || []);
                     }
                     
@@ -368,16 +373,13 @@ export const useVQForm = (
                 }
             }
 
-            // @Agent_Payload_Parser - Line Mapping (Search for vqLines, vq_lines, lines, items)
-            const rawLines = data.vqLines || data.vq_lines || data.lines || data.items || [];
+            // @Agent_Payload_Parser - Line Mapping (Prioritize linesToMap > apiLines)
+            const vqLinesFromHeader = data.vqLines || data.vq_lines || data.lines || data.items || [];
+            const rawLines = vqLinesFromHeader.length > 0 ? vqLinesFromHeader : (fetchedLines || []);
             const linesToMap = Array.isArray(rawLines) ? rawLines : [];
+            const finalLinesSource = linesToMap.length > 0 ? linesToMap : apiLines;
             
-            // @Agent_Backend_Diagnostic - Failsafe Alert
-            if (linesToMap.length === 0 && apiLines.length === 0) {
-                logger.warn("VQ Lines Not Found", data);
-            }
-
-            const mappedLines: QuotationLineFormData[] = (apiLines.length > 0 ? apiLines : linesToMap).map((l: RawVQLine) => {
+            const mappedLines: QuotationLineFormData[] = finalLinesSource.map((l: RawVQLine) => {
                 const matchedItem = masterItems.find((i) => Number(i.item_id) === Number(l.item_id));
                 return {
                     ...createEmptyLine(),
@@ -801,13 +803,10 @@ export const useVQForm = (
 
 
   const sanitizePayload = (data: QuotationFormData): VQCreateData => {
-    // 🎯 Flatten Header Discount to absolute money amount to keep calculateHeaderTotal happy
-    const globalDiscountAmount = parseDiscountAmount(data.discount_expression, totals.subtotal);
-
     const payload: VQCreateData = {
       // 🛡️ @Agent_Ultimate_Purifier: STRICT DTO MAPPING (Header)
       ...(vqId ? { vq_no: data.vq_no } : {}), // Omit vq_no if creating to satisfy backend
-      discount_expression: String(globalDiscountAmount || 0), // 🎯 Explicit Header Discount
+      discount_expression: String(data.discount_expression || '0'), // 🎯 Keep original expression (e.g. "15%")
       quotation_no: data.quotation_no && data.quotation_no.trim() !== '' ? data.quotation_no : '-', 
       quotation_date: data.quotation_date ? new Date(data.quotation_date).toISOString() : new Date().toISOString(),
       quotation_expiry_date: data.valid_until ? new Date(data.valid_until).toISOString() : undefined,

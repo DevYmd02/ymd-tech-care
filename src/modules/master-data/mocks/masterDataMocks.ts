@@ -562,9 +562,12 @@ const _mockUOMConversions: UOMConversionListItem[] = [
     {
         id: 1,
         conversion_id: 1,
+        item_id: 1,
         item_code: 'RM-001',
         item_name: 'Paracetamol 500mg',
+        from_unit_id: 2,
         from_unit_name: 'ลัง',
+        to_unit_id: 5,
         to_unit_name: 'แพ็ค',
         conversion_factor: 12,
         is_purchase_unit: true,
@@ -574,9 +577,12 @@ const _mockUOMConversions: UOMConversionListItem[] = [
     {
         id: 2,
         conversion_id: 2,
+        item_id: 1,
         item_code: 'RM-001',
         item_name: 'Paracetamol 500mg',
+        from_unit_id: 5,
         from_unit_name: 'แพ็ค',
+        to_unit_id: 1,
         to_unit_name: 'ชิ้น',
         conversion_factor: 6,
         is_purchase_unit: false,
@@ -586,9 +592,12 @@ const _mockUOMConversions: UOMConversionListItem[] = [
     {
         id: 3,
         conversion_id: 3,
+        item_id: 5,
         item_code: 'EQ-005',
         item_name: 'Surgical Mask',
+        from_unit_id: 2,
         from_unit_name: 'ลัง',
+        to_unit_id: 2, // Assuming Box
         to_unit_name: 'กล่อง',
         conversion_factor: 20,
         is_purchase_unit: true,

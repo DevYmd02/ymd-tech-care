@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { RefreshCcw, Search, Save, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { logger } from '@/shared/utils';
 import { useQuery } from '@tanstack/react-query';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
-import { mockUOMConversions } from '@/modules/master-data/mocks/masterDataMocks';
-import type { UOMConversionFormData, ItemListItem } from '@/modules/master-data/types/master-data-types';
-import { initialUOMConversionFormData } from '@/modules/master-data/types/master-data-types';
+import { UOMConversionService } from '@/modules/master-data/inventory/services/uom-conversion.service';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
+import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import { DialogFormLayout } from '@ui';
 import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
+import { useUOMConversionForm } from '../../hooks/useUOMConversionForm';
 
 interface Props {
     isOpen: boolean;
@@ -18,8 +18,27 @@ interface Props {
 }
 
 export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
-    const [formData, setFormData] = useState<UOMConversionFormData>(initialUOMConversionFormData);
     const [isItemSearchOpen, setIsItemSearchOpen] = useState(false);
+
+    // Fetch details for edit mode
+    const { data: existingData, isLoading: isFetchingDetail } = useQuery({
+        queryKey: ['uom-conversion', editId],
+        queryFn: () => editId ? UOMConversionService.getById(editId) : null,
+        enabled: !!editId && isOpen,
+    });
+
+    const {
+        formData,
+        errors,
+        register,
+        isSaving,
+        handleSave,
+        setValue,
+        clearForm,
+    } = useUOMConversionForm(editId || null, existingData, () => {
+        if (onSuccess) onSuccess();
+        onClose();
+    });
 
     // Fetch Units from API
     const { data: unitsResponse } = useQuery({
@@ -34,31 +53,35 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
     const units = unitsResponse || [];
     const activeUnits = units.filter(u => u.is_active);
 
-    // Reset form when modal opens
+    // Fetch Item details if missing (for edit mode)
+    const itemIdToFetch = formData.item_id;
+    const { data: itemDetail } = useQuery({
+        queryKey: ['item-detail', itemIdToFetch],
+        queryFn: () => itemIdToFetch ? ItemMasterService.getById(itemIdToFetch) : null,
+        enabled: !!itemIdToFetch && !formData.itemCode && isOpen,
+    });
+
+    // Auto-fill item info when fetched
     useEffect(() => {
-        if (isOpen) {
-            if (editId) {
-                const existing = mockUOMConversions.find(c => c.conversion_id === editId);
-                if (existing) {
-                    setFormData({
-                        itemCode: existing.item_code,
-                        itemName: existing.item_name,
-                        fromUnit: existing.from_unit_name,
-                        toUnit: existing.to_unit_name,
-                        conversionFactor: existing.conversion_factor,
-                        isPurchaseUnit: existing.is_purchase_unit,
-                        isActive: existing.is_active,
-                    });
-                }
-            } else {
-                setFormData(initialUOMConversionFormData);
+        if (itemDetail && !formData.itemCode) {
+            setValue('itemCode', itemDetail.item_code);
+            setValue('itemName', itemDetail.item_name);
+        }
+    }, [itemDetail, formData.itemCode, setValue]);
+
+    // Auto-fill unit names if missing
+    useEffect(() => {
+        if (activeUnits.length > 0) {
+            if (formData.from_uom_id && !formData.fromUnit) {
+                const unit = activeUnits.find(u => u.unit_id === formData.from_uom_id);
+                if (unit) setValue('fromUnit', unit.unit_code);
+            }
+            if (formData.to_uom_id && !formData.toUnit) {
+                const unit = activeUnits.find(u => u.unit_id === formData.to_uom_id);
+                if (unit) setValue('toUnit', unit.unit_code);
             }
         }
-    }, [isOpen, editId]);
-
-    const handleInputChange = (field: keyof UOMConversionFormData, value: string | number | boolean) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
-    };
+    }, [activeUnits, formData.from_uom_id, formData.fromUnit, formData.to_uom_id, formData.toUnit, setValue]);
 
     const handleFindItem = () => {
         setIsItemSearchOpen(true);
@@ -66,50 +89,46 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
 
     const handleProductSelect = (product: ItemListItem) => {
         // Find the unit code for the product's base unit (Base UOM)
-        // Search by ID first, then fallback to name matching for robustness
         const baseUnit = units.find(u => 
             u.unit_id === product.uom_id || 
             u.unit_id === product.unit_id ||
             u.unit_name === product.uom_name ||
-            u.unit_name === product.unit_name ||
-            product.uom_name?.includes(u.unit_name) ||
-            product.unit_name?.includes(u.unit_name)
+            u.unit_name === product.unit_name
         );
         
-        setFormData(prev => ({
-            ...prev,
-            itemCode: product.item_code,
-            itemName: product.item_name,
-            toUnit: baseUnit?.unit_code || '', // Auto-fill with Base UOM code (e.g. 'PCS')
-        }));
+        setValue('item_id', product.item_id || product.id);
+        setValue('itemCode', product.item_code);
+        setValue('itemName', product.item_name);
+        
+        if (baseUnit) {
+            setValue('to_uom_id', baseUnit.unit_id);
+            setValue('toUnit', baseUnit.unit_code);
+        }
+        
         setIsItemSearchOpen(false);
     };
 
-    const handleSave = () => {
-        if (!formData.itemCode.trim() || !formData.fromUnit || !formData.toUnit) {
-            alert('กรุณากรอกข้อมูลให้ครบถ้วน');
-            return;
-        }
-        
-        logger.log('Save UOM Conversion:', formData);
-        alert(editId ? 'บันทึกการแก้ไขสำเร็จ' : 'เพิ่มการแปลงหน่วยใหม่สำเร็จ');
-        if (onSuccess) onSuccess();
-        onClose();
-    };
-
     const handleReset = () => {
-        setFormData(initialUOMConversionFormData);
+        clearForm();
     };
 
     const Footer = (
         <div className="flex justify-end gap-3">
-            <button onClick={handleReset} className={`${styles.btnSecondary} flex items-center gap-2`}>
+            <button 
+                onClick={handleReset} 
+                className={`${styles.btnSecondary} flex items-center gap-2`}
+                disabled={isSaving}
+            >
                 <RotateCcw size={18} />
                 ล้างข้อมูล
             </button>
-            <button onClick={handleSave} className={`${styles.btnPrimary} flex items-center gap-2`}>
+            <button 
+                onClick={handleSave} 
+                className={`${styles.btnPrimary} flex items-center gap-2`}
+                disabled={isSaving || isFetchingDetail}
+            >
                 <Save size={18} />
-                บันทึก
+                {isSaving ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
         </div>
     );
@@ -131,10 +150,10 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
                         <div className="relative group">
                             <input
                                 type="text"
-                                value={formData.itemCode}
-                                onChange={(e) => handleInputChange('itemCode', e.target.value)}
-                                className={`${styles.input} pr-12 focus:ring-purple-500`}
+                                {...register('itemCode')}
+                                className={`${styles.input} pr-12 focus:ring-purple-500 ${errors.itemCode ? 'border-red-500' : ''}`}
                                 placeholder="ระบุรหัสสินค้า"
+                                readOnly
                             />
                             <button
                                 onClick={handleFindItem}
@@ -144,6 +163,7 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
                                 <Search size={16} />
                             </button>
                         </div>
+                        {errors.itemCode && <p className="text-red-500 text-xs mt-1">{errors.itemCode.message}</p>}
                     </div>
                     <div>
                         <label className={styles.label}>ชื่อสินค้า</label>
@@ -161,28 +181,40 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
                         <div>
                             <label className={styles.label}>หน่วยต้นทาง (From)</label>
                             <select 
-                                value={formData.fromUnit} 
-                                onChange={(e) => handleInputChange('fromUnit', e.target.value)} 
-                                className={styles.inputSelect}
+                                value={formData.from_uom_id || ''} 
+                                onChange={(e) => {
+                                    const id = parseInt(e.target.value);
+                                    const unit = activeUnits.find(u => u.unit_id === id);
+                                    setValue('from_uom_id', id);
+                                    setValue('fromUnit', unit?.unit_code || '');
+                                }} 
+                                className={`${styles.inputSelect} ${errors.from_uom_id ? 'border-red-500' : ''}`}
                             >
                                 <option value="">-- เลือกหน่วย --</option>
                                 {activeUnits.map(u => (
-                                    <option key={u.unit_id} value={u.unit_code}>{u.unit_name} ({u.unit_code})</option>
+                                    <option key={u.unit_id} value={u.unit_id}>{u.unit_name} ({u.unit_code})</option>
                                 ))}
                             </select>
+                            {errors.from_uom_id && <p className="text-red-500 text-xs mt-1">{errors.from_uom_id.message}</p>}
                         </div>
                         <div>
                             <label className={styles.label}>หน่วยปลายทาง (To)</label>
                             <select 
-                                value={formData.toUnit} 
-                                onChange={(e) => handleInputChange('toUnit', e.target.value)} 
-                                className={`${styles.inputSelect} ${formData.itemCode ? 'border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
+                                value={formData.to_uom_id || ''} 
+                                onChange={(e) => {
+                                    const id = parseInt(e.target.value);
+                                    const unit = activeUnits.find(u => u.unit_id === id);
+                                    setValue('to_uom_id', id);
+                                    setValue('toUnit', unit?.unit_code || '');
+                                }} 
+                                className={`${styles.inputSelect} ${formData.itemCode ? 'border-blue-200 dark:border-blue-900/50 bg-blue-50/30 dark:bg-blue-900/10' : ''} ${errors.to_uom_id ? 'border-red-500' : ''}`}
                             >
                                 <option value="">-- เลือกหน่วย --</option>
                                 {activeUnits.map(u => (
-                                    <option key={u.unit_id} value={u.unit_code}>{u.unit_name} ({u.unit_code})</option>
+                                    <option key={u.unit_id} value={u.unit_id}>{u.unit_name} ({u.unit_code})</option>
                                 ))}
                             </select>
+                            {errors.to_uom_id && <p className="text-red-500 text-xs mt-1">{errors.to_uom_id.message}</p>}
                         </div>
                     </div>
 
@@ -194,23 +226,22 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
                                 <input
                                     type="number"
                                     step="0.000001"
-                                    value={formData.conversionFactor || ''}
-                                    onChange={(e) => handleInputChange('conversionFactor', parseFloat(e.target.value) || 0)}
-                                    className={`${styles.input} font-mono`}
+                                    {...register('conversionFactor', { valueAsNumber: true })}
+                                    className={`${styles.input} font-mono ${errors.conversionFactor ? 'border-red-500' : ''}`}
                                     placeholder="0.000000"
                                 />
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
                                     Decimal (6)
                                 </div>
                             </div>
+                            {errors.conversionFactor && <p className="text-red-500 text-xs mt-1">{errors.conversionFactor.message}</p>}
                         </div>
                         <div className="space-y-3 pb-1">
                             <label className="flex items-center gap-3 cursor-pointer group">
                                 <div className="relative flex items-center">
                                     <input
                                         type="checkbox"
-                                        checked={formData.isPurchaseUnit}
-                                        onChange={(e) => handleInputChange('isPurchaseUnit', e.target.checked)}
+                                        {...register('isPurchaseUnit')}
                                         className="w-5 h-5 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500 cursor-pointer"
                                     />
                                 </div>
@@ -220,8 +251,7 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
                                 <div className="relative flex items-center">
                                     <input
                                         type="checkbox"
-                                        checked={formData.isActive}
-                                        onChange={(e) => handleInputChange('isActive', e.target.checked)}
+                                        {...register('isActive')}
                                         className="w-5 h-5 text-green-600 border-gray-300 dark:border-gray-600 rounded focus:ring-green-500 cursor-pointer"
                                     />
                                 </div>
@@ -236,7 +266,7 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
                             <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
                                 <span className="font-bold underline decoration-blue-400">สรุปหลักการ:</span>
                                 <span>1 {formData.fromUnit || '...'} = </span>
-                                <span className="font-mono font-bold text-lg">{formData.conversionFactor.toFixed(6)}</span>
+                                <span className="font-mono font-bold text-lg">{(formData.conversionFactor || 0).toFixed(6)}</span>
                                 <span> {formData.toUnit || '...'}</span>
                             </p>
                             <p className="text-[11px] text-blue-500 dark:text-blue-400 mt-1 italic">
