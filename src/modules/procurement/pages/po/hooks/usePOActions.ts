@@ -2,16 +2,17 @@ import { useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { POService } from '@/modules/procurement/services';
-import { CreatePOSchema, type POFormData, type POLine } from '@/modules/procurement/schemas/po-schemas';
+import { CreatePOSchema, type POFormData, type POLine, type POListItem } from '@/modules/procurement/schemas/po-schemas';
 import type { CreatePOPayload } from '@/modules/procurement/types/po-types';
+import type { UserProfile } from '@/core/auth/auth.service';
 import { logger } from '@/shared/utils';
 import { extractErrorMessage } from '@/core/api/api';
 
 interface UsePOActionsProps {
     poId?: number;
-    user: any;
+    user: UserProfile | null;
     formMethods: UseFormReturn<POFormData>;
-    existingPO: any;
+    existingPO: POListItem | null | undefined;
     onClose: () => void;
     onSuccess?: () => void;
     toast: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
@@ -24,8 +25,9 @@ export const usePOActions = (props?: UsePOActionsProps) => {
     const [pendingPayload, setPendingPayload] = useState<POFormData | null>(null);
 
     // List-level Direct Submit
-    const handleDirectSubmit = async (item: any) => {
-        const poId = item.po_id || item.po_header_id || item.id;
+    const handleDirectSubmit = async (item: POListItem | Record<string, unknown>) => {
+        const itemAny = item as Record<string, unknown>;
+        const poId = (itemAny.po_id || itemAny.po_header_id || itemAny.id) as number | string;
         if (!poId) return;
 
         try {
@@ -80,7 +82,7 @@ export const usePOActions = (props?: UsePOActionsProps) => {
                 discount_expression: pendingPayload.discount_expression || "0",
                 status:             "DRAFT", // Hardcode DRAFT for new creation
                 created_at:         new Date().toISOString(),
-                created_by:         (poId ? (getValues('created_by') ? Number(getValues('created_by')) : undefined) : (user?.id ? Number(user.id) : undefined)) as unknown as number,
+                created_by:         Number(poId ? (getValues('created_by') || user?.id || 1) : (user?.id || 1)),
                 
                 po_lines: (pendingPayload.po_lines || []).map((item: POLine, index: number) => ({
                     line_no:        index + 1,
@@ -130,14 +132,14 @@ export const usePOActions = (props?: UsePOActionsProps) => {
                 const updatePayload = {
                     ...patchCandidate,
                     updated_by: Number(user?.id || 1), // 🛡️ Mandatory for PATCH
-                    status:     finalizedPayload.status || (existingPO as any)?.status || 'DRAFT',
-                    created_at: finalizedPayload.created_at || (existingPO as any)?.created_at || new Date().toISOString(),
+                    status:     finalizedPayload.status || existingPO?.status || 'DRAFT',
+                    created_at: finalizedPayload.created_at || existingPO?.created_at || new Date().toISOString(),
                 };
 
-                await POService.update(Number(poId), updatePayload as any);
+                await POService.update(Number(poId), updatePayload as unknown as CreatePOPayload);
                 
                 // 🌟 Auto-submit if it was REJECTED
-                if ((existingPO as any)?.status === 'REJECTED') {
+                if (existingPO?.status === 'REJECTED') {
                     logger.info(`[usePOActions] Auto-submitting PO ${poId} from REJECTED state`);
                     await POService.submit(Number(poId));
                 }

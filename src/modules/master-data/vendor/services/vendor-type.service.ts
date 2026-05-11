@@ -66,12 +66,12 @@ export const VendorTypeService = {
             const newVendorType: VendorTypeMaster = {
                 vendor_type_id: newId,
                 id: newId,
-                vendor_type_code: data.typeCode.toUpperCase(),
-                code: data.typeCode.toUpperCase(),
-                vendor_type_name: data.typeName,
-                name_th: data.typeName,
-                vendor_type_nameeng: data.typeNameEn,
-                is_active: data.isActive,
+                vendor_type_code: data.vendor_type_code.toUpperCase(),
+                code: data.vendor_type_code.toUpperCase(),
+                vendor_type_name: data.vendor_type_name,
+                name_th: data.vendor_type_name,
+                vendor_type_nameeng: data.vendor_type_nameeng,
+                is_active: data.is_active,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
             };
@@ -97,12 +97,12 @@ export const VendorTypeService = {
             if (index !== -1) {
                 localVendorTypes.items[index] = {
                     ...localVendorTypes.items[index],
-                    vendor_type_code: data.typeCode.toUpperCase(),
-                    code: data.typeCode.toUpperCase(),
-                    vendor_type_name: data.typeName,
-                    name_th: data.typeName,
-                    vendor_type_nameeng: data.typeNameEn,
-                    is_active: data.isActive,
+                    vendor_type_code: data.vendor_type_code.toUpperCase(),
+                    code: data.vendor_type_code.toUpperCase(),
+                    vendor_type_name: data.vendor_type_name,
+                    name_th: data.vendor_type_name,
+                    vendor_type_nameeng: data.vendor_type_nameeng,
+                    is_active: data.is_active,
                     updated_at: new Date().toISOString(),
                 };
                 return { success: true, data: localVendorTypes.items[index] };

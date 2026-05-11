@@ -106,7 +106,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
       const targetApprovalId = itemArg?.approval_id;
       if (targetApprovalId) {
           try {
-              avDetails = await AVService.getApprovalById(targetApprovalId, { signal });
+              avDetails = await AVService.getApprovalById(Number(targetApprovalId), { signal });
           } catch (err: unknown) {
               if (err instanceof Error && err.name !== 'AbortError' && err.name !== 'CanceledError') {
                   logger.warn('[useAVForm] Failed to fetch specific AV detail:', err);

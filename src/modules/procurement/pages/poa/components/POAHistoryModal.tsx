@@ -143,8 +143,7 @@ export const POAHistoryModal: React.FC<POAHistoryModalProps> = ({
  * Implements Deep Hydration to ensure totals are accurate by fetching full detail.
  */
 const POAHistoryRow: React.FC<{ item: POListItem; index: number }> = ({ item, index }) => {
-  const itemAny = item as any;
-  const poaId = Number(itemAny.approval_id || item.po_id);
+  const poaId = Number(item.approval_id || item.po_id);
   const isOfficialPOA = !!item.poa_no && item.poa_no !== '-';
 
   // Fetch full detail for this specific record to get the real total_amount

@@ -8,7 +8,7 @@ import { ItemBarcodeService } from '../services/item-barcode.service';
 import { UnitService } from '../services/unit.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils';
-import type { ItemBarcodeListItem } from '../types/product-types';
+import type { ItemBarcodeListItem, ItemBarcode } from '../types/product-types';
 
 export const itemBarcodeSchema = z.object({
     item_id: z.coerce.number().min(1, 'กรุณาเลือกสินค้า'),
@@ -34,7 +34,7 @@ const initialFormData: ItemBarcodeFormData = {
 
 export function useItemBarcodeForm(
     editId: number | null, 
-    initialData?: ItemBarcodeListItem | null, 
+    initialData?: ItemBarcode | ItemBarcodeListItem | null, 
     onSuccess?: () => void,
     preFill?: { item_id?: number; item_code?: string; item_name?: string }
 ) {
@@ -86,7 +86,7 @@ export function useItemBarcodeForm(
                 clearErrors('barcode');
             }
         }
-    }, [duplicateCheckData, debouncedBarcode, editId, setError, clearErrors, errors.barcode?.message]);
+    }, [duplicateCheckData, debouncedBarcode, editId, setError, clearErrors, errors.barcode]);
 
     // Load units for dropdown
     const { data: unitData } = useQuery({
@@ -108,7 +108,11 @@ export function useItemBarcodeForm(
                 item_code: initialData.item_code || '',
                 item_name: initialData.item_name || '',
                 barcode: initialData.barcode || '',
-                uom_id: String(initialData.unit_id || ''),
+                uom_id: String(
+                    ('uom_id' in initialData ? initialData.uom_id : undefined) ?? 
+                    ('unit_id' in initialData ? (initialData as ItemBarcodeListItem).unit_id : undefined) ?? 
+                    ''
+                ),
                 is_primary: initialData.is_primary ?? false,
                 is_active: initialData.is_active ?? true,
             });

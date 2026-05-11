@@ -6,7 +6,7 @@ import { ProductSearchModal } from '@/modules/master-data/inventory/components/P
 import { useItemBarcodeForm } from '@/modules/master-data/inventory/hooks/useItemBarcodeForm';
 import { ItemBarcodeService } from '@/modules/master-data/inventory/services/item-barcode.service';
 import { useQuery } from '@tanstack/react-query';
-import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
+import type { ItemListItem, UnitListItem } from '@/modules/master-data/types/master-data-types';
 
 interface Props {
     isOpen: boolean;
@@ -47,7 +47,7 @@ export function ItemBarcodeFormModal({
         clearForm,
     } = useItemBarcodeForm(
         editId || null, 
-        editData as any, 
+        editData, 
         () => {
             if (onSuccess) onSuccess();
             onClose();
@@ -178,7 +178,7 @@ export function ItemBarcodeFormModal({
                                 className={`${styles.inputSelect} ${errors.uom_id ? 'border-red-500 focus:ring-red-500' : ''}`}
                             >
                                 <option value="">-- เลือกหน่วย --</option>
-                                {units.map((u: any) => (
+                                {units.map((u: UnitListItem) => (
                                     <option key={u.unit_id} value={String(u.unit_id)}>{u.unit_name} ({u.unit_code})</option>
                                 ))}
                             </select>

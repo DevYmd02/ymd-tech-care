@@ -5,6 +5,25 @@ import type { ItemBarcodeListItem, ItemBarcodeCreateRequest, ItemBarcodeUpdateRe
 import type { ListResponse } from '@/shared/types/api.types';
 import type { SuccessResponse } from '@/shared/types/api.types';
 
+interface ItemBarcodeRawResponse extends Record<string, unknown> {
+    id?: number;
+    item_barcode_id?: number;
+    barcode_id?: number;
+    item_id?: number;
+    item_code?: string;
+    item_name?: string;
+    barcode?: string;
+    item_barcode_code?: string;
+    uom_id?: number;
+    unit_id?: number;
+    unit_name?: string;
+    is_primary?: boolean;
+    is_default?: boolean;
+    is_active?: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
 export const ItemBarcodeService = {
   getAll: async (params?: { item_id?: number; barcode?: string }): Promise<ListResponse<ItemBarcodeListItem>> => {
     if (USE_MOCK) {
@@ -24,30 +43,30 @@ export const ItemBarcodeService = {
     }
     try {
       // Reverting to /item-barcode as requested by user
-      const response = await api.get<any>('/item-barcode', { params });
+      const response = await api.get<ItemBarcodeRawResponse[] | { items?: ItemBarcodeRawResponse[]; data?: ItemBarcodeRawResponse[] }>('/item-barcode', { params });
       
-      let rawItems: any[] = [];
+      let rawItems: ItemBarcodeRawResponse[] = [];
       if (Array.isArray(response)) {
           rawItems = response;
-      } else if (response && response.items) {
+      } else if (response && 'items' in response && response.items) {
           rawItems = response.items;
-      } else if (response && response.data) {
+      } else if (response && 'data' in response && response.data) {
           rawItems = response.data;
       }
 
       // Map DB fields to our frontend format (ItemBarcodeListItem)
-      const items: ItemBarcodeListItem[] = rawItems.map((b: any) => ({
-          id: b.id || b.item_barcode_id || b.barcode_id, // Primary ID for table rows
-          barcode_id: b.item_barcode_id || b.barcode_id || b.id,
-          item_id: b.item_id,
-          item_code: b.item_code || '',
-          item_name: b.item_name || '',
-          barcode: b.barcode || b.item_barcode_code,
-          unit_id: b.uom_id || b.unit_id,
-          unit_name: b.unit_name || '',
-          is_primary: b.is_primary || b.is_default || false,
-          is_active: b.is_active ?? true,
-          created_at: b.created_at || new Date().toISOString()
+      const items: ItemBarcodeListItem[] = rawItems.map((b: ItemBarcodeRawResponse) => ({
+          id: Number(b.id || b.item_barcode_id || b.barcode_id || 0), // Primary ID for table rows
+          barcode_id: Number(b.item_barcode_id || b.barcode_id || b.id || 0),
+          item_id: Number(b.item_id || 0),
+          item_code: String(b.item_code || ''),
+          item_name: String(b.item_name || ''),
+          barcode: String(b.barcode || b.item_barcode_code || ''),
+          unit_id: Number(b.uom_id || b.unit_id || 0),
+          unit_name: String(b.unit_name || ''),
+          is_primary: Boolean(b.is_primary || b.is_default || false),
+          is_active: Boolean(b.is_active ?? true),
+          created_at: String(b.created_at || new Date().toISOString())
       }));
 
       return { items, total: items.length, page: 1, limit: items.length };
@@ -59,19 +78,19 @@ export const ItemBarcodeService = {
 
   getById: async (id: number): Promise<ItemBarcode | null> => {
       try {
-          const response = await api.get<any>(`/item-barcode/${id}`);
+          const response = await api.get<ItemBarcodeRawResponse>(`/item-barcode/${id}`);
           return {
-              item_barcode_id: response.item_barcode_id || response.barcode_id || response.id,
-              item_id: response.item_id,
-              barcode: response.barcode || response.item_barcode_code,
-              uom_id: response.uom_id || response.unit_id,
-              is_primary: response.is_primary || response.is_default || false,
-              is_active: response.is_active ?? true,
-              item_code: response.item_code || '',
-              item_name: response.item_name || '',
-              unit_name: response.unit_name || '',
-              created_at: response.created_at || new Date().toISOString(),
-              updated_at: response.updated_at || new Date().toISOString()
+              item_barcode_id: Number(response.item_barcode_id || response.barcode_id || response.id || 0),
+              item_id: Number(response.item_id || 0),
+              barcode: String(response.barcode || response.item_barcode_code || ''),
+              uom_id: Number(response.uom_id || response.unit_id || 0),
+              is_primary: Boolean(response.is_primary || response.is_default || false),
+              is_active: Boolean(response.is_active ?? true),
+              item_code: String(response.item_code || ''),
+              item_name: String(response.item_name || ''),
+              unit_name: String(response.unit_name || ''),
+              created_at: String(response.created_at || new Date().toISOString()),
+              updated_at: String(response.updated_at || new Date().toISOString())
           };
       } catch (error) {
           logger.error('[ItemBarcodeService] getById error:', error);

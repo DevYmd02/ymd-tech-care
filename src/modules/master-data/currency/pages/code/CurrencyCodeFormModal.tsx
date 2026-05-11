@@ -4,13 +4,14 @@
  * @module currency
  */
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { Coins, Save, X, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 import { DialogFormLayout } from '@ui';
 import { logger } from '@/shared/utils';
+import type { CurrencyMappedItem } from '@/modules/master-data/currency/types/currency-types';
 
 interface Props {
     isOpen: boolean;
@@ -41,24 +42,24 @@ export function CurrencyFormModal({ isOpen, onClose, editId, onSuccess }: Props)
         }
     });
 
-    const clearForm = () => {
+    const clearForm = useCallback(() => {
         reset({
             code: '',
             name_th: '',
             exchange_rate: '',
             is_active: true
         });
-    };
+    }, [reset]);
 
     useEffect(() => {
         if (isOpen) {
             if (editId) {
-                CurrencyService.getById(editId).then((existing: any) => {
+                CurrencyService.getById(editId).then((existing: CurrencyMappedItem | null) => {
                     if (existing) {
                         reset({
                             code: existing.code || '',
                             name_th: existing.name_th || '',
-                            exchange_rate: existing.exchange_rate || '',
+                            exchange_rate: String(existing.exchange_rate || ''),
                             is_active: existing.is_active ?? true
                         });
                     }
@@ -67,7 +68,7 @@ export function CurrencyFormModal({ isOpen, onClose, editId, onSuccess }: Props)
                 clearForm();
             }
         }
-    }, [isOpen, editId, reset]);
+    }, [isOpen, editId, reset, clearForm]);
 
     const onSubmit = async (data: FormValues) => {
         try {

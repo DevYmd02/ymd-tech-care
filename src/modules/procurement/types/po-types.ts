@@ -57,6 +57,7 @@ export interface POHeader {
     qc_id?: number;                 // INTEGER — FK -> qc_header
     qc_no?: string;                 // Display Only
     poa_no?: string;                // Display Only
+    approval_id?: number;           // FK -> po_approval (Required for History/Printing)
     approval_emp_name?: string;     // Display Only (Joined)
     rfq_id?: number;                // FK -> rfq
     winning_vq_id?: number;         // FK -> quotation_header
@@ -64,6 +65,7 @@ export interface POHeader {
     // Detail Fields (Returned by getById)
     delivery_date?: string;
     tax_name?: string;
+    tax_rate?: number;
     tax_code?: {
         tax_name: string;
         tax_rate: number;

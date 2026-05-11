@@ -102,22 +102,25 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
   useEffect(() => {
     // SCENARIO 1: Deep Hydration from API (Edit Mode Only)
-    if (qcData && (mode === 'edit')) {
-      const actualQCData = (qcData as unknown as Record<string, unknown>)?.data as unknown as Record<string, unknown> || qcData;
-      setQCNo((actualQCData.qc_no as string) || '');
-      setPRNo((actualQCData.ref_pr_no as string) || (actualQCData.pr_no as string) || '');
-      setAVNo((actualQCData.approved_pr_no as string) || (actualQCData.av_no as string) || '');
+    if (qcData && mode === 'edit') {
+      const actualQCData = (qcData as Record<string, unknown>)?.data as Record<string, unknown> || qcData as Record<string, unknown>;
+      setQCNo(String(actualQCData.qc_no || ''));
+      setPRNo(String(actualQCData.ref_pr_no || actualQCData.pr_no || ''));
+      setAVNo(String(actualQCData.approved_pr_no || actualQCData.av_no || ''));
       setValue('pr_id', Number(actualQCData.pr_id) || null);
-      setRFQNo((actualQCData.rfq_no as string) || '');
+      setRFQNo(String(actualQCData.rfq_no || ''));
 
       setValue('rfq_id', Number(actualQCData.rfq_id || actualQCData.rfq_header_id) || 0);
-      setQCDate(actualQCData.comparison_date ? new Date(actualQCData.comparison_date as any).toLocaleDateString('en-GB') : getTodayFormatted());
+      
+      const compDate = actualQCData.comparison_date;
+      setQCDate(compDate ? new Date(compDate as string | number | Date).toLocaleDateString('en-GB') : getTodayFormatted());
+      
       setValue('winning_vq_id', Number(actualQCData.winning_vq_id || actualQCData.vq_header_id) || 0);
       
-      const remarkVal = (actualQCData?.remark as string) || (actualQCData?.remarks as string) || '';
+      const remarkVal = String(actualQCData?.remark || actualQCData?.remarks || '');
       setValue('remarks', remarkVal);
       
-      const creatorName = (actualQCData?.created_by_name as string) || (actualQCData?.creator_name as string) || (actualQCData?.employee_name as string) || '';
+      const creatorName = String(actualQCData?.created_by_name || actualQCData?.creator_name || actualQCData?.employee_name || '');
       if (creatorName) setCreatedBy(creatorName);
 
       const winnerId = actualQCData?.winning_vq_id || actualQCData.vq_header_id;
@@ -125,45 +128,47 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     } 
     // SCENARIO 2: Resilient Hydration from initialData (View mode or Fallback)
     else if (initialData && (mode === 'view' || mode === 'edit')) {
-      const actualInitial = (initialData as unknown as Record<string, unknown>)?.data as unknown as Record<string, unknown> || initialData;
+      const actualInitial = (initialData as Record<string, unknown>)?.data as Record<string, unknown> || initialData as Record<string, unknown>;
       
       // Mandatory Mapping: List items often use 'rfq_header_id' while form expects 'rfq_id'
       const mappedRfqId = actualInitial.rfq_id || actualInitial.rfq_header_id;
       const mappedWinnerId = actualInitial.winning_vq_id || actualInitial.vq_header_id;
 
-      setQCNo((actualInitial.qc_no as string) || '');
-      setPRNo((actualInitial.ref_pr_no as string) || (actualInitial.pr_no as string) || '');
-      setAVNo((actualInitial.approved_pr_no as string) || (actualInitial.av_no as string) || '');
-      setRFQNo((actualInitial.rfq_no as string) || '');
-      setQCDate(actualInitial.comparison_date ? new Date(actualInitial.comparison_date as any).toLocaleDateString('en-GB') : (actualInitial.created_at ? new Date(actualInitial.created_at as any).toLocaleDateString('en-GB') : getTodayFormatted()));
+      setQCNo(String(actualInitial.qc_no || ''));
+      setPRNo(String(actualInitial.ref_pr_no || actualInitial.pr_no || ''));
+      setAVNo(String(actualInitial.approved_pr_no || actualInitial.av_no || ''));
+      setRFQNo(String(actualInitial.rfq_no || ''));
+      
+      const compDate = actualInitial.comparison_date;
+      const createdAt = actualInitial.created_at;
+      setQCDate(compDate ? new Date(compDate as string | number | Date).toLocaleDateString('en-GB') : (createdAt ? new Date(createdAt as string | number | Date).toLocaleDateString('en-GB') : getTodayFormatted()));
       
       setValue('rfq_id', Number(mappedRfqId) || 0);
       setValue('winning_vq_id', Number(mappedWinnerId) || 0);
 
-      const remarkVal = (actualInitial.remark as string) || (actualInitial.remarks as string) || '';
+      const remarkVal = String(actualInitial.remark || actualInitial.remarks || '');
       setValue('remarks', remarkVal);
 
-      const creatorName = (actualInitial.created_by_name as string) || (actualInitial.creator_name as string) || (actualInitial.employee_name as string) || '';
+      const creatorName = String(actualInitial.created_by_name || actualInitial.creator_name || actualInitial.employee_name || '');
       if (creatorName) setCreatedBy(creatorName);
 
       if (mappedWinnerId) setSelectedVQIds([Number(mappedWinnerId)]);
       
       logger.debug('🛡️ [QCFormModal] Legitimate Hydration from initialData (Console Cleanse Mode)');
     }
-  }, [qcData, initialData, mode, setValue, watch]);
+  }, [qcData, initialData, mode, setValue]);
 
   // 👤 EFFECT: Fetch Creator Name if missing but ID is present
   useEffect(() => {
-    const actualQC = (qcData as unknown as Record<string, unknown>)?.data as unknown as Record<string, unknown> || qcData;
-    const actualInitial = (initialData as unknown as Record<string, unknown>)?.data as unknown as Record<string, unknown> || initialData;
-    const creatorId = actualQC?.created_by || actualInitial?.created_by;
+    const actualQC = (qcData as Record<string, unknown>)?.data as Record<string, unknown> || qcData as Record<string, unknown>;
+    const actualInitial = (initialData as Record<string, unknown>)?.data as Record<string, unknown> || initialData as Record<string, unknown>;
+    const creatorId = (actualQC?.created_by || actualInitial?.created_by) as number;
     
     if (creatorId && !createdBy && (mode === 'view' || mode === 'edit')) {
       logger.debug('👤 [QCFormModal] Attempting to fetch creator name for ID:', creatorId);
-      OrgEmployeeService.get(creatorId as number).then((response: unknown) => {
-        const resp = response as unknown as Record<string, unknown>;
-        const emp = (resp?.data as unknown as Record<string, unknown>) || resp;
-        const name = (emp?.employee_name as string) || (emp?.first_name as string) || (emp?.first_name_th as string) || (emp?.employee_name_th as string) || '';
+      OrgEmployeeService.get(creatorId).then((response: unknown) => {
+        const emp = (response as Record<string, unknown>)?.data as Record<string, unknown> || response as Record<string, unknown>;
+        const name = String(emp?.employee_name || emp?.first_name || emp?.first_name_th || emp?.employee_name_th || '');
         if (name) {
           logger.debug('✅ [QCFormModal] Found creator name:', name);
           setCreatedBy(name);
@@ -871,7 +876,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setSelectedVQIds(availableVQs.map((v: VQListItem) => (v.vq_header_id || (v as any).vq_id || v.quotation_id) as number))}
+                    onClick={() => setSelectedVQIds(availableVQs.map((v: VQListItem) => (v.vq_header_id || v.vq_id || v.quotation_id) as number))}
                     className="text-xs text-blue-600 hover:underline font-medium"
                   >
                     เลือกทั้งหมด
@@ -907,7 +912,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {availableVQs.map((vq: VQListItem, index: number) => {
-                  const vId = (vq.vq_header_id || (vq as any).vq_id || vq.quotation_id!) as number;
+                  const vId = (vq.vq_header_id || vq.vq_id || vq.quotation_id!) as number;
                   const keyId = vId ? `vq-${vId}` : `vq-idx-${index}`;
                   const isSelected = selectedVQIds.includes(vId);
                   const isDisabled = !isSelected && selectedVQIds.length >= 3;
@@ -970,7 +975,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {selectedVQs.map((vq: VQListItem, index: number) => {
-                  const vId = (vq.vq_header_id || (vq as any).vq_id || vq.quotation_id!) as number;
+                  const vId = (vq.vq_header_id || vq.vq_id || vq.quotation_id!) as number;
                   const keyId = vId ? `vq-sel-${vId}` : `vq-sel-idx-${index}`;
                   const grandTotal = Number(vq.total_amount || vq.base_total_amount) || 0;
                   const isLowest = grandTotal > 0 && grandTotal === minGrandTotal;

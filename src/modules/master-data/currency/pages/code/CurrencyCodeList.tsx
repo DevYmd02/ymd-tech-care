@@ -7,13 +7,14 @@ import { ActiveStatusBadge } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import { CurrencyService } from '@/modules/master-data/currency/services/currency.service';
 import { logger } from '@/shared/utils';
+import type { CurrencyMappedItem } from '@/modules/master-data/currency/types/currency-types';
 import { CurrencyFormModal } from './CurrencyCodeFormModal';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 
 export default function CurrencyCodeList() {
     const { filters, setFilters, resetFilters } = useTableFilters();
     const { confirm } = useConfirmation();
-    const [data, setData] = useState<any[]>([]);
+    const [data, setData] = useState<CurrencyMappedItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editId, setEditId] = useState<string | null>(null);
@@ -65,7 +66,8 @@ export default function CurrencyCodeList() {
         { name: 'search', label: 'ค้นหา', type: 'text', placeholder: 'กรอกรหัสหรือชื่อสกุลเงิน' },
     ], []);
 
-    const columns = useMemo<ColumnDef<any>[]>(() => [
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const columns = useMemo<ColumnDef<CurrencyMappedItem, any>[]>(() => [
         { id: 'sequence', header: 'ลำดับ', accessorFn: (_, index) => index + 1, size: 60 },
         { accessorKey: 'code', header: 'รหัสสกุลเงิน', cell: ({ getValue }) => <span className="font-medium text-blue-600">{getValue() as string}</span>, size: 120 },
         { accessorKey: 'name_th', header: 'ชื่อสกุลเงิน', size: 250 },

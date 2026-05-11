@@ -3,7 +3,12 @@ import type { RFQVendor } from '@/modules/procurement/types';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 
 interface VendorDispatchTableProps {
-    vendors: (RFQVendor & { vendor_code?: string; vendor_name?: string })[];
+    vendors: (RFQVendor & { 
+        vendor_code?: string; 
+        vendor_name?: string;
+        email?: string;
+        sent_at?: string;
+    })[];
 }
 
 export const VendorDispatchTable: React.FC<VendorDispatchTableProps> = ({ vendors }) => {
@@ -46,6 +51,9 @@ export const VendorDispatchTable: React.FC<VendorDispatchTableProps> = ({ vendor
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {vendors.map((vendor, index) => {
                                 const vendorName = [vendor.vendor_code, vendor.vendor_name].filter(Boolean).join(' - ') || '-';
+                                const email = vendor.email_sent_to || vendor.email || '-';
+                                const sentDate = vendor.sent_date || vendor.sent_at;
+
                                 return (
                                     <tr key={index} className="hover:bg-gray-50/30 dark:hover:bg-gray-800/20 transition-colors">
                                         <td className={`${tdCls} font-bold`}>{vendorName}</td>
@@ -54,11 +62,9 @@ export const VendorDispatchTable: React.FC<VendorDispatchTableProps> = ({ vendor
                                                 {vendor.sent_via || 'EMAIL'}
                                             </span>
                                         </td>
-                                        <td className={tdCls}>{vendor.email_sent_to || (vendor as any).email || '-'}</td>
+                                        <td className={tdCls}>{email}</td>
                                         <td className={`${tdCls} font-medium`}>
-                                            {(vendor.sent_date || (vendor as any).sent_at) 
-                                                ? formatThaiDate(vendor.sent_date || (vendor as any).sent_at) 
-                                                : '-'}
+                                            {sentDate ? formatThaiDate(sentDate) : '-'}
                                         </td>
                                     </tr>
                                 );

@@ -1,5 +1,5 @@
 export interface ApprovalHeader {
-  approval_id: number;
+  approval_id: number | string;
   approval_no: string;
   approval_date: string;
   need_by_date?: string;

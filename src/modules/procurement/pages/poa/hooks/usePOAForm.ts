@@ -11,7 +11,28 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { extractErrorMessage } from '@/core/api/api';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
+import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 
+interface POAApprovalPayload {
+    po_header_id: number;
+    status: 'APPROVED' | 'PARTIAL' | 'REJECTED';
+    remarks: string;
+    approval_date: string;
+    need_by_date: string;
+    approval_emp_id: number;
+    approval_emp_name: string;
+    base_currency_code: string;
+    quote_currency_code: string;
+    exchange_rate: number;
+    tax_code_id: number;
+    discount_expression: string;
+    lines: Array<{
+        po_line_id: number;
+        approved_qty: number;
+        remarks: string;
+        approval_date: string;
+    }>;
+}
 interface UsePOAFormOptions {
     isOpen: boolean;
     onClose: () => void;
@@ -125,7 +146,8 @@ export const usePOAForm = ({
             // 🎯 Logic: Map PO lines to form state with robust quantity fallbacks
             const initialLines = (sourceObj.po_lines || []).map((l: POLine) => {
                 // Try multiple field names to find the absolute original PO quantity
-                const originalQty = Number(l.qty || l.qty_ordered || (l as any).qty_total || (l as any).quantity || 0);
+                const rawLine = l as unknown as Record<string, unknown>;
+                const originalQty = Number(l.qty || l.qty_ordered || rawLine.qty_total || rawLine.quantity || 0);
                 let remQty = l.remaining_qty !== undefined ? Number(l.remaining_qty) : originalQty;
 
                 // 🎯 SAFETY RESTORE: If it's a new POA and remQty is 0 but originalQty exists, use originalQty
@@ -171,8 +193,7 @@ export const usePOAForm = ({
                 delivery_date: sourceObj.delivery_date || '',
                 tax_code_id: sourceObj.tax_code_id,
                 tax_name: (sourceObj.tax_name && sourceObj.tax_name !== '-' && sourceObj.tax_name !== 'undefined') ? sourceObj.tax_name : 
-                          (sourceObj.tax_code as any)?.tax_name || 
-                          (sourceObj.tax_code as any)?.name || '-',
+                          (sourceObj.tax_code as TaxCode)?.tax_name || '-',
                 created_by_name: (sourceObj.created_by_name && sourceObj.created_by_name !== '-' && sourceObj.created_by_name !== 'undefined') ? sourceObj.created_by_name : 
                                  (sourceObj.approval_emp_name && sourceObj.approval_emp_name !== '-' && sourceObj.approval_emp_name !== 'undefined') ? sourceObj.approval_emp_name : '-',
                 exchange_rate_date: sourceObj.exchange_rate_date ? new Date(sourceObj.exchange_rate_date).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]),
@@ -201,7 +222,7 @@ export const usePOAForm = ({
     useEffect(() => {
         if (!watchLines || !detailData) return;
         
-        const isAllFinalized = watchLines.every((l: any) => {
+        const isAllFinalized = watchLines.every((l) => {
             // 1. If item is already processed (approved in full in previous round), it's "Done".
             if (l.is_processed) return true;
             
@@ -251,7 +272,7 @@ export const usePOAForm = ({
             
             // 🎯 NEW: Dynamic Status Calculation (Pattern matched with AV/PR)
             // Check if at least one item is checked
-            const hasCheckedItem = formData.po_lines.some((l: any) => !!l.is_approved);
+            const hasCheckedItem = formData.po_lines.some((l) => !!l.is_approved);
             if (!hasCheckedItem) {
                 toast('กรุณาเลือกรายการที่ต้องการอนุมัติอย่างน้อย 1 รายการ', 'error');
                 setIsSubmitting(false);
@@ -261,17 +282,17 @@ export const usePOAForm = ({
             // Calculation Logic:
             // APPROVED = All items are checked AND all approved quantities equal ordered quantities.
             // PARTIAL  = At least one item checked AND (some items unchecked OR some quantities reduced).
-            const isAllFinalized = formData.po_lines.every((l: any) => {
+            const isAllFinalized = formData.po_lines.every((l) => {
                 if (l.is_processed) return true;
                 const approvedQty = Number(l.qty_ordered || 0);
                 const remQty      = Number(l.remaining_qty || 0);
                 return !!l.is_approved && approvedQty === remQty && remQty > 0;
             });
             
-            const submissionStatus = isAllFinalized ? 'APPROVED' : 'PARTIAL';
+            const submissionStatus = (isAllFinalized ? 'APPROVED' : 'PARTIAL') as 'APPROVED' | 'PARTIAL';
 
             // Prepare enriched unified approval payload
-            const payload: any = {
+            const payload: POAApprovalPayload = {
                 po_header_id: numericPoId,
                 status: submissionStatus,
                 remarks: formData.remarks || (submissionStatus === 'PARTIAL' ? 'Partially Approved via POA' : 'Approved via POA'),
@@ -282,14 +303,14 @@ export const usePOAForm = ({
                 // After the currency swap fix: form field currency_code = PO/quote currency (e.g. USD)
                 // form field target_currency = domestic/base currency (e.g. THB)
                 // Backend expects: base_currency_code = THB, quote_currency_code = USD
-                base_currency_code: (formData as any).target_currency || 'THB',
+                base_currency_code: formData.target_currency || 'THB',
                 quote_currency_code: formData.currency_code || 'THB',
                 exchange_rate: formData.exchange_rate || 1,
-                tax_code_id: (formData as any).tax_code_id || 0,
-                discount_expression: (formData as any).discount_expression || '0',
-                lines: formData.po_lines.map((l: any) => ({
+                tax_code_id: formData.tax_code_id || 0,
+                discount_expression: (formData as unknown as Record<string, unknown>).discount_expression as string || '0',
+                lines: formData.po_lines.map((l) => ({
                     // 🛡️ Always use the business integer po_line_id, NOT the RHF string field.id
-                    po_line_id: Number(l.po_line_id || l.id || 0),
+                    po_line_id: Number(l.po_line_id || (l as unknown as Record<string, unknown>).id || 0),
                     // If unchecked, approved_qty MUST be 0 (Backend requirement for PARTIAL)
                     approved_qty: l.is_approved ? Number(l.qty_ordered || l.qty || 0) : 0,
                     remarks: l.line_remark || (l.is_approved ? 'Approved' : 'Rejected/Skipped'),
@@ -345,25 +366,25 @@ export const usePOAForm = ({
             setIsSubmitting(true);
             
             // Prepare enriched unified rejection payload
-            const payload: any = {
+            const payload: POAApprovalPayload = {
                 po_header_id: numericPoId,
                 status: 'REJECTED',
                 remarks: reason,
                 approval_date: now,
-                need_by_date: (formData as any).delivery_date || (formData as any).po_date || now,
+                need_by_date: formData.delivery_date || formData.po_date || now,
                 approval_emp_id: user?.employee_id || user?.id || 0,
                 approval_emp_name: user?.employee?.employee_fullname || user?.username || 'System',
                 // After the currency swap fix: form field currency_code = PO/quote currency (e.g. USD)
                 // form field target_currency = domestic/base currency (e.g. THB)
                 // Backend expects: base_currency_code = THB, quote_currency_code = USD
-                base_currency_code: (formData as any).target_currency || 'THB',
+                base_currency_code: formData.target_currency || 'THB',
                 quote_currency_code: formData.currency_code || 'THB',
                 exchange_rate: formData.exchange_rate || 1,
-                tax_code_id: (formData as any).tax_code_id || 0,
-                discount_expression: (formData as any).discount_expression || '0',
-                lines: formData.po_lines.map((l: any) => ({
+                tax_code_id: formData.tax_code_id || 0,
+                discount_expression: (formData as unknown as Record<string, unknown>).discount_expression as string || '0',
+                lines: formData.po_lines.map((l) => ({
                     // 🛡️ Always use the business integer po_line_id, NOT the RHF string field.id
-                    po_line_id: Number(l.po_line_id || l.id || 0),
+                    po_line_id: Number(l.po_line_id || (l as unknown as Record<string, unknown>).id || 0),
                     approved_qty: 0, // Reject sets approved qty to 0
                     remarks: reason,
                     approval_date: now

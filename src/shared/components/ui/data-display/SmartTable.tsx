@@ -25,8 +25,12 @@ interface SortConfig {
 
 interface SmartTableProps<TData> {
     data: TData[];
+    /** 
+     * @note ใช้ any สำหรับ TValue เพื่อรองรับคอลัมน์ที่หลากหลายประเภทข้อมูล (Polymorphic Columns)
+     * หากเปลี่ยนเป็น unknown จะทำให้ Accessor ของคอลัมน์เกิด Type mismatch (31+ errors)
+     */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    columns: ColumnDef<TData, any>[];
+    columns: ColumnDef<TData, any>[]; // polymorphism required
     isLoading?: boolean;
     pagination: {
         pageIndex: number;
@@ -83,7 +87,8 @@ export function SmartTable<TData>({
     const tableColumns = React.useMemo(() => {
         if (!enableRowSelection) return columns;
 
-        const selectionColumn: ColumnDef<TData, unknown> = {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const selectionColumn: ColumnDef<TData, any> = { // polymorphism required
             id: 'select',
             header: ({ table }) => (
                 <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>

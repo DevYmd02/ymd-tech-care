@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useForm, useFieldArray, useWatch, type Control, type UseFormRegister, type UseFormSetValue } from 'react-hook-form';
+import axios from 'axios';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { ClipboardCheck, Save, X } from 'lucide-react';
@@ -178,8 +179,11 @@ export const VendorEvaluationFormModal: React.FC<VendorEvaluationFormModalProps>
       onSuccess?.();
     },
     onError: (err: unknown) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      toast((err as any)?.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+      const errorMessage = axios.isAxiosError(err)
+        ? err.response?.data?.message
+        : (err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+      
+      toast(errorMessage || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
     }
   });
 

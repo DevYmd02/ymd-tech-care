@@ -21,6 +21,7 @@ import { POAHistoryModal } from './POAHistoryModal';
 import type { Control, FieldErrors, UseFormSetValue } from 'react-hook-form';
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { POAFormData } from '@/modules/procurement/schemas/poa-schemas';
+import type { POListItem } from '@/modules/procurement/types';
 import { cn } from '@/shared/utils';
 
 
@@ -33,7 +34,7 @@ const ui = {
     error: 'text-red-500 text-[10px] mt-0.5 font-medium',
 };
 
-const POSummaryPanel = ({ control, detailData }: { control: Control<POAFormData>; detailData?: Record<string, any> }) => {
+const POSummaryPanel = ({ control, detailData }: { control: Control<POAFormData>; detailData?: POListItem }) => {
     const poLines = useWatch({ control, name: 'po_lines' });
 
     const { grossTotal, totalDiscount, taxAmount, totalAmount, taxRate } = useMemo(() => {
@@ -45,7 +46,7 @@ const POSummaryPanel = ({ control, detailData }: { control: Control<POAFormData>
         }, 0);
         
         const subtotal = Math.max(0, grossTotal - totalDiscount);
-        const rawRate = Number((detailData as Record<string, any>)?.tax_code?.tax_rate ?? (detailData as Record<string, any>)?.tax_rate ?? 7);
+        const rawRate = Number(detailData?.tax_code?.tax_rate ?? detailData?.tax_rate ?? 7);
         const normalizedRate = (rawRate > 0 && rawRate < 1) ? (rawRate * 100) : rawRate;
         const taxRate = parseFloat(normalizedRate.toFixed(4));
         
@@ -88,13 +89,13 @@ interface POLineRowProps {
     idx: number;
     control: Control<POAFormData>;
     isReadOnly: boolean;
-    detailData?: any;
+    detailData?: POListItem;
     errors: FieldErrors<POAFormData>;
     setValue: UseFormSetValue<POAFormData>;
 }
 
 const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, detailData, errors, setValue }) => {
-    const lineVal = useWatch({ control, name: `po_lines.${idx}` as any });
+    const lineVal = useWatch({ control, name: `po_lines.${idx}` as `po_lines.${number}` });
     const isProcessed = !!(lineVal?.is_processed ?? field.is_processed);
     
     // Derived values
@@ -278,7 +279,7 @@ interface POAFormModalProps {
     onClose: () => void;
     onSuccess?: () => void;
     poId?: number;
-    initialValues?: any;
+    initialValues?: Partial<POListItem>;
     readOnly?: boolean;
 }
 
@@ -357,12 +358,12 @@ export default function POAFormModal({
                                     </button>
 
                                     {/* Print POA Button */}
-                                    {(detailData?.status === 'APPROVED' || detailData?.status === 'PARTIAL') && (detailData as any)?.approval_id && (
+                                    {(detailData?.status === 'APPROVED' || detailData?.status === 'PARTIAL') && detailData?.approval_id && (
                                         <button
                                             type="button"
                                             onClick={() => {
                                                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                                const approvalId = (detailData as any).approval_id;
+                                                const approvalId = detailData.approval_id;
                                                 window.open(`${apiUrl}/po-approval/${approvalId}/pdf`, '_blank');
                                             }}
                                             className="px-3 py-2 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-blue-200 dark:border-blue-800 transition-all"
@@ -621,7 +622,7 @@ export default function POAFormModal({
                                             <th className="px-2 py-2 text-center w-20 border-r border-blue-500/40 font-semibold text-[11px]">
                                                 {isReadOnly ? 'ยอดอนุมัติเดิม' : (
                                                     // 🎯 AV PATTERN: If any line has been partially approved (rem < total), show "ยอดคงเหลือ"
-                                                    fields.some(f => Number((f as any).remaining_qty || 0) < Number((f as any).qty || 0))
+                                                    fields.some(f => Number(f.remaining_qty || 0) < Number(f.qty || 0))
                                                     ? 'ยอดคงเหลือ' 
                                                     : 'จำนวนสั่งซื้อ'
                                                 )}
@@ -649,14 +650,14 @@ export default function POAFormModal({
                                             </tr>
                                         ) : (() => {
                                             const renderedLines = fields.map((field, idx: number) => {
-                                                const isProcessed = !!(field as any).is_processed;
+                                                const isProcessed = !!field.is_processed;
                                                 const isHidden = !isReadOnly && isProcessed;
                                                 if (isHidden) return null;
 
                                                 return (
                                                     <POLineRow
                                                         key={field.id}
-                                                        field={field as any}
+                                                        field={field}
                                                         idx={idx}
                                                         control={control}
                                                         isReadOnly={isReadOnly}

@@ -727,10 +727,10 @@ export interface VendorTypeMaster extends Omit<IBaseMaster, 'id'> {
  * VendorTypeFormData - สำหรับ Frontend Form
  */
 export interface VendorTypeFormData {
-    typeCode: string;
-    typeName: string;
-    typeNameEn: string;
-    isActive: boolean;
+    vendor_type_code: string;
+    vendor_type_name: string;
+    vendor_type_nameeng: string;
+    is_active: boolean;
 }
 
 // ====================================================================================
@@ -752,8 +752,8 @@ export interface VendorGroupMaster extends Omit<IBaseMaster, 'id'> {
  * VendorGroupFormData - สำหรับ Frontend Form
  */
 export interface VendorGroupFormData {
-    groupCode: string;
-    groupName: string;
-    groupNameEn: string;
-    isActive: boolean;
+    vendor_group_code: string;
+    vendor_group_name: string;
+    vendor_group_nameeng: string;
+    is_active: boolean;
 }

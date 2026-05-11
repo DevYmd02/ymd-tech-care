@@ -6,6 +6,16 @@ import { LocationService } from '@inventory/services/inventory-master.service';
 import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
 import { SaleAreaService } from '@sales-master/pages/area/services/area.service';
 import { VendorService } from '@master-data/vendor/services/vendor.service';
+import type { 
+    BranchListItem, 
+    WarehouseListItem, 
+    UnitListItem, 
+    Currency, 
+    DepartmentListItem 
+} from '../types/master-data-types';
+import type { TaxCode } from '../tax/types/tax-types';
+import type { EmployeeListItem } from '../company/types/employee.types';
+import type { ListResponse } from '@/shared/types/api.types';
 
 // Caching Constants for Master Data
 const MASTER_DATA_STALE_TIME = 5 * 60 * 1000; // 5 minutes
@@ -15,7 +25,7 @@ const MASTER_DATA_GC_TIME = 30 * 60 * 1000;    // 30 minutes
  * Hook to fetch all branches
  */
 export function useBranches(enabled = true) {
-    return useQuery({
+    return useQuery<BranchListItem[]>({
         queryKey: ['master-branches'],
         queryFn: () => MasterDataService.getBranches(),
         enabled,
@@ -28,7 +38,7 @@ export function useBranches(enabled = true) {
  * Hook to fetch all units (UOMs)
  */
 export function useUnits(enabled = true, limit = 1000) {
-    return useQuery({
+    return useQuery<ListResponse<UnitListItem>>({
         queryKey: ['master-units', limit],
         queryFn: () => UnitService.getAll({ limit }),
         enabled,
@@ -41,7 +51,7 @@ export function useUnits(enabled = true, limit = 1000) {
  * Hook to fetch all warehouses
  */
 export function useWarehouses(enabled = true) {
-    return useQuery({
+    return useQuery<ListResponse<WarehouseListItem>>({
         queryKey: ['master-warehouses'],
         queryFn: () => WarehouseService.getAll(),
         enabled,
@@ -67,7 +77,7 @@ export function useLocations(enabled = true, limit = 1000) {
  * Hook to fetch all currencies
  */
 export function useCurrencies(enabled = true) {
-    return useQuery({
+    return useQuery<Currency[]>({
         queryKey: ['master-currencies'],
         queryFn: () => MasterDataService.getCurrencies(),
         enabled,
@@ -80,7 +90,7 @@ export function useCurrencies(enabled = true) {
  * Hook to fetch all tax codes
  */
 export function useTaxCodes(enabled = true) {
-    return useQuery({
+    return useQuery<TaxCode[]>({
         queryKey: ['master-tax-codes'],
         queryFn: () => TaxCodeService.getTaxCodes(),
         enabled,
@@ -93,7 +103,7 @@ export function useTaxCodes(enabled = true) {
  * Hook to fetch all departments
  */
 export function useDepartments(enabled = true) {
-    return useQuery({
+    return useQuery<DepartmentListItem[]>({
         queryKey: ['master-departments'],
         queryFn: () => MasterDataService.getDepartments(),
         enabled,
@@ -131,7 +141,7 @@ export function useSaleAreas(enabled = true) {
  * Hook to fetch all employees
  */
 export function useEmployees(enabled = true) {
-    return useQuery({
+    return useQuery<EmployeeListItem[]>({
         queryKey: ['master-employees'],
         queryFn: () => MasterDataService.getEmployees(),
         enabled,

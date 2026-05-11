@@ -29,10 +29,11 @@ export const POSearchModal: React.FC<POSearchModalProps> = ({
     if (!isOpen) return null;
 
     // Handles raw data structure (might be wrapped in { success: true, data: [...] } or straight array)
-    const rawPoList = (data as any)?.items || (data as any)?.data || data || [];
+    // Handles raw data structure (might be wrapped in { success: true, data: [...] } or straight array)
+    const rawPoList = (data as unknown as { data?: POListItem[] })?.data || (data as unknown as POListItem[]) || [];
     
     // 🎯 Client-Side Filtering
-    const filteredPoList = (rawPoList as any[]).filter(item => {
+    const filteredPoList = rawPoList.filter(item => {
         if (!searchTerm) return true;
         const s = searchTerm.toLowerCase();
         return (
@@ -63,7 +64,7 @@ export const POSearchModal: React.FC<POSearchModalProps> = ({
                 <div className="p-4 flex-1 overflow-auto flex flex-col gap-4">
                     
                     {/* 🎯 NEW: Search Box */}
-                    {!isLoading && !error && (rawPoList as any[]).length > 0 && (
+                    {!isLoading && !error && rawPoList.length > 0 && (
                         <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <Search className="h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
@@ -88,7 +89,7 @@ export const POSearchModal: React.FC<POSearchModalProps> = ({
                         <div className="text-center py-10 text-red-500">
                             เกิดข้อผิดพลาดในการดึงข้อมูล
                         </div>
-                    ) : (rawPoList as any[]).length === 0 ? (
+                    ) : rawPoList.length === 0 ? (
                         <div className="text-center py-10 text-gray-500 dark:text-gray-400">
                             ไม่มีใบสั่งซื้อที่รออนุมัติในระบบ
                         </div>
@@ -110,20 +111,18 @@ export const POSearchModal: React.FC<POSearchModalProps> = ({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                                    {filteredPoList.map((item: any, index: number) => {
-                                        const total = (() => {
-                                            const rawTotal = Number(
-                                                item.total_amount ?? 
-                                                item.base_total_amount ?? 
-                                                item.grand_total ?? 
-                                                item.net_amount ?? 
-                                                item.net_amt ?? 
-                                                item.amount ?? 
-                                                item.total ?? 
-                                                0
-                                            );
-                                            return rawTotal;
-                                        })();
+                                    {filteredPoList.map((item, index) => {
+                                        const raw = item as unknown as Record<string, unknown>;
+                                        const total = Number(
+                                            item.total_amount ?? 
+                                            item.base_total_amount ?? 
+                                            raw.grand_total ?? 
+                                            raw.net_amount ?? 
+                                            raw.net_amt ?? 
+                                            raw.amount ?? 
+                                            raw.total ?? 
+                                            0
+                                        );
                                         return (
                                             <tr key={item.po_id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
                                                 <td className="px-4 py-3 text-center text-gray-500">{index + 1}</td>

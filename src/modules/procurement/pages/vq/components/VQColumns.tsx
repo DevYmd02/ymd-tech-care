@@ -16,7 +16,7 @@ import { RFQNoDisplay, PRNoDisplay } from './VQColumnComponents';
 const columnHelper = createColumnHelper<VQListItem>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any>[] => {
+export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any>[] => { // polymorphism required
     const { vendorMap, filters, totalAmount, handleOpenView, handleOpenEdit } = context;
 
     return [
@@ -164,7 +164,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
                     <div className="flex flex-row items-center justify-center gap-2 whitespace-nowrap">
                         {canView && (
                             <button 
-                                onClick={() => handleOpenView((item as any).vq_id || item.vq_header_id)}
+                                onClick={() => handleOpenView(item.vq_id || item.vq_header_id)}
                                 className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all"
                                 title="ดูรายละเอียด"
                             >
@@ -174,7 +174,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
 
                         {canEdit && (
                             <button 
-                                onClick={() => handleOpenEdit((item as any).vq_id || item.vq_header_id)}
+                                onClick={() => handleOpenEdit(item.vq_id || item.vq_header_id)}
                                 className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
                                 title="แก้ไข"
                             >
@@ -185,7 +185,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
 
                         {canRecord && (
                             <button 
-                                onClick={() => handleOpenEdit((item as any).vq_id || item.vq_header_id)}
+                                onClick={() => handleOpenEdit(item.vq_id || item.vq_header_id)}
                                 className="flex items-center gap-1 pl-1.5 pr-2 py-1 ml-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold rounded shadow-sm transition-all whitespace-nowrap"
                                 title="บันทึกราคา"
                             >
@@ -216,7 +216,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
 const pendingColumnHelper = createColumnHelper<VQPendingQueueItem>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getPendingColumns = (tab: 'WAITING_VQ' | 'WAITING_RFQ', context: VQColumnsContext): ColumnDef<VQPendingQueueItem, any>[] => {
+export const getPendingColumns = (tab: 'WAITING_VQ' | 'WAITING_RFQ', context: VQColumnsContext): ColumnDef<VQPendingQueueItem, any>[] => { // polymorphism required
     const { vendorMap, filters, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, handleCancelVendor } = context;
 
     return [

@@ -7,7 +7,7 @@
  *  Business logic extracted to usePOForm hook.
  */
 import { useMemo, useState } from 'react';
-import { FormProvider, useWatch, Controller, useFieldArray, type Control } from 'react-hook-form';
+import { FormProvider, useWatch, Controller, useFieldArray, type Control, type FieldErrors } from 'react-hook-form';
 import { SavingOverlay } from '@/shared/components/ui/feedback/SavingOverlay';
 import { 
     Save, Search, Trash2, FileText,
@@ -75,7 +75,7 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
     // 🎯 Optimization: Only watch fields that affect totals
     const watchedLineTotals = useWatch({
         control,
-        name: fields.map((_, i) => `po_lines.${i}.line_total`) as any
+        name: fields.map((_, i) => `po_lines.${i}.line_total` as const)
     });
     const taxCodeId = useWatch({ control, name: 'tax_code_id' });
 
@@ -101,8 +101,8 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
         const taxRate = selectedTax ? Number(selectedTax.tax_rate) : 0;
 
         const summary = calculatePricingSummary(items, taxRate, false);
-        const totalDiscount = items.reduce((sum: number, item: any) => sum + (item.discount || 0), 0);
-        const grossTotal = items.reduce((sum: number, item: any) => sum + (item.qty * item.unit_price), 0);
+        const totalDiscount = items.reduce((sum: number, item: { discount: number }) => sum + (item.discount || 0), 0);
+        const grossTotal = items.reduce((sum: number, item: { qty: number; unit_price: number }) => sum + (item.qty * item.unit_price), 0);
 
         return {
             ...summary,
@@ -148,6 +148,22 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
 // SUB-COMPONENT: Line Row (isolated watch for performance)
 // ====================================================================================
 
+interface POFormLineRowProps {
+    idx: number;
+    field: POLine & { id: string };
+    isView: boolean;
+    isLockedByQC: boolean;
+    isLoadingUnits: boolean;
+    units: UnitListItem[];
+    handleOpenProductSearch: (index: number) => void;
+    remove: (index: number) => void;
+    handleAddLine: () => void;
+    register: ReturnType<typeof usePOForm>['register'];
+    errors: FieldErrors<POFormData>;
+    setValue: ReturnType<typeof usePOForm>['setValue'];
+    control: Control<POFormData>;
+}
+
 const POFormLineRow = ({ 
     idx, 
     field, 
@@ -162,7 +178,7 @@ const POFormLineRow = ({
     errors,
     setValue,
     control
-}: any) => {
+}: POFormLineRowProps) => {
     const line = useWatch({ control, name: `po_lines.${idx}` });
     
     return (

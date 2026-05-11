@@ -7,10 +7,17 @@ import type { ListResponse } from '@/shared/types/api.types';
 import type { SuccessResponse } from '@/shared/types/api.types';
 
 import { normalizeListResponse } from '@/shared/utils/apiUtils';
+import type { TableFilters } from '@/shared/hooks/useTableFilters';
+
+export interface ItemTypeFilters extends Partial<TableFilters> {
+  item_type_code?: string;
+  item_type_name?: string;
+}
+
 
 export const ItemTypeService = {
 
-  getAll: async (params?: unknown, config?: AxiosRequestConfig): Promise<ListResponse<ItemTypeListItem>> => {
+  getAll: async (params?: ItemTypeFilters, config?: AxiosRequestConfig): Promise<ListResponse<ItemTypeListItem>> => {
     if (USE_MOCK) {
       logger.info('🎭 [Mock Mode] Serving Item Type List');
       return {

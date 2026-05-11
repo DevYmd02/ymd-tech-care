@@ -47,7 +47,7 @@ export const usePOCalculations = ({
                      ...l,
                      tax_code_id: watchHeaderTaxCodeId
                  }));
-                 setValue('po_lines', updatedLines as any, { shouldDirty: true });
+                setValue('po_lines', updatedLines as POFormData['po_lines'], { shouldDirty: true });
              }
         }
     }, [watchHeaderTaxCodeId, setValue, getValues]);

@@ -14,7 +14,8 @@ export const useVQMasterData = (enabled = true) => {
     const { data: currenciesResponse, isLoading: isLoadingCurrencies } = useCurrencies(enabled);
 
     const purchaseTaxOptions = useMemo(() => {
-        const taxArray: TaxCode[] = (taxCodesResponse as any)?.data || (taxCodesResponse as any)?.items || (Array.isArray(taxCodesResponse) ? taxCodesResponse : []);
+        const raw = taxCodesResponse as unknown as Record<string, unknown>;
+        const taxArray: TaxCode[] = (raw?.data as TaxCode[]) || (raw?.items as TaxCode[]) || (Array.isArray(taxCodesResponse) ? taxCodesResponse : []);
         
         const filteredTax = taxArray.filter((t: TaxCode) => {
             if (t.is_active === undefined || t.is_active === null) return true;
@@ -30,7 +31,8 @@ export const useVQMasterData = (enabled = true) => {
     }, [taxCodesResponse]);
 
     const currencyOptions = useMemo(() => {
-        const currArray: Currency[] = (currenciesResponse as any)?.data || (currenciesResponse as any)?.items || (Array.isArray(currenciesResponse) ? currenciesResponse : []);
+        const raw = currenciesResponse as unknown as Record<string, unknown>;
+        const currArray: Currency[] = (raw?.data as Currency[]) || (raw?.items as Currency[]) || (Array.isArray(currenciesResponse) ? currenciesResponse : []);
         
         let mapped = currArray.map((c: Currency) => ({
             value: String(c.currency_code),

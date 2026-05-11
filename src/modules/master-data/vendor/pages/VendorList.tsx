@@ -15,6 +15,7 @@ import { SmartTable } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
+import type { VendorListItem, VendorFormData } from '../types/vendor-types';
 
 // ====================================================================================
 // CONFIG
@@ -111,8 +112,8 @@ export default function VendorList() {
             // Sorting
             if (sortConfig) {
                 items.sort((a, b) => {
-                    const fieldValA = a[sortConfig.key];
-                    const fieldValB = b[sortConfig.key];
+                    const fieldValA = a[sortConfig.key as keyof VendorListItem];
+                    const fieldValB = b[sortConfig.key as keyof VendorListItem];
                     
                     const valA = fieldValA !== undefined && fieldValA !== null ? String(fieldValA) : '';
                     const valB = fieldValB !== undefined && fieldValB !== null ? String(fieldValB) : '';
@@ -156,21 +157,21 @@ export default function VendorList() {
     }, [queryClient]);
 
     const statusMutation = useMutation({
-        mutationFn: ({ id, is_active }: { id: number, code: string, is_active: boolean }) => 
-            VendorService.update(id, { is_active } as any), // Use general update method
+        mutationFn: ({ id, is_active }: { id: number, is_active: boolean }) => 
+            VendorService.update(id, { is_active } as unknown as Partial<VendorFormData>), // Safe cast for status-only update
         onMutate: async ({ id, is_active }) => {
             // Cancel any outgoing refetches
             await queryClient.cancelQueries({ queryKey: ['vendors'] });
 
             // Snapshot the previous value
-            const previousVendors = queryClient.getQueryData<{ items: any[], total: number }>(['vendors', filters]);
+            const previousVendors = queryClient.getQueryData<{ items: VendorListItem[], total: number }>(['vendors', filters]);
 
             // Optimistically update
-            queryClient.setQueryData<{ items: any[], total: number }>(['vendors', filters], (old) => {
+            queryClient.setQueryData<{ items: VendorListItem[], total: number }>(['vendors', filters], (old) => {
                 if (!old || !old.items) return old;
                 return {
                     ...old,
-                    items: old.items.map((item: any) => 
+                    items: old.items.map((item) => 
                         item.vendor_id === id ? { ...item, is_active: is_active } : item
                     )
                 };
@@ -225,12 +226,12 @@ export default function VendorList() {
         });
 
         if (isConfirmed) {
-            statusMutation.mutate({ id, code, is_active });
+            statusMutation.mutate({ id, is_active });
         }
     }, [confirm, statusMutation]);
 
     // ==================== TABLE COLUMNS ====================
-    const columns = useMemo<ColumnDef<any>[]>(() => [
+    const columns = useMemo<ColumnDef<VendorListItem>[]>(() => [
         {
             id: 'sequence',
             header: 'ลำดับ',

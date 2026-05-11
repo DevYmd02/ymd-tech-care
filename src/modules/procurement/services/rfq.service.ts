@@ -357,11 +357,11 @@ export const RFQService = {
     return res;
   },
 
-  getPRApprovalDetail: async (prId: number): Promise<Record<string, unknown>[]> => {
+  getPRApprovalDetail: async (prId: number): Promise<PRHeader[]> => {
     logger.info(`[RFQService] Fetching PR Approval Detail for PR ID: ${prId}`);
     try {
       // 🎯 FIX: Postman shows backend returns 'approval_no', not 'approved_pr_no'
-      const res = await api.get<{ data: Record<string, unknown>[] }>(ENDPOINTS.prApprovalDetail(prId));
+      const res = await api.get<{ data: PRHeader[] }>(ENDPOINTS.prApprovalDetail(prId));
       
       const items = res.data || [];
       if (!Array.isArray(items)) {
@@ -369,7 +369,7 @@ export const RFQService = {
         return [];
       }
 
-      return items.filter((item) => Boolean(item.approval_no || item.approved_pr_no || item.approval_id));
+      return items.filter((item) => Boolean(item.approval_no || item.approved_pr_no || item.approval_id || item.av_no));
     } catch (error) {
       logger.error(`[RFQService] Failed to fetch PR Approval Detail for ${prId}:`, error);
       return [];

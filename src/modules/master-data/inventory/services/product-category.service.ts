@@ -21,6 +21,14 @@ interface BackendProductCategory {
   created_at?: string;
 }
 
+export interface ProductCategoryFilters extends Partial<TableFilters> {
+  category_code?: string;
+  category_name?: string;
+  item_category_code?: string;
+  item_category_name?: string;
+}
+
+
 function mapToProductCategory(item: BackendProductCategory): ProductCategoryListItem {
   return {
     id: item.item_category_id || item.category_id,
@@ -34,7 +42,7 @@ function mapToProductCategory(item: BackendProductCategory): ProductCategoryList
 }
 
 export const ProductCategoryService = {
-  getAll: async (params?: Partial<TableFilters>, config?: AxiosRequestConfig): Promise<PaginatedListResponse<ProductCategoryListItem>> => {
+  getAll: async (params?: ProductCategoryFilters, config?: AxiosRequestConfig): Promise<PaginatedListResponse<ProductCategoryListItem>> => {
     if (USE_MOCK) {
       logger.info('🎭 [Mock Mode] Serving Product Category List');
       return {

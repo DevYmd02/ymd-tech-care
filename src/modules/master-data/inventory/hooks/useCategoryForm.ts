@@ -50,7 +50,7 @@ export function useCategoryForm(editId: number | null, initialData?: ProductCate
         queryKey: ['category-check-duplicate', debouncedCode],
         queryFn: async () => {
             if (!debouncedCode) return { items: [] };
-            return ProductCategoryService.getAll({ category_code: debouncedCode } as any);
+            return ProductCategoryService.getAll({ category_code: debouncedCode });
         },
         enabled: !!debouncedCode && debouncedCode.trim().length >= 1,
     });

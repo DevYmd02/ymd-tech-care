@@ -32,11 +32,11 @@ export function ReservationLineTable({
     onLineChange, 
     onSearchProduct, 
     onSearchLot,
-    onSearchWarehouse,
-    onSearchLocation,
+    // onSearchWarehouse,
+    // onSearchLocation,
     uoms = [],
-    warehouses = [],
-    locations = [],
+    // warehouses = [],
+    // locations = [],
     priceLevelNames = [],
     readOnly = false,
     currencySymbol = 'บาท'
@@ -93,16 +93,16 @@ export function ReservationLineTable({
 
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900">
                 <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-purple-200 dark:scrollbar-thumb-purple-500/20 scrollbar-track-transparent bg-white dark:bg-gray-900">
-                <table className="table-fixed text-sm text-left border-separate border-spacing-0 w-full min-w-[2130px]">
+                <table className="table-fixed text-sm text-left border-separate border-spacing-0 w-full min-w-[1590px]">
                     <colgroup>
                         <col className="w-[60px]" />
                         <col className="w-[200px]" />
                         <col className="w-[300px]" />
-                        <col className="w-[160px]" />
-                        <col className="w-[160px]" />
+                        {/* <col className="w-[160px]" />
+                        <col className="w-[160px]" /> */}
                         <col className="w-[120px]" />
                         <col className="w-[120px]" />
-                        <col className="w-[220px]" />
+                        {/* <col className="w-[220px]" /> */}
                         <col className="w-[140px]" />
                         <col className="w-[130px]" />
                         <col className="w-[160px]" />
@@ -114,11 +114,11 @@ export function ReservationLineTable({
                              <th className={`${headerThClass} text-center text-purple-600 dark:text-purple-400 sticky left-0 bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-200 dark:after:bg-gray-700`}>ลำดับ</th>
                              <th className={`${headerThClass} text-purple-700 dark:text-purple-300 sticky left-[60px] bg-[#fbfaff] dark:bg-gray-800 z-50 border-r-0 after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[2px] after:bg-purple-100 dark:after:bg-purple-800/40`}>รหัสสินค้า</th>
                              <th className={`${headerThClass} text-purple-700 dark:text-purple-300`}>ชื่อสินค้า</th>
-                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>คลัง</th>
-                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>ที่เก็บ</th>
+                             {/* <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>คลัง</th>
+                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>ที่เก็บ</th> */}
                              <th className={`${headerThClass} text-right text-purple-700 dark:text-purple-300/60`}>จอง (QTY)</th>
                              <th className={`${headerThClass} text-center text-purple-700 dark:text-purple-300/60`}>หน่วย</th>
-                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>ล็อต</th>
+                             {/* <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>ล็อต</th> */}
                              <th className={`${headerThClass} text-right text-purple-700 dark:text-purple-300/60`}>ราคา/หน่วย</th>
                              <th className={`${headerThClass} text-right text-purple-700 dark:text-purple-300/60`}>ส่วนลด</th>
                              <th className={`${headerThClass} text-right text-purple-700 dark:text-purple-300/60`}>ยอดรวม</th>
@@ -163,29 +163,29 @@ export function ReservationLineTable({
                                         />
                                     </td>
                                     
-                                    <td className="px-2 py-2">
-                                        <div className="flex gap-1 items-center">
-                                            <input 
-                                                value={warehouses.find(w => String(w.warehouse_id) === String(line.warehouse_id))?.warehouse_name || ''}
-                                                readOnly
-                                                onClick={!isLocked ? () => onSearchWarehouse?.(index) : undefined}
-                                                className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-purple-400 focus:border-purple-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors ${getFieldErrorClass(index, 'warehouse_id')}`}
-                                                placeholder="เลือกคลัง..."
-                                            />
-                                        </div>
-                                    </td>
+                                     {/* <td className="px-2 py-2">
+                                         <div className="flex gap-1 items-center">
+                                             <input 
+                                                 value={warehouses.find(w => String(w.warehouse_id) === String(line.warehouse_id))?.warehouse_name || ''}
+                                                 readOnly
+                                                 onClick={!isLocked ? () => onSearchWarehouse?.(index) : undefined}
+                                                 className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-purple-400 focus:border-purple-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors ${getFieldErrorClass(index, 'warehouse_id')}`}
+                                                 placeholder="เลือกคลัง..."
+                                             />
+                                         </div>
+                                     </td>
 
-                                    <td className="px-2 py-2">
-                                        <div className="flex gap-1 items-center">
-                                            <input 
-                                                value={locations.find(l => String(l.location_id) === String(line.location_id))?.name_th || locations.find(l => String(l.location_id) === String(line.location_id))?.code || ''}
-                                                readOnly
-                                                onClick={!isLocked ? () => onSearchLocation?.(index) : undefined}
-                                                className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-orange-400 focus:border-orange-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors ${getFieldErrorClass(index, 'location_id')}`}
-                                                placeholder="เลือกที่เก็บ..."
-                                            />
-                                        </div>
-                                    </td>
+                                     <td className="px-2 py-2">
+                                         <div className="flex gap-1 items-center">
+                                             <input 
+                                                 value={locations.find(l => String(l.location_id) === String(line.location_id))?.name_th || locations.find(l => String(l.location_id) === String(line.location_id))?.code || ''}
+                                                 readOnly
+                                                 onClick={!isLocked ? () => onSearchLocation?.(index) : undefined}
+                                                 className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-orange-400 focus:border-orange-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors ${getFieldErrorClass(index, 'location_id')}`}
+                                                 placeholder="เลือกที่เก็บ..."
+                                             />
+                                         </div>
+                                     </td> */}
                                     
                                     <td className="px-2 py-2">
                                         <input 
@@ -229,7 +229,7 @@ export function ReservationLineTable({
                                         </select>
                                     </td>
                                     
-                                    <td className="px-2 py-2">
+                                    {/* <td className="px-2 py-2">
                                         <div className="relative group/lot">
                                             <div 
                                                 onClick={!isLocked ? () => {
@@ -259,7 +259,7 @@ export function ReservationLineTable({
                                                 className={`${compactInputClass} ${getFieldErrorClass(index, 'lot_no')} pl-7 cursor-pointer font-bold text-purple-600 dark:text-purple-400 bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700 hover:border-purple-400 focus:ring-purple-500 transition-colors`}
                                             />
                                         </div>
-                                    </td>
+                                    </td> */}
 
                                     <td className="px-2 py-2">
                                         <input 
@@ -332,8 +332,8 @@ export function ReservationLineTable({
                                         </div>
                                     </td>
                                     
-                                    <td className="px-2 py-2">
-                                        <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner overflow-hidden max-w-[150px] ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700'}`}>
+                                     <td className="px-2 py-2">
+                                         <div className={`h-8 flex flex-col items-end justify-center px-3 font-bold bg-white dark:bg-gray-900 rounded border shadow-inner overflow-hidden w-full ${line.line_total < 0 ? 'text-red-500 border-red-200 dark:border-red-800' : 'text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700'}`}>
                                             <span className="truncate w-full text-right overflow-hidden">{formatNumber(line.line_total || 0)}</span>
                                             {hasLineFieldError(index, 'line_total') && (
                                                 <div className="flex items-center gap-0.5 text-[8px] font-medium text-red-500 mt-[-2px]">
@@ -357,13 +357,29 @@ export function ReservationLineTable({
                                     
                                     {!isLocked && (
                                         <td className="px-2 py-2 text-center sticky right-[-1px] pr-[9px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-[30] transition-colors border-l border-gray-100 dark:border-gray-700 shadow-[-12px_0_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[-20px_0_30px_-15px_rgba(0,0,0,0.8)] isolate">
-                                            <button 
-                                                type="button" 
-                                                onClick={() => onRemoveLine(index)}
-                                                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
+                                            <div className="flex items-center justify-center gap-1">
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => {
+                                                        if (line.item_id) {
+                                                            onSearchLot?.(index);
+                                                        } else {
+                                                            showNoItemToast();
+                                                        }
+                                                    }}
+                                                    className="p-1.5 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors"
+                                                    title="จัดการล็อตและคลังสินค้า (ถ้าจำเป็น)"
+                                                >
+                                                    <Package size={18} />
+                                                </button>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => onRemoveLine(index)}
+                                                    className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
                                         </td>
                                     )}
                                 </tr>

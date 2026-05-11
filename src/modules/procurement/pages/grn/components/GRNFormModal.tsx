@@ -9,6 +9,10 @@ import type { LotNo } from '@/modules/master-data/inventory/types/inventory-mast
 import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
 import { useGRNForm } from '../hooks/useGRNForm';
 import type { POListItem } from '@/modules/procurement/types';
+import type { Currency } from '@/modules/master-data/currency/types/currency-types';
+import type { WarehouseListItem } from '@/modules/master-data/inventory/types/warehouse-types';
+import type { EmployeeListItem } from '@/modules/master-data/company/types/employee.types';
+import type { EmployeeDeptListItem } from '@/modules/master-data/company/types/employee-dept.types';
 
 // ====================================================================================
 // PROPS
@@ -39,7 +43,8 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
         isMulticurrency,
         items,
         onFormSubmit,
-        handleRemoveLine,
+        append,
+        remove,
     } = useGRNForm({ isOpen, initialPOId, onClose, onSuccess });
 
     const { register, control, handleSubmit, setValue, watch, formState: { errors } } = methods;
@@ -70,15 +75,16 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
     const handleAddLine = () => {
         // Since GRN is usually based on PO, manual adding might be limited, 
         // but we keep the button for flexibility.
-        // @ts-ignore
-        methods.append({
+        append({
             po_line_id: Date.now(), // Temporary ID for manual lines if allowed
+            item_id: 0,
             item_code: '',
             item_name: '',
             qty_ordered: 0,
             qty_received: 0,
             accepted_qty: 0,
             rejected_qty: 0,
+            uom_id: '',
             uom_name: '',
             unit_price: 0,
             line_total: 0,
@@ -123,7 +129,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                             </button>
                             <button
                                 type="button"
-                                onClick={handleSubmit(onFormSubmit as any)}
+                                onClick={handleSubmit(onFormSubmit)}
                                 disabled={isSubmitting || isFetchingPO}
                                 className="px-8 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-bold shadow-md transition-all flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
                             >
@@ -196,7 +202,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                                 <div className="relative">
                                     <select {...register('warehouse_id', { valueAsNumber: true })} className={selectClass}>
                                         <option value="">-- เลือกคลังสินค้า --</option>
-                                        {warehouses.map((wh: any) => (
+                                        {warehouses.map((wh: WarehouseListItem) => (
                                             <option key={wh.warehouse_id} value={wh.warehouse_id}>{wh.warehouse_name}</option>
                                         ))}
                                     </select>
@@ -209,7 +215,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                                 <div className="relative">
                                     <select {...register('received_by', { valueAsNumber: true })} className={selectClass}>
                                         <option value="">-- เลือกผู้รับสินค้า --</option>
-                                        {employees.map((emp: any) => (
+                                        {employees.map((emp: EmployeeListItem) => (
                                             <option key={emp.employee_id} value={emp.employee_id}>{emp.employee_name}</option>
                                         ))}
                                     </select>
@@ -222,7 +228,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                                 <div className="relative">
                                     <select {...register('emp_dept_id')} className={selectClass}>
                                         <option value="">-- เลือกแผนก --</option>
-                                        {departments.map((dept: any) => (
+                                        {departments.map((dept: EmployeeDeptListItem) => (
                                             <option key={dept.emp_dept_id || dept.dept_id || dept.id} value={String(dept.emp_dept_id || dept.dept_id || dept.id)}>
                                                 {dept.emp_dept_code || dept.dept_code} - {dept.emp_dept_name || dept.dept_name || dept.department_name}
                                             </option>
@@ -307,9 +313,9 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                                                         disabled={!isMulticurrency}
                                                     >
                                                         <option value="">-- เลือกสกุลเงิน --</option>
-                                                        {currencies.map((c: any) => (
+                                                        {currencies.map((c: Currency) => (
                                                             <option key={c.id || c.currency_id} value={c.id || c.currency_id}>
-                                                                {c.code || c.currency_code} - {c.name_th || c.currency_name}
+                                                                {c.code || c.currency_code} - {c.name_th}
                                                             </option>
                                                         ))}
                                                     </select>
@@ -325,9 +331,9 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                                                         disabled={!isMulticurrency}
                                                     >
                                                         <option value="">-- เลือกสกุลเงิน --</option>
-                                                        {currencies.map((c: any) => (
+                                                        {currencies.map((c: Currency) => (
                                                             <option key={c.id || c.currency_id} value={c.id || c.currency_id}>
-                                                                {c.code || c.currency_code} - {c.name_th || c.currency_name}
+                                                                {c.code || c.currency_code} - {c.name_th}
                                                             </option>
                                                         ))}
                                                     </select>
@@ -469,7 +475,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                                             <td className="px-4 py-3 text-center">
                                                 <button 
                                                     type="button"
-                                                    onClick={() => handleRemoveLine(index)}
+                                                    onClick={() => remove(index)}
                                                     className="w-8 h-8 flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all"
                                                 >
                                                     <Trash2 size={18} />

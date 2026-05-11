@@ -23,7 +23,8 @@ export const ExistingAVSearchModal: React.FC<Props> = ({ isOpen, onClose, prId, 
 
   if (!isOpen) return null;
 
-  const records = data?.data || [];
+  // Handle both { data: [] } and direct array responses
+  const records = (Array.isArray(data) ? data : data?.data) || [];
 
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">

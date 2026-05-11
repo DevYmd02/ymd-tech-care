@@ -56,7 +56,7 @@ export function useTaxGroupForm(editId: string | number | null, initialData?: Ta
         mutationFn: (data: TaxGroupFormValues) => {
             const payload = {
                 tax_group_code: data.code,
-                tax_type: data.taxType as any,
+                tax_type: data.taxType as TaxGroup['tax_type'],
                 tax_rate: Number(data.taxRate),
                 is_active: data.isActive
             };

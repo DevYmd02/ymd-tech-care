@@ -21,14 +21,15 @@ export const ApprovalHistoryModal: React.FC<ApprovalHistoryModalProps> = ({
 }) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['prs', 'approvals', prNo || prId],
-    queryFn: () => AVService.getApprovalList(prNo ? { pr_no: prNo, limit: 100 } : { pr_id: prId }),
+    queryFn: () => AVService.getApprovalList({ pr_id: prId, pr_no: prNo, limit: 100 }),
     enabled: isOpen && (!!prNo || !!prId),
     staleTime: 5 * 1000 // 5 seconds
   });
 
   if (!isOpen) return null;
 
-  const approvals = data?.data || [];
+  // Handle both { data: [] } and direct array responses
+  const approvals = (Array.isArray(data) ? data : data?.data) || [];
 
   return createPortal(
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
