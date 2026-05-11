@@ -16,7 +16,7 @@ import type { CustomerBillingGroup } from '@customer/billing-group/types/billing
 import { logger } from '@/shared/utils';
 
 export function CustomerGeneralInfo() {
-    const { register, formState: { errors } } = useFormContext<CustomerSchemaType>();
+    const { register, setValue, getValues, formState: { errors } } = useFormContext<CustomerSchemaType>();
     const [businessTypes, setBusinessTypes] = useState<CustomerBusinessType[]>([]);
     const [customerTypes, setCustomerTypes] = useState<CustomerType[]>([]);
     const [customerGroups, setCustomerGroups] = useState<CustomerGroup[]>([]);
@@ -25,22 +25,34 @@ export function CustomerGeneralInfo() {
     useEffect(() => {
         const fetchDropdownData = async () => {
             try {
-                const [bTypes, cTypes, cGroups, bGroups] = await Promise.all([
-                    BusinessTypeService.getList(),
-                    CustomerTypeService.getList(),
-                    CustomerGroupService.getList(),
-                    BillingGroupService.getList()
-                ]);
-                setBusinessTypes(bTypes.data || []);
-                setCustomerTypes(cTypes.data || []);
-                setCustomerGroups(cGroups.data || []);
-                setBillingGroups(bGroups.data || []);
+                // Fetch individually to prevent one failing from blocking others
+                BusinessTypeService.getList().then(res => setBusinessTypes(res.data || []));
+                CustomerTypeService.getList().then(res => setCustomerTypes(res.data || []));
+                CustomerGroupService.getList().then(res => setCustomerGroups(res.data || []));
+                BillingGroupService.getList().then(res => setBillingGroups(res.data || []));
             } catch (error) {
                 logger.error("Failed to fetch customer dropdown data", error);
             }
         };
         fetchDropdownData();
     }, []);
+
+    // Re-sync values once options are loaded to handle race conditions with reset()
+    useEffect(() => {
+        if (businessTypes.length > 0) setValue('business_type_id', getValues('business_type_id'));
+    }, [businessTypes, setValue, getValues]);
+
+    useEffect(() => {
+        if (customerTypes.length > 0) setValue('customer_type_id', getValues('customer_type_id'));
+    }, [customerTypes, setValue, getValues]);
+
+    useEffect(() => {
+        if (customerGroups.length > 0) setValue('customer_group_id', getValues('customer_group_id'));
+    }, [customerGroups, setValue, getValues]);
+
+    useEffect(() => {
+        if (billingGroups.length > 0) setValue('billing_group_id', getValues('billing_group_id'));
+    }, [billingGroups, setValue, getValues]);
 
     return (
         <section>

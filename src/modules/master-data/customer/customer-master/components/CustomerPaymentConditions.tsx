@@ -8,7 +8,7 @@ import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/
 import { logger } from '@/shared/utils';
 
 export function CustomerPaymentConditions() {
-    const { register, formState: { errors } } = useFormContext<CustomerSchemaType>();
+    const { register, setValue, getValues, formState: { errors } } = useFormContext<CustomerSchemaType>();
     const [priceLevels, setPriceLevels] = useState<PriceLevelName[]>([]);
 
     useEffect(() => {
@@ -23,6 +23,13 @@ export function CustomerPaymentConditions() {
         };
         fetchLevels();
     }, []);
+
+    // Re-sync values once options are loaded
+    useEffect(() => {
+        if (priceLevels.length > 0) {
+            setValue('price_level_id', getValues('price_level_id'));
+        }
+    }, [priceLevels, setValue, getValues]);
 
     return (
         <section>
