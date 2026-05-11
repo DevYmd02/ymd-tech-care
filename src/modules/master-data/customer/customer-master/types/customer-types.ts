@@ -122,6 +122,7 @@ export interface CustomerMaster {
     customer_type?: CustomerType;
     customer_group?: CustomerGroup;
     billing_group?: CustomerBillingGroup;
+    price_level?: { id: number | string; name?: string };
 }
 
 /** Customer Form Data (Standard snake_case) */
@@ -248,10 +249,10 @@ export const toCustomerFormData = (c: CustomerMaster): CustomerFormData => {
         customer_name_th: c.customer_name || c.customer_name_th || '',
         customer_name_en: c.customer_nameeng || c.customer_name_en || '',
         tax_id: c.tax_id || '',
-        business_type_id: c.business_type_id || '',
-        customer_type_id: c.customer_type_id || '',
-        customer_group_id: c.customer_group_id || '',
-        billing_group_id: c.bill_group_id || c.billing_group_id || '',
+        business_type_id: c.business_type_id != null ? String(c.business_type_id) : (c.business_type?.business_type_id != null ? String(c.business_type.business_type_id) : ''),
+        customer_type_id: c.customer_type_id != null ? String(c.customer_type_id) : (c.customer_type?.customer_type_id != null ? String(c.customer_type.customer_type_id) : ''),
+        customer_group_id: c.customer_group_id != null ? String(c.customer_group_id) : (c.customer_group?.customer_group_id != null ? String(c.customer_group.customer_group_id) : ''),
+        billing_group_id: c.bill_group_id != null ? String(c.bill_group_id) : (c.billing_group_id != null ? String(c.billing_group_id) : (c.billing_group?.bill_group_id != null ? String(c.billing_group.bill_group_id) : '')),
         vat_registered: c.is_vat_registered ?? true,
         addresses: targetAddresses && targetAddresses.length > 0 ? targetAddresses.map((addr) => ({
             id: addr.customer_address_id ? String(addr.customer_address_id) : String(Math.random()),
@@ -277,7 +278,7 @@ export const toCustomerFormData = (c: CustomerMaster): CustomerFormData => {
         credit_limit: Number(c.credit_limit || 0),
         credit_term: c.credit_term_days || c.credit_days || 0,
         payment_method_id: c.payment_method_default || c.payment_method || '',
-        price_level_id: c.price_level_id || '',
+        price_level_id: c.price_level_id != null ? String(c.price_level_id) : (c.price_level?.id != null ? String(c.price_level.id) : ''),
         additional_contacts: (c.contacts || []).slice(1).map((contact) => ({
             id: contact.contact_id || String(Math.random()),
             name: contact.contact_name || '',

@@ -175,16 +175,22 @@ export function useCustomerForm({
             return addr;
         });
 
+        const parseId = (val: string | number | null | undefined) => {
+            if (!val || val === '') return undefined;
+            const num = Number(val);
+            return isNaN(num) ? val : num;
+        };
+
         const commonPayload = {
             customer_code:          data.customer_code,
             customer_name:          data.customer_name_th,
             customer_nameeng:       data.customer_name_en || undefined,
             tax_id:                 data.tax_id || undefined,
             is_vat_registered:      data.vat_registered,
-            customer_type_id:       Number(data.customer_type_id),
-            customer_group_id:      Number(data.customer_group_id),
-            bill_group_id:          data.billing_group_id ? Number(data.billing_group_id) : undefined,
-            business_type_id:       data.business_type_id ? Number(data.business_type_id) : undefined,
+            customer_type_id:       parseId(data.customer_type_id),
+            customer_group_id:      parseId(data.customer_group_id),
+            bill_group_id:          parseId(data.billing_group_id),
+            business_type_id:       parseId(data.business_type_id),
             credit_limit:           Number(data.credit_limit),
             payment_term_days:      Number(data.credit_term),
             payment_method_default: data.payment_method_id || undefined,
@@ -192,7 +198,7 @@ export function useCustomerForm({
             phone:                  data.phone || undefined,
             email:                  data.email || undefined,
             website:                data.website || undefined,
-            price_level_id:         data.price_level_id ? Number(data.price_level_id) : undefined,
+            price_level_id:         parseId(data.price_level_id),
             is_active:              data.is_active,
             addresses:              mappedAddresses,
         };

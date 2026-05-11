@@ -298,6 +298,9 @@ export const ReservationService = {
                             line_discount_input: String(l.discount_expression || l.line_discount_input || '0'),
                             line_discount: Number(l.discount_amount || l.line_discount || 0),
                             line_total: Number(l.net_amount || l.line_total || 0),
+                            price_source: l.price_source !== undefined ? Number(l.price_source) : undefined,
+                            price_source_name: String(l.price_source_name || ''),
+                            price_level_priority: l.price_level_priority !== undefined ? Number(l.price_level_priority) : undefined,
                         };
                     }));
                 }

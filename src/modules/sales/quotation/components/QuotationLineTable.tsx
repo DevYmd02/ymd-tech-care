@@ -1,6 +1,7 @@
 import { memo } from 'react';
-import { Plus, Trash2, Package, Search, AlertCircle, Loader2, Tag } from 'lucide-react';
+import { Plus, Trash2, Package, Search, AlertCircle, Loader2 } from 'lucide-react';
 import { useFormContext, useFieldArray, useWatch } from 'react-hook-form';
+import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
 import type { QuotationLineValues, QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { UnitListItem } from '@inventory/types/product-types';
 import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/price-level-name.types';
@@ -18,12 +19,6 @@ interface QuotationLineTableProps {
     readOnly?: boolean;
     currencySymbol?: string;
 }
-
-const PRICE_SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
-    PRICE_LIST:     { label: 'Price List',  cls: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-800/50' },
-    PRICE_LEVEL:    { label: 'Price Level', cls: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border-indigo-200/50 dark:border-indigo-800/50' },
-    MANUAL:         { label: 'Manual',      cls: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-200/50 dark:border-amber-800/50' },
-};
 
 const compactInputClass = "h-8 w-full px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
 
@@ -66,13 +61,6 @@ const QuotationLineRow = memo(({
     if (!line) return null;
 
     const isFetchingPrice = loadingPriceLines.has(index);
-
-    const normalizedSource = line.price_source_name 
-        ? String(line.price_source_name).toUpperCase().replace(/\s+/g, '_') 
-        : undefined;
-    const sourceInfo = normalizedSource
-        ? PRICE_SOURCE_BADGE[normalizedSource]
-        : undefined;
 
     return (
         <tr className="hover:bg-blue-50/30 dark:hover:bg-blue-900/5 transition-colors group">
@@ -181,26 +169,13 @@ const QuotationLineRow = memo(({
                         </div>
                     )}
                 </div>
-                {sourceInfo && !isFetchingPrice && (Number(line.unit_price) > 0) && (
-                    <div
-                        className={`inline-flex items-center gap-0.5 mt-0.5 px-1.5 py-0 rounded text-[9px] font-semibold border whitespace-nowrap ${sourceInfo.cls}`}
-                        title={(() => {
-                            if (normalizedSource === 'PRICE_LEVEL' && line.price_level_priority) {
-                                const levelName = priceLevelNames.find(n => (Number(n.level_no) || Number(n.levelNo)) === Number(line.price_level_priority))?.name;
-                                return `Price Level ${line.price_level_priority}${levelName ? ` - ${levelName}` : ''}`;
-                            }
-                            return sourceInfo.label;
-                        })()}
-                    >
-                        <Tag size={8} />
-                        {(() => {
-                            if (normalizedSource === 'PRICE_LEVEL' && line.price_level_priority) {
-                                const levelName = priceLevelNames.find(n => (Number(n.level_no) || Number(n.levelNo)) === Number(line.price_level_priority))?.name;
-                                return `Price Level ${line.price_level_priority}${levelName ? ` - ${levelName}` : ''}`;
-                            }
-                            return sourceInfo.label;
-                        })()}
-                    </div>
+                {!isFetchingPrice && (
+                    <PriceSourceBadge 
+                        priceSourceName={line.price_source_name}
+                        priceLevelPriority={line.price_level_priority}
+                        priceLevelNames={priceLevelNames}
+                        unitPrice={line.unit_price}
+                    />
                 )}
                 {hasLineFieldError(index, 'unit_price') && <span className="text-[10px] text-red-500 block text-right mt-0.5">ระบุราคา</span>}
             </td>

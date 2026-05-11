@@ -203,6 +203,9 @@ export interface AOLineFormData {
   lot_id?: string | number;
   lot_no?: string;
   remarks?: string;
+  price_source?: number | null;
+  price_source_name?: string | null;
+  price_level_priority?: number | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

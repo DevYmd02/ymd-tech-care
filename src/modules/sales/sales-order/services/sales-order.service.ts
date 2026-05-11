@@ -198,6 +198,9 @@ export const SalesOrderService = {
                                 : lotIdVal
                         ) : undefined),
                         lot_no: lotNo,
+                        price_source: l['price_source'],
+                        price_source_name: String(l['price_source_name'] || ''),
+                        price_level_priority: l['price_level_priority'],
                     };
                 }));
 

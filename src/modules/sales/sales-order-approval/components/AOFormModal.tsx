@@ -12,6 +12,7 @@ import { AOHeader } from './AOHeader';
 import { AOFormLines } from './AOFormLines';
 import { AOFormSummary } from './AOFormSummary';
 import { AOHistoryModal } from '../../shared/components/AOHistoryModal';
+import { usePriceLevelName } from '@sales-master/pages/price-level-name/hooks/usePriceLevelName';
 import type { AOListItem, SOForApproval } from '../types/sales-order-approval.types';
 import type { AOLineFormData } from '../schemas/ao.schema';
 import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
@@ -48,6 +49,7 @@ export const AOFormModal: React.FC<Props> = ({
   const { register, watch, formState: { errors } } = formMethods;
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSOSearchOpen, setIsSOSearchOpen] = useState(false);
+  const { allItems: priceLevelNames } = usePriceLevelName(isOpen);
 
   const handleSelectSO = (so: SOForApproval) => {
     if (so.so_id) {
@@ -229,6 +231,7 @@ export const AOFormModal: React.FC<Props> = ({
                     <AOFormLines
                       lines={lines as unknown as AOLineFormData[]}
                       updateLine={updateLine}
+                      priceLevelNames={priceLevelNames}
                       readOnly={isAlreadyProcessed}
                     />
                   </div>

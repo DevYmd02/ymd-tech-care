@@ -4,6 +4,8 @@ import type { SalesOrderLineValues, SalesOrderFormValues } from '../schemas/sale
 import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
 import { formatNumber } from '@/shared/utils';
+import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
+import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/price-level-name.types';
 
 interface SalesOrderLineTableProps {
     onAddLine: () => void;
@@ -16,6 +18,7 @@ interface SalesOrderLineTableProps {
     uoms: UnitListItem[];
     warehouses: WarehouseListItem[];
     locations: Location[];
+    priceLevelNames?: PriceLevelName[];
     readOnly?: boolean;
 }
 
@@ -31,6 +34,7 @@ interface SalesOrderLineRowProps {
     uoms: UnitListItem[];
     warehouses: WarehouseListItem[];
     locations: Location[];
+    priceLevelNames?: PriceLevelName[];
     getFieldClass: (index: number, fieldName: keyof SalesOrderLineValues, baseClass: string) => string;
     hasLineFieldError: (index: number, fieldName: keyof SalesOrderLineValues) => boolean;
 }
@@ -57,6 +61,7 @@ const SalesOrderLineRow = ({
     uoms,
     warehouses,
     locations,
+    priceLevelNames = [],
     getFieldClass,
     hasLineFieldError
 }: SalesOrderLineRowProps) => {
@@ -215,6 +220,14 @@ const SalesOrderLineRow = ({
                     maxLength={12}
                     className={`${getFieldClass(index, 'unit_price', compactInputClass)} text-right font-medium bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
                 />
+                <div className="flex justify-end">
+                    <PriceSourceBadge 
+                        priceSourceName={line.price_source_name}
+                        priceLevelPriority={line.price_level_priority}
+                        priceLevelNames={priceLevelNames}
+                        unitPrice={line.unit_price}
+                    />
+                </div>
             </td>
 
             {/* Line Discount */}
@@ -290,6 +303,7 @@ export function SalesOrderLineTable({
     uoms = [],
     warehouses = [],
     locations = [],
+    priceLevelNames = [],
     readOnly = false,
 }: SalesOrderLineTableProps) {
     const { control, formState: { errors } } = useFormContext<SalesOrderFormValues>();
@@ -380,6 +394,7 @@ export function SalesOrderLineTable({
                                     uoms={uoms}
                                     warehouses={warehouses}
                                     locations={locations}
+                                    priceLevelNames={priceLevelNames}
                                     getFieldClass={getFieldClass}
                                     hasLineFieldError={hasLineFieldError}
                                 />
