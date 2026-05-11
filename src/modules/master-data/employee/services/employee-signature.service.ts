@@ -11,17 +11,16 @@ export const EmployeeSignatureService = {
   /**
    * Upload a new signature for an employee
    */
-  uploadSignature: async (employeeId: number, file: File, signatureName?: string): Promise<IUploadSignatureResponse> => {
+  uploadSignature: async (employeeId: number, file: File): Promise<IUploadSignatureResponse> => {
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      if (signatureName) {
-        formData.append('signature_name', signatureName);
-      }
-
+      // สลับลำดับตาม Postman (ID ก่อน แล้วตามด้วยไฟล์)
+      formData.append('employee_id', employeeId.toString());
+      formData.append('emp_signature', file);
+      
       const response = await api.post<IUploadSignatureResponse>(`/employee-signature/${employeeId}`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': undefined,
         },
       });
       return response;
@@ -36,8 +35,11 @@ export const EmployeeSignatureService = {
    */
   getSignatures: async (employeeId: number): Promise<IEmployeeSignature[]> => {
     try {
-      const response = await api.get<IEmployeeSignature[]>(`/employee-signature/${employeeId}`);
-      return response;
+      const response = await api.get<IEmployeeSignature[] | IEmployeeSignature>(`/employee-signature/${employeeId}`);
+      // ปรับให้เป็น Array เสมอ
+      if (Array.isArray(response)) return response;
+      if (response && typeof response === 'object') return [response as IEmployeeSignature];
+      return [];
     } catch (error) {
       logger.error('[EmployeeSignatureService] getSignatures error:', error);
       throw error;

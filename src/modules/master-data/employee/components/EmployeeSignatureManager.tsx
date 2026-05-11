@@ -17,6 +17,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { EmployeeSignatureService } from '../services/employee-signature.service';
 import { clsx } from 'clsx';
+import { API_BASE_URL } from '@/core/api/api';
 
 interface Props {
   employeeId: number;
@@ -28,6 +29,17 @@ export const EmployeeSignatureManager: React.FC<Props> = ({ employeeId, onClose 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
+  // ฟังก์ชันช่วยจัดการ URL รูปภาพ
+  const getSignatureUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    
+    // ตัด /api ออกจาก Base URL เพื่อให้ได้ Root URL ของ Server
+    const baseUrl = API_BASE_URL.replace(/\/api$/, '');
+    // รวม URL เข้าด้วยกัน (ตรวจสอบเรื่อง / ซ้ำ)
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   // Fetch signatures
   const { data: signatures = [], isLoading } = useQuery({
     queryKey: ['employee-signatures', employeeId],
@@ -37,8 +49,8 @@ export const EmployeeSignatureManager: React.FC<Props> = ({ employeeId, onClose 
 
   // Upload mutation
   const uploadMutation = useMutation({
-    mutationFn: ({ file, name }: { file: File, name?: string }) => 
-      EmployeeSignatureService.uploadSignature(employeeId, file, name),
+    mutationFn: ({ file }: { file: File }) => 
+      EmployeeSignatureService.uploadSignature(employeeId, file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employee-signatures', employeeId] });
       toast.success('อัปโหลดลายเซ็นสำเร็จ');
@@ -72,12 +84,25 @@ export const EmployeeSignatureManager: React.FC<Props> = ({ employeeId, onClose 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        toast.error('ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 2MB)');
+      // ตรวจสอบนามสกุลไฟล์
+      const allowedExtensions = ['jpg', 'jpeg', 'png'];
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      
+      if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+        toast.error('อนุญาตเฉพาะไฟล์นามสกุล .jpg, .jpeg และ .png เท่านั้น');
+        if (fileInputRef.current) fileInputRef.current.value = '';
         return;
       }
+
+      // ตรวจสอบขนาดไฟล์ (ไม่เกิน 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('ขนาดไฟล์ต้องไม่เกิน 2MB');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+
       setIsUploading(true);
-      uploadMutation.mutate({ file, name: file.name });
+      uploadMutation.mutate({ file });
     }
   };
 
@@ -121,7 +146,7 @@ export const EmployeeSignatureManager: React.FC<Props> = ({ employeeId, onClose 
           type="file" 
           ref={fileInputRef} 
           className="hidden" 
-          accept="image/*" 
+          accept=".jpg,.jpeg,.png" 
           onChange={handleFileChange}
         />
       </div>
@@ -156,7 +181,7 @@ export const EmployeeSignatureManager: React.FC<Props> = ({ employeeId, onClose 
                 {/* Signature Preview */}
                 <div className="aspect-[3/1] bg-white dark:bg-gray-100 rounded-lg border border-gray-100 dark:border-slate-700 mb-4 flex items-center justify-center overflow-hidden shadow-inner">
                   <img 
-                    src={sig.signature_url} 
+                    src={getSignatureUrl(sig.signature_url)} 
                     alt={sig.signature_name || 'Signature'} 
                     className="max-h-full max-w-full object-contain p-2"
                     onError={(e) => {
