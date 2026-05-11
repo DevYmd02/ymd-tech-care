@@ -1,6 +1,7 @@
 import api from '@core/api/api';
 import type { ApproveQuotationPayload, AQListItem } from '../types/quotation-approve.types';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
+import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import { extractArrayFromResponse } from '@utils/clientFilterUtils';
 
 // API Endpoint constants
@@ -126,7 +127,7 @@ export const AQService = {
    * ดึง AQ รายตัว
    */
   getApprovalById: async (aqId: number): Promise<unknown> => {
-    return await api.get<unknown>(ENDPOINTS.approvalDetail(aqId));
+    return await api.get<unknown>(ENDPOINTS.approvalDetail(aqId), { skipToast: true });
   },
 
   /**
@@ -140,6 +141,8 @@ export const AQService = {
    * อัปเดตสถานะ SQ
    */
   updateSQStatus: async (sqId: string | number, status: string): Promise<unknown> => {
-    return await api.patch<unknown>(ENDPOINTS.updateSQ(sqId), { status, sq_status: status });
+    // 🛡️ Use QuotationService.update instead of direct patch to ensure 
+    // all mandatory fields (payment_term, lines, etc.) are preserved
+    return await QuotationService.update(sqId, { status, sq_status: status } as Partial<QuotationFormValues>);
   },
 };

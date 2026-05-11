@@ -39,7 +39,7 @@ export const QuotationFormSchema = z.object({
     quote_currency_code: z.string().optional(),
     exchange_rate: z.coerce.number().default(1),
     exchange_rate_date: z.string().optional(),
-    status: z.enum(['DRAFT', 'PENDING', 'SENT', 'ACCEPTED', 'EXPIRED', 'CANCELLED', 'REJECTED']).default('DRAFT'),
+    status: z.enum(['DRAFT', 'PENDING', 'SENT', 'ACCEPTED', 'EXPIRED', 'CANCELLED', 'REJECTED', 'APPROVED']).default('DRAFT'),
     valid_until: z.string().optional(),
     sub_total: z.coerce.number().default(0),
     discount_expression: z.string().optional(),

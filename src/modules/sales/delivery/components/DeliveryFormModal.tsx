@@ -17,7 +17,7 @@ import { EmployeeSearchModal } from '@master-data/employee/components/EmployeeSe
 import { ProductSearchModal } from '@sales/quotation/components/ProductSearchModal';
 import { WarehouseSearchModal } from '@sales/shared/components/search-modals/WarehouseSearchModal';
 import { LocationSearchModal } from '@sales/shared/components/search-modals/LocationSearchModal';
-import { LotSearchModal } from '@sales/sales-order/components/LotSearchModal';
+import { LotSearchModal } from '@sales/reservation/components/search-modals/LotSearchModal';
 import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
 import { useConfirmation } from '@hooks/useConfirmation';
 import { useDeliveryForm } from '../hooks';
@@ -396,6 +396,16 @@ export function DeliveryFormModal({
                 itemId={
                     activeLineIndex !== null
                         ? String(lines[activeLineIndex]?.item_id || '')
+                        : undefined
+                }
+                itemName={
+                    activeLineIndex !== null
+                        ? String(lines[activeLineIndex]?.item_name || '')
+                        : undefined
+                }
+                itemCode={
+                    activeLineIndex !== null
+                        ? String(lines[activeLineIndex]?.item_code || '')
                         : undefined
                 }
             />
