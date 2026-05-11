@@ -36,6 +36,8 @@ import type {
     SaleTargetMaster, 
     SaleTargetFilters 
 } from './types/sale-target.types';
+import { OrgEmployeeService } from '@company/services/employee.service';
+import type { EmployeeMaster } from '@/modules/master-data/company/types/employee.types';
 
 const STATUS_OPTIONS = [
     { label: 'ทั้งหมด', value: 'ALL' },
@@ -48,6 +50,10 @@ export default function SalesTargetList() {
     const [monthlyTargets, setMonthlyTargets] = useState<SalePeriodMaster[]>([]);
     const [employeeTargets, setSaleTargets] = useState<SaleTargetMaster[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    
+    // Master Data for mapping
+    const [allEmployees, setAllEmployees] = useState<EmployeeMaster[]>([]);
+    const [allPeriods, setAllPeriods] = useState<SalePeriodMaster[]>([]);
     
     // Modal states
     const [isSalePeriodModalOpen, setIsSalePeriodModalOpen] = useState(false);
@@ -102,14 +108,33 @@ export default function SalesTargetList() {
     const fetchEmployeeData = useCallback(async () => {
         setIsLoading(true);
         try {
+            // Fetch targets
             const response = await SaleTargetService.getList(filters as unknown as Partial<SaleTargetFilters>);
-            setSaleTargets(response.items || []);
+            let items: SaleTargetMaster[] = [];
+            if (Array.isArray(response)) {
+                items = response;
+            } else if (response && typeof response === 'object') {
+                const res = response as unknown as { items?: SaleTargetMaster[]; data?: SaleTargetMaster[] };
+                items = res.items || res.data || [];
+            }
+            setSaleTargets(items);
+
+            // Fetch Master Data for mapping if not already fetched
+            if (allEmployees.length === 0) {
+                const empRes = await OrgEmployeeService.getList({ limit: 1000 });
+                setAllEmployees(Array.isArray(empRes) ? empRes : (empRes.items || []));
+            }
+            if (allPeriods.length === 0) {
+                const perRes = await SalePeriodService.getList({ limit: 1000 });
+                setAllPeriods(Array.isArray(perRes) ? perRes : (perRes.items || []));
+            }
+
         } catch (error) {
             logger.error('Failed to fetch sale targets:', error);
         } finally {
             setIsLoading(false);
         }
-    }, [filters]);
+    }, [filters, allEmployees.length, allPeriods.length]);
 
     useEffect(() => {
         if (activeTab === 'monthly') {
@@ -198,6 +223,8 @@ export default function SalesTargetList() {
                         handlePageChange={handlePageChange}
                         handleEdit={handleEdit}
                         handleDelete={handleDelete}
+                        employees={allEmployees}
+                        periods={allPeriods}
                     />
                 )}
 

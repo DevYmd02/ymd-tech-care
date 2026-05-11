@@ -6,10 +6,10 @@
 import type { BaseMasterData } from '@/shared/types/common-master.types';
 
 export interface SalePeriodMaster extends BaseMasterData {
-    period_id: string; // Used as the code/id in payload
+    period_id: number; // Integer ID
     begin_date: string;
     end_date: string;
-    period_target: string; // Backend expects string
+    period_target: number; // Backend expects number
     close_status: boolean;
 }
 

@@ -8,6 +8,8 @@ import { Edit2, Trash2 } from 'lucide-react';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';
 import type { SaleTargetMaster } from '../types/sale-target.types';
+import type { SalePeriodMaster } from '../types/sale-period.types';
+import type { EmployeeMaster } from '@/modules/master-data/company/types/employee.types';
 import type { TableFilters } from '@/shared/hooks/useTableFilters';
 
 interface Props {
@@ -17,6 +19,8 @@ interface Props {
     handlePageChange: (page: number) => void;
     handleEdit: (id: string | number) => void;
     handleDelete: (id: string | number) => void;
+    employees: EmployeeMaster[];
+    periods: SalePeriodMaster[];
 }
 
 export function SaleTargetTab({
@@ -26,6 +30,8 @@ export function SaleTargetTab({
     handlePageChange,
     handleEdit,
     handleDelete,
+    employees,
+    periods,
 }: Props) {
     
     const columns = useMemo<ColumnDef<SaleTargetMaster>[]>(() => [
@@ -36,27 +42,51 @@ export function SaleTargetTab({
             size: 60,
         },
         {
-            accessorKey: 'employee_code',
-            header: 'รหัสพนักงาน',
-            cell: ({ getValue }) => (
-                <span className="font-medium text-purple-600 dark:text-purple-400">
-                    {getValue() as string}
-                </span>
-            ),
+            id: 'employee_display',
+            header: 'พนักงาน',
+            cell: ({ row }) => {
+                const item = row.original;
+                const emp = employees.find(e => Number(e.employee_id || e.id) === Number(item.emp_id));
+                const code = emp?.employee_code || item.employee_code || `ID: ${item.emp_id}`;
+                const name = emp?.employee_name || 
+                            (emp ? `${emp.employee_firstname_th || ''} ${emp.employee_lastname_th || ''}`.trim() : '') || 
+                            item.employee_name || '';
+                
+                return (
+                    <div className="flex items-center gap-2">
+                        <span className="font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap">{code}</span>
+                        {name && <span className="text-gray-600 dark:text-gray-400">| {name}</span>}
+                    </div>
+                );
+            },
         },
         {
-            accessorKey: 'employee_name',
-            header: 'ชื่อพนักงาน',
-        },
-        {
-            accessorKey: 'target_name',
+            id: 'period_display',
             header: 'ช่วงเวลา',
-            cell: ({ getValue }) => <span className="text-gray-500">{getValue() as string}</span>,
+            cell: ({ row }) => {
+                const item = row.original;
+                const period = periods.find(p => Number(p.period_id) === Number(item.period_id));
+                
+                if (period) {
+                    return (
+                        <div className="flex items-center gap-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                            <span>{`งวดวันที่ ${new Date(period.begin_date).toLocaleDateString('th-TH')}`}</span>
+                            <span className="text-gray-400">ถึง</span>
+                            <span>{`${new Date(period.end_date).toLocaleDateString('th-TH')}`}</span>
+                        </div>
+                    );
+                }
+                
+                return <span className="text-gray-500">{item.target_name || `งวด ID: ${item.period_id}`}</span>;
+            },
         },
         {
-            accessorKey: 'amount',
+            id: 'target_amount',
             header: 'เป้าการขาย',
-            cell: ({ getValue }) => (getValue() as number).toLocaleString('th-TH', { minimumFractionDigits: 2 }),
+            cell: ({ row }) => {
+                const amount = Number(row.original.period_target || row.original.amount || 0);
+                return amount.toLocaleString('th-TH', { minimumFractionDigits: 2 });
+            },
         },
         {
             id: 'actions',
@@ -65,13 +95,13 @@ export function SaleTargetTab({
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button 
-                        onClick={() => handleEdit(row.original.id)}
+                        onClick={() => handleEdit(row.original.target_id || row.original.id)}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                     >
                         <Edit2 size={18} />
                     </button>
                     <button 
-                        onClick={() => handleDelete(row.original.id)}
+                        onClick={() => handleDelete(row.original.target_id || row.original.id)}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     >
                         <Trash2 size={18} />
@@ -79,7 +109,7 @@ export function SaleTargetTab({
                 </div>
             ),
         },
-    ], [filters.page, filters.limit, handleEdit, handleDelete]);
+    ], [filters.page, filters.limit, handleEdit, handleDelete, employees, periods]);
 
     return (
         <SmartTable
@@ -93,7 +123,7 @@ export function SaleTargetTab({
                 onPageChange: handlePageChange,
                 onPageSizeChange: () => {}, // Managed by parent now
             }}
-            rowIdField="id"
+            rowIdField="target_id"
             className="shadow-sm"
         />
     );
