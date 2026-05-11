@@ -136,10 +136,10 @@ const LoginPage = () => {
             setIsLocked(false);
             setLockoutSeconds(null);
             setError(null);
-            // Reset attempts and lockout after period ends
+            
+            // 💡 Clear only the lockout timestamp, keep attempts for incremental logic
             const cleanUser = username.trim().toLowerCase();
             if (cleanUser) {
-                sessionStorage.removeItem(`login_attempts_${cleanUser}`);
                 sessionStorage.removeItem(`lockout_until_${cleanUser}`);
             }
         }
@@ -194,15 +194,15 @@ const LoginPage = () => {
                 // 2. Handle Attempt Counting (401)
                 else if (err.response?.status === 401) {
                     let remaining: number | null = null;
+                    
+                    // 💡 Track failures in session for incremental logic
+                    const currentFailures = parseInt(sessionStorage.getItem(ATTEMPT_KEY) || '0', 10) + 1;
+                    sessionStorage.setItem(ATTEMPT_KEY, currentFailures.toString());
 
-                    // Use Backend data if available
+                    // Use Backend data if available for "remaining" count, otherwise use local
                     if (data && typeof data === 'object' && 'attemptsRemaining' in data) {
                         remaining = data.attemptsRemaining ?? null;
-                    } 
-                    // Fallback: Frontend Session Tracking
-                    else {
-                        const currentFailures = parseInt(sessionStorage.getItem(ATTEMPT_KEY) || '0', 10) + 1;
-                        sessionStorage.setItem(ATTEMPT_KEY, currentFailures.toString());
+                    } else {
                         remaining = Math.max(0, MAX_ATTEMPTS - currentFailures);
                     }
 
@@ -212,7 +212,10 @@ const LoginPage = () => {
                     if (remaining === 0) {
                         finalErrorKey = 'TOO_MANY_ATTEMPTS';
                         setIsLocked(true);
-                        const duration = 60;
+                        
+                        // 💡 Dynamic duration: 10s for 3rd fail, then +5s for each fail after
+                        const duration = 10 + (currentFailures - MAX_ATTEMPTS) * 5;
+                        
                         setLockoutSeconds(duration);
                         // Save lockout expiration to sessionStorage for F5 persistence
                         sessionStorage.setItem(`lockout_until_${cleanUsername.toLowerCase()}`, (Date.now() + duration * 1000).toString());
