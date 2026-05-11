@@ -729,54 +729,7 @@ default_tax_code: '',
 // ITEM UOM CONVERSION - แปลงหน่วย (หลายหน่วยนับ)
 // ====================================================================================
 
-export interface ItemUOMConversion {
-    conversion_id: number;
-    item_id: number;
-    item_code: string;
-    item_name: string;
-    from_unit_id: number;
-    from_unit_name: string;
-    to_unit_id: number;
-    to_unit_name: string;
-    conversion_factor: number;
-    is_purchase_unit: boolean;
-    is_active: boolean;
-    created_at: string;
-    updated_at: string;
-}
-
-export interface UOMConversionFormData {
-    itemCode: string;
-    itemName: string;
-    fromUnit: string;
-    toUnit: string;
-    conversionFactor: number;
-    isPurchaseUnit: boolean;
-    isActive: boolean;
-}
-
-export interface UOMConversionListItem {
-    id: number;
-    conversion_id: number;
-    item_code: string;
-    item_name: string;
-    from_unit_name: string;
-    to_unit_name: string;
-    conversion_factor: number;
-    is_purchase_unit: boolean;
-    is_active: boolean;
-    created_at: string;
-}
-
-export const initialUOMConversionFormData: UOMConversionFormData = {
-    itemCode: '',
-    itemName: '',
-    fromUnit: '',
-    toUnit: '',
-    conversionFactor: 0,
-    isPurchaseUnit: false,
-    isActive: true,
-};
+export * from './uom-conversion-types';
 
 // ====================================================================================
 // ITEM BARCODE - บาร์โค้ดหลายรายการ/หลายหน่วย

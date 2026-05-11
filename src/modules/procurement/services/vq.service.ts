@@ -1,6 +1,6 @@
 import api from '@/core/api/api';
 import { USE_MOCK } from '@/core/api/api';
-import type { VQListParams, VQListResponse, VQCreateData, VQListItem, VQPendingQueueResponse, VQPendingQueueItem } from '@/modules/procurement/types';
+import type { VQListParams, VQListResponse, VQCreateData, VQListItem, VQPendingQueueResponse, VQPendingQueueItem, QuotationLine } from '@/modules/procurement/types';
 import { logger } from '@/shared/utils';
 import type { SuccessResponse } from '@/shared/types/api.types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
@@ -17,6 +17,7 @@ const ENDPOINTS = {
   waitingForVq: '/vq/rfq/waiting-for-rfq',
   modalWaitingForRfq: '/vq/rfq/waiting-for-rfq',
   modalWaitingForRfqVendor: (id: number) => `/vq/rfq/waiting-for-rfq-vendor/${id}`,
+  lines: (id: number) => `/vq/${id}/lines`,
 };
 
 export const VQService = {
@@ -154,6 +155,12 @@ export const VQService = {
     logger.info(`[VQService] Fetching VQ Detail ${id}`);
     const response = await api.get<unknown>(`${ENDPOINTS.list}/${id}`, config);
     return unwrapResponseData<VQListItem>(response);
+  },
+
+  getLines: async (id: number, config?: AxiosRequestConfig): Promise<QuotationLine[]> => {
+    logger.info(`[VQService] Fetching VQ Lines for ${id}`);
+    const response = await api.get<unknown>(ENDPOINTS.lines(id), config);
+    return unwrapResponseData<QuotationLine[]>(response);
   },
 
   create: async (data: VQCreateData): Promise<SuccessResponse> => {

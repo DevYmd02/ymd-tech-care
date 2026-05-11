@@ -91,7 +91,7 @@ api.interceptors.response.use(
     // If it contains keys that are not part of a standard envelope (like 'id', 'name', etc.), 
     // we treat the whole object as the data payload.
     if (resBody && typeof resBody === 'object' && resBody.data !== undefined) {
-      const envelopeKeys = ['success', 'message', 'statusCode', 'status', 'total', 'page', 'limit', 'count', 'error', 'pageSize', 'totalPages'];
+      const envelopeKeys = ['success', 'message', 'statusCode', 'status', 'error'];
       const bodyKeys = Object.keys(resBody);
       
       // If there are keys that are NOT in our envelope whitelist (excluding 'data' itself),

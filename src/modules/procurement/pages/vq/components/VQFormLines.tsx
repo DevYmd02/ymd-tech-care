@@ -41,7 +41,11 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
 }) => {
     const { register, control, setValue } = useFormContext<QuotationFormData>();
 
-    const watchVqLinesRaw = useWatch({ control, name: 'vq_lines' });
+    const watchVqLinesRaw = useWatch({ 
+        control, 
+        name: 'vq_lines',
+        defaultValue: fields.map(f => ({ ...f, net_amount: 0 })) // Fallback to avoid undefined during init
+    });
     const watchVqLines = useMemo(() => watchVqLinesRaw || [], [watchVqLinesRaw]);
     const watchedLines = watchVqLines; // Alias for consistent naming
 
@@ -211,14 +215,23 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                                 
                                                 {/* Unit Price */}
                                                 <td className="px-1 py-1 border-r border-gray-200 dark:border-gray-700">
-                                                    <input 
-                                                        type="number" step="any" disabled={isNoQuote || forceViewMode}
-                                                        {...register(`vq_lines.${index}.unit_price`, { 
-                                                            valueAsNumber: true,
-                                                            onChange: () => updateLineCalculation(index)
-                                                        })} 
-                                                        className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-right transition-all ${(isNoQuote || forceViewMode) ? 'opacity-70 cursor-not-allowed disabled:bg-gray-50 font-medium' : ''}`} 
-                                                        placeholder="0.00"
+                                                    <Controller
+                                                        name={`vq_lines.${index}.unit_price`}
+                                                        control={control}
+                                                        render={({ field: controllerField }) => (
+                                                            <input 
+                                                                {...controllerField}
+                                                                type="number" step="any" 
+                                                                disabled={isNoQuote || forceViewMode}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value === '' ? 0 : Number(e.target.value);
+                                                                    controllerField.onChange(val);
+                                                                    updateLineCalculation(index);
+                                                                }}
+                                                                className={`w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-right transition-all ${(isNoQuote || forceViewMode) ? 'opacity-70 cursor-not-allowed disabled:bg-gray-50 font-medium' : ''}`} 
+                                                                placeholder="0.00"
+                                                            />
+                                                        )}
                                                     />
                                                     {watchVqLines[index]?.reference_price ? (Number(watchVqLines[index]?.reference_price) || 0) > 0 && (
                                                         <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right flex flex-col leading-tight">
@@ -230,16 +243,25 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
 
                                                 {/* Discount Raw (Amount or %) */}
                                                 <td className="px-4 py-3 text-right border-r border-gray-200 dark:border-gray-700">
-                                                    <input 
-                                                        type="text" disabled={isNoQuote || forceViewMode}
-                                                        {...register(`vq_lines.${index}.discount_expression`, { 
-                                                            onChange: () => updateLineCalculation(index)
-                                                        })} 
-                                                        className={`w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-right transition-all ${(isNoQuote || forceViewMode) ? 'opacity-70 cursor-not-allowed disabled:bg-gray-50 font-medium' : ''}`} 
-                                                        placeholder="0 or 5%"
+                                                    <Controller
+                                                        name={`vq_lines.${index}.discount_expression`}
+                                                        control={control}
+                                                        render={({ field: controllerField }) => (
+                                                            <input 
+                                                                {...controllerField}
+                                                                type="text" 
+                                                                disabled={isNoQuote || forceViewMode}
+                                                                onChange={(e) => {
+                                                                    controllerField.onChange(e.target.value);
+                                                                    updateLineCalculation(index);
+                                                                }}
+                                                                className={`w-full h-8 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-right transition-all ${(isNoQuote || forceViewMode) ? 'opacity-70 cursor-not-allowed disabled:bg-gray-50 font-medium' : ''}`} 
+                                                                placeholder="0 or 5%"
+                                                            />
+                                                        )}
                                                     />
                                                     {(Number(watchVqLines[index]?.discount_amount) || 0) > 0 && (
-                                                        <span className="text-[10px] text-rose-500 text-right pr-1 italic">
+                                                        <span className="text-[10px] text-rose-500 text-right pr-1 italic block mt-1">
                                                             -{(Number(watchVqLines[index]?.discount_amount) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </span>
                                                     )}
