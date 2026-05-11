@@ -1,6 +1,8 @@
 import api from '@core/api/api';
 import type { ApproveSalesOrderPayload, AOListItem } from '../types/sales-order-approval.types';
 import { extractArrayFromResponse } from '@utils/clientFilterUtils';
+import { SalesOrderService } from '@sales/sales-order/services/sales-order.service';
+import type { SalesOrderFormData } from '@sales/sales-order/types/sales-order.types';
 
 // API Endpoint constants
 const ENDPOINTS = {
@@ -123,6 +125,17 @@ export const AOService = {
   },
 
   updateSOStatus: async (id: string | number, status: string) => {
+    // 🛡️ Sync SO Status using the robust SalesOrderService.update
+    // This avoids "400 Bad Request" errors caused by missing mandatory fields in partial patches.
+    const fullData = await SalesOrderService.getById(String(id));
+    if (fullData) {
+      return await SalesOrderService.update(String(id), {
+        ...fullData,
+        status: status as SalesOrderFormData['status']
+      });
+    }
+    
+    // Fallback if full data fetch fails
     return await api.patch(ENDPOINTS.updateSO(id), { status });
   }
 };
