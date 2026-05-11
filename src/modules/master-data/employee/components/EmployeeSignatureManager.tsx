@@ -193,9 +193,6 @@ export const EmployeeSignatureManager: React.FC<Props> = ({ employeeId, onClose 
                 {/* Info & Actions */}
                 <div className="flex items-center justify-between">
                   <div className="overflow-hidden">
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200 truncate" title={sig.signature_name || 'Signature'}>
-                      {sig.signature_name || 'ไม่มีชื่อไฟล์'}
-                    </p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">
                       อัปโหลดเมื่อ {new Date(sig.created_at).toLocaleDateString('th-TH')}
                     </p>
@@ -218,14 +215,9 @@ export const EmployeeSignatureManager: React.FC<Props> = ({ employeeId, onClose 
                           deleteMutation.mutate(sig.emp_signature_id);
                         }
                       }}
-                      disabled={deleteMutation.isPending || sig.is_active}
-                      className={clsx(
-                        "p-2 rounded-lg transition-colors",
-                        sig.is_active 
-                          ? "text-gray-200 dark:text-gray-700 cursor-not-allowed" 
-                          : "text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
-                      )}
-                      title={sig.is_active ? "ไม่สามารถลบลายเซ็นที่ใช้งานอยู่ได้" : "ลบลายเซ็น"}
+                      disabled={deleteMutation.isPending}
+                      className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                      title="ลบลายเซ็น"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>

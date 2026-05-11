@@ -437,16 +437,16 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                             <table className="w-full text-left border-collapse">
                                 <thead className="bg-gray-50 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300">
                                     <tr>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[50px] text-center">ลำดับ</th>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[150px]">รหัสสินค้า</th>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[350px]">ชื่อสินค้า</th>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[150px]">หน่วย</th>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[130px] text-right">ราคา</th>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[130px] text-right">ส่วนลด </th>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[140px] text-right">มูลค่าส่วนลด</th>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[140px] text-right">ราคาสุทธิ</th>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[200px]">หมายเหตุ</th>
-                                        <th className="p-3 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[80px] text-center">จัดการ</th>
+                                        <th className="p-2 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[40px] text-center">ลำดับ</th>
+                                        <th className="p-2 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[200px]">รหัสสินค้า</th>
+                                        <th className="p-2 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[350px]">ชื่อสินค้า</th>
+                                        <th className="p-2 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[110px]">หน่วย</th>
+                                        <th className="p-2 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[110px] text-center">ราคา</th>
+                                        <th className="p-2 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[110px] text-center">ส่วนลด</th>
+                                        <th className="p-2 text-xs font-bold border-b border-gray-200 dark:border-gray-700 min-w-[100px] text-right">มูลค่าส่วนลด</th>
+                                        <th className="p-2 text-xs font-bold border-b border-gray-200 dark:border-gray-700 min-w-[100px] text-right">ราคาสุทธิ</th>
+                                        <th className="p-2 text-sm font-bold border-b border-gray-200 dark:border-gray-700 min-w-[150px]">หมายเหตุ</th>
+                                        <th className="p-2 text-sm font-bold border-b border-gray-200 dark:border-gray-700 w-[60px] text-center">จัดการ</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-100 dark:divide-gray-800">
@@ -459,12 +459,12 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                     ) : (
                                         fields.map((field, index) => (
                                             <tr key={field.id} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors">
-                                                <td className="p-3 text-center text-sm font-medium text-gray-500 dark:text-gray-400">
+                                                <td className="p-2 text-center text-sm font-medium text-gray-500 dark:text-gray-400">
                                                     {index + 1}
                                                 </td>
-                                                <td className="p-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{watch(`items.${index}.itemCode`)}</span>
+                                                <td className="p-2">
+                                                    <div className="flex items-center gap-2 px-1">
+                                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">{watch(`items.${index}.itemCode`)}</span>
                                                         <button 
                                                             type="button"
                                                             onClick={() => {
@@ -477,11 +477,11 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                                         </button>
                                                     </div>
                                                 </td>
-                                                <td className="p-3 text-sm text-gray-600 dark:text-gray-300">
+                                                <td className="p-2 text-sm text-gray-600 dark:text-gray-300">
                                                     {watch(`items.${index}.itemName`)}
                                                 </td>
-                                                <td className="p-3">
-                                                    <div className="flex flex-col gap-1 min-w-[150px]">
+                                                <td className="p-2">
+                                                    <div className="flex flex-col gap-1 min-w-[100px]">
                                                         <select
                                                             {...register(`items.${index}.uomId`)}
                                                             value={watch(`items.${index}.uomId`) || ''}
@@ -514,42 +514,42 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="p-3">
+                                                <td className="p-1 text-center">
                                                     <input
                                                         type="text"
                                                         {...register(`items.${index}.unitPrice`, {
                                                             onChange: (e) => handleItemChange(index, 'unitPrice', e.target.value)
                                                         })}
                                                         onFocus={(e) => e.target.select()}
-                                                        className="w-full text-right bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-sm font-bold px-3 py-1.5 rounded-lg text-gray-700 dark:text-gray-100 shadow-sm transition-all"
+                                                        className="w-full text-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-sm font-bold px-0.5 py-1 rounded-md text-gray-700 dark:text-gray-100 shadow-sm transition-all"
                                                     />
                                                 </td>
-                                                <td className="p-3">
+                                                <td className="p-1 text-center">
                                                     <input
                                                         type="text"
                                                         {...register(`items.${index}.lineDiscount`, {
                                                             onChange: (e) => handleItemChange(index, 'lineDiscount', e.target.value)
                                                         })}
                                                         onFocus={(e) => e.target.select()}
-                                                        className="w-full text-right bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-sm font-bold px-3 py-1.5 rounded-lg text-red-600 dark:text-red-400 shadow-sm transition-all"
+                                                        className="w-full text-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-sm font-bold px-0.5 py-1 rounded-md text-red-600 dark:text-red-400 shadow-sm transition-all"
                                                         placeholder="0"
                                                     />
                                                 </td>
-                                                <td className="p-3 text-right text-sm font-semibold text-gray-500 dark:text-gray-400">
+                                                <td className="p-2 text-right text-sm font-semibold text-gray-500 dark:text-gray-400">
                                                     {Number(watch(`items.${index}.lineDiscountAmnt`) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </td>
-                                                <td className="p-3 text-right text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                <td className="p-2 text-right text-sm font-bold text-blue-600 dark:text-blue-400">
                                                     {Number(watch(`items.${index}.unitPriceNet`) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                 </td>
-                                                <td className="p-3">
+                                                <td className="p-2">
                                                     <input
                                                         type="text"
                                                         {...register(`items.${index}.remark`)}
-                                                        className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-sm p-2 rounded-lg text-gray-700 dark:text-gray-300 shadow-sm transition-all"
+                                                        className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none text-sm p-1 rounded-lg text-gray-700 dark:text-gray-300 shadow-sm transition-all"
                                                         placeholder="หมายเหตุ..."
                                                     />
                                                 </td>
-                                                <td className="p-3 text-center">
+                                                <td className="p-2 text-center">
                                                     <button
                                                         type="button"
                                                         onClick={() => remove(index)}
