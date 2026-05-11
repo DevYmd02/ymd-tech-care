@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { FileText, Search, Plus, Send } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -48,11 +49,23 @@ const STATUS_OPTIONS = [
 
 export default function QuotationListPage() {
     const { toast } = useToast();
-    const [sqNo, setSqNo] = useState('');
-    const [customer, setCustomer] = useState('');
-    const [statusFilter, setStatusFilter] = useState('ALL');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+
+    // 🔗 URL-synced filters — bookmarkable, shareable, survives refresh
+    const {
+        filters,
+        localFilters,
+        handleFilterChange,
+        handleApplyFilters,
+        handlePageChange,
+        resetFilters,
+        setFilters,
+    } = useTableFilters({
+        defaultLimit: 10,
+        customParamKeys: {
+            search: 'sq_no',
+            search2: 'customer_name',
+        }
+    });
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
@@ -62,25 +75,21 @@ export default function QuotationListPage() {
     const [isApproveLoading, setIsApproveLoading] = useState(false);
     const [pendingApproveId, setPendingApproveId] = useState<string | null>(null);
     
-    // 📄 Pagination State
-    const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(10);
-    
     // 🏷️ History Modal State
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [historySqId, setHistorySqId] = useState<number | undefined>(undefined);
     const [historySqNo, setHistorySqNo] = useState<string>('');
 
-    // 🏗️ Memoize query params to prevent unstable identities
+    // 🏗️ Query params derived from URL-synced filters
     const queryParams = useMemo(() => ({
-        sq_no: sqNo,
-        customer_name: customer,
-        status: statusFilter === 'ALL' ? undefined : statusFilter,
-        start_date: startDate,
-        end_date: endDate,
-        page,
-        limit
-    }), [sqNo, customer, statusFilter, startDate, endDate, page, limit]);
+        sq_no: filters.search,
+        customer_name: filters.search2,
+        status: filters.status === 'ALL' ? undefined : filters.status,
+        start_date: filters.date_start,
+        end_date: filters.date_end,
+        page: filters.page,
+        limit: filters.limit
+    }), [filters]);
 
     const { data: apiData, isLoading, refetch } = useQuotationList(queryParams);
 
@@ -102,12 +111,7 @@ export default function QuotationListPage() {
     const displayData = useMemo(() => apiData?.data || [], [apiData]);
 
     const handleClearFilter = () => {
-        setSqNo('');
-        setCustomer('');
-        setStatusFilter('ALL');
-        setStartDate('');
-        setEndDate('');
-        setPage(1);
+        resetFilters();
     };
 
     const handleCreate = () => {
@@ -226,7 +230,7 @@ export default function QuotationListPage() {
         columnHelper.display({
             id: 'index',
             header: () => <div className="flex justify-center items-center w-full">ลำดับ</div>,
-            cell: (info) => <div className="flex justify-center items-center w-full">{(page - 1) * limit + info.row.index + 1}</div>,
+            cell: (info) => <div className="flex justify-center items-center w-full">{(filters.page - 1) * filters.limit + info.row.index + 1}</div>,
             size: 50,
             enableSorting: false,
         }),
@@ -340,7 +344,7 @@ export default function QuotationListPage() {
             size: 180,
             enableSorting: false,
         }),
-    ], [columnHelper, customerMap, page, limit]);
+    ], [columnHelper, customerMap, filters.page, filters.limit]);
 
     return (
         <PageListLayout
@@ -353,37 +357,37 @@ export default function QuotationListPage() {
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                     <FilterField
                         label="เลขที่ใบเสนอราคา"
-                        value={sqNo}
-                        onChange={setSqNo}
+                        value={localFilters.search}
+                        onChange={(v) => handleFilterChange('search', v)}
                         placeholder="SQ-xxxx"
                         accentColor="blue"
                     />
                     <FilterField
                         label="ลูกค้า"
-                        value={customer}
-                        onChange={setCustomer}
+                        value={localFilters.search2}
+                        onChange={(v) => handleFilterChange('search2', v)}
                         placeholder="ชื่อลูกค้า"
                         accentColor="blue"
                     />
                     <FilterField
                         label="วันที่ตั้งแต่"
                         type="date"
-                        value={startDate}
-                        onChange={setStartDate}
+                        value={localFilters.date_start}
+                        onChange={(v) => handleFilterChange('date_start', v)}
                         accentColor="blue"
                     />
                     <FilterField
                         label="ถึงวันที่"
                         type="date"
-                        value={endDate}
-                        onChange={setEndDate}
+                        value={localFilters.date_end}
+                        onChange={(v) => handleFilterChange('date_end', v)}
                         accentColor="blue"
                     />
                     <FilterField
                         label="สถานะ"
                         type="select"
-                        value={statusFilter}
-                        onChange={setStatusFilter}
+                        value={localFilters.status}
+                        onChange={(v) => handleFilterChange('status', v)}
                         options={STATUS_OPTIONS}
                         accentColor="blue"
                     />
@@ -399,7 +403,7 @@ export default function QuotationListPage() {
                                 ล้างค่า
                             </button>
                             <button
-                                onClick={() => { setPage(1); refetch(); }}
+                                onClick={handleApplyFilters}
                                 className="h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center px-6 gap-2"
                             >
                                 <Search size={18} strokeWidth={3} />
@@ -424,11 +428,11 @@ export default function QuotationListPage() {
                     columns={columns}
                     isLoading={isLoading}
                     pagination={{
-                        pageIndex: page,
-                        pageSize: limit,
+                        pageIndex: filters.page,
+                        pageSize: filters.limit,
                         totalCount: apiData?.total || 0,
-                        onPageChange: (p) => setPage(p),
-                        onPageSizeChange: (s) => { setLimit(s); setPage(1); },
+                        onPageChange: (p) => handlePageChange(p),
+                        onPageSizeChange: (s) => setFilters({ limit: s, page: 1 } as never),
                     }}
                     renderMobileCard={(item) => (
                         <SalesMobileCard 

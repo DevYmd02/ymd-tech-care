@@ -84,7 +84,6 @@ export default defineConfig(({ mode }) => {
               // Group 3: UI Extras
               if (
                 id.includes('@tanstack/react-table') ||
-                id.includes('sweetalert2') ||
                 id.includes('react-hot-toast')
               ) {
                 return 'vendor-ui-libs';

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useForm, useWatch, type Resolver, type Path, type PathValue } from 'react-hook-form';
+import { useForm, useWatch, type Resolver, type PathValue } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
 import { MasterDataService } from '@master-data';
@@ -327,54 +327,65 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         };
     }, []);
     
-    // Data Fetching (Master Data)
+    // Data Fetching (Master Data) — staleTime ตั้งสูงเพราะ Master Data แทบไม่เปลี่ยน
+    const MASTER_STALE = 1000 * 60 * 30; // 30 นาที
+    const REF_STALE = 1000 * 60 * 10;    // 10 นาที
+
     const { data: branches = [] } = useQuery({
         queryKey: ['master-branches'],
         queryFn: MasterDataService.getBranches,
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: MASTER_STALE,
     });
 
     const { data: currencies = [] } = useQuery<Currency[]>({
         queryKey: ['master-currencies'],
         queryFn: MasterDataService.getCurrencies,
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: MASTER_STALE,
     });
 
     const { data: customerResponse } = useQuery({
         queryKey: ['master-customers'],
         queryFn: () => CustomerService.getList({ limit: 100 }),
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: REF_STALE,
     });
     const customers = customerResponse?.data || [];
 
     const { data: taxCodes = [] } = useQuery<TaxCode[]>({
         queryKey: ['master-tax-codes'],
         queryFn: TaxCodeService.getTaxCodes,
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: MASTER_STALE,
     });
 
     const { data: departments = [] } = useQuery({
         queryKey: ['master-departments'],
         queryFn: MasterDataService.getDepartments,
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: MASTER_STALE,
     });
 
     const { data: projects = [] } = useQuery({
         queryKey: ['master-projects'],
         queryFn: MasterDataService.getProjects,
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: MASTER_STALE,
     });
 
     const { data: saleAreas = [] } = useQuery({
         queryKey: ['master-sale-areas'],
         queryFn: () => MasterDataService.getSaleAreas(),
         enabled: isOpen,
+        staleTime: MASTER_STALE,
     });
 
     const { data: allEmployees = [] } = useQuery({
         queryKey: ['master-employees'],
         queryFn: () => MasterDataService.getEmployees(),
         enabled: isOpen,
+        staleTime: REF_STALE,
     });
 
     const employees = useMemo(() => 
@@ -385,12 +396,14 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         queryKey: ['master-price-level-names'],
         queryFn: () => MasterDataService.getPriceLevelNames(),
         enabled: isOpen,
+        staleTime: MASTER_STALE,
     });
 
     const { data: uomResponse } = useQuery({
         queryKey: ['master-units'],
         queryFn: () => UnitService.getAll({ limit: 1000 }),
-        enabled: isOpen
+        enabled: isOpen,
+        staleTime: MASTER_STALE,
     });
     const uoms = useMemo(() => uomResponse?.items || [], [uomResponse]);
 
@@ -559,11 +572,13 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     }, [currencies, sourceCurrency, targetCurrency, setValue, isMulti, getValues]);
 
     // 2. Automated Calculations (Subtotal, VAT, Discount, Total)
-    const lineIndices = (getValues('lines') || []).map((_, i) => i);
-    const watchedLineTotals = useWatch({
-        control,
-        name: lineIndices.map(i => `lines.${i}.line_total` as Path<QuotationFormValues>)
-    });
+    // 📺 Performance Fix: Watch the entire lines array once (stable subscription)
+    // instead of re-creating lineIndices on every render which caused useWatch to re-subscribe constantly.
+    const watchedLines = useWatch({ control, name: 'lines' });
+    const watchedLineTotals = useMemo(
+        () => (watchedLines || []).map(l => Number(l?.line_total) || 0),
+        [watchedLines]
+    );
     
     const discountExpression = useMemo(() => discount_expression || '0', [discount_expression]);
     const taxCodeId = useMemo(() => tax_code_id, [tax_code_id]);
@@ -571,7 +586,7 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
 
     useEffect(() => {
         // Line Totals & Header Subtotal
-        const calculatedSubTotal = (watchedLineTotals as (string | number | undefined)[] || []).reduce<number>((sum, val) => sum + (Number(val) || 0), 0);
+        const calculatedSubTotal = watchedLineTotals.reduce((sum, val) => sum + val, 0);
         
         // Header Discount
         const calculatedDiscount = calculateDiscountAmount(calculatedSubTotal, discountExpression);
