@@ -4,7 +4,7 @@
  * @module vendor
  */
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -69,14 +69,14 @@ export function VendorGroupFormModal({ isOpen, onClose, editId, onSuccess }: Pro
 
     const isActive = useWatch({ control, name: 'is_active' });
 
-    const clearForm = () => {
+    const clearForm = useCallback(() => {
         reset({
             vendor_group_code: '',
             vendor_group_name: '',
             vendor_group_nameeng: '',
             is_active: true
         });
-    };
+    }, [reset]);
 
     // Reset/Load Data
     useEffect(() => {
@@ -96,7 +96,7 @@ export function VendorGroupFormModal({ isOpen, onClose, editId, onSuccess }: Pro
                 clearForm();
             }
         }
-    }, [isOpen, editId, reset]);
+    }, [isOpen, editId, reset, clearForm]);
 
     const onSubmit = async (data: VendorGroupFormValues) => {
         try {
@@ -109,9 +109,9 @@ export function VendorGroupFormModal({ isOpen, onClose, editId, onSuccess }: Pro
 
             let result;
             if (editId) {
-                result = await VendorGroupService.update(editId, payload as any);
+                result = await VendorGroupService.update(editId, payload);
             } else {
-                result = await VendorGroupService.create(payload as any);
+                result = await VendorGroupService.create(payload);
             }
 
             if (result.success) {

@@ -106,7 +106,7 @@ export default function VQListPage() {
         setSendingRFQ({ rfq_id: item.rfq_id, rfq_no: item.rfq_no } as RFQHeader);
     }, []);
 
-    const executeSendRFQ = async (batchData: Array<{ rfqVendorId: number; payload: any }>) => {
+    const executeSendRFQ = async (batchData: Array<{ rfqVendorId: number; payload: SendRFQToVendorPayload }>) => {
         if (!sendingRFQ || batchData.length === 0) return;
         const rfqNo = sendingRFQ.rfq_no;
         toast(`กำลังส่งอีเมล RFQ ${rfqNo} ในพื้นหลัง...`, 'info');
@@ -433,8 +433,7 @@ export default function VQListPage() {
         }
     }), [filters.page, filters.limit, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, vendorMap]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const groupedRfqColumns = useMemo<ColumnDef<GroupedPendingRFQ, any>[]>(() => [
+    const groupedRfqColumns = useMemo<ColumnDef<GroupedPendingRFQ, unknown>[]>(() => [
         {
             id: 'index',
             header: () => <div className="text-center w-full">ลำดับ</div>,
@@ -711,7 +710,7 @@ export default function VQListPage() {
                         {activeTab === 'WAITING_RFQ' && (
                             <SmartTable
                                 data={groupedWaitingRfqData}
-                                columns={groupedRfqColumns as ColumnDef<GroupedPendingRFQ, unknown>[]}
+                                columns={groupedRfqColumns}
                                 isLoading={isWaitingRfqLoading}
                                 pagination={{
                                     pageIndex: filters.page,

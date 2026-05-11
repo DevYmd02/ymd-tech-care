@@ -4,7 +4,7 @@
  * @module vendor
  */
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -69,14 +69,14 @@ export function VendorTypeFormModal({ isOpen, onClose, editId, onSuccess }: Prop
 
     const isActive = useWatch({ control, name: 'is_active' });
 
-    const clearForm = () => {
+    const clearForm = useCallback(() => {
         reset({
             vendor_type_code: '',
             vendor_type_name: '',
             vendor_type_nameeng: '',
             is_active: true
         });
-    };
+    }, [reset]);
 
     // Reset/Load Data
     useEffect(() => {
@@ -96,7 +96,7 @@ export function VendorTypeFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                 clearForm();
             }
         }
-    }, [isOpen, editId, reset]);
+    }, [isOpen, editId, reset, clearForm]);
 
     const onSubmit = async (data: VendorTypeFormValues) => {
         try {
@@ -109,9 +109,9 @@ export function VendorTypeFormModal({ isOpen, onClose, editId, onSuccess }: Prop
 
             let result;
             if (editId) {
-                result = await VendorTypeService.update(editId, payload as any);
+                result = await VendorTypeService.update(editId, payload);
             } else {
-                result = await VendorTypeService.create(payload as any);
+                result = await VendorTypeService.create(payload);
             }
 
             if (result.success) {

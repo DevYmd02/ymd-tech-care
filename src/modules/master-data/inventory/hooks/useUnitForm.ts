@@ -55,7 +55,7 @@ export function useUnitForm(editId: number | null, initialData?: UnitListItem | 
         queryKey: ['unit-check-duplicate', debouncedCode],
         queryFn: async () => {
             if (!debouncedCode) return { items: [] };
-            return UnitService.getAll({ unit_code: debouncedCode } as any);
+            return UnitService.getAll({ unit_code: debouncedCode });
         },
         enabled: !!debouncedCode && debouncedCode.trim().length >= 1,
     });

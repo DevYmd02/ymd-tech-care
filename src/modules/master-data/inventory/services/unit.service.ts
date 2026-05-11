@@ -17,6 +17,14 @@ interface UomResponse {
     updated_at?: string;
 }
 
+export interface UnitFilters extends Partial<TableFilters> {
+    unit_code?: string;
+    unit_name?: string;
+    uom_code?: string;
+    uom_name?: string;
+}
+
+
 // ✅ type-safe ไม่ใช้ any
 function mapUomToUnit(item: UomResponse): UnitListItem {
     return {
@@ -39,7 +47,7 @@ function mapUomToUnit(item: UomResponse): UnitListItem {
 import { normalizeListResponse } from '@/shared/utils/apiUtils';
 
 export const UnitService = {
-    getAll: async (params?: Partial<TableFilters>, config?: AxiosRequestConfig): Promise<PaginatedListResponse<UnitListItem>> => {
+    getAll: async (params?: UnitFilters, config?: AxiosRequestConfig): Promise<PaginatedListResponse<UnitListItem>> => {
         if (USE_MOCK) {
             logger.info('🎭 [Mock Mode] Serving Unit List');
             return { items: mockUnits, total: mockUnits.length, page: 1, limit: 100 };

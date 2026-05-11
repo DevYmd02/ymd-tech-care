@@ -16,7 +16,7 @@ import { RFQNoDisplay, PRNoDisplay } from './VQColumnComponents';
 const columnHelper = createColumnHelper<VQListItem>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any>[] => {
+export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any>[] => { // polymorphism required
     const { vendorMap, filters, totalAmount, handleOpenView, handleOpenEdit } = context;
 
     return [
@@ -216,7 +216,7 @@ export const getColumns = (context: VQColumnsContext): ColumnDef<VQListItem, any
 const pendingColumnHelper = createColumnHelper<VQPendingQueueItem>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getPendingColumns = (tab: 'WAITING_VQ' | 'WAITING_RFQ', context: VQColumnsContext): ColumnDef<VQPendingQueueItem, any>[] => {
+export const getPendingColumns = (tab: 'WAITING_VQ' | 'WAITING_RFQ', context: VQColumnsContext): ColumnDef<VQPendingQueueItem, any>[] => { // polymorphism required
     const { vendorMap, filters, setInitialRFQForCreate, setIsVqModalOpen, setSelectedVqId, setIsViewMode, handleCancelVendor } = context;
 
     return [

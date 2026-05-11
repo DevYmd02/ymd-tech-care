@@ -50,7 +50,7 @@ export function useItemTypeForm(editId: number | null, initialData?: ItemTypeLis
         queryKey: ['itemtype-check-duplicate', debouncedCode],
         queryFn: async () => {
             if (!debouncedCode) return { items: [] };
-            return ItemTypeService.getAll({ item_type_code: debouncedCode } as any);
+            return ItemTypeService.getAll({ item_type_code: debouncedCode });
         },
         enabled: !!debouncedCode && debouncedCode.trim().length >= 1,
     });

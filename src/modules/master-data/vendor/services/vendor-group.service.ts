@@ -64,12 +64,12 @@ export const VendorGroupService = {
             const newVendorGroup: VendorGroupMaster = {
                 vendor_group_id: newId,
                 id: newId,
-                vendor_group_code: data.groupCode.toUpperCase(),
-                code: data.groupCode.toUpperCase(),
-                vendor_group_name: data.groupName,
-                name_th: data.groupName,
-                vendor_group_nameeng: data.groupNameEn,
-                is_active: data.isActive,
+                vendor_group_code: data.vendor_group_code.toUpperCase(),
+                code: data.vendor_group_code.toUpperCase(),
+                vendor_group_name: data.vendor_group_name,
+                name_th: data.vendor_group_name,
+                vendor_group_nameeng: data.vendor_group_nameeng,
+                is_active: data.is_active,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
             };
@@ -96,12 +96,12 @@ export const VendorGroupService = {
             if (index !== -1) {
                 localVendorGroups.items[index] = {
                     ...localVendorGroups.items[index],
-                    vendor_group_code: data.groupCode.toUpperCase(),
-                    code: data.groupCode.toUpperCase(),
-                    vendor_group_name: data.groupName,
-                    name_th: data.groupName,
-                    vendor_group_nameeng: data.groupNameEn,
-                    is_active: data.isActive,
+                    vendor_group_code: data.vendor_group_code.toUpperCase(),
+                    code: data.vendor_group_code.toUpperCase(),
+                    vendor_group_name: data.vendor_group_name,
+                    name_th: data.vendor_group_name,
+                    vendor_group_nameeng: data.vendor_group_nameeng,
+                    is_active: data.is_active,
                     updated_at: new Date().toISOString(),
                 };
                 return { success: true, data: localVendorGroups.items[index] };
