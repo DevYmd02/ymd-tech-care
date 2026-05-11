@@ -26,6 +26,9 @@ const queryClient = new QueryClient({
       },
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000), // 1s → 2s → 4s (max 8s)
     },
+    mutations: {
+      retry: false, // ห้าม retry mutation เด็ดขาด — อาจทำให้ insert/update ซ้ำ
+    },
   },
 });
 
