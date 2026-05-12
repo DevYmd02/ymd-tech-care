@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { POService } from '@/modules/procurement/services';
-import { CreatePOSchema, type POFormData, type POLine, type POListItem } from '@/modules/procurement/schemas/po-schemas';
+import { type POFormData, type POLine, type POListItem } from '@/modules/procurement/schemas/po-schemas';
 import type { CreatePOPayload } from '@/modules/procurement/types/po-types';
 import type { UserProfile } from '@/core/auth/auth.service';
 import { logger } from '@/shared/utils';
@@ -23,10 +23,18 @@ export const usePOActions = (props?: UsePOActionsProps) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [pendingPayload, setPendingPayload] = useState<POFormData | null>(null);
+    const [isDirectConfirmOpen, setIsDirectConfirmOpen] = useState(false);
+    const [pendingDirectItem, setPendingDirectItem] = useState<POListItem | Record<string, unknown> | null>(null);
 
     // List-level Direct Submit
-    const handleDirectSubmit = async (item: POListItem | Record<string, unknown>) => {
-        const itemAny = item as Record<string, unknown>;
+    const handleDirectSubmit = (item: POListItem | Record<string, unknown>) => {
+        setPendingDirectItem(item);
+        setIsDirectConfirmOpen(true);
+    };
+
+    const executeDirectSubmit = async () => {
+        if (!pendingDirectItem) return;
+        const itemAny = pendingDirectItem as Record<string, unknown>;
         const poId = (itemAny.po_id || itemAny.po_header_id || itemAny.id) as number | string;
         if (!poId) return;
 
@@ -36,6 +44,8 @@ export const usePOActions = (props?: UsePOActionsProps) => {
             await POService.submit(Number(poId));
             queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
             props?.toast?.('ส่งอนุมัติสำเร็จ', 'success');
+            setIsDirectConfirmOpen(false);
+            setPendingDirectItem(null);
         } catch (error: unknown) {
             logger.error('[usePOActions] handleDirectSubmit error:', error);
             const errMsg = extractErrorMessage(error);
@@ -71,7 +81,11 @@ export const usePOActions = (props?: UsePOActionsProps) => {
             const fullPayload: CreatePOPayload = {
                 po_date:            pendingPayload.po_date ? new Date(pendingPayload.po_date).toISOString() : new Date().toISOString(),
                 pr_id:              safeId(pendingPayload.pr_id),
+                qc_id:              safeId(pendingPayload.qc_id),
+                qc_no:              pendingPayload.qc_no,
+                pr_no:              pendingPayload.pr_no,
                 vendor_id:          Number(pendingPayload.vendor_id),
+                vendor_name:        pendingPayload.vendor_name,
                 branch_id:          Number(pendingPayload.branch_id),
                 warehouse_id:       Number(pendingPayload.ship_to_warehouse_id),
                 base_currency_code: pendingPayload.base_currency_code || "THB",
@@ -80,6 +94,7 @@ export const usePOActions = (props?: UsePOActionsProps) => {
                 exchange_rate_date: pendingPayload.exchange_rate_date ? new Date(pendingPayload.exchange_rate_date).toISOString() : new Date().toISOString(),
                 tax_code_id:        Number(pendingPayload.tax_code_id),
                 discount_expression: pendingPayload.discount_expression || "0",
+                remarks:             pendingPayload.remarks || "",
                 status:             "DRAFT", // Hardcode DRAFT for new creation
                 created_at:         new Date().toISOString(),
                 created_by:         Number(poId ? (getValues('created_by') || user?.id || 1) : (user?.id || 1)),
@@ -144,7 +159,6 @@ export const usePOActions = (props?: UsePOActionsProps) => {
                     await POService.submit(Number(poId));
                 }
             } else {
-                CreatePOSchema.parse(finalizedPayload);
                 await POService.create(finalizedPayload as unknown as CreatePOPayload);
             }
 
@@ -177,9 +191,13 @@ export const usePOActions = (props?: UsePOActionsProps) => {
         isSubmitting,
         isConfirmModalOpen,
         setIsConfirmModalOpen,
+        isDirectConfirmOpen,
+        setIsDirectConfirmOpen,
         pendingPayload,
+        pendingDirectItem,
         handleConfirmSave,
         onSubmit,
-        handleDirectSubmit
+        handleDirectSubmit,
+        executeDirectSubmit
     };
 };

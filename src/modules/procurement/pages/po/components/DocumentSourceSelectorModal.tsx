@@ -127,7 +127,7 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                             pr_id: qc.pr_id || (qcAny.pr_header_id as number) || (-(qc.qc_id || 0)),
                             pr_no: qc.pr_no || `(No PR Reference)`,
                             base_currency_code: 'THB', 
-                            pr_base_total_amount: Number(qc.vq_total_amount || 0),
+                            pr_base_total_amount: Number(qc.vq_total_amount || qc.lowest_price || (qcAny.total_amount as number) || (qcAny.net_amount as number) || 0),
                             requester_name: prRequesterMap.get(prNo || '') || qcAny.requester_name || qcAny.created_by_name || 
                                             (qcAny.created_by_id === 1 || qcAny.created_by === 1 ? 'แอดมิน แอดมิน' : '-'), 
                             preferred_vendor: winnerVendorId ? {
@@ -249,7 +249,8 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
     const vqMap = vqQueries.reduce((acc, query, index) => {
         if (query.data) {
             const id = winningVqIds[index];
-            acc[id] = query.data as VQListItem;
+            const rawData = (query.data as unknown as Record<string, unknown>)?.data || query.data;
+            acc[id] = Array.isArray(rawData) ? (rawData[0] as VQListItem) : (rawData as VQListItem);
         }
         return acc;
     }, {} as Record<number, VQListItem>);
@@ -407,7 +408,10 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
                                     const vendorDetail = winningVendorId ? vendorMap[winningVendorId] : null;
                                     
                                     const vendorName = vendorDetail?.vendor_name || vqDetail?.vendor?.vendor_name || vqDetail?.vendor_name || pr.preferred_vendor?.vendor_name || (pr as unknown as { vendor_name?: string }).vendor_name || (hasQC ? 'มีผู้ชนะใน QC' : 'ไม่ระบุผู้ขาย');
-                                    const displayAmount = vqDetail ? Number(vqDetail.base_total_amount || 0) : pr.pr_base_total_amount;
+                                    const vqRaw = vqDetail as unknown as Record<string, unknown>;
+                                    const displayAmount = vqDetail 
+                                        ? Number(vqDetail.base_total_amount || vqDetail.quote_total_amount || vqRaw.total_amount || vqRaw.net_amount || 0) 
+                                        : Number(pr.pr_base_total_amount || 0);
 
                                     return (
                                         <div 
@@ -489,4 +493,3 @@ export const DocumentSourceSelectorModal: React.FC<DocumentSourceSelectorModalPr
         </ModalLayout>
     );
 };
-

@@ -58,11 +58,19 @@ const deriveRFQCounter = (item: RFQHeader) => {
     // 🔒 FIX: Prioritize 'sent_vendors_count' (REQUIRED field) over legacy 'vendor_sent'
     // This ensures that when the backend is updated, the frontend picks up the new value correctly.
     const total = item.vendor_total ?? item.vendor_count ?? item.rfqVendors?.length ?? 0;
-    const sentCount = item.sent_vendors_count ?? item.vendor_sent ?? item.rfqVendors?.filter((v) => 
-        ['SENT', 'RESPONDED', 'DECLINED', 'CLOSED'].includes(String(v.status || '').toUpperCase())
+    
+    // 🔒 FIX: Only count vendors as 'Sent' if they were explicitly sent (status = SENT or has sent_date)
+    // This prevents the 'Sent' count from increasing automatically when a VQ is created for a pending vendor.
+    const sentCount = item.sent_vendors_count ?? item.vendor_sent ?? item.rfqVendors?.filter((v) => {
+        const status = String(v.status || '').toUpperCase();
+        return status === 'SENT' || !!v.sent_date;
+    }).length ?? 0;
+
+    const respondedCount = item.responded_vendors_count ?? item.vendor_responded ?? item.rfqVendors?.filter((v) => 
+        ['RESPONDED', 'DECLINED'].includes(String(v.status || '').toUpperCase())
     ).length ?? 0;
     
-    return { total, sentCount };
+    return { total, sentCount, respondedCount };
 };
 
 const getDynamicStatus = (item: RFQHeader) => {

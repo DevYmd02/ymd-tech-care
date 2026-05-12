@@ -7,7 +7,7 @@
  *  Business logic extracted to usePOForm hook.
  */
 import { useMemo, useState } from 'react';
-import { FormProvider, useWatch, Controller, useFieldArray, type Control, type FieldErrors } from 'react-hook-form';
+import { FormProvider, useWatch, Controller, type Control, type FieldErrors } from 'react-hook-form';
 import { SavingOverlay } from '@/shared/components/ui/feedback/SavingOverlay';
 import { 
     Save, Search, Trash2, FileText,
@@ -18,6 +18,8 @@ import { POStatusBadge } from '@ui';
 import { WindowFormLayout } from '@/shared/components/ui/layout/WindowFormLayout';
 import { CustomDateInput } from '@ui';
 import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
+import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
+
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { ProductSearchModal } from './ProductSearchModal';
 import { PRSearchModal } from './PRSearchModal';
@@ -68,25 +70,15 @@ const RowTotal = ({ control, index }: { control: Control<POFormData>; index: num
 // SUB-COMPONENT: Summary Panel
 // ====================================================================================
 
-const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; taxCodes: TaxCode[] }) => {
-    // 🎯 Optimization: Use fieldArray to get stable references (only changes on add/remove)
-    const { fields } = useFieldArray({ control, name: 'po_lines' });
-    
-    // 🎯 Optimization: Only watch fields that affect totals
-    const watchedLineTotals = useWatch({
-        control,
-        name: fields.map((_, i) => `po_lines.${i}.line_total` as const)
-    });
+const POSummaryPanel = ({ control, taxCodes, isView }: { control: Control<POFormData>; taxCodes: TaxCode[]; isView: boolean }) => {
+    // 🎯 Watch everything needed for calculation
+    const currentLines = useWatch({ control, name: 'po_lines' });
     const taxCodeId = useWatch({ control, name: 'tax_code_id' });
+    const headerDiscountExpr = useWatch({ control, name: 'discount_expression' });
 
     const { taxAmount, totalAmount, taxRate, totalDiscount, grossTotal } = useMemo(() => {
-        // 🎯 Ensure reactivity from watchedLineTotals and satisfy ESLint/TS
-        const lineCount = (watchedLineTotals || []).length;
-        if (lineCount < 0) return { taxAmount: 0, totalAmount: 0, taxRate: 0, totalDiscount: 0, grossTotal: 0 };
-
-        // Use getValues for the actual data to avoid watching everything
-        const currentLines = (control._formValues.po_lines || []);
-        const items = currentLines.map((l: POLine) => {
+        const lines = currentLines || [];
+        const items = (lines as POLine[]).map((l) => {
             const qty = Number(l.qty_ordered ?? l.qty ?? 0);
             const price = Number(l.unit_price ?? 0);
             const disc = parseDiscountAmount(l.discount_expression ?? '0', qty * price);
@@ -100,17 +92,22 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
         const selectedTax = (Array.isArray(taxCodes) ? taxCodes : []).find(t => Number(t.tax_code_id) === Number(taxCodeId));
         const taxRate = selectedTax ? Number(selectedTax.tax_rate) : 0;
 
-        const summary = calculatePricingSummary(items, taxRate, false);
-        const totalDiscount = items.reduce((sum: number, item: { discount: number }) => sum + (item.discount || 0), 0);
+        const lineDiscountTotal = items.reduce((sum: number, item: { discount: number }) => sum + (item.discount || 0), 0);
         const grossTotal = items.reduce((sum: number, item: { qty: number; unit_price: number }) => sum + (item.qty * item.unit_price), 0);
+
+        const subtotalBeforeGlobal = Math.max(0, grossTotal - lineDiscountTotal);
+        const globalDiscountAmount = parseDiscountAmount(headerDiscountExpr || '0', subtotalBeforeGlobal);
+
+        const summary = calculatePricingSummary(items, taxRate, false, globalDiscountAmount);
+        const fullTotalDiscount = lineDiscountTotal + globalDiscountAmount;
 
         return {
             ...summary,
             taxRate,
-            totalDiscount,
+            totalDiscount: fullTotalDiscount,
             grossTotal
         };
-    }, [watchedLineTotals, taxCodeId, taxCodes, control._formValues.po_lines]);
+    }, [currentLines, taxCodeId, taxCodes, headerDiscountExpr]);
 
     return (
         <div className="w-80 space-y-2 bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm transition-all">
@@ -120,8 +117,29 @@ const POSummaryPanel = ({ control, taxCodes }: { control: Control<POFormData>; t
                     {grossTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
             </div>
+            <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600 dark:text-slate-400">ส่วนลดท้ายบิล</span>
+                <div className="flex items-center gap-2">
+                    <Controller
+                        control={control}
+                        name="discount_expression"
+                        render={({ field }) => (
+                            <input
+                                {...field}
+                                type="text"
+                                className="w-20 h-7 text-right px-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
+                                placeholder="0 หรือ 5%"
+                                readOnly={isView}
+                                onChange={(e) => {
+                                    field.onChange(e.target.value);
+                                }}
+                            />
+                        )}
+                    />
+                </div>
+            </div>
             <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-slate-400">ส่วนลด</span>
+                <span className="text-gray-600 dark:text-slate-400">รวมส่วนลด</span>
                 <span className={`font-medium ${totalDiscount > 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
                     {totalDiscount > 0 ? '-' : ''}{totalDiscount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
@@ -514,7 +532,7 @@ export default function POFormModal({
                                 <div>
                                     <label className={ui.label}>วันที่ PO <span className="text-red-500">*</span></label>
                                     <div className="h-8">
-                                        <Controller
+                                        <Controller<POFormData, 'po_date'>
                                             name="po_date"
                                             control={control}
                                             render={({ field }) => (
@@ -619,7 +637,7 @@ export default function POFormModal({
                                 <div>
                                     <label className={ui.label}>กำหนดส่งของ</label>
                                     <div className="h-8">
-                                        <Controller
+                                        <Controller<POFormData, 'delivery_date'>
                                             name="delivery_date"
                                             control={control}
                                             render={({ field }) => (
@@ -641,7 +659,7 @@ export default function POFormModal({
                                 <div>
                                     <label className={ui.label}>ประเภทภาษี</label>
                                     <div className="h-8">
-                                        <Controller
+                                        <Controller<POFormData, 'tax_code_id'>
                                             name="tax_code_id"
                                             control={control}
                                             render={({ field }) => (
@@ -671,12 +689,17 @@ export default function POFormModal({
 
                             </div>
 
-                            {/* ── Row 4: Currency Detail Fields (Always visible) ── */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg">
+                            {/* ── Row 4: Currency Detail Fields (Conditional via MulticurrencyWrapper) ── */}
+                            <MulticurrencyWrapper
+                                name="is_multicurrency"
+                                label="ระบุสกุลเงินต่างประเทศ (Multicurrency)"
+                                control={control}
+                            >
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg">
                                     <div>
                                         <label className={ui.label}>วันที่อัตราแลกเปลี่ยน</label>
                                         <div className="h-8">
-                                            <Controller
+                                            <Controller<POFormData, 'exchange_rate_date'>
                                                 name="exchange_rate_date"
                                                 control={control}
                                                 render={({ field }) => (
@@ -706,7 +729,6 @@ export default function POFormModal({
                                             <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
                                             {Array.isArray(currencies) && currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_th}</option>)}
                                         </select>
-
                                     </div>
                                     <div>
                                         <label className={ui.label}>ไปที่สกุลเงิน (Target)</label>
@@ -721,7 +743,6 @@ export default function POFormModal({
                                             <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
                                             {Array.isArray(currencies) && currencies.map((o: Currency) => <option key={o.currency_code} value={o.currency_code}>{o.currency_code} - {o.name_th}</option>)}
                                         </select>
-
                                     </div>
                                     <div>
                                         <label className={ui.label}>อัตราแลกเปลี่ยน <span className="text-red-500">*</span></label>
@@ -735,10 +756,11 @@ export default function POFormModal({
                                             disabled={isView}
                                             placeholder="1"
                                         />
-
                                         {errors.exchange_rate && <p className={ui.error}>{errors.exchange_rate.message}</p>}
                                     </div>
-                            </div>
+                                </div>
+                            </MulticurrencyWrapper>
+
                         </div>
                     </div>
 
@@ -843,7 +865,7 @@ export default function POFormModal({
 
                         {/* Summary Footer */}
                         <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-6 flex justify-end">
-                            <POSummaryPanel control={control} taxCodes={taxCodes} />
+                            <POSummaryPanel control={control} taxCodes={taxCodes} isView={isView} />
                         </div>
                     </div>
 

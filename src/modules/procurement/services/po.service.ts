@@ -66,8 +66,11 @@ const ENDPOINTS = {
  */
 const KNOWN_DTO_FIELDS = [
     'po_no', 'po_date', 'vendor_id', 'branch_id', 'status', 'remarks',
-    'payment_term_days', 'tax_code_id', 'currency_code', 'exchange_rate',
-    'pr_id', 'qc_id', 'poa_no', 'delivery_date', 'po_lines'
+    'tax_code_id', 'currency_code', 'exchange_rate',
+    'pr_id', 'qc_id', 'poa_no', 'po_lines',
+    'base_currency_code', 'quote_currency_code', 'exchange_rate_date',
+    'created_at', 'created_by', 'discount_expression', 'warehouse_id',
+    'qc_no', 'pr_no', 'vendor_name'
 ];
 
 /**
@@ -75,7 +78,8 @@ const KNOWN_DTO_FIELDS = [
  */
 const KNOWN_LINE_DTO_FIELDS = [
     'po_line_id', 'item_id', 'qty', 'unit_price', 'uom_id',
-    'discount_expression', 'note', 'pr_line_id'
+    'discount_expression', 'note', 'pr_line_id', 'rfq_line_id',
+    'line_no', 'status', 'required_receipt_type', 'description'
 ];
 
 export const POService = {
@@ -149,31 +153,37 @@ export const POService = {
                     const pr = await PRService.getDetail(id, config);
                     if (pr?.pr_no) prMap[id] = pr.pr_no;
                 } catch { /* ignore */ }
-            }),
-            // Hydrate QCs
-            ...Array.from(qcIdsToFetch).map(async (id) => {
-                try {
-                    const qc = await QCService.getById(id, config);
-                    if (qc?.qc_no) qcMap[id] = qc.qc_no;
-                } catch { /* ignore */ }
             })
+            // ❌ Removed QCService.getById fetch to prevent 404 errors as endpoint is missing
         ]);
 
-        // 4. Final Mapping
-        const allItems = rawItems.map((item) => {
+        // 4. Final Mapping with Backup QC Lookup
+        const allItems = await Promise.all(rawItems.map(async (item) => {
             const bName = masterDataCache.getBranchName(item.branch_id);
+            let qcNo = item.qc_no || (item.qc_id || (item as unknown as Record<string, unknown>).qc_header_id ? qcMap[item.qc_id || (item as unknown as Record<string, unknown>).qc_header_id as number] : undefined);
+            
+            // 🔎 Triple-Scan Backup: If still no QC No, try fetching via PR No
+            const prNo = item.pr_no || (item.pr_id ? prMap[item.pr_id] : undefined);
+            if (!qcNo && prNo) {
+                try {
+                    const qcsRes = await QCService.getList({ pr_no: prNo }, config);
+                    const qcs = extractArrayFromResponse<Record<string, unknown>>(qcsRes);
+                    if (qcs.length > 0) qcNo = qcs[0].qc_no as string;
+                } catch { /* ignore */ }
+            }
+
             const mappedItem = {
                 ...item,
                 po_id: Number(normalizeId(item.po_id ?? (item as unknown as Record<string, unknown>).po_header_id)),
                 vendor_name: item.vendor_name || vendorMap[item.vendor_id] || undefined,
                 status: normalizePOStatus(item.status),
-                pr_no: item.pr_no || (item.pr_id ? prMap[item.pr_id] : undefined),
-                qc_no: item.qc_no || (item.qc_id || (item as unknown as Record<string, unknown>).qc_header_id ? qcMap[item.qc_id || (item as unknown as Record<string, unknown>).qc_header_id as number] : undefined),
+                pr_no: prNo,
+                qc_no: qcNo,
                 po_date: normalizeDate(item.po_date),
                 branch_name: (typeof bName === 'string' ? bName : '') as string
             };
             return mappedItem;
-        });
+        }));
 
         // Client-side Filtering & Pagination Layer
         // We apply this for both Mock and Live data to ensure UI consistency 
@@ -243,15 +253,8 @@ export const POService = {
             }
         }
 
-        const qcId = mappedItem.qc_id || (mappedItem as unknown as Record<string, unknown>).qc_header_id || (mappedItem as unknown as Record<string, unknown>).qc_id || (mappedItem as unknown as Record<string, unknown>).id as number | undefined;
-        if (qcId && !mappedItem.qc_no) {
-            try {
-                const qcDetail = await QCService.getById(Number(qcId), config);
-                if (qcDetail?.qc_no) mappedItem.qc_no = qcDetail.qc_no;
-            } catch (error) {
-                logger.error('[POService] QC hydration failed', error);
-            }
-        }
+        // ❌ Removed QCService.getById fetch to prevent 404 errors
+        // Will rely on backup lookup below if needed
 
         // Backup QC lookup (if po record missing qc_id but has pr_no)
         if (!mappedItem.qc_no && mappedItem.pr_no) {

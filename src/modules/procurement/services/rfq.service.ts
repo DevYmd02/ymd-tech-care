@@ -147,7 +147,8 @@ export const RFQService = {
         params?.creator_name || 
         params?.status || 
         params?.date_start || 
-        params?.date_end
+        params?.date_end ||
+        params?.approved_pr_no
     );
 
     // 🎯 HYBRID FALLBACK: Strip filters from API call if client filtering is active
@@ -168,6 +169,9 @@ export const RFQService = {
         delete apiParams.date_start;
         delete apiParams.date_end;
     }
+    
+    // ❌ Always delete `approved_pr_no` because backend rejects it with 400 Bad Request
+    delete apiParams.approved_pr_no;
 
     // ⚡ PHASE 2: Fetch data from backend
     const res = await api.get<RFQListResponse & { pageSize?: number }>(ENDPOINTS.list, { 
@@ -220,12 +224,13 @@ export const RFQService = {
         if (params?.status && params.status !== 'ALL') filterParams.status = params.status;
         if (params?.date_start) filterParams.date_start = params.date_start;
         if (params?.date_end) filterParams.date_end = params.date_end;
+        if (params?.approved_pr_no) filterParams.approved_pr_no = params.approved_pr_no;
         if (params?.page) filterParams.page = params.page;
         if (params?.limit) filterParams.limit = params.limit;
         if (params?.sort) filterParams.sort = params.sort;
 
         return applyClientFilters<RFQHeader>(normalizedItems, filterParams, {
-            searchableFields: ['rfq_no', 'pr_no', 'creator_name'],
+            searchableFields: ['rfq_no', 'pr_no', 'creator_name', 'approved_pr_no'],
             dateField: 'rfq_date',
             backendTotal: res.total,
             exactMatchFields: ['status']

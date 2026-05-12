@@ -12,6 +12,9 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { POFormModal, DocumentSourceSelectorModal } from './components';
 import { POAHistoryModal } from '@/modules/procurement/pages/poa/components/POAHistoryModal';
 import GRNFormModal from '@/modules/procurement/pages/grn/components/GRNFormModal';
+import { ConfirmationModal } from '@/shared/components/system/ConfirmationModal';
+import { toast } from 'react-hot-toast';
+import type { UseFormReturn } from 'react-hook-form';
 
 export default function POListPage() {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -24,7 +27,24 @@ export default function POListPage() {
         handlePageChange, handleSortChange, sortConfig,
     } = usePOList();
 
-    const { handleDirectSubmit } = usePOActions();
+    const { 
+        handleDirectSubmit, 
+        executeDirectSubmit,
+        isDirectConfirmOpen,
+        setIsDirectConfirmOpen,
+        isSubmitting,
+        pendingDirectItem
+    } = usePOActions({
+        user: null, // Not needed for direct submit
+        formMethods: {} as UseFormReturn<POFormData>,
+        existingPO: null,
+        onClose: () => {},
+        toast: (msg, type) => {
+            if (type === 'success') toast.success(msg);
+            else if (type === 'error') toast.error(msg);
+            else toast(msg);
+        }
+    });
 
     // ── Modal State (URL Driven) ──────────────────────────────────────────────
     const isCreateInterceptorOpen = searchParams.get('mode') === 'select-source';
@@ -145,8 +165,8 @@ export default function POListPage() {
             header: () => <div className="text-left whitespace-nowrap">เอกสารอ้างอิง</div>,
             cell: (info) => {
                 const item = info.row.original;
-                const prDisplay = item.pr_no || (item.pr_id ? `ID: ${item.pr_id}` : null);
-                const qcDisplay = item.qc_no || (item.qc_id ? `ID: ${item.qc_id}` : null);
+                const prDisplay = item.pr_no || (item.pr_id ? `PR: ${item.pr_id}` : null);
+                const qcDisplay = item.qc_no || (item.qc_id ? `QC: ${item.qc_id}` : null);
                 
                 return (
                     <div className="flex flex-col whitespace-nowrap text-sm">
@@ -636,6 +656,18 @@ export default function POListPage() {
                     poNo={historyPoNo}
                 />
             )}
+
+            <ConfirmationModal
+                isOpen={isDirectConfirmOpen}
+                onClose={() => setIsDirectConfirmOpen(false)}
+                onConfirm={executeDirectSubmit}
+                title="ยืนยันการส่งอนุมัติ"
+                description={`คุณต้องการส่งใบสั่งซื้อ ${pendingDirectItem?.po_no || ''} เพื่อขออนุมัติใช่หรือไม่?`}
+                confirmText="ส่งอนุมัติ"
+                cancelText="ยกเลิก"
+                variant="info"
+                isLoading={isSubmitting}
+            />
         </>
     );
 }

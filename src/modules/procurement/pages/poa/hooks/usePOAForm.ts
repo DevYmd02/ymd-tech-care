@@ -108,7 +108,9 @@ export const usePOAForm = ({
             vendor_name: '',
             remarks: '',
             reject_reason: '',
+            is_multicurrency: false,
             currency_code: 'THB',
+
             target_currency: 'THB',
             exchange_rate_date: new Date().toISOString().split('T')[0],
             exchange_rate: 1,
@@ -196,11 +198,13 @@ export const usePOAForm = ({
                           (sourceObj.tax_code as TaxCode)?.tax_name || '-',
                 created_by_name: (sourceObj.created_by_name && sourceObj.created_by_name !== '-' && sourceObj.created_by_name !== 'undefined') ? sourceObj.created_by_name : 
                                  (sourceObj.approval_emp_name && sourceObj.approval_emp_name !== '-' && sourceObj.approval_emp_name !== 'undefined') ? sourceObj.approval_emp_name : '-',
+                is_multicurrency: !!(sourceObj.quote_currency_code && sourceObj.quote_currency_code !== 'THB') || (sourceObj.currency_code && sourceObj.currency_code !== 'THB') || Number(sourceObj.exchange_rate || 1) !== 1,
                 exchange_rate_date: sourceObj.exchange_rate_date ? new Date(sourceObj.exchange_rate_date).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]),
                 currency_code: sourceObj.quote_currency_code || sourceObj.currency_code || 'THB',
                 target_currency: sourceObj.base_currency_code || sourceObj.target_currency || 'THB',
                 exchange_rate: Number(sourceObj.exchange_rate || 1),
             });
+
 
             // Sync refs to prevent loop
             prevCurrencyId.current = sourceObj.quote_currency_code || sourceObj.currency_code || 'THB';
@@ -235,15 +239,20 @@ export const usePOAForm = ({
         setIsPartialApproval(!isAllFinalized);
     }, [watchLines, detailData]);
 
-    // ── Currency Exchange Rate Auto-Calculation triggers (DISABLED FOR POA) ──────
-    // Note: Approvers should see the rate from the original PO. 
-    // Manual changes to currency will not auto-fetch to avoid overriding historical PO rates.
-    /* 
+    const watchIsMulticurrency = useWatch({ control, name: 'is_multicurrency' });
+
+
+    // ── Enforce THB when Multicurrency is OFF ─────────────────────────────────
     useEffect(() => {
-        if (!watchCurrencyCode || isReadOnly || isInitialLoad.current) return;
-        // ... (Disabled to prevent overriding PO data with master data defaults like 35)
-    }, [watchCurrencyCode, watchTargetCurrency, watchRateDate, isReadOnly, currencies]);
-    */
+        if (!watchIsMulticurrency && !isInitialLoad.current) {
+            setValue('currency_code', 'THB');
+            setValue('exchange_rate', 1);
+            setValue('target_currency', 'THB');
+        }
+    }, [watchIsMulticurrency, setValue]);
+
+    // ── Currency Exchange Rate Auto-Calculation triggers (DISABLED FOR POA) ──────
+
 
 
     const handleConfirmApprove = async () => {

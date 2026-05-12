@@ -32,7 +32,9 @@ export const POAFormSchema = z.object({
     vendor_name: z.string().optional(),
     remarks: z.string().optional(),
     reject_reason: z.string().optional(),
+    is_multicurrency: z.boolean().default(false),
     currency_code: z.string().optional(),
+
     target_currency: z.string().optional(),
     exchange_rate_date: z.string().optional(),
     exchange_rate: z.number().optional(),

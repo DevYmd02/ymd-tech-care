@@ -23,6 +23,8 @@ import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { POAFormData } from '@/modules/procurement/schemas/poa-schemas';
 import type { POListItem } from '@/modules/procurement/types';
 import { cn } from '@/shared/utils';
+import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWrapper';
+
 
 
 const ui = {
@@ -516,69 +518,76 @@ export default function POAFormModal({
                                         </div>
                                     </div>
 
-                                    {/* Row 4: Currency Selection */}
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg">
-                                        <div>
-                                            <label className={ui.label}>วันที่อัตราแลกเปลี่ยน</label>
-                                            <div className="h-8">
-                                                <Controller
-                                                    name="exchange_rate_date"
-                                                    control={control}
-                                                    render={({ field }) => (
-                                                        <CustomDateInput 
-                                                            value={field.value || ''} 
-                                                            onChange={field.onChange} 
-                                                            disabled={isReadOnly} 
-                                                            className={cn(ui.input, errors.exchange_rate_date && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
-                                                        />
-                                                    )}
-                                                />
+                                    {/* Row 4: Currency Selection (Conditional via MulticurrencyWrapper) */}
+                                    <MulticurrencyWrapper
+                                        name="is_multicurrency"
+                                        label="ระบุสกุลเงินต่างประเทศ (Multicurrency)"
+                                        control={control}
+                                    >
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-lg">
+                                            <div>
+                                                <label className={ui.label}>วันที่อัตราแลกเปลี่ยน</label>
+                                                <div className="h-8">
+                                                    <Controller
+                                                        name="exchange_rate_date"
+                                                        control={control}
+                                                        render={({ field }) => (
+                                                            <CustomDateInput 
+                                                                value={field.value || ''} 
+                                                                onChange={field.onChange} 
+                                                                disabled={isReadOnly} 
+                                                                className={cn(ui.input, errors.exchange_rate_date && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
+                                                            />
+                                                        )}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className={ui.label}>รหัสสกุลเงิน <span className="text-red-500">*</span></label>
+                                                <select 
+                                                    {...register('currency_code')} 
+                                                    className={cn(ui.select, errors.currency_code && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
+                                                    disabled={isLoadingCurrencies || isReadOnly}
+                                                >
+                                                    <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
+                                                    {currencies.map((o: Currency) => (
+                                                        <option key={o.currency_code} value={o.currency_code}>
+                                                            {o.currency_code} - {o.name_th}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className={ui.label}>ไปที่สกุลเงิน (Target)</label>
+                                                <select 
+                                                    {...register('target_currency')} 
+                                                    className={cn(ui.select, errors.target_currency && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
+                                                    disabled={isLoadingCurrencies || isReadOnly}
+                                                >
+                                                    <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
+                                                    {currencies.map((o: Currency) => (
+                                                        <option key={o.currency_code} value={o.currency_code}>
+                                                            {o.currency_code} - {o.name_th}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className={ui.label}>อัตราแลกเปลี่ยน <span className="text-red-500">*</span></label>
+                                                <div className="relative">
+                                                    <input 
+                                                        type="number" step="0.0001" 
+                                                        {...register('exchange_rate', { valueAsNumber: true })}
+                                                        className={cn(ui.input, "text-right pr-8", errors.exchange_rate && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
+                                                        placeholder="1" 
+                                                        disabled={isReadOnly}
+                                                    />
+                                                </div>
+                                                {errors.exchange_rate && <p className={ui.error}>{errors.exchange_rate.message}</p>}
                                             </div>
                                         </div>
-                                        <div>
-                                            <label className={ui.label}>รหัสสกุลเงิน <span className="text-red-500">*</span></label>
-                                            <select 
-                                                {...register('currency_code')} 
-                                                className={cn(ui.select, errors.currency_code && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
-                                                disabled={isLoadingCurrencies || isReadOnly}
-                                            >
-                                                <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
-                                                {currencies.map((o: Currency) => (
-                                                    <option key={o.currency_code} value={o.currency_code}>
-                                                        {o.currency_code} - {o.name_th}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className={ui.label}>ไปที่สกุลเงิน (Target)</label>
-                                            <select 
-                                                {...register('target_currency')} 
-                                                className={cn(ui.select, errors.target_currency && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
-                                                disabled={isLoadingCurrencies || isReadOnly}
-                                            >
-                                                <option value="">{isLoadingCurrencies ? 'โหลด...' : 'เลือกสกุลเงิน'}</option>
-                                                {currencies.map((o: Currency) => (
-                                                    <option key={o.currency_code} value={o.currency_code}>
-                                                        {o.currency_code} - {o.name_th}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className={ui.label}>อัตราแลกเปลี่ยน <span className="text-red-500">*</span></label>
-                                            <div className="relative">
-                                                <input 
-                                                    type="number" step="0.0001" 
-                                                    {...register('exchange_rate', { valueAsNumber: true })}
-                                                    className={cn(ui.input, "text-right pr-8", errors.exchange_rate && "border-red-500 focus:ring-red-500/20 focus:border-red-500")} 
-                                                    placeholder="1" 
-                                                    disabled={isReadOnly}
-                                                />
-                                            </div>
-                                            {errors.exchange_rate && <p className={ui.error}>{errors.exchange_rate.message}</p>}
-                                        </div>
-                                    </div>
+                                    </MulticurrencyWrapper>
+
 
                                     {/* Remarks Section (Previous Reject Reason) */}
                                     <div>
