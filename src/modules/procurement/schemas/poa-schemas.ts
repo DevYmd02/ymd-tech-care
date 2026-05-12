@@ -50,6 +50,7 @@ export const POAFormSchema = z.object({
     pr_no: z.string().optional(),
     qc_no: z.string().optional(),
     created_by_name: z.string().optional(),
+    discount_expression: z.string().optional().default('0'),
     
     po_lines: z.array(POALineSchema),
 });

@@ -127,6 +127,7 @@ interface POHeaderResponse {
     net_amt?: number;
     amount?: number;
     total?: number;
+    discount_expression?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -207,6 +208,7 @@ const mapPOAResponseToListItem = (
             poHeader.base_currency_code || poHeader.target_currency || poHeader.baseCurrencyCode || poHeader.targetCurrency ||
             item.base_currency_code || item.target_currency || item.baseCurrencyCode || item.targetCurrency || 'THB'
         ),
+        discount_expression: String(item.discount_expression || poHeader.discount_expression || '0'),
     };
 
     const mappedLines = lines.map((l: POALineResponse, idx: number) => {
@@ -272,8 +274,13 @@ const mapPOAResponseToListItem = (
             const subTotalOriginal = (mappedLines || []).reduce((sum: number, l) => {
                 return sum + Number(l.net_amount || 0);
             }, 0);
+            // 🎯 Header Discount calculation (Original Currency)
+            const headerDiscExpr = recovered.discount_expression || '0';
+            const headerDiscAmount = parseDiscountAmount(headerDiscExpr, subTotalOriginal);
+            const netBeforeTax = Math.max(0, subTotalOriginal - headerDiscAmount);
+
             const taxRate = Number(recovered.tax_rate ?? 7);
-            const totalWithTaxOriginal = subTotalOriginal + (subTotalOriginal * taxRate / 100);
+            const totalWithTaxOriginal = netBeforeTax + (netBeforeTax * taxRate / 100);
             
             // 🎯 Convert to Base Currency (Baht)
             const calculatedTotalBase = Number((totalWithTaxOriginal * rate).toFixed(2));
@@ -606,8 +613,15 @@ export const POAService = {
         const seenHistoryIds = new Set<number>();
 
         const poHeaderDetail = (approvalRes.poHeader as POHeaderResponse) || (approvalRes.po_header as POHeaderResponse) || approvalRes || {};
-        const parentLines = poRes.po_lines || [];
-        const poaLinesRaw = approvalRes.po_lines || poHeaderDetail.po_lines || approvalRes.lines || [];
+        
+        // 🎯 ROBUST LINE EXTRACTION: Backend might send po_lines, poLines, or just lines
+        const poResRecord = poRes as unknown as Record<string, unknown>;
+        const parentLinesRaw = poRes.po_lines || poResRecord.poLines || poResRecord.lines || [];
+        const parentLines = Array.isArray(parentLinesRaw) ? parentLinesRaw : [];
+        
+        const approvalResRecord = approvalRes as Record<string, unknown>;
+        const poHeaderDetailRecord = poHeaderDetail as Record<string, unknown>;
+        const poaLinesRaw = approvalRes.po_lines || approvalResRecord.poLines || poHeaderDetail.po_lines || poHeaderDetailRecord.poLines || approvalResRecord.lines || [];
         const poaLines = Array.isArray(poaLinesRaw) ? poaLinesRaw : [];
 
         const parentIdMap = new Map<string, Record<string, unknown>>();

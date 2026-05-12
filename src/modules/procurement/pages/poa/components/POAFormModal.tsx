@@ -38,31 +38,38 @@ const ui = {
 
 const POSummaryPanel = ({ control, detailData }: { control: Control<POAFormData>; detailData?: POListItem }) => {
     const poLines = useWatch({ control, name: 'po_lines' });
+    const headerDiscountExpr = useWatch({ control, name: 'discount_expression' }) || '0';
 
-    const { grossTotal, totalDiscount, taxAmount, totalAmount, taxRate } = useMemo(() => {
+    const summaryData = useMemo(() => {
         const approvedLines = (poLines ?? []).filter((l) => !!l.is_approved);
-        const grossTotal = approvedLines.reduce((sum: number, l) => sum + (Number(l.qty_ordered ?? 0) * Number(l.unit_price ?? 0)), 0);
-        const totalDiscount = approvedLines.reduce((sum: number, l) => {
+        const calcGrossTotal = approvedLines.reduce((sum: number, l) => sum + (Number(l.qty_ordered ?? 0) * Number(l.unit_price ?? 0)), 0);
+        const calcLineDiscount = approvedLines.reduce((sum: number, l) => {
             const lineGross = Number(l.qty_ordered ?? 0) * Number(l.unit_price ?? 0);
             return sum + parseDiscountAmount(l.discount_expression || '0', lineGross);
         }, 0);
         
-        const subtotal = Math.max(0, grossTotal - totalDiscount);
+        const subtotalBeforeHeader = Math.max(0, calcGrossTotal - calcLineDiscount);
+        const headerDiscountAmt = parseDiscountAmount(headerDiscountExpr, subtotalBeforeHeader);
+        const subtotal = Math.max(0, subtotalBeforeHeader - headerDiscountAmt);
+
         const rawRate = Number(detailData?.tax_code?.tax_rate ?? detailData?.tax_rate ?? 7);
         const normalizedRate = (rawRate > 0 && rawRate < 1) ? (rawRate * 100) : rawRate;
-        const taxRate = parseFloat(normalizedRate.toFixed(4));
+        const calcTaxRate = parseFloat(normalizedRate.toFixed(4));
         
-        const taxAmount   = Math.round(subtotal * (taxRate / 100) * 100) / 100;
-        const totalAmount = Math.max(0, Math.round((subtotal + taxAmount) * 100) / 100);
+        const calcTaxAmount   = Math.round(subtotal * (calcTaxRate / 100) * 100) / 100;
+        const calcTotalAmount = Math.max(0, Math.round((subtotal + calcTaxAmount) * 100) / 100);
 
         return {
-            grossTotal:    Math.round(grossTotal    * 100) / 100,
-            totalDiscount: Math.round(totalDiscount * 100) / 100,
-            taxAmount,
-            totalAmount,
-            taxRate
+            grossTotal:    Math.round(calcGrossTotal    * 100) / 100,
+            lineDiscount:  Math.round(calcLineDiscount * 100) / 100,
+            headerDiscount: Math.round(headerDiscountAmt * 100) / 100,
+            taxAmount:     calcTaxAmount,
+            totalAmount:   calcTotalAmount,
+            taxRate:       calcTaxRate
         };
-    }, [poLines, detailData]);
+    }, [poLines, headerDiscountExpr, detailData]);
+
+    const { grossTotal, lineDiscount, headerDiscount, taxAmount, totalAmount, taxRate } = summaryData;
 
     return (
         <div className="w-80 space-y-2 bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm ml-auto">
@@ -70,10 +77,18 @@ const POSummaryPanel = ({ control, detailData }: { control: Control<POAFormData>
                 <span className="text-gray-600 dark:text-slate-400">รวมเป็นเงิน</span>
                 <span className="font-medium text-gray-900 dark:text-white">{grossTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
             </div>
-            <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-slate-400">ส่วนลด</span>
-                <span className={`font-medium ${totalDiscount > 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>{totalDiscount > 0 ? '-' : ''}{totalDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-            </div>
+            {lineDiscount > 0 && (
+                <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-slate-400">ส่วนลดรายการ</span>
+                    <span className="font-medium text-red-500">-{lineDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+            )}
+            {headerDiscount > 0 && (
+                <div className="flex justify-between text-sm">
+                    <span className="text-gray-600 dark:text-slate-400">ส่วนลดท้ายบิล</span>
+                    <span className="font-medium text-red-500">-{headerDiscount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+            )}
             <div className="flex justify-between text-sm">
                 <span className="text-gray-600 dark:text-slate-400">ภาษีมูลค่าเพิ่ม ({taxRate}%)</span>
                 <span className="font-medium text-gray-900 dark:text-white">{taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
@@ -103,7 +118,10 @@ const POLineRow: React.FC<POLineRowProps> = ({ field, idx, control, isReadOnly, 
     // Derived values
     const qty = lineVal?.qty_ordered ?? field.qty_ordered ?? 0;
     const price = lineVal?.unit_price ?? field.unit_price ?? 0;
-    const total = (Number(qty) || 0) * (Number(price) || 0);
+    const lineGross = (Number(qty) || 0) * (Number(price) || 0);
+    const discExpr = lineVal?.discount_expression ?? field.discount_expression ?? '0';
+    const discAmt = parseDiscountAmount(discExpr, lineGross);
+    const total = Math.max(0, lineGross - discAmt);
     const isApproved = !!(lineVal?.is_approved ?? field.is_approved);
 
     // Row-level disable logic
@@ -606,6 +624,20 @@ export default function POAFormModal({
                                         />
                                         {errors.reject_reason && <p className="text-red-500 text-[12px] mt-1 ml-1">{errors.reject_reason.message}</p>}
                                     </div>
+
+                                    {/* Row 6: Header Discount (ส่วนลดท้ายบิล) - Only show in Edit mode to avoid redundancy with summary */}
+                                    {!isReadOnly && (
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 border-t border-gray-50 dark:border-gray-800 pt-4">
+                                            <div className="md:col-start-4">
+                                                <label className={ui.label}>ส่วนลดท้ายบิล (Header Discount)</label>
+                                                <input 
+                                                    {...register('discount_expression')}
+                                                    className={cn(ui.input, "text-right font-medium")}
+                                                    placeholder="0 หรือ 5%..."
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

@@ -323,6 +323,8 @@ export const POService = {
                     return l;
                 })
             );
+            // 🎯 STANDARDIZATION: Ensure po_lines is the canonical key for all downstream consumers
+            mappedItem.po_lines = itemWithLines[linesKey] as import('@/modules/procurement/types').POLine[];
         }
 
         return mappedItem;

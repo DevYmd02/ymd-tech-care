@@ -61,6 +61,7 @@ export interface POHeader {
     approval_emp_name?: string;     // Display Only (Joined)
     rfq_id?: number;                // FK -> rfq
     winning_vq_id?: number;         // FK -> quotation_header
+    discount_expression?: string;   // numeric/expression for header discount
 
     // Detail Fields (Returned by getById)
     delivery_date?: string;
