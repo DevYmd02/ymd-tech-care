@@ -21,15 +21,22 @@ export const ApprovalHistoryModal: React.FC<ApprovalHistoryModalProps> = ({
 }) => {
   const { data, isLoading, error } = useQuery({
     queryKey: ['prs', 'approvals', prNo || prId],
-    queryFn: () => AVService.getApprovalList({ pr_id: prId, pr_no: prNo, limit: 100 }),
+    queryFn: async () => {
+      const res = await AVService.getApprovalList({ limit: 1000 });
+      const allRecords = (Array.isArray(res) ? res : res?.data) || [];
+      return allRecords.filter((rec: ApprovalHeader) => 
+        Number(rec.pr_id) === Number(prId) || 
+        (prNo && rec.pr?.pr_no === prNo) ||
+        (prNo && rec.pr_no === prNo)
+      );
+    },
     enabled: isOpen && (!!prNo || !!prId),
     staleTime: 5 * 1000 // 5 seconds
   });
 
   if (!isOpen) return null;
 
-  // Handle both { data: [] } and direct array responses
-  const approvals = (Array.isArray(data) ? data : data?.data) || [];
+  const approvals = data || [];
 
   return createPortal(
     <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">

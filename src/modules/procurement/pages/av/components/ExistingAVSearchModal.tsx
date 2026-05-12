@@ -11,20 +11,28 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   prId: number;
+  prNo?: string;
   onSelect: (av: ApprovalHeader) => void;
 }
 
-export const ExistingAVSearchModal: React.FC<Props> = ({ isOpen, onClose, prId, onSelect }) => {
+export const ExistingAVSearchModal: React.FC<Props> = ({ isOpen, onClose, prId, prNo, onSelect }) => {
   const { data, isLoading } = useQuery({
-    queryKey: ['existing-avs', prId],
-    queryFn: () => AVService.getApprovalList({ pr_id: prId }),
-    enabled: isOpen && !!prId,
+    queryKey: ['existing-avs', prId, prNo],
+    queryFn: async () => {
+      const res = await AVService.getApprovalList({ limit: 1000 });
+      const allRecords = (Array.isArray(res) ? res : res?.data) || [];
+      return allRecords.filter((rec: ApprovalHeader) => 
+        Number(rec.pr_id) === Number(prId) || 
+        (prNo && rec.pr?.pr_no === prNo) ||
+        (prNo && rec.pr_no === prNo)
+      );
+    },
+    enabled: isOpen && (!!prId || !!prNo),
   });
 
   if (!isOpen) return null;
 
-  // Handle both { data: [] } and direct array responses
-  const records = (Array.isArray(data) ? data : data?.data) || [];
+  const records = data || [];
 
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">

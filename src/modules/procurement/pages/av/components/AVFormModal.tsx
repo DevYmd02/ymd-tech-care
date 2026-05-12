@@ -444,6 +444,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
         isOpen={isAVSearchOpen}
         onClose={() => setIsAVSearchOpen(false)}
         prId={id as number}
+        prNo={watch('pr_no')}
         onSelect={(av) => {
             loadAVData(av);
             setIsAVSearchOpen(false);
