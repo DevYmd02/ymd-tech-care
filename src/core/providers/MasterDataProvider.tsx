@@ -7,6 +7,7 @@ import {
     useEmployees, 
     useDepartments 
 } from '@/modules/master-data/hooks/useMasterData';
+import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { 
     MasterDataContext, 
     type MasterDataContextType,
@@ -33,31 +34,36 @@ const extractList = (data: unknown) => {
 };
 
 const UnitsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { data } = useUnits();
+    const { isAuthenticated } = useAuth();
+    const { data } = useUnits(isAuthenticated);
     const units = useMemo(() => extractList(data), [data]);
     return <UnitsContext.Provider value={units}>{children}</UnitsContext.Provider>;
 };
 
 const BranchesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { data } = useBranches();
+    const { isAuthenticated } = useAuth();
+    const { data } = useBranches(isAuthenticated);
     const branches = useMemo(() => extractList(data), [data]);
     return <BranchesContext.Provider value={branches}>{children}</BranchesContext.Provider>;
 };
 
 const WarehousesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { data } = useWarehouses();
+    const { isAuthenticated } = useAuth();
+    const { data } = useWarehouses(isAuthenticated);
     const warehouses = useMemo(() => extractList(data), [data]);
     return <WarehousesContext.Provider value={warehouses}>{children}</WarehousesContext.Provider>;
 };
 
 const EmployeesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { data } = useEmployees();
+    const { isAuthenticated } = useAuth();
+    const { data } = useEmployees(isAuthenticated);
     const employees = useMemo(() => extractList(data), [data]);
     return <EmployeesContext.Provider value={employees}>{children}</EmployeesContext.Provider>;
 };
 
 const DepartmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { data } = useDepartments();
+    const { isAuthenticated } = useAuth();
+    const { data } = useDepartments(isAuthenticated);
     const departments = useMemo(() => extractList(data), [data]);
     return <DepartmentsContext.Provider value={departments}>{children}</DepartmentsContext.Provider>;
 };

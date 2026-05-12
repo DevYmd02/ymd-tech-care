@@ -18,6 +18,7 @@ import { placeholderRoutes, ROUTES } from '@/core/config/routes';
 import { AuthProvider, useAuth } from '@/core/auth/contexts/AuthContext';
 import { MasterDataProvider } from '@/core/providers/MasterDataProvider';
 import { ProtectedRoute } from '@/core/auth/components/ProtectedRoute';
+import { PublicRoute } from '@/core/auth/components/PublicRoute';
 import { PlaceholderPage } from '@ui';
 import { ToastProvider } from '@ui';
 
@@ -174,21 +175,27 @@ function AppContent() {
         <Routes>
           {/* Auth Routes - Public */}
           <Route path={ROUTES.AUTH.LOGIN} element={
-            <React.Suspense fallback={<GlobalLoading message="Loading Login..." />}>
-              <LoginPage />
-            </React.Suspense>
+            <PublicRoute>
+              <React.Suspense fallback={<GlobalLoading message="Loading Login..." />}>
+                <LoginPage />
+              </React.Suspense>
+            </PublicRoute>
           } />
           
           <Route path={ROUTES.AUTH.REGISTER} element={
-            <React.Suspense fallback={<GlobalLoading message="Loading Register..." />}>
-              <RegisterPage />
-            </React.Suspense>
+            <PublicRoute>
+              <React.Suspense fallback={<GlobalLoading message="Loading Register..." />}>
+                <RegisterPage />
+              </React.Suspense>
+            </PublicRoute>
           } />
 
           <Route path={ROUTES.AUTH.FORGOT_PASSWORD} element={
-            <React.Suspense fallback={<GlobalLoading message="Loading..." />}>
-              <ForgotPasswordPage />
-            </React.Suspense>
+            <PublicRoute>
+              <React.Suspense fallback={<GlobalLoading message="Loading..." />}>
+                <ForgotPasswordPage />
+              </React.Suspense>
+            </PublicRoute>
           } />
 
           {/* Legacy Redirects */}
