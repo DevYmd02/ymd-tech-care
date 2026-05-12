@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useForm, useWatch, type Path, type SubmitHandler, type FieldErrors, type FieldError, type Resolver } from 'react-hook-form';
+import { useForm, useWatch, type Path, type FieldPathValue, type SubmitHandler, type FieldErrors, type FieldError, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { VendorService } from '../services/vendor.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
@@ -208,8 +208,7 @@ export function useVendorForm({
             finalValue = checked;
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setValue(name as Path<VendorSchemaType>, finalValue as any, { shouldValidate: true, shouldDirty: true });
+        setValue(name as Path<VendorSchemaType>, finalValue as FieldPathValue<VendorSchemaType, Path<VendorSchemaType>>, { shouldValidate: true, shouldDirty: true });
     };
 
     const addBankAccount = () => {

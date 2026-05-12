@@ -67,6 +67,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // }, [isAuthenticated, resetInactivityTimer]);
 
   const hasInitialized = React.useRef(false);
+  const authChannel = React.useMemo(() => new BroadcastChannel('auth_sync'), []);
+
+  useEffect(() => {
+    const handleSync = (event: MessageEvent) => {
+      if (event.data.type === 'LOGOUT') {
+        logger.info('🔄 Cross-tab Logout detected');
+        setIsAuthenticated(false);
+        setUser(null);
+        // No need to clear storage again as the sender already did, 
+        // but it's safe to do so.
+      } else if (event.data.type === 'LOGIN') {
+        logger.info('🔄 Cross-tab Login detected');
+        const token = localStorage.getItem(AUTH_TOKEN_KEY);
+        const profile = localStorage.getItem(AUTH_PROFILE_KEY);
+        if (token && profile) {
+          setUser(JSON.parse(profile));
+          setIsAuthenticated(true);
+        }
+      }
+    };
+
+    authChannel.addEventListener('message', handleSync);
+    return () => authChannel.removeEventListener('message', handleSync);
+  }, [authChannel]);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -79,6 +103,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         clearAuthStorage();
         setIsAuthenticated(false);
         setUser(null);
+        authChannel.postMessage({ type: 'LOGOUT' });
         navigate('/auth/login', { replace: true });
       });
 
@@ -98,7 +123,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         } else {
           // Token exists but no profile? Might be a legacy state or manual entry.
-          // In a real app, we'd call /auth/me here. For now, we'll wait for next login.
           logger.warn('Token found but no cached profile - requiring re-login');
           clearAuthStorage();
         }
@@ -109,7 +133,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     initializeAuth();
-  }, [navigate]);
+  }, [navigate, authChannel]);
 
   const login = useCallback(async (data: LoginPayload) => {
     try {
@@ -129,6 +153,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         
         setIsAuthenticated(true);
+        authChannel.postMessage({ type: 'LOGIN' });
         navigate('/'); // Redirect to dashboard
       } else {
         logger.warn('⚠️ Login successful but no token found:', response);
@@ -139,14 +164,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(null);
       throw error;
     }
-  }, [navigate]);
+  }, [navigate, authChannel]);
 
   const logout = useCallback(() => {
     clearAuthStorage();
     setIsAuthenticated(false);
     setUser(null);
+    authChannel.postMessage({ type: 'LOGOUT' });
     navigate('/auth/login');
-  }, [navigate]);
+  }, [navigate, authChannel]);
 
   const value = React.useMemo(() => ({
     isAuthenticated,
