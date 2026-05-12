@@ -3,6 +3,13 @@
  * @description Shared business logic for calculating PR/PO totals, VAT, and Discounts.
  */
 
+/**
+ * Helper to round to 2 decimal places to ensure financial consistency
+ */
+const round = (val: number): number => {
+    return Math.round((val + Number.EPSILON) * 100) / 100;
+};
+
 export interface PricingItem {
     qty: number;
     unit_price: number;
@@ -20,7 +27,7 @@ export interface PricingSummary {
  * Calculates the line total for a single item.
  */
 export const calculateLineTotal = (qty: number, price: number, discount: number = 0): number => {
-    return Math.max(0, (qty * price) - discount);
+    return round(Math.max(0, (qty * price) - discount));
 };
 
 /**
@@ -32,25 +39,25 @@ export const calculatePricingSummary = (
     isVatIncluded: boolean = false,
     globalDiscountAmount: number = 0
 ): PricingSummary => {
-    const subtotal = items.reduce((sum, item) => {
+    const subtotal = round(items.reduce((sum, item) => {
         return sum + calculateLineTotal(item.qty, item.unit_price, item.discount || 0);
-    }, 0);
+    }, 0));
 
     let taxAmount = 0;
     let totalAmount = 0;
-    const beforeTax = Math.max(0, subtotal - globalDiscountAmount);
+    const beforeTax = round(Math.max(0, subtotal - globalDiscountAmount));
 
     if (isVatIncluded) {
         // Formula: Total = Subtotal (inclusive)
         // Tax = Total * Rate / (100 + Rate)
         // Before Tax = Total - Tax
         totalAmount = beforeTax; // discount reduces the beforeTax base
-        taxAmount = (totalAmount * taxRate) / (100 + taxRate);
+        taxAmount = round((totalAmount * taxRate) / (100 + taxRate));
     } else {
         // Formula: Tax = Subtotal * Rate / 100
         // Total = Subtotal + Tax
-        taxAmount = beforeTax * (taxRate / 100);
-        totalAmount = beforeTax + taxAmount;
+        taxAmount = round(beforeTax * (taxRate / 100));
+        totalAmount = round(beforeTax + taxAmount);
     }
 
     return {
@@ -71,8 +78,9 @@ export const parseDiscountAmount = (raw: string | number | undefined, baseAmount
     const str = String(raw).trim();
     if (str.endsWith('%')) {
         const percent = parseFloat(str.replace('%', ''));
-        return isNaN(percent) ? 0 : baseAmount * (percent / 100);
+        return isNaN(percent) ? 0 : round(baseAmount * (percent / 100));
     }
     const val = parseFloat(str);
-    return isNaN(val) ? 0 : val;
+    return isNaN(val) ? 0 : round(val);
 };
+
