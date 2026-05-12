@@ -348,7 +348,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
       discount_expression: "0",
       pr_approval_lines: data.lines.filter(l => l.is_approved).map(line => ({
          approved_qty: Number(line.approved_qty),
-         remarks: line.remark || "ok",
+         remarks: line.remark || "",
          pr_line_id: Number(line.pr_line_id || 1),
          approval_date: new Date().toISOString().split('T')[0]
       }))
@@ -360,9 +360,9 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
       
       try {
         if (apiPayload.status === 'PARTIAL') {
-          await PRService.update(Number(activeId), { status: 'PARTIAL' });
+          await PRService.update(Number(activeId), { status: 'PARTIAL' }, { skipToast: true });
         } else {
-          await PRService.approvePR(Number(activeId));
+          await PRService.approvePR(Number(activeId), { skipToast: true });
         }
       } catch (err) {
         logger.warn('[useAVForm] PR approve sync failed (non-critical):', err);
@@ -426,7 +426,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
       await AVService.rejectPR(apiPayload);
 
       try {
-        await PRService.rejectPR(Number(activeId), reason || 'Rejected');
+        await PRService.rejectPR(Number(activeId), reason || 'Rejected', { skipToast: true });
       } catch (err) {
         logger.error('[useAVForm] PR status sync failed:', err);
         toast('บันทึกการไม่อนุมัติแล้ว แต่ไม่สามารถอัปเดตสถานะที่หน้ารายการ PR ได้กรุณารีเฟรชหน้าจอ', 'warning');

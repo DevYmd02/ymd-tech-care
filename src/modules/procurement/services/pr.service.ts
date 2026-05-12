@@ -1,6 +1,4 @@
-import api from '@/core/api/api';
-import type { AxiosRequestConfig } from 'axios';
-import { USE_MOCK } from '@/core/api/api';
+import api, { type CustomAxiosConfig, USE_MOCK } from '@/core/api/api';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import type { VendorListResponse, VendorListItem } from '@/modules/master-data/vendor/types/vendor-types';
 import type { ApprovalListResponse } from '@/modules/procurement/types/av-types';
@@ -78,7 +76,7 @@ const AV_STATUS_CACHE_TTL = 30 * 1000; // 30 seconds (shorter TTL to catch recen
  * will have their status overridden here, since the PR header table may lag
  * behind (e.g., still showing PENDING after a partial approval).
  */
-async function buildAVStatusMap(config?: AxiosRequestConfig): Promise<Map<number, { status: string; av_no?: string }>> {
+async function buildAVStatusMap(config?: CustomAxiosConfig): Promise<Map<number, { status: string; av_no?: string }>> {
   const now = Date.now();
   if (cachedAVStatusMap && (now - lastAVStatusFetchTime < AV_STATUS_CACHE_TTL)) {
     return cachedAVStatusMap as Map<number, { status: string; av_no?: string }>;
@@ -177,7 +175,7 @@ function deduplicatePRs(items: PRHeader[]): PRHeader[] {
 
 export const PRService = {
   clearAVCache: clearPRServiceAVCache,
-  getList: async (params?: PRListParams, config?: AxiosRequestConfig): Promise<PRListResponse> => {
+  getList: async (params?: PRListParams, config?: CustomAxiosConfig): Promise<PRListResponse> => {
     logger.info('[PRService] Fetching PR List', params);
 
     // 1. Prepare API Params
@@ -364,7 +362,7 @@ export const PRService = {
     return applyClientPagination<PRHeader>(uniqueItems, page, limit, response.total);
   },
 
-  getDetail: async (id: number, config?: AxiosRequestConfig): Promise<PRHeaderExtended> => {
+  getDetail: async (id: number, config?: CustomAxiosConfig): Promise<PRHeaderExtended> => {
     logger.info(`[PRService] Fetching PR Detail: ${id}`);
     const response = await api.get<unknown>(ENDPOINTS.detail(id), config);
     
@@ -512,7 +510,7 @@ export const PRService = {
     }
   },
 
-  update: async (id: number, payload: PRUpdatePayload): Promise<PRHeader> => {
+  update: async (id: number, payload: PRUpdatePayload, config?: CustomAxiosConfig): Promise<PRHeader> => {
     logger.info(`[PRService] Updating PR: ${id}`);
     logger.debug('🔧 [PRService] UPDATE WIRE-READY JSON:', JSON.stringify(payload, null, 2));
     
@@ -525,7 +523,7 @@ export const PRService = {
     const sanitizedPayload = PRService.sanitizeData(payload as unknown as Record<string, unknown>);
 
     try {
-      const response = await api.patch<PRHeader>(ENDPOINTS.detail(id), sanitizedPayload);
+      const response = await api.patch<PRHeader>(ENDPOINTS.detail(id), sanitizedPayload, config);
       logger.info('✅ [PRService] PR Updated Successfully!', { pr_id: id });
       clearPRServiceAVCache();
       return response;
@@ -568,20 +566,20 @@ export const PRService = {
   },
 
   // 2. Approve PR (Pending -> Approved)
-  async approvePR(id: number) {
+  async approvePR(id: number, config?: CustomAxiosConfig) {
     // 🎯 Use POST for actions
-    return await api.post(ENDPOINTS.approve(id));
+    return await api.post(ENDPOINTS.approve(id), {}, config);
   },
 
   // 3. Reject PR (Pending -> Rejected)
-  async rejectPR(id: number, reason?: string) {
+  async rejectPR(id: number, reason?: string, config?: CustomAxiosConfig) {
     // 🎯 Use POST and pass reason if provided. 
     // We send both 'reason' and 'remarks'/'reject_reason' to handle inconsistent backend DTOs.
     return await api.post(ENDPOINTS.reject(id), { 
       reason,
       remarks: reason,
       reject_reason: reason
-    });
+    }, config);
   },
 
   cancel: async (id: number): Promise<SuccessResponse> => {
