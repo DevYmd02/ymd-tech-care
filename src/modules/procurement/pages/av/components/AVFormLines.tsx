@@ -20,10 +20,11 @@ export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
 
     const isExistingAV = !!avNo && String(avNo).trim() !== '' && String(avNo).trim() !== 'ระบบจะกรอกอัตโนมัติ';
 
-    // A PR is considered partial if it's NOT an existing AV and HAS other AVs on the list
+    const status = (watchForm('status') || '').toUpperCase();
     const hasOtherAVs = watchForm('hasOtherAVs');
-    const isPartialPR = !isExistingAV && !!hasOtherAVs;
-
+    const isPartialPR = !isExistingAV && (status === 'PARTIAL' || !!hasOtherAVs);
+    
+    // 🎯 If it's a Partial PR, we ALWAYS want to show "Remaining Qty" mode
     const showRequestedQty = isExistingAV || !isPartialPR;
 
     const tableInputClass = 'w-full h-8 px-3 text-sm border border-gray-300 dark:border-gray-600 !rounded-xl text-gray-900 bg-gray-50 dark:bg-gray-800 dark:text-white transition-all focus:outline-none';
@@ -72,11 +73,13 @@ export const AVFormLines: React.FC<AVFormLinesProps> = React.memo(({
                                 const status = watchForm('status');
 
                                 const approvedQty = Number(line.approved_qty) || 0;
-                                const requestedQty = Number(showRequestedQty ? (line.requested_qty ?? line.qty) : (line.remaining_qty ?? line.requested_qty ?? line.qty)) || 0;
+                                const remainingQty = line.remaining_qty !== undefined ? Number(line.remaining_qty) : (line.requested_qty ?? line.qty ?? 0);
+                                const requestedQty = Number(showRequestedQty ? (line.requested_qty ?? line.qty) : (remainingQty)) || 0;
 
                                 // 🎯 Updated Hiding Logic:
                                 // If it's a NEW AV, hide lines with 0 requested (already fully approved elsewhere)
-                                if (!isExistingAV && requestedQty === 0) return null;
+                                // EXCEPT if it's a Partial PR (we want to see the lines even if balance is 0 for visibility)
+                                if (!isExistingAV && requestedQty === 0 && !isPartialPR) return null;
                                 
                                 // If it's an EXISTING AV:
                                 // - If it's REJECTED, show everything that was part of the PR or AV

@@ -77,9 +77,15 @@ export const AVHeader: React.FC<Props> = ({ onSearchPRClick, costCenters, projec
             <input 
               {...register("pr_no")} 
               className={`${inputClass} bg-gray-100 italic ${watch("pr_no")?.startsWith('DRAFT-TEMP') ? 'text-amber-600 font-bold' : ''}`} 
-              value={(watch("pr_no")?.startsWith('DRAFT-TEMP') ? 'NEW (รอรันเลข)' : watch("pr_no")) || ''}
               readOnly 
+              // 💡 Use defaultValue instead of value to avoid React warning when using register
+              defaultValue={watch("pr_no") || ''}
             />
+            {watch("pr_no")?.startsWith('DRAFT-TEMP') && (
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <span className="text-amber-600 text-xs font-bold bg-white">NEW (รอรันเลข)</span>
+              </div>
+            )}
             <button 
                 type="button" 
                 onClick={onSearchPRClick}
