@@ -11,8 +11,7 @@ import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
 import { logger } from '@/shared/utils';
-import type { QuotationHeader, QuotationLineData } from '@sales/quotation/types/quotation.types';
-import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
+import type { QuotationHeader } from '@sales/quotation/types/quotation.types';
 import { QuotationFormModal } from '@sales/quotation/components/QuotationFormModal';
 import { useQuotationList } from '@sales/quotation/hooks/useQuotation';
 import { useQuery } from '@tanstack/react-query';
@@ -144,66 +143,9 @@ export default function QuotationListPage() {
         if (!pendingApproveId) return;
         setIsApproveLoading(true);
         try {
-            // 🔍 Resilience Strategy: Use type-safe casting instead of 'any' to satisfy Lint rules.
-            const rawRecord = displayData.find(item => String(item.id) === pendingApproveId) as unknown;
-            const record = rawRecord as Record<string, unknown>;
-            
-            if (record) {
-                // Map List Record to Partial Form Values to satisfy Backend mandatory fields.
-                // 🛡️ Resolution Priority: 
-                // 1. Existing tax_code_id in record
-                // 2. Hidden tax_code_id in rawData 
-                // 3. undefined (to prevent sending '0' which backend rejects)
-                const rawData = (record.rawData || {}) as Record<string, unknown>;
-                const resolvedTaxCode = record.tax_code_id || rawData.tax_code_id;
-                
-                const updatePayload: Partial<QuotationFormValues> = {
-                    status: 'PENDING' as const,
-                    sq_status: 'PENDING' as const,
-                    // 🛡️ Rescue Lines: Explicitly map and cast types to satisfy QuotationLineSchema requirements
-                    lines: ((record.lines || []) as QuotationLineData[]).map(line => ({
-                        sq_line_id: line.sq_line_id ? String(line.sq_line_id) : undefined,
-                        sq_id: line.sq_id ? String(line.sq_id) : undefined,
-                        item_id: Number(line.item_id || 0),
-                        item_code: line.item_code,
-                        item_name: line.item_name,
-                        qty: Number(line.qty || 0),
-                        uom_id: Number(line.uom_id || 0),
-                        unit_price: Number(line.unit_price || 0),
-                        discount_expression: line.discount_expression,
-                        line_discount: Number(line.line_discount || 0),
-                        tax_code_id: line.tax_code_id ? Number(line.tax_code_id) : null,
-                        line_total: Number(line.line_total || 0),
-                        note: line.note,
-                        price_source: line.price_source,
-                        price_source_name: line.price_source_name
-                    })),
-                    sq_date: String(record.date || record.sq_date || new Date().toISOString().split('T')[0]),
-                    customer_id: record.customer_id ? Number(record.customer_id) : undefined,
-                    branch_id: record.branch_id ? Number(record.branch_id) : undefined,
-                    lead_id: record.lead_id ? Number(record.lead_id) : null,
-                    // 🛡️ Resolve tracking IDs: Prioritize mapped record values, then rawData fallback to satisfy backend integer requirements
-                    sale_area_id: (record.sale_area_id ?? record.emp_area_id ?? (record.rawData as Record<string, unknown>)?.sale_area_id ?? (record.rawData as Record<string, unknown>)?.emp_area_id) ? Number(record.sale_area_id ?? record.emp_area_id ?? (record.rawData as Record<string, unknown>)?.sale_area_id ?? (record.rawData as Record<string, unknown>)?.emp_area_id) : undefined,
-                    emp_sale_id: (record.emp_sale_id ?? (record.rawData as Record<string, unknown>)?.emp_sale_id) ? Number(record.emp_sale_id ?? (record.rawData as Record<string, unknown>)?.emp_sale_id) : undefined,
-                    emp_dept_id: (record.emp_dept_id ?? (record.rawData as Record<string, unknown>)?.emp_dept_id) ? Number(record.emp_dept_id ?? (record.rawData as Record<string, unknown>)?.emp_dept_id) : undefined,
-                    project_id: (record.project_id ?? (record.rawData as Record<string, unknown>)?.project_id) ? Number(record.project_id ?? (record.rawData as Record<string, unknown>)?.project_id) : undefined,
-                    tax_code_id: resolvedTaxCode ? Number(resolvedTaxCode) : undefined,
-                    exchange_rate_date: String(record.exchange_rate_date || record.date || new Date().toISOString().split('T')[0]),
-                    // 🛡️ Financial Integrity: Must preserve currency and rate to prevent reset to THB/1
-                    base_currency_code: String(record.base_currency_code || (record.rawData as Record<string, unknown>)?.base_currency_code || 'THB'),
-                    quote_currency_code: String(record.quote_currency_code || (record.rawData as Record<string, unknown>)?.quote_currency_code || 'THB'),
-                    exchange_rate: Number(record.exchange_rate || (record.rawData as Record<string, unknown>)?.exchange_rate || 1),
-                    discount_expression: String(record.discount_expression || (record.rawData as Record<string, unknown>)?.discount_expression || '0'),
-                    
-                    // 🛡️ Critical Fix: Preserve header fields that are often missing from the list view but exist in rawData
-                    payment_term_days: Number((record.rawData as Record<string, unknown>)?.payment_term_days ?? record['payment_term_days'] ?? 0),
-                    valid_until: String(record.expiry_date || (record.rawData as Record<string, unknown>)?.valid_until || ''),
-                    remarks: String(record.remarks || (record.rawData as Record<string, unknown>)?.remarks || ''),
-                    onhold: String((record.rawData as Record<string, unknown>)?.onhold || 'N') as 'Y' | 'N',
-                };
-
-                await QuotationService.update(pendingApproveId, updatePayload);
-            }
+            // ✅ Centralized logic in Service (Issue #1)
+            // Service will automatically handle detail hydration to ensure data integrity
+            await QuotationService.submitForApproval(pendingApproveId);
             
             refetch();
             setIsApproveConfirmOpen(false);
