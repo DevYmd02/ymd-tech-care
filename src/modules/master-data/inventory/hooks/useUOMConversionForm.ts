@@ -67,7 +67,23 @@ export function useUOMConversionForm(editId: number | null, initialData?: UOMCon
     }, [initialData, reset, editId]);
 
     const saveMutation = useMutation({
-        mutationFn: (data: UOMConversionFormValues) => {
+        mutationFn: async (data: UOMConversionFormValues) => {
+            // Frontend validation: Check for duplicate Active conversions
+            if (data.isActive) {
+                const existingData = await UOMConversionService.getAll();
+                const items = existingData.items || [];
+                const duplicateActive = items.find(c => 
+                    c.item_id === data.item_id && 
+                    c.from_unit_id === data.from_uom_id && 
+                    c.is_active === true &&
+                    c.id !== editId // ignore itself in edit mode
+                );
+
+                if (duplicateActive) {
+                    throw new Error(`ไม่สามารถบันทึกได้ เนื่องจากมีการตั้งค่าแปลงหน่วย "${data.fromUnit}" ของสินค้านี้ในสถานะ "ใช้งาน" อยู่แล้ว`);
+                }
+            }
+
             const payload = {
                 item_id: data.item_id,
                 from_uom_id: data.from_uom_id,
