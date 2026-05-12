@@ -28,7 +28,6 @@ import type { DeliveryFormValues } from '../schemas/delivery.schemas';
 import type { DeliveryFormData } from '../types/delivery.types';
 import type { ItemListItem } from '@inventory/types/product-types';
 import type { LotNo } from '@inventory/types/inventory-master.types';
-import type { IEmployee } from '@master-data/company/types/employee-types';
 import { SalesOrderSearchModal } from '@sales/delivery/components/SalesOrderSearchModal';
 import type { SalesOrderHeader } from '@sales/sales-order/services/sales-order.service';
 import { CustomerAddressSearchModal } from './CustomerAddressSearchModal';
@@ -104,6 +103,7 @@ export function DeliveryFormModal({
         handleLineChange,
         handleSelectProduct,
         handleSelectSalesOrder,
+        handleSelectEmployee,
     } = useDeliveryForm({
         isOpen,
         id,
@@ -113,15 +113,6 @@ export function DeliveryFormModal({
 
     const { watch } = methods;
 
-    const handleSelectEmployee = (emp: IEmployee) => {
-        const empId = String(emp.id || '');
-        methods.setValue('ship_by_emp', empId, { shouldDirty: true, shouldValidate: true });
-        methods.setValue(
-            'ship_by_emp_name',
-            `${emp.employee_firstname_th || ''} ${emp.employee_lastname_th || ''}`.trim(),
-            { shouldDirty: true, shouldValidate: true }
-        );
-    };
 
     const { confirm } = useConfirmation();
     const { handleSubmit } = methods;

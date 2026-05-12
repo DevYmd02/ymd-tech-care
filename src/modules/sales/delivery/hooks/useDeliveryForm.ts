@@ -46,25 +46,14 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms }: UseDeliveryFo
             return;
         }
 
-        const isEditing = !!id;
-        const hasData = initialData && Object.keys(initialData).length > 0;
-
-        if (!isInitializedRef.current) {
-            if (!isEditing || hasData) {
-                reset({
-                    ...getDeliveryDefaultValues(),
-                    ...(initialData || {}),
-                });
-                if (hasData) {
-                    isInitializedRef.current = true;
-                }
-            }
-        } else if (hasData) {
-            // 🔄 Re-sync if data updates (e.g. after background refetch)
+        // Only reset if not initialized or if we are switching to a different ID
+        if (!isInitializedRef.current && initialData) {
             reset({
                 ...getDeliveryDefaultValues(),
-                ...(initialData || {}),
+                ...initialData,
             });
+            isInitializedRef.current = true;
+            logger.debug('[useDeliveryForm] Form initialized with data:', id);
         }
     }, [isOpen, initialData, reset, id]);
 
@@ -191,6 +180,15 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms }: UseDeliveryFo
         }
     };
 
+    const handleSelectEmployee = (emp: import('@master-data/company/types/employee-types').IEmployee) => {
+        const empId = String(emp.id || '');
+        const empName = `${emp.employee_firstname_th || ''} ${emp.employee_lastname_th || ''}`.trim();
+        
+        
+        setValue('ship_by_emp', empId, { shouldValidate: true, shouldDirty: true });
+        setValue('ship_by_emp_name', empName, { shouldValidate: true, shouldDirty: true });
+    };
+
     return {
         methods,
         lines,
@@ -199,5 +197,6 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms }: UseDeliveryFo
         handleLineChange,
         handleSelectProduct,
         handleSelectSalesOrder,
+        handleSelectEmployee,
     };
 }
