@@ -423,10 +423,7 @@ export default function AVListPage() {
                         <button 
                             onClick={() => {
                                 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                const approvalId = row.original.approval_id;
-                                if (approvalId) {
-                                    window.open(`${apiUrl}/pr-approval/${approvalId}/pdf`, '_blank');
-                                }
+                                window.open(`${apiUrl}/pr-approval/${row.original.approval_id}/pdf`, '_blank');
                             }}
                             className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-all" 
                             title="พิมพ์ใบอนุมัติ"
@@ -594,10 +591,7 @@ export default function AVListPage() {
                                             <button
                                                 onClick={() => {
                                                     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                                    const approvalId = item.approval_id;
-                                                    if (approvalId) {
-                                                        window.open(`${apiUrl}/pr-approval/${approvalId}/pdf`, '_blank');
-                                                    }
+                                                    window.open(`${apiUrl}/pr-approval/${item.approval_id}/pdf`, '_blank');
                                                 }}
                                                 className="flex-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
                                             >

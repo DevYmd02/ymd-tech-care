@@ -366,11 +366,18 @@ export default function RFQListPage() {
             batchData.map(item => RFQService.sendToVendor(item.rfqVendorId, item.payload))
         ).then(results => {
             const failures = results.filter(r => r.status === 'rejected');
+            const successes = results.filter(r => r.status === 'fulfilled');
+
+            if (successes.length > 0) {
+                toast(`ส่ง RFQ ${rfqNo} เรียบร้อยแล้ว (${successes.length} รายการ)`, 'success');
+            }
+
             if (failures.length > 0) {
                 logger.error('[RFQListPage] Some RFQ sends failed:', failures);
-                toast(`ส่งสำเร็จบางส่วน (ล้มเหลว ${failures.length} รายการ)`, 'error');
-            } else {
-                toast(`ส่ง RFQ ${rfqNo} เรียบร้อยแล้ว`, 'success');
+                // We keep it quiet on the UI if at least some succeeded, or show a gentle warning
+                if (successes.length === 0) {
+                    toast('การส่ง RFQ ล้มเหลว กรุณาตรวจสอบการตั้งค่าอีเมล', 'error');
+                }
             }
 
             if (String(sendingRFQ.status || '').toUpperCase() === 'DRAFT' && failures.length < batchData.length) {

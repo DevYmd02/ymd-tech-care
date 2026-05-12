@@ -15,6 +15,7 @@ import { RFQService } from '@/modules/procurement/services/rfq.service';
 import { logger } from '@/shared/utils';
 import { MultiEmailInput } from '@/shared/components/ui/inputs/MultiEmailInput';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
+import api from '@/core/api/api';
 
 // ====================================================================================
 // TYPES
@@ -61,6 +62,7 @@ interface VendorSmartCardProps {
     onEmailToggle: (checked: boolean) => void;
     onEmailConfigChange: (config: VendorEmailConfig) => void;
     onPrintPreview: (e: React.MouseEvent) => void;
+    isPrinting?: boolean;
 }
 
 const VendorSmartCard: React.FC<VendorSmartCardProps> = ({
@@ -72,6 +74,7 @@ const VendorSmartCard: React.FC<VendorSmartCardProps> = ({
     onEmailToggle,
     onEmailConfigChange,
     onPrintPreview,
+    isPrinting = false,
 }) => {
     // Outer accordion: expands if vendor is selected & not locked
     const isExpanded = isSelected && !isLocked;
@@ -175,10 +178,15 @@ const VendorSmartCard: React.FC<VendorSmartCardProps> = ({
                     <button
                         type="button"
                         onClick={onPrintPreview}
-                        className="p-1.5 rounded-md text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                        disabled={isPrinting}
+                        className={`p-1.5 rounded-md transition-all ${
+                            isPrinting 
+                                ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' 
+                                : 'text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20'
+                        }`}
                         title="ดูตัวอย่างเอกสาร (Print Preview)"
                     >
-                        <Printer className="w-4 h-4" />
+                        {isPrinting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
                     </button>
                 </div>
             </div>
@@ -271,6 +279,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [selectedVendorIds, setSelectedVendorIds] = useState<number[]>([]);
     const [emailConfig, setEmailConfig] = useState<Record<number, VendorEmailConfig>>({});
+    const [isPrinting, setIsPrinting] = useState<number | null>(null);
 
     useEffect(() => {
         if (!isOpen || !rfq) {
@@ -424,15 +433,60 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
         }));
     }, []);
 
-    const handlePrintPreview = useCallback((e: React.MouseEvent, vendor: VendorDetailDisplay) => {
+    const handlePrintPreview = useCallback(async (e: React.MouseEvent, vendor: VendorDetailDisplay) => {
         e.stopPropagation();
-        logger.info('Opening print preview for vendor:', vendor.vendor_code);
-        
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-        if (vendor.rfq_vendor_id) {
-            window.open(`${apiUrl}/rfq/vendor/${vendor.rfq_vendor_id}/pdf`, '_blank');
-        } else {
+        if (!vendor.rfq_vendor_id) {
             logger.warn('[RFQSendConfirmModal] Missing rfq_vendor_id for print preview');
+            return;
+        }
+
+        // 1. 🚀 เปิดหน้าต่างใหม่ทันทีเพื่อไม่ให้ User รู้สึกว่าช้า และป้องกัน Popup Blocker
+        const previewWindow = window.open('', '_blank');
+        if (previewWindow) {
+            previewWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Loading PDF Preview...</title>
+                        <style>
+                            body { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; background: #f3f4f6; color: #374151; }
+                            .loader { border: 4px solid #e5e7eb; border-top: 4px solid #4f46e5; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin-bottom: 16px; }
+                            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="loader"></div>
+                        <div>กำลังเตรียมเอกสาร PDF กรุณารอสักครู่...</div>
+                    </body>
+                </html>
+            `);
+        }
+
+        try {
+            setIsPrinting(vendor.rfq_vendor_id);
+            logger.info('Opening print preview for vendor:', vendor.vendor_code);
+            
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+            const url = `${apiUrl}/rfq/vendor/${vendor.rfq_vendor_id}/pdf`;
+            
+            // 🎯 Fetch PDF as blob
+            const response = await api.get(url, { responseType: 'blob' });
+            
+            const blob = new Blob([response as unknown as BlobPart], { type: 'application/pdf' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            // 2. ✅ ส่งไฟล์เข้าไปในหน้าต่างที่เปิดรอไว้แล้ว
+            if (previewWindow && !previewWindow.closed) {
+                previewWindow.location.href = blobUrl;
+            } else {
+                // กรณีหน้าต่างโดนปิดไปก่อน
+                window.open(blobUrl, '_blank');
+            }
+        } catch (error) {
+            logger.error('[RFQSendConfirmModal] Failed to load PDF preview:', error);
+            if (previewWindow) previewWindow.close();
+            alert('ไม่สามารถโหลดเอกสารได้ กรุณาลองใหม่อีกครั้ง');
+        } finally {
+            setIsPrinting(null);
         }
     }, []);
 
@@ -535,7 +589,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                     {!isFetching && !fetchError && !hasVendors && (
                         <div className="flex flex-col items-center gap-3 p-5 bg-amber-50 dark:bg-amber-900/20 border-2 border-dashed border-amber-300 dark:border-amber-700 rounded-lg">
                             <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center">
-                                <AlertTriangle className="w-7 h-7 text-amber-600 dark:text-amber-400" />
+                                <AlertTriangle className="w-7 h-7 text-amber-600 dark:amber-400" />
                             </div>
                             <div className="text-center">
                                 <p className="font-bold text-amber-800 dark:text-amber-200 mb-1">ไม่พบรายชื่อผู้ขาย</p>
@@ -585,6 +639,7 @@ export const RFQSendConfirmModal: React.FC<RFQSendConfirmModalProps> = ({
                                                 onEmailToggle={checked => handlePerVendorEmailToggle(vendor.vendor_id, checked)}
                                                 onEmailConfigChange={cfg => handleEmailConfigChange(vendor.vendor_id, cfg)}
                                                 onPrintPreview={e => handlePrintPreview(e, vendor)}
+                                                isPrinting={isPrinting === vendor.rfq_vendor_id}
                                             />
                                         );
                                     })}
