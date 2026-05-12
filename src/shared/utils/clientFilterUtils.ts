@@ -240,3 +240,50 @@ export const applyClientPagination = <T>(
     totalPages,
   };
 };
+
+/**
+ * 🎯 Hybrid Filtering Param Preparer
+ * 
+ * Determines if client-side filtering is needed based on the presence of
+ * filter parameters, and prepares the API parameters accordingly.
+ */
+export const prepareHybridParams = (
+    params: Record<string, FilterValue>,
+    supportedBackendFields: string[] = [],
+    options: { maxWindow?: number } = {}
+) => {
+    const { maxWindow = 500 } = options;
+    const apiParams = { ...params };
+    
+    // Check if any provided param is NOT supported by the backend
+    const filterKeys = Object.keys(params).filter(key => 
+        !['page', 'limit', 'sort'].includes(key) && 
+        params[key] !== undefined && 
+        params[key] !== null && 
+        params[key] !== '' && 
+        params[key] !== 'ALL'
+    );
+    
+    const needsClientFilter = filterKeys.some(key => !supportedBackendFields.includes(key));
+    
+    if (needsClientFilter) {
+        // Expand search window to find matches
+        apiParams.limit = maxWindow;
+        apiParams.page = 1;
+        
+        // Strip non-supported fields from API call to prevent backend errors or 0-results
+        filterKeys.forEach(key => {
+            if (!supportedBackendFields.includes(key)) {
+                delete apiParams[key];
+            }
+        });
+        
+        logger.debug(`🚀 [HybridParams] Expansion triggered (limit=${maxWindow}) due to fields:`, filterKeys.filter(k => !supportedBackendFields.includes(k)));
+    }
+    
+    return {
+        apiParams,
+        needsClientFilter
+    };
+};
+
