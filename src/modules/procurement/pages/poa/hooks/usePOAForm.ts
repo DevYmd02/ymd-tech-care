@@ -108,7 +108,7 @@ export const usePOAForm = ({
             vendor_name: '',
             remarks: '',
             reject_reason: '',
-            is_multicurrency: false,
+            is_multicurrency: true, // 🎯 USER REQUEST: Default to checked/expanded for visibility
             currency_code: 'THB',
 
             target_currency: 'THB',
@@ -124,6 +124,7 @@ export const usePOAForm = ({
             pr_no: '',
             qc_no: '',
             created_by_name: '',
+            discount_expression: '0',
             po_lines: [],
         },
     });
@@ -198,11 +199,12 @@ export const usePOAForm = ({
                           (sourceObj.tax_code as TaxCode)?.tax_name || '-',
                 created_by_name: (sourceObj.created_by_name && sourceObj.created_by_name !== '-' && sourceObj.created_by_name !== 'undefined') ? sourceObj.created_by_name : 
                                  (sourceObj.approval_emp_name && sourceObj.approval_emp_name !== '-' && sourceObj.approval_emp_name !== 'undefined') ? sourceObj.approval_emp_name : '-',
-                is_multicurrency: !!(sourceObj.quote_currency_code && sourceObj.quote_currency_code !== 'THB') || (sourceObj.currency_code && sourceObj.currency_code !== 'THB') || Number(sourceObj.exchange_rate || 1) !== 1,
+                is_multicurrency: true, // 🎯 USER REQUEST: Force check/expand by default
                 exchange_rate_date: sourceObj.exchange_rate_date ? new Date(sourceObj.exchange_rate_date).toISOString().split('T')[0] : (new Date().toISOString().split('T')[0]),
                 currency_code: sourceObj.quote_currency_code || sourceObj.currency_code || 'THB',
-                target_currency: sourceObj.base_currency_code || sourceObj.target_currency || 'THB',
+                target_currency: sourceObj.target_currency || sourceObj.base_currency_code || 'THB',
                 exchange_rate: Number(sourceObj.exchange_rate || 1),
+                discount_expression: String(sourceObj.discount_expression || '0'),
             });
 
 
