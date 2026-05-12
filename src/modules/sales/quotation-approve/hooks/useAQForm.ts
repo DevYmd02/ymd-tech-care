@@ -550,11 +550,11 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
       await AQService.createApproval(payload);
 
       // Sync SQ status → APPROVED
-      try {
-        await AQService.updateSQStatus(activeId, 'APPROVED');
-      } catch (err) {
-        logger.warn('[useAQForm] SQ status sync failed (non-critical):', err);
-      }
+      // try {
+      //   await AQService.updateSQStatus(activeId, 'APPROVED');
+      // } catch (err) {
+      //   logger.warn('[useAQForm] SQ status sync failed (non-critical):', err);
+      // }
 
       toast('อนุมัติใบเสนอราคาสำเร็จ', 'success');
       queryClient.removeQueries({ queryKey: ['quotations'] });
@@ -620,12 +620,12 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
     try {
       await AQService.createApproval(payload);
 
-      try {
-        await AQService.updateSQStatus(activeId, 'REJECTED');
-      } catch (err) {
-        logger.error('[useAQForm] SQ status sync failed:', err);
-        toast('บันทึกการไม่อนุมัติแล้ว แต่อัปเดตสถานะ SQ ไม่สำเร็จ กรุณารีเฟรชหน้า', 'warning');
-      }
+      // try {
+      //   await AQService.updateSQStatus(activeId, 'REJECTED');
+      // } catch (err) {
+      //   logger.error('[useAQForm] SQ status sync failed:', err);
+      //   toast('บันทึกการไม่อนุมัติแล้ว แต่อัปเดตสถานะ SQ ไม่สำเร็จ กรุณารีเฟรชหน้า', 'warning');
+      // }
 
       toast('ไม่อนุมัติใบเสนอราคาสำเร็จ', 'success');
       queryClient.removeQueries({ queryKey: ['quotations'] });
