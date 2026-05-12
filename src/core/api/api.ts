@@ -76,10 +76,12 @@ api.interceptors.response.use(
     logger.debug(`✅ [API] [${method}] ${url}`);
 
     const skipToast = (response.config as CustomAxiosConfig).skipToast === true;
-    if (!skipToast && ['POST', 'PATCH', 'DELETE'].includes(method)) {
-      if (!url?.includes('/auth/login')) {
-        toast.success('ดำเนินการสำเร็จ');
-      }
+    const isMutation = ['POST', 'PATCH', 'DELETE'].includes(method);
+    const isAuth = url?.includes('/auth/login') || url?.includes('/auth/register');
+
+    if (!skipToast && isMutation && !isAuth) {
+      // 💡 Improved: Only toast if the response is successful and not explicitly skipped
+      toast.success('ดำเนินการสำเร็จ');
     }
 
     const resBody = response.data;

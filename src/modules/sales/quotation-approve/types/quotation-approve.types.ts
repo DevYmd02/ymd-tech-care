@@ -182,15 +182,16 @@ export interface AQLineFormData {
   uom_id: number;
   uom_name: string;
   unit_price: number;
-  discount_expression?: string;
+  discount_expression: string;
   discount_amount: number;
   net_amount: number;
   is_approved: boolean;
   approved_qty: number;
   approved_net_amount: number;
-  remarks?: string;
+  remarks: string;
   price_source?: number;
-  price_source_name?: string;
+  price_source_name: string;
+  price_level_priority?: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
