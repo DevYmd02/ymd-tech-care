@@ -18,14 +18,19 @@ import { usePRActions } from '@/modules/procurement/pages/pr/hooks';
 import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 
 import { formatThaiDate } from '@/shared/utils/dateUtils';
-import { createColumnHelper } from '@tanstack/react-table';
+import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
+
 
 // Services & Types - Updated imports to use new module structure
 import { PRService, type PRListParams } from '@/modules/procurement/services/pr.service';
 import type { PRHeader, PRStatus } from '@/modules/procurement/types';
+import { createVendorMap, hydratePRHeader } from '@/modules/procurement/utils/pr-hydration';
+
 
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
-import type { VendorListItem } from '@/modules/master-data/vendor/types/vendor-types';
+
+
+
 
 // ====================================================================================
 // STATUS OPTIONS
@@ -64,18 +69,9 @@ export default function PRListPage() {
     });
 
     const vendorMap = useMemo(() => {
-        const map: Record<string, { vendor_code: string; vendor_name: string }> = {};
-        (vendorData?.items || []).forEach((v: VendorListItem) => {
-            const id = v.vendor_id || v.id;
-            if (id) {
-                map[String(id)] = {
-                    vendor_code: v.vendor_code || '',
-                    vendor_name: v.vendor_name || ''
-                };
-            }
-        });
-        return map;
+        return createVendorMap(vendorData?.items || []);
     }, [vendorData]);
+
     // URL-based Filter State (Explicit Search Pattern)
     const { filters, localFilters, handleFilterChange, handleApplyFilters, setFilters, resetFilters, handlePageChange, handleSortChange, sortConfig } = useTableFilters<PRStatus>({
         defaultStatus: 'ALL',
@@ -262,14 +258,8 @@ export default function PRListPage() {
         columnHelper.accessor('requester_name', {
             header: 'ผู้ขอซื้อ',
             cell: (info) => {
-                const row = info.row.original;
-
-                // ── Aggressive Requester Name Hydration ──
-                const reqName = row.requester_name || row.created_by_name || row.employee_name;
-                const reqId = row.requester_user_id || row.user_id || row.created_by_user_id;
-                const displayReq = reqName
-                    ? String(reqName)
-                    : (reqId ? `ID: ${reqId}` : 'ไม่ระบุผู้ขอ');
+                const row = hydratePRHeader(info.row.original);
+                const displayReq = row.requester_name || 'ไม่ระบุผู้ขอ';
 
                 return (
                     <div className="flex flex-col py-2 gap-0.5">
@@ -282,41 +272,26 @@ export default function PRListPage() {
             size: 140,
             enableSorting: false,
         }),
+
         columnHelper.accessor(row => {
-            const vId = row.preferred_vendor_id || row.vendor_id;
-            const vendorFromId = vId ? vendorMap[String(vId)] : undefined;
-            const vendorCode = vendorFromId?.vendor_code || row.vendor_quote_no || '';
-            const vendorName = vendorFromId?.vendor_name || row.vendor_name || '';
-            return `${vendorCode} ${vendorName}`;
+            const hydrated = hydratePRHeader(row, vendorMap);
+            return `${hydrated.vendor_code} ${hydrated.vendor_name}`;
         }, {
             id: 'vendor_info',
             header: 'ผู้ขาย/รหัสผู้ขาย',
             cell: (info) => {
-                const row = info.row.original;
-                const vId = row.preferred_vendor_id || row.vendor_id;
-                const vendorFromId = vId ? vendorMap[String(vId)] : undefined;
+                const row = hydratePRHeader(info.row.original, vendorMap);
                 
-                const vendorCode = vendorFromId?.vendor_code || row.vendor_quote_no || '';
-                let vendorName = vendorFromId?.vendor_name || row.vendor_name || '';
-
-                // If Code exists but Name is missing, do lookup in fetched vendorData
-                if (!vendorName && vendorCode) {
-                    const foundVendor = (vendorData?.items || []).find((v: VendorListItem) => v.vendor_code === vendorCode);
-                    if (foundVendor) {
-                        vendorName = foundVendor.vendor_name;
-                    }
-                }
-
-                if (!vendorName && !vendorCode) return <div className="text-sm text-gray-400">-</div>;
+                if (!row.vendor_name && !row.vendor_code) return <div className="text-sm text-gray-400">-</div>;
 
                 return (
                     <div className="flex flex-col py-1 gap-0.5">
-                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate max-w-[180px]" title={vendorName || 'ไม่ระบุชื่อผู้ขาย'}>
-                            {vendorName || '-'}
+                        <span className="text-gray-900 dark:text-gray-100 font-medium truncate max-w-[180px]" title={row.vendor_name || 'ไม่ระบุชื่อผู้ขาย'}>
+                            {row.vendor_name || '-'}
                         </span>
-                        {vendorCode && (
+                        {row.vendor_code && (
                             <span className="text-[10px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded w-fit">
-                                {vendorCode}
+                                {row.vendor_code}
                             </span>
                         )}
                     </div>
@@ -325,6 +300,7 @@ export default function PRListPage() {
             size: 120,
             enableSorting: false,
         }),
+
         columnHelper.accessor(row => row.total_amount ?? Number(row.pr_base_total_amount ?? 0), {
             id: 'total_amount',
             header: () => <span className="whitespace-nowrap">ยอดรวม (บาท)</span>,
@@ -373,7 +349,8 @@ export default function PRListPage() {
             size: 200, 
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data, handleSendApproval, handleEdit, handleView, vendorMap, vendorData?.items, handleViewHistory]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleSendApproval, handleEdit, handleView, vendorMap, handleViewHistory]);
+
 
     // ====================================================================================
     // RENDER
@@ -470,8 +447,10 @@ export default function PRListPage() {
                     <div className="hidden md:block flex-1 overflow-hidden">
                         <SmartTable
                             data={data?.data ?? []}
-                            columns={columns}
+                            columns={columns as ColumnDef<PRHeader, unknown>[]}
+
                             isLoading={isLoading}
+
                             pagination={{
                                 pageIndex: filters.page,
                                 pageSize: filters.limit,
@@ -494,34 +473,30 @@ export default function PRListPage() {
                             isEmpty={!data?.data.length}
                             pagination={data?.total ? { page: filters.page, total: data.total, limit: filters.limit, onPageChange: handlePageChange } : undefined}
                         >
-                            {data?.data.map((item) => (
+                            {data?.data.map((item) => {
+                                const hydrated = hydratePRHeader(item, vendorMap);
+                                return (
                                 <MobileListCard
-                                    key={item.pr_id}
-                                    title={item.pr_no}
-                                    subtitle={formatThaiDate(item.pr_date)}
-                                    statusBadge={<PRStatusBadge status={item.status} />}
+                                    key={hydrated.pr_id}
+                                    title={hydrated.pr_no}
+                                    subtitle={formatThaiDate(hydrated.pr_date)}
+                                    statusBadge={<PRStatusBadge status={hydrated.status} />}
                                     details={[
                                         {
                                             label: 'ผู้ขอ:',
-                                            value: item.requester_name || item.created_by_name || item.employee_name
-                                                || (item.requester_user_id ? `User ID: ${item.requester_user_id}` : 'ไม่ระบุผู้ขอ'),
+                                            value: hydrated.requester_name || 'ไม่ระบุผู้ขอ',
                                         },
                                         {
                                             label: 'รหัสผู้ขาย:',
-                                            value: (() => {
-                                                const vId = item.preferred_vendor_id || item.vendor_id;
-                                                return vId ? vendorMap[String(vId)]?.vendor_code : '-';
-                                            })() || '-',
+                                            value: hydrated.vendor_code || '-',
                                         },
                                         {
                                             label: 'ชื่อผู้ขาย:',
-                                            value: (() => {
-                                                const vId = item.preferred_vendor_id || item.vendor_id;
-                                                return vId ? vendorMap[String(vId)]?.vendor_name : '-';
-                                            })() || '-',
+                                            value: hydrated.vendor_name || '-',
                                         },
-                                        ...(item.need_by_date ? [{ label: 'ต้องการใช้:', value: formatThaiDate(item.need_by_date) }] : []),
+                                        ...(hydrated.need_by_date ? [{ label: 'ต้องการใช้:', value: formatThaiDate(hydrated.need_by_date) }] : []),
                                     ]}
+
                                     amountLabel="ยอดรวม"
                                     amountValue={
                                         <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
@@ -567,8 +542,12 @@ export default function PRListPage() {
                                         </>
                                     }
                                 />
-                            ))}
+                                );
+                            })}
                         </MobileListContainer>
+
+
+
                     </div>
                 </div>
 
