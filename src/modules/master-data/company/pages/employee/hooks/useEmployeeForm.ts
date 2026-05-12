@@ -23,7 +23,7 @@ import React from 'react';
 export const employeeSchema = z.object({
     // ข้อมูลพื้นฐาน
     branch_id:             z.number().nullable(),
-    employee_code:         z.string().min(1, 'กรุณากรอกรหัสพนักงาน').max(25, 'รหัสพนักงานต้องไม่เกิน 25 ตัวอักษร'),
+    employee_code:         z.string().trim().min(1, 'กรุณากรอกรหัสพนักงาน').max(25, 'รหัสพนักงานต้องไม่เกิน 25 ตัวอักษร'),
     employee_title_th:     z.string().min(1, 'กรุณาเลือกคำนำหน้า (ไทย)').max(50),
     employee_title_en:     z.string().max(255).or(z.literal('')),
     employee_firstname_th: z.string().min(1, 'กรุณากรอกชื่อ (ไทย)').max(200),
@@ -177,16 +177,19 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
 
     useEffect(() => {
         const checkDuplicate = async () => {
-            if (!debouncedCode || isEdit) {
+            const trimmedCode = debouncedCode?.trim();
+            if (!trimmedCode || isEdit) {
                 if (!isEdit) clearErrors('employee_code');
                 return;
             }
             
             try {
                 // ค้นหาพนักงานที่มีรหัสตรงกัน
-                const res = await OrgEmployeeService.getList({ search: debouncedCode });
+                const res = await OrgEmployeeService.getList({ search: trimmedCode });
                 const items = Array.isArray(res) ? res : (res?.items || []);
-                const isDuplicate = items.some(emp => emp.employee_code === debouncedCode);
+                
+                // ตรวจสอบความถูกต้องโดยการ trim ทั้งคู่
+                const isDuplicate = items.some(emp => emp.employee_code?.trim() === trimmedCode);
                 
                 if (isDuplicate) {
                     setError('employee_code', { 
@@ -195,7 +198,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
                     });
                 } else {
                     // ตรวจสอบว่าไม่มี error อื่น (เช่น min length) ก่อน clear
-                    if (debouncedCode.length >= 1 && debouncedCode.length <= 25) {
+                    if (trimmedCode.length >= 1 && trimmedCode.length <= 25) {
                         clearErrors('employee_code');
                     }
                 }
