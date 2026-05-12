@@ -417,9 +417,14 @@ export class QuotationService {
     static async update(id: string | number, data: Partial<QuotationFormValues>): Promise<void> {
         let finalFormValues: QuotationFormValues;
 
-        if (!data.lines || !data.sq_date || !data.customer_id) {
+        // 🛡️ HYDRATION GUARD: If critical fields are missing, fetch current data first
+        const isPartial = !data.lines || !data.sq_date || !data.customer_id;
+        
+        if (isPartial) {
+            logger.debug(`[QuotationService] Partial update detected for ID ${id}, hydrating from server...`);
             const currentData = await this.getById(id);
             if (!currentData) {
+                logger.warn(`[QuotationService] Could not hydrate data for ID ${id}, proceeding with raw partial data.`);
                 finalFormValues = data as unknown as QuotationFormValues;
             } else {
                 finalFormValues = { ...currentData, ...data } as unknown as QuotationFormValues;
@@ -438,5 +443,18 @@ export class QuotationService {
             logger.error(`[QuotationService] update failed (ID: ${id}): ${errorMsg}`, { error, payloadSent: payload });
             throw error;
         }
+    }
+
+    /**
+     * 🏷️ ส่งใบเสนอราคาขออนุมัติ (Submit for Approval)
+     * ย้าย Logic การเตรียม Payload จาก Component มาไว้ที่ Service เพื่อความปลอดภัย (Issue #1)
+     */
+    static async submitForApproval(id: string | number): Promise<void> {
+        logger.info(`[QuotationService] Submitting for approval: ${id}`);
+        // เราเรียกใช้ update() ซึ่งมีระบบ Hydration Guard อยู่แล้ว
+        return this.update(id, { 
+            status: 'PENDING',
+            sq_status: 'PENDING'
+        } as Partial<QuotationFormValues>);
     }
 }
