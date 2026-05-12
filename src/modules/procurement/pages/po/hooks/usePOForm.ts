@@ -5,14 +5,13 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import type { Resolver, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
-import { POService, VQService } from '@/modules/procurement/services';
+import { POService } from '@/modules/procurement/services';
 import { POFormSchema, type POFormData, type ItemSelectorResult } from '@/modules/procurement/schemas/po-schemas'; 
 import { usePOHydration } from './usePOHydration';
 import { usePOCalculations } from './usePOCalculations';
 import { usePOActions } from './usePOActions';
 import type { VendorSearchItem } from '@/modules/master-data/vendor/types/vendor-types';
 import type { PRHeader } from '@/modules/procurement/types/pr-types';
-import type { QuotationHeader, QuotationLine } from '@/modules/procurement/types/vq-types'; 
 import type { Currency } from '@/modules/master-data/types/master-data-types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
@@ -52,7 +51,8 @@ export const usePOForm = ({
     const [isQCModalOpen, setIsQCModalOpen]         = useState(false);
     const [isPRModalOpen, setIsPRModalOpen]         = useState(false);
     const [isHydrating, setIsHydrating] = useState(false);
-    const hasHydratedInitial = useRef(false);
+    const isInitialResetDone = useRef(false);
+    const isSourceHydrated = useRef(false);
     const docAbortControllerRef = useRef<AbortController | null>(null);
 
     // ── Helper ──────────────────────────────────────────────────────────────
@@ -88,6 +88,8 @@ export const usePOForm = ({
             target_currency: 'THB',
             exchange_rate_date: new Date().toISOString().split('T')[0],
             exchange_rate: 1,
+            base_currency_code: 'THB',
+            quote_currency_code: 'THB',
             payment_term_days: 30,
             delivery_date: '',
             remarks: '',
@@ -167,168 +169,99 @@ export const usePOForm = ({
         getValues,
         replace,
         trigger,
-        toast,
-        currencies
+        toast
     });
 
     // ── Default Currency Sync ─────────────────────────────────────────────
-    // Set THB defaults immediately on open — don't wait for currencies to load,
-    // so the field is never blank while master data is in-flight.
     useEffect(() => {
         if (!isOpen || poId || isHydrating) return;
         if (!getValues('currency_code')) setValue('currency_code', 'THB');
         if (!getValues('target_currency')) setValue('target_currency', 'THB');
     }, [isOpen, poId, isHydrating, setValue, getValues]);
 
-    // ── VQ Inheritance Query ──────────────────
-    const { data: inheritedQC } = useQuery({
-        queryKey: ['inherit-vq', 
-            initialValues?.rfq_id || existingPO?.rfq_id, 
-            initialValues?.winning_vq_id || existingPO?.winning_vq_id, 
-            initialValues?.vendor_id || existingPO?.vendor_id
-        ],
-        queryFn: async () => {
-            const rfqId = initialValues?.rfq_id || existingPO?.rfq_id;
-            const winningVqId = initialValues?.winning_vq_id || existingPO?.winning_vq_id;
-            const vendorId = initialValues?.vendor_id || existingPO?.vendor_id;
 
-            if ((!rfqId && !winningVqId) || !vendorId) return null;
-            const res = await VQService.getList({});
-            const sourceVQ = res.data.find(vq => 
-                Number(vq.vendor_id) === Number(vendorId) && 
-                (Number(vq.rfq_id) === Number(rfqId) || Number(vq.vq_header_id) === Number(winningVqId) || Number(vq.quotation_id) === Number(winningVqId))
-            );
-            
-            if (sourceVQ?.vq_header_id || sourceVQ?.quotation_id) {
-                return await VQService.getById(sourceVQ.vq_header_id || sourceVQ.quotation_id!);
-            }
-            return null;
-        },
-        enabled: isOpen && (!!initialValues?.rfq_id || !!initialValues?.winning_vq_id || !!existingPO?.rfq_id || !!existingPO?.winning_vq_id) && (!!initialValues?.vendor_id || !!existingPO?.vendor_id)
-    });
-
-    // ── Form Initial Hydration Effect ─────────────────────────────────────────
+    // 🎯 INITIAL FORM HYDRATION / RESET
     useEffect(() => {
-        if (isOpen) {
-            const isMasterDataReady = (
-                (branches?.length > 0 || !isOpen) && 
-                (taxCodes?.length > 0 || !isOpen) && 
-                (units?.length > 0 || !isOpen)
-            );
+        if (!isOpen) {
+            isInitialResetDone.current = false;
+            isSourceHydrated.current = false;
+            return;
+        }
 
-            if (isOpen && !isMasterDataReady) return;
+        // Only reset if we haven't done it for this session, 
+        // OR if a different existing PO is being loaded.
+        if (isInitialResetDone.current && !existingPO) return;
 
-            let initialPOLines: POFormData['po_lines'] = [];
-            
-            if (existingPO) {
-                const detail = existingPO as unknown as Record<string, unknown>;
-                const lines = (detail.poLines || detail.po_lines || detail.lines || []) as Record<string, unknown>[];
-                if (lines.length > 0) {
-                    initialPOLines = lines.map((l: Record<string, unknown>, idx: number) => ({
-                        line_no:         idx + 1,
-                        item_id:         Number(l.item_id || 0),
-                        po_line_id:      l.po_line_id ? Number(l.po_line_id) : undefined,
-                        id:              Number(l.po_line_id || l.item_id || 0),
-                        item_code:       (l.item_code as string) || (l.item as Record<string, unknown>)?.item_code as string || '',
-                        item_name:       (l.item_name as string) || (l.item as Record<string, unknown>)?.item_name as string || '',
-                        description:     (l.description as string) || (l.remark as string) || '',
-                        pr_line_id:      (l.pr_line_id as number) || null,
-                        status:          (l.status as string) || 'OPEN',
-                        qty:             Number(l.qty || l.qty_ordered || 0),
-                        qty_ordered:     Number(l.qty_ordered || l.qty || 0),
-                        uom_id:          l.uom_id ? Number(l.uom_id) : 0,
-                        unit_price:      Number(l.unit_price || 0),
-                        discount_amount: Number(l.discount_amount || 0),
-                        discount_expression: String(l.discount_expression || '0'),
-                        tax_code_id:     (l.tax_code_id as number) || undefined,
-                        required_receipt_type: (l.required_receipt_type as "FULL" | "PARTIAL") || 'FULL',
-                        receipt_type:    'GOODS' as const,
-                        line_total:      Number(l.line_total || 0),
-                    }));
-                }
-            }
-            else if (initialValues?.po_lines && initialValues.po_lines.length > 0) {
-                initialPOLines = initialValues.po_lines.map((l: Record<string, unknown>, idx: number) => ({
-                    ...l,
-                    po_line_id: Number(l.po_line_id || (l.id && l.id !== l.item_id ? l.id : undefined) || 0) || undefined,
-                    id: Number(l.po_line_id || l.id || l.item_id || 0),
-                    item_id: Number(l.item_id || l.id || 0),
-                    line_no: l.line_no as number || idx + 1,
-                })) as unknown as POFormData['po_lines']; 
-            } 
-            else if (inheritedQC && (inheritedQC.vq_lines || inheritedQC.lines)) {
-                const sourceLines = (inheritedQC.vq_lines || inheritedQC.lines) as QuotationLine[];
-                initialPOLines = sourceLines.map((l: QuotationLine, idx: number) => ({
+        const detail = (existingPO as unknown as Record<string, unknown>) || {};
+        let initialPOLines: POFormData['po_lines'] = [];
+
+        if (existingPO) {
+            const lines = (detail.poLines || detail.po_lines || detail.lines || []) as Record<string, unknown>[];
+            initialPOLines = lines.map((l: Record<string, unknown>, idx: number) => {
+                const itemCode = (l.item_code as string) || (l.item as Record<string, unknown>)?.item_code as string || (l.code as string) || '';
+                return {
                     line_no:         idx + 1,
                     item_id:         Number(l.item_id || 0),
-                    po_line_id:      undefined,
-                    id:              Number(l.item_id || 0),
-                    item_code:       l.item?.item_code || l.item_code || '',
-                    item_name:       l.item?.item_name || l.item_name || '',
-                    description:     l.remark || l.item?.item_name || l.item_name || '',
-                    pr_line_id:      l.pr_line_id || null,
-                    status:          'OPEN',
-                    qty:             Number(l.qty) || 1,
-                    qty_ordered:     Number(l.qty) || 1,
+                    po_line_id:      l.po_line_id ? Number(l.po_line_id) : undefined,
+                    id:              Number(l.po_line_id || l.item_id || 0),
+                    item_code:       itemCode,
+                    code:            itemCode,
+                    item_name:       (l.item_name as string) || (l.item as Record<string, unknown>)?.item_name as string || '',
+                    description:     (l.description as string) || (l.remark as string) || '',
+                    pr_line_id:      (l.pr_line_id as number) || null,
+                    status:          (l.status as string) || 'OPEN',
+                    qty:             Number(l.qty || l.qty_ordered || 0),
+                    qty_ordered:     Number(l.qty_ordered || l.qty || 0),
                     uom_id:          l.uom_id ? Number(l.uom_id) : 0,
-                    unit_price:      Number(l.unit_price) || 0,
-                    discount_amount: Number(l.discount_amount) || 0,
+                    unit_price:      Number(l.unit_price || 0),
+                    discount_amount: Number(l.discount_amount || 0),
                     discount_expression: String(l.discount_expression || '0'),
-                    tax_code_id:     l.tax_code_id || (inheritedQC as QuotationHeader).tax_code_id || undefined,
-                    required_receipt_type: 'FULL',
+                    tax_code_id:     (l.tax_code_id as number) || undefined,
+                    required_receipt_type: (l.required_receipt_type as "FULL" | "PARTIAL") || 'FULL',
                     receipt_type:    'GOODS' as const,
-                    line_total:      Number(l.net_amount) || 0,
-                }));
-            }
-
-            if (initialPOLines.length === 0 && !initialValues?.rfq_id && !initialValues?.winning_vq_id) {
-                initialPOLines = [{
-                    line_no: 1, item_id: 0, id: 0, item_code: '', item_name: '', description: '',
-                    pr_line_id: null, status: 'OPEN', qty: 1, qty_ordered: 1, uom_id: 0, unit_price: 0,
-                    discount_amount: 0, discount_expression: '0', tax_code_id: undefined,
-                    required_receipt_type: 'FULL', receipt_type: 'GOODS' as const, line_total: 0,
-                }];
-            }
-
-            const detail = (existingPO as unknown as Record<string, unknown>) || {};
-            const backendCurrency = detail?.currency_code || detail?.quote_currency_code || initialValues?.currency_code || 'THB';
-            const backendRate = Number(detail?.exchange_rate || inheritedQC?.exchange_rate || initialValues?.exchange_rate || 1);
-            const isActuallyMulti = !!(backendCurrency && backendCurrency !== 'THB') || backendRate !== 1;
-
-            reset({
-                po_no:                (detail.po_no as string)                       ?? (initialValues?.po_no as string)                ?? undefined,
-                po_date:              cleanD(detail.po_date as string)              ?? cleanD(initialValues?.po_date)      ?? new Date().toISOString().split('T')[0],
-                rfq_id:               (detail.rfq_id as number)                      ?? (initialValues?.rfq_id as number)               ?? inheritedQC?.rfq_id ?? undefined,
-                winning_vq_id:        (detail.winning_vq_id as number)               ?? (initialValues?.winning_vq_id as number)        ?? inheritedQC?.vq_header_id ?? inheritedQC?.quotation_id ?? undefined,
-                pr_id:                (detail.pr_id as number)                       ?? (inheritedQC?.pr_id || initialValues?.pr_id) ?? undefined,
-                pr_no:                (detail.pr_no as string)                       ?? (inheritedQC?.pr_no || initialValues?.pr_no as string) ?? undefined,
-                qc_id:                (detail.qc_id as number)                       ?? (initialValues?.qc_id as number)                ?? undefined,
-                qc_no:                (detail.qc_no as string)                       ?? (initialValues?.qc_no as string)                ?? undefined,
-                vendor_id:            (detail.vendor_id as number)                   ?? (initialValues?.vendor_id as number)            ?? undefined,
-                vendor_name:          (detail.vendor_name as string)                 ?? (initialValues?.vendor_name as string)          ?? undefined,
-                branch_id:            (detail.branch_id as number)                   ?? (initialValues?.branch_id as number)            ?? undefined,
-                ship_to_warehouse_id: (detail.ship_to_warehouse_id as number)       ?? (detail.warehouse_id as number) ?? (initialValues?.ship_to_warehouse_id as number) ?? undefined,
-                is_multicurrency:     isActuallyMulti,
-                currency_code:        backendCurrency as string,
-                base_currency_code:   (detail.base_currency_code as string)          || inheritedQC?.base_currency_code     || 'THB',
-                quote_currency_code:  backendCurrency as string,
-                target_currency:      'THB',
-                exchange_rate_date:   cleanD(detail.exchange_rate_date as string)  ?? cleanD(initialValues?.exchange_rate_date) ?? new Date().toISOString().split('T')[0],
-                exchange_rate:        backendRate,
-                payment_term_days:    Number(detail.payment_term_days    || inheritedQC?.payment_term_days || initialValues?.payment_term_days || 30),
-                delivery_date:        cleanD(detail.delivery_date as string)       || cleanD(initialValues?.delivery_date) || '',
-                remarks:              (detail.remarks as string)                     ?? (initialValues?.remarks as string) ?? '',
-                discount_expression:  (detail.discount_expression as string)         ?? (initialValues?.discount_expression as string) ?? '0',
-                tax_code_id:          Number(detail.tax_code_id || detail.tax_id || initialValues?.tax_code_id || inheritedQC?.tax_code_id || initialPOLines[0]?.tax_code_id) || undefined,
-                created_by:           (detail.created_by as number)                  ?? (initialValues?.created_by as number),
-                created_by_name:      (detail.created_by_name as string)             ?? (initialValues?.created_by_name as string) ?? (user?.employee?.employee_fullname || user?.username || ''),
-                po_lines:             initialPOLines,
+                    line_total:      Number(l.line_total || 0),
+                };
             });
+        } else if (initialValues?.po_lines) {
+            initialPOLines = initialValues.po_lines as POFormData['po_lines'];
         }
-    }, [
-        isOpen, initialValues, reset, inheritedQC, user, existingPO,
-        branches?.length, taxCodes?.length, units?.length, currencies?.length
-    ]);
+        
+        const backendCurrency = detail?.currency_code || detail?.quote_currency_code || initialValues?.currency_code || 'THB';
+        const backendRate = Number(detail?.exchange_rate || initialValues?.exchange_rate || 1);
+        const isActuallyMulti = !!(backendCurrency && backendCurrency !== 'THB') || backendRate !== 1;
+
+        reset({
+            po_no:                (detail.po_no as string)                       ?? (initialValues?.po_no as string)                ?? undefined,
+            po_date:              cleanD(detail.po_date as string)              ?? cleanD(initialValues?.po_date)      ?? new Date().toISOString().split('T')[0],
+            rfq_id:               (detail.rfq_id as number)                      ?? (initialValues?.rfq_id as number)               ?? undefined,
+            winning_vq_id:        (detail.winning_vq_id as number)               ?? (initialValues?.winning_vq_id as number)        ?? undefined,
+            pr_id:                (detail.pr_id as number)                       ?? (initialValues?.pr_id as number)                ?? undefined,
+            pr_no:                (detail.pr_no as string)                       ?? (initialValues?.pr_no as string)                ?? undefined,
+            qc_id:                (detail.qc_id as number)                       ?? (initialValues?.qc_id as number)                ?? undefined,
+            qc_no:                (detail.qc_no as string)                       ?? (initialValues?.qc_no as string)                ?? undefined,
+            vendor_id:            (detail.vendor_id as number)                   ?? (initialValues?.vendor_id as number)            ?? undefined,
+            vendor_name:          (detail.vendor_name as string)                 ?? (initialValues?.vendor_name as string)          ?? undefined,
+            branch_id:            (detail.branch_id as number)                   ?? (initialValues?.branch_id as number)            ?? undefined,
+            ship_to_warehouse_id: (detail.ship_to_warehouse_id as number)       ?? (detail.warehouse_id as number) ?? (initialValues?.ship_to_warehouse_id as number) ?? undefined,
+            is_multicurrency:     isActuallyMulti,
+            currency_code:        backendCurrency as string,
+            base_currency_code:   (detail.base_currency_code as string)          || 'THB',
+            quote_currency_code:  backendCurrency as string,
+            target_currency:      'THB',
+            exchange_rate_date:   cleanD(detail.exchange_rate_date as string)  ?? cleanD(initialValues?.exchange_rate_date) ?? new Date().toISOString().split('T')[0],
+            exchange_rate:        backendRate,
+            payment_term_days:    Number(detail.payment_term_days    || initialValues?.payment_term_days || 30),
+            delivery_date:        cleanD(detail.delivery_date as string)       || cleanD(initialValues?.delivery_date) || '',
+            remarks:              (detail.remarks as string)                     ?? (initialValues?.remarks as string) ?? '',
+            discount_expression:  (detail.discount_expression as string)         ?? (initialValues?.discount_expression as string) ?? '0',
+            tax_code_id:          Number(detail.tax_code_id || detail.tax_id || initialValues?.tax_code_id) || undefined,
+            created_by:           (detail.created_by as number)                  ?? (initialValues?.created_by as number),
+            created_by_name:      (detail.created_by_name as string)             ?? (initialValues?.created_by_name as string) ?? (user?.employee?.employee_fullname || user?.username || ''),
+            po_lines:             initialPOLines,
+        });
+
+        isInitialResetDone.current = true;
+    }, [isOpen, initialValues, reset, user, existingPO]);
     
     // ── Handlers ──────────────────────────────────────────────────────────────
     const handleVendorSelect = (vendor: VendorSearchItem) => {
@@ -373,24 +306,6 @@ export const usePOForm = ({
         }
     }, [hydrateFromSource]);
 
-    // ── Auto-Hydrate from Reference Doc on Create Mount ───────────────────────
-    useEffect(() => {
-        if (isOpen && !poId && initialValues?.pr_id) {
-            const isQcFlow = !!initialValues?.qc_id || !!initialValues?.winning_vq_id;
-            if (isQcFlow) {
-                handleSelectReferenceDoc(
-                    Number(initialValues.pr_id), 'QC', 
-                    initialValues.qc_id ? Number(initialValues.qc_id) : undefined, 
-                    initialValues.vendor_id ? Number(initialValues.vendor_id) : undefined,
-                    initialValues.winning_vq_id ? Number(initialValues.winning_vq_id) : undefined,
-                    initialValues.qc_no
-                );
-            } else {
-                handleSelectReferenceDoc(Number(initialValues.pr_id), 'PR');
-            }
-        }
-    }, [isOpen, initialValues?.pr_id, initialValues?.qc_id, initialValues?.winning_vq_id, initialValues?.vendor_id, initialValues?.qc_no, handleSelectReferenceDoc, poId]);
-
     const handleSelectPR = useCallback((pr: PRHeader) => {
         handleSelectReferenceDoc(pr.pr_id, 'PR');
     }, [handleSelectReferenceDoc]);
@@ -408,11 +323,13 @@ export const usePOForm = ({
         const prodUomName = (anyItem.uom_name || anyItem.unit_name || anyItem.base_uom_name || anyItem.sale_uom_name || '') as string;
 
         const safeUnits = Array.isArray(units) ? units : [];
-        const matchedUnit = safeUnits.find(u => {
-            if (prodUomId && (String(u.id) === String(prodUomId) || String(u.uom_id) === String(prodUomId))) return true;
-            if (prodUomName && (u.uom_name?.trim() === prodUomName.trim() || u.unit_name?.trim() === prodUomName.trim())) return true;
+        const matchedUnit = safeUnits.find((u: unknown) => {
+            const ut = u as Record<string, unknown>;
+            if (prodUomId && (String(ut.id) === String(prodUomId) || String(ut.uom_id) === String(prodUomId))) return true;
+            const uName = (ut.uom_name || ut.unit_name || '') as string;
+            if (prodUomName && uName.trim() === (prodUomName as string).trim()) return true;
             return false;
-        });
+        }) as Record<string, unknown> | undefined;
 
         const finalUomId = Number(prodUomId || matchedUnit?.uom_id || matchedUnit?.id || 1);
 
@@ -420,11 +337,10 @@ export const usePOForm = ({
             ...getValues(`po_lines.${index}`),
             id: Number(item.id || item.item_id),
             item_id: Number(item.id || item.item_id),
-            code: String(item.item_code || item.code || ""),
             item_code: String(item.item_code || item.code || ""),
             description: String(item.item_name || item.description || ""),
             uom_id: finalUomId || 0,
-            unit_price: Number(item.standard_price || item.unit_price || 0),
+            unit_price: Number(anyItem.standard_price || anyItem.unit_price || 0),
         });
         setTimeout(() => trigger(`po_lines.${index}.item_id`), 100);
     }, [update, getValues, trigger, units]);
@@ -435,9 +351,9 @@ export const usePOForm = ({
         if (!isOpen) {
             docAbortControllerRef.current?.abort();
             docAbortControllerRef.current = null;
-            hasHydratedInitial.current = false;
+            isInitialResetDone.current = false;
+            isSourceHydrated.current = false;
             reset();
-            logger.debug("♻️ PO Form Session Reset: Memory & Data Cleared");
         }
     }, [isOpen, reset]);
 
@@ -449,7 +365,8 @@ export const usePOForm = ({
     }, []);
 
     useEffect(() => {
-        if (!isOpen || hasHydratedInitial.current || isHydrating) return;
+        if (!isOpen || isSourceHydrated.current || isHydrating || poId) return;
+        
         const sPrId = searchParams.get('sourcePrId') || searchParams.get('source_pr_id');
         const sQcId = searchParams.get('sourceQcId') || searchParams.get('source_qc_id');
         const sVqId = searchParams.get('winningVqId') || searchParams.get('winning_vq_id');
@@ -463,15 +380,19 @@ export const usePOForm = ({
         const winningVqId = sVqId ? Number(sVqId) : (initialValues?.winning_vq_id || undefined);
         const isQC = sCreateFromQC || !!qcId || !!winningVqId;
 
-        if (prId && getValues('po_lines').length === 0) {
-            hasHydratedInitial.current = true; 
+        if (prId) {
+            isSourceHydrated.current = true;
             handleSelectReferenceDoc(
-                prId, isQC ? 'QC' : 'PR', qcId, vendorId, winningVqId,
+                prId, 
+                isQC ? 'QC' : 'PR', 
+                qcId, 
+                vendorId, 
+                winningVqId, 
                 sQcNo || initialValues?.qc_no,
                 searchParams.get('approvalNo') || searchParams.get('approval_no') || initialValues?.approval_no
             );
         }
-    }, [isOpen, initialValues, getValues, handleSelectReferenceDoc, isHydrating, searchParams]);
+    }, [isOpen, initialValues, handleSelectReferenceDoc, isHydrating, searchParams, poId]);
 
     const handleAddLine = useCallback(() => {
         append({
@@ -487,7 +408,7 @@ export const usePOForm = ({
         const firstErrorKey = Object.keys(errors)[0] as keyof POFormData;
         if (firstErrorKey) {
             const errorElement = document.getElementsByName(firstErrorKey)[0] || 
-                               document.querySelector(`[name="${firstErrorKey}"]`);
+                                document.querySelector(`[name="${firstErrorKey}"]`);
             if (errorElement) {
                 errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 if (errorElement instanceof HTMLElement && 'focus' in errorElement) errorElement.focus();
@@ -499,7 +420,7 @@ export const usePOForm = ({
         // Form & Master Data
         formMethods, register, control, errors, handleSubmit, setValue,
         branches, units, currencies, taxCodes,
-        isLoadingBranches, isLoadingUnits, isLoadingCurrencies, isLoadingTaxCodes,
+        isLoadingBranches, isLoadingCurrencies, isLoadingUnits, isLoadingTaxCodes,
         fields, append, remove, replace, update,
         
         // State
