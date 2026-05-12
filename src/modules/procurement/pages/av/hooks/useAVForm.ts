@@ -173,13 +173,23 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
         };
       }
 
-      const source = pr;
-      const mappedLines: AVLineFormData[] = (source.lines || []).map((line: PRLineResponse) => {
+      const isExistingAV = !!avDetails?.approval_id || !!itemArg?.approval_id;
+      
+      const prRaw = pr as unknown as Record<string, unknown>;
+      const source = (prRaw.header || prRaw) as Record<string, unknown>; 
+      const sourceLines = (prRaw.lines || source.lines || []) as PRLineResponse[];
+
+      const mappedLines: AVLineFormData[] = sourceLines.map((line: PRLineResponse) => {
         const matchedAVLine = (avDetails?.pr_approval_lines || avDetails?.prApprovalLines || itemArg?.pr_approval_lines || itemArg?.prApprovalLines || [])
           .find((avL: ApprovalLine) => Number(avL.pr_line_id) === Number(line.pr_line_id));
 
-        const qty = Number(line.qty || line.requested_qty || 0);
-        const isExistingAV = !!avDetails?.approval_id || !!itemArg?.approval_id;
+        const statusStr = (source.status as string) || '';
+        const isPartial = statusStr.toUpperCase() === 'PARTIAL';
+        const rawQty = Number(line.qty || line.requested_qty || 0);
+        const remainingQty = line.remaining_qty !== undefined ? Number(line.remaining_qty) : rawQty;
+        
+        // 🎯 For partial PRs, the actionable quantity is the remaining balance
+        const qty = isPartial ? remainingQty : rawQty;
         const isApproved = isExistingAV ? !!matchedAVLine : true;
 
         return {
@@ -235,14 +245,15 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
         approval_id: avDetails?.approval_id || itemArg?.approval_id,
         av_no: avDetails?.approval_no || itemArg?.approval_no || '',
         lines: mappedLines,
-        pr_no: source.pr_no || '',
-        purpose: (source.purpose || source.remark || '').trim(),
-        need_by_date: source.need_by_date || '',
-        pr_date: source.pr_date || '',
+        pr_no: (source.pr_no as string) || '',
+        purpose: ((source.purpose as string) || (source.remark as string) || '').trim(),
+        need_by_date: (source.need_by_date as string) || '',
+        pr_date: (source.pr_date as string) || '',
         vendor_name: vendorName,
-        preparer_name: avDetails?.approval_emp_name || source.requester_name || '',
-        requester_name: source.requester_name || source.employee_name || '',
-        status: (avDetails?.status || itemArg?.status || source.status || 'PENDING') as PRStatus,
+        preparer_name: avDetails?.approval_emp_name || (source.requester_name as string) || '',
+        requester_name: (source.requester_name as string) || (source.employee_name as string) || '',
+        // 🎯 Prioritize the real PR status from the source header for new approvals
+        status: (avDetails?.status || (isExistingAV ? itemArg?.status : null) || (source.status as string) || 'PENDING') as PRStatus,
         cost_center_id: source.cost_center_id ? Number(source.cost_center_id) : undefined,
         pr_tax_code_id: source.pr_tax_code_id ? Number(source.pr_tax_code_id) : undefined,
         pr_tax_rate: Number(source.pr_tax_rate || 0),
