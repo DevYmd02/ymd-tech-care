@@ -24,10 +24,10 @@ export const calculateDiscountAmount = (baseAmount: number, expression: string |
 
   if (expr.endsWith('%')) {
     const percent = parseFloat(expr.replace('%', '')) || 0;
-    return baseAmount * (percent / 100);
+    return round(baseAmount * (percent / 100));
   }
 
-  return parseFloat(expr) || 0;
+  return round(parseFloat(expr) || 0);
 };
 
 /**
@@ -38,7 +38,7 @@ export const calculateDiscountAmount = (baseAmount: number, expression: string |
  */
 export const calculateVatAmount = (taxableAmount: number, taxRate: number): number => {
   if (!taxRate || taxRate <= 0) return 0;
-  return taxableAmount * (taxRate / 100);
+  return round(taxableAmount * (taxRate / 100));
 };
 
 /**
@@ -60,5 +60,5 @@ export const calculateNetTotal = (subtotal: number, discount: number, vat: numbe
  * @returns The line total
  */
 export const calculateLineTotal = (qty: number, unitPrice: number, discountAmount: number): number => {
-  return round((qty * unitPrice) - discountAmount);
+  return round(Math.max(0, (qty * unitPrice) - discountAmount));
 };
