@@ -26,6 +26,8 @@ export interface ApprovalHeader {
   pr?: {
     pr_no: string;
   };
+  pr_no?: string; // Flattened PR No
+  id?: number;    // Alias for approval_id
 }
 
 export interface ApprovalLine {
