@@ -170,7 +170,7 @@ export const getRFQDefaultFormValues = (): RFQFormValues => ({
     incoterm: '',
     remarks: '',
     target_delivery_date: '',
-    isMulticurrency: false,
+    isMulticurrency: true,
     purpose: '',
     rfqLines: [],
     vendors: [],

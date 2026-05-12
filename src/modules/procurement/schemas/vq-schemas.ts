@@ -82,7 +82,7 @@ export const QuotationHeaderSchema = z.object({
 
   rfq_no: z.string().min(1, 'กรุณาเลือกเลขที่ RFQ'), // Human-readable Ref RFQ
   currency: z.string().min(1, 'กรุณาระบุสกุลเงิน'),
-  isMulticurrency: z.boolean().optional(),
+  isMulticurrency: z.boolean().optional().default(true),
   exchange_rate_date: z.string().optional(),
   target_currency: z.string().optional(),
   exchange_rate: z.coerce.number({ message: 'อัตราแลกเปลี่ยนต้องมากกว่า 0' }).min(0.0001, 'อัตราแลกเปลี่ยนต้องมากกว่า 0').optional(),

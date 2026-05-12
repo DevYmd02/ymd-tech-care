@@ -434,15 +434,7 @@ export const useVQForm = (
                 contact_email: data.contact_email || (data.vendor as unknown as Record<string, unknown>)?.contact_email as string || '',
                 // 💱 @Agent_Currency_Prioritizer: Prefer explicit VQ fields (base/quote) over generic join fields
                 currency: data.base_currency_code || data.currency || 'THB',
-                isMulticurrency: Boolean(
-                    data.is_multicurrency || 
-                    data.isMulticurrency || 
-                    (data.base_currency_code && String(data.base_currency_code).toUpperCase() !== 'THB') ||
-                    (data.quote_currency_code && String(data.quote_currency_code).toUpperCase() !== 'THB') ||
-                    (data.currency && String(data.currency).toUpperCase() !== 'THB') ||
-                    (data.target_currency && String(data.target_currency).toUpperCase() !== 'THB') ||
-                    (Number(data.exchange_rate || 1) !== 1)
-                ),
+                isMulticurrency: true, // Force visible for Detail/Edit as requested
                 exchange_rate_date: data.exchange_rate_date || '',
                 target_currency: data.quote_currency_code || data.target_currency || 'THB',
                 exchange_rate: Number(data.exchange_rate) || 1,
@@ -593,7 +585,7 @@ export const useVQForm = (
                 contact_phone: '',
                 contact_email: '',
                 currency: fullRFQ.rfq_base_currency_code || 'THB',
-                isMulticurrency: Boolean(fullRFQ.rfq_base_currency_code && fullRFQ.rfq_base_currency_code !== 'THB'),
+                isMulticurrency: true,
                 exchange_rate_date: formatDateForInputHelper(fullRFQ.rfq_exchange_rate_date) || formatDateForInputHelper(new Date()),
                 target_currency: fullRFQ.rfq_quote_currency_code || 'THB',
                 exchange_rate: Number(fullRFQ.rfq_exchange_rate) || 1,
@@ -643,7 +635,7 @@ export const useVQForm = (
           quotation_no: '',
           quotation_date: formatDateForInputHelper(new Date()),
           currency: 'THB',
-          isMulticurrency: false,
+          isMulticurrency: true,
           exchange_rate_date: formatDateForInputHelper(new Date()),
           target_currency: 'THB',
           exchange_rate: 1,

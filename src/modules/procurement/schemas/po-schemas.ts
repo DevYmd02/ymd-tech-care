@@ -257,7 +257,7 @@ export const POFormSchema = z.object({
 
     // Terms
     tax_code_id: z.number({ message: 'กรุณาเลือกประเภทภาษี' }).min(1, 'กรุณาเลือกประเภทภาษี'),
-    is_multicurrency:   z.boolean().default(false),
+    is_multicurrency:   z.boolean().default(true),
     currency_code: z.string().min(1, 'กรุณาระบุสกุลเงิน'),
     base_currency_code: z.string().default('THB'),
     quote_currency_code: z.string().default('THB'),
