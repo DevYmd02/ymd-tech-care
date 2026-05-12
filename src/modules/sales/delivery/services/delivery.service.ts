@@ -64,7 +64,6 @@ export const DeliveryService = {
 
     /** ดึงรายการใบจัดส่งสินค้า */
     getList: async (params: DeliveryListParams = {}) => {
-        logger.debug('[DeliveryService] getList params:', params);
         try {
             const response = await api.get<{ data: Record<string, unknown>[]; total: number } | Record<string, unknown>[]>(
                 '/delivery', { params }
@@ -202,7 +201,7 @@ export const DeliveryService = {
             r['warehouse_id'] = normalizeId(r['warehouse_id'] || warehouseObj['warehouse_id'] || warehouseObj['id']);
             r['ship_by_emp'] = normalizeId(r['ship_by_emp'] || r['ship_by_employee_id'] || r['ship_by_employee'] || empObj['id'] || empObj['employee_id']);
             r['ship_by_emp_name'] = String(
-                r['ship_by_emp_name'] || empObj['employee_fullname'] ||
+                r['ship_by_emp_name'] || empObj['employee_fullname'] || empObj['employee_name'] ||
                 `${empObj['employee_firstname_th'] || ''} ${empObj['employee_lastname_th'] || ''}`.trim() || ''
             );
 
@@ -615,6 +614,7 @@ export const DeliveryService = {
             return !isNaN(num) ? num : String(id);
         };
 
+
         const transformed: Record<string, unknown> = {
             delivery_date: toISOString(raw['delivery_date']) || new Date().toISOString(),
             docu_date: toISOString(raw['docu_date']) || new Date().toISOString(),
@@ -624,9 +624,12 @@ export const DeliveryService = {
             carrier: raw['carrier'] || '',
             tracking_no: raw['tracking_no'] || '',
             remarks: raw['remarks'] || '',
-            ship_by_emp: mapId(raw['ship_by_emp']) || null,
         };
 
+        transformed['ship_by_emp'] = (raw['ship_by_emp'] && raw['ship_by_emp'] !== '') 
+            ? Number(raw['ship_by_emp']) 
+            : null;
+        
         if (isValidId(raw['so_id'])) transformed['so_id'] = mapId(raw['so_id']);
         if (isValidId(raw['customer_id'])) transformed['customer_id'] = mapId(raw['customer_id']);
         if (isValidId(raw['branch_id'])) transformed['branch_id'] = mapId(raw['branch_id']);

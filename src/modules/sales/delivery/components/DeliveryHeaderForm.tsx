@@ -255,6 +255,9 @@ export function DeliveryHeaderForm({
                             placeholder="หมายเหตุเพิ่มเติม"
                             className={inputClass}
                         />
+                        {/* Hidden fields to ensure they are registered in the form */}
+                        <input type="hidden" {...register('ship_by_emp')} />
+                        <input type="hidden" {...register('ship_by_emp_name')} />
                     </div>
                 </div>
             </div>
