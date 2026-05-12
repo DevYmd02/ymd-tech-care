@@ -13,10 +13,10 @@ export function AOFormSummary() {
   const discountExpression = watch('discount_expression') || '0';
   const taxRate = Number(watch('tax_rate')) || 0;
 
-  const approvedDiscount = calculateDiscountAmount(approvedSubTotal, discountExpression);
-  const approvedTaxable = approvedSubTotal - approvedDiscount;
+  const approvedDiscount = approvedSubTotal > 0 ? calculateDiscountAmount(approvedSubTotal, discountExpression) : 0;
+  const approvedTaxable = Math.max(0, approvedSubTotal - approvedDiscount);
   const approvedVat = calculateVatAmount(approvedTaxable, taxRate);
-  const approvedNetTotal = calculateNetTotal(approvedSubTotal, approvedDiscount, approvedVat);
+  const approvedNetTotal = Math.max(0, calculateNetTotal(approvedSubTotal, approvedDiscount, approvedVat));
 
   const baseSubTotal = (watch('sub_total') as number) || 0;
   const baseDiscount = (watch('quote_discount_amount') as number) || (watch('base_discount_amount') as number) || 0;

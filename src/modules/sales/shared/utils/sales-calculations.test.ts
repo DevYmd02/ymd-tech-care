@@ -74,8 +74,11 @@ describe('Sales Calculations', () => {
       expect(calculateVatAmount(14.35715, 7)).toBe(1.01); // 1.0050005
     });
     
-    it('should handle zero base amount', () => {
+    it('should handle zero or negative base amount', () => {
       expect(calculateDiscountAmount(0, '10%')).toBe(0);
+      expect(calculateDiscountAmount(0, '50')).toBe(0);
+      expect(calculateDiscountAmount(-100, '10%')).toBe(0);
+      expect(calculateDiscountAmount(-100, '50')).toBe(0);
       expect(calculateVatAmount(0, 7)).toBe(0);
     });
   });

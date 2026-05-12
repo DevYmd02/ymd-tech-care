@@ -20,6 +20,8 @@ export const calculateDiscountAmount = (baseAmount: number, expression: string |
   const expr = String(expression || '0').trim();
   if (expr === '0' || expr === '') return 0;
 
+  if (baseAmount <= 0) return 0;
+
   if (expr.endsWith('%')) {
     const percent = parseFloat(expr.replace('%', '')) || 0;
     return baseAmount * (percent / 100);
