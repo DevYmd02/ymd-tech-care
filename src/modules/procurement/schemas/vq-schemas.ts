@@ -110,10 +110,10 @@ export const QuotationHeaderSchema = z.object({
 })
 .superRefine((data, ctx) => {
   if (data.isMulticurrency) {
-    if (!data.currency || data.currency === 'THB') {
+    if (!data.currency) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "กรุณาระบุสกุลเงินต่างประเทศ",
+        message: "กรุณาระบุสกุลเงิน",
         path: ["currency"]
       });
     }
