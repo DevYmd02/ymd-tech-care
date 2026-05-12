@@ -37,8 +37,6 @@ export const mapPRToRFQFormData = (
     unitsMap?: UnitListItem[],
     vendorDetail?: VendorMaster | null
 ): Partial<RFQFormValues> => {
-    const isMulti = pr.pr_base_currency_code !== 'THB';
-    
     return {
         pr_id: pr.pr_id,
         pr_no: pr.pr_no,
@@ -51,7 +49,7 @@ export const mapPRToRFQFormData = (
         pr_tax_rate: pr.pr_tax_rate || undefined,
         
         // Currency Sync
-        isMulticurrency: isMulti,
+        isMulticurrency: true,
         rfq_base_currency_code: pr.pr_base_currency_code,
         rfq_quote_currency_code: pr.pr_quote_currency_code || 'THB',
         rfq_exchange_rate: pr.pr_exchange_rate || 1,
@@ -623,7 +621,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     remarks: rfq.remarks || '',
                     purpose: rfq.purpose || '',
                     receive_location: rfq.receive_location || '',
-                    isMulticurrency: (rfq.rfq_base_currency_code || 'THB') !== 'THB',
+                    isMulticurrency: true, // Force visible for Detail/Edit as requested
                     // 🎯 SMART DERIVATION v2: Force priority to Line Dates (since Header date is not updateable via API)
                     // 🔒 FIX: If Header shows 23 but PR shows 21, prioritize PR's delivery_date
                     target_delivery_date: (

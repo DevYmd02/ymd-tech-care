@@ -83,7 +83,7 @@ export const usePOForm = ({
             vendor_name: undefined,
             branch_id: undefined,
             ship_to_warehouse_id: undefined,
-            is_multicurrency: false,
+            is_multicurrency: true,
             currency_code: 'THB',
             target_currency: 'THB',
             exchange_rate_date: new Date().toISOString().split('T')[0],
@@ -228,7 +228,6 @@ export const usePOForm = ({
         
         const backendCurrency = detail?.currency_code || detail?.quote_currency_code || initialValues?.currency_code || 'THB';
         const backendRate = Number(detail?.exchange_rate || initialValues?.exchange_rate || 1);
-        const isActuallyMulti = !!(backendCurrency && backendCurrency !== 'THB') || backendRate !== 1;
 
         reset({
             po_no:                (detail.po_no as string)                       ?? (initialValues?.po_no as string)                ?? undefined,
@@ -243,7 +242,7 @@ export const usePOForm = ({
             vendor_name:          (detail.vendor_name as string)                 ?? (initialValues?.vendor_name as string)          ?? undefined,
             branch_id:            (detail.branch_id as number)                   ?? (initialValues?.branch_id as number)            ?? undefined,
             ship_to_warehouse_id: (detail.ship_to_warehouse_id as number)       ?? (detail.warehouse_id as number) ?? (initialValues?.ship_to_warehouse_id as number) ?? undefined,
-            is_multicurrency:     isActuallyMulti,
+            is_multicurrency:     true, // Force visible for Detail/Edit as requested
             currency_code:        backendCurrency as string,
             base_currency_code:   (detail.base_currency_code as string)          || 'THB',
             quote_currency_code:  backendCurrency as string,

@@ -47,7 +47,7 @@ export const usePOHydration = ({
         // 🚨 Reset key header fields before hydration
         setValue('vendor_id', undefined as unknown as number);
         setValue('vendor_name', undefined);
-        setValue('is_multicurrency', false);
+        setValue('is_multicurrency', true);
         setValue('currency_code', 'THB');
         setValue('qc_no', undefined);
         setValue('approval_no', undefined);
@@ -120,8 +120,8 @@ export const usePOHydration = ({
             const resolvedCode = fullWinningVQ?.quote_currency_code || vqRaw?.currency as string || fullPR.pr_quote_currency_code || 'THB';
             
             const isForeign = resolvedCode !== 'THB' || finalExRate !== 1;
-            // 🎯 USER REQUEST: Always expand/check Multicurrency if source is QC
-            setValue('is_multicurrency', type === 'QC' || isForeign);
+            // 🎯 USER REQUEST: Always expand/check Multicurrency
+            setValue('is_multicurrency', true);
 
             setValue('currency_code', resolvedCode);
             setValue('exchange_rate', finalExRate);
