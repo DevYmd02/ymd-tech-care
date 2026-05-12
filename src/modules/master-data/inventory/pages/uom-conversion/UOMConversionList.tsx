@@ -164,7 +164,9 @@ export default function UOMConversionList() {
             id: 'sequence',
             header: 'ลำดับ',
             accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1,
+            meta: { thClassName: 'px-2 py-3 font-semibold text-center', tdClassName: 'text-center' },
             size: 60,
+            enableSorting: false,
         },
         {
             accessorKey: 'item_code',
@@ -198,7 +200,9 @@ export default function UOMConversionList() {
         },
         {
             accessorKey: 'is_purchase_unit',
-            header: () => <div className="text-center w-full">หน่วยซื้อ</div>,
+            header: 'หน่วยซื้อ',
+            meta: { thClassName: 'px-2 py-3 font-semibold text-center', tdClassName: 'text-center' },
+            enableSorting: false,
             cell: ({ getValue }) => (
                 <div className="flex justify-center">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -214,7 +218,9 @@ export default function UOMConversionList() {
         },
         {
             accessorKey: 'is_active',
-            header: () => <div className="text-center w-full">สถานะ</div>,
+            header: 'สถานะ',
+            meta: { thClassName: 'px-2 py-3 font-semibold text-center', tdClassName: 'text-center' },
+            enableSorting: false,
             cell: ({ getValue }) => (
                 <div className="flex justify-center">
                     <ActiveStatusBadge isActive={getValue() as boolean} />
@@ -224,8 +230,10 @@ export default function UOMConversionList() {
         },
         {
             id: 'actions',
-            header: () => <div className="text-center w-full">จัดการ</div>,
+            header: 'จัดการ',
+            meta: { thClassName: 'px-2 py-3 font-semibold text-center', tdClassName: 'text-center' },
             size: 100,
+            enableSorting: false,
             cell: ({ row }) => (
                 <div className="flex items-center justify-center gap-2">
                     <button 
