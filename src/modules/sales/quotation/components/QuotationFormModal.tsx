@@ -14,6 +14,7 @@ import { logger } from '@utils';
 import { useToast } from '@ui/feedback/Toast';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { QuotationHeader } from '@sales/quotation/types/quotation.types';
+import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 
 interface QuotationFormModalProps {
     isOpen: boolean;
@@ -178,7 +179,17 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                 {isLoadingDetail && !watch('sq_no') ? (
                     <SalesFormSkeleton />
                 ) : (
-                    <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
+                    <ErrorBoundary>
+                        <style dangerouslySetInnerHTML={{ __html: `
+                            @keyframes formFadeIn {
+                                from { opacity: 0; transform: translateY(8px); }
+                                to { opacity: 1; transform: translateY(0); }
+                            }
+                            .animate-form-fade-in {
+                                animation: formFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                            }
+                        `}} />
+                        <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 animate-form-fade-in">
                         <form id="quotation-form" onSubmit={handleSubmit(onFormSubmit, onInvalidSubmit)} className="max-w-[1400px] mx-auto space-y-6">
                             
                             {/* 1. Header Section */}
@@ -240,6 +251,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                         </div>
                     </form>
                 </div>
+                </ErrorBoundary>
                 )}
             </FormProvider>
 

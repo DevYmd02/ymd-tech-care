@@ -9,6 +9,8 @@
 import { useMemo, useState } from 'react';
 import { FormProvider, useWatch, Controller, type Control, type FieldErrors } from 'react-hook-form';
 import { SavingOverlay } from '@/shared/components/ui/feedback/SavingOverlay';
+import { ProcurementFormSkeleton } from '@/modules/procurement/shared/components/ProcurementFormSkeleton';
+import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 import { 
     Save, Search, Trash2, FileText,
     Loader2, Plus, X as XIcon, Printer
@@ -501,8 +503,11 @@ export default function POFormModal({
                 }
             >
                 <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 relative">
-                    {/* 🧊 Saving Overlay */}
                     <SavingOverlay isVisible={isSubmitting} />
+                    {isHydrating ? (
+                        <ProcurementFormSkeleton />
+                    ) : (
+                        <ErrorBoundary>
 
                     {/* ════════════════════════════════════════════════════════
                         CARD 1 — PO Header
@@ -918,8 +923,10 @@ export default function POFormModal({
                             setIsProductModalOpen(false);
                         }}
                     />
-                </div>
-            </WindowFormLayout>
+                    </ErrorBoundary>
+            )}
+        </div>
+    </WindowFormLayout>
         </FormProvider>
     );
 }

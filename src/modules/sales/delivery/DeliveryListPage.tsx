@@ -4,8 +4,8 @@
  * @route /sales/delivery
  */
 
-import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Truck, Search, Plus, Eye, Edit } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -16,6 +16,7 @@ import { useConfirmation } from '@hooks/useConfirmation';
 import { DeliveryFormModal } from './components/DeliveryFormModal';
 import { DeliveryStatusBadge } from './components/DeliveryStatusBadge';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
+import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 
 // ====================================================================================
 // CONSTANTS
@@ -62,6 +63,28 @@ export default function DeliveryListPage() {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | undefined>(undefined);
     const [isViewOnly, setIsViewOnly] = useState(false);
+    const queryClient = useQueryClient();
+    const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleMouseEnter = useCallback((id: string) => {
+        if (!id) return;
+        if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+        
+        prefetchTimerRef.current = setTimeout(() => {
+            queryClient.prefetchQuery({
+                queryKey: ['delivery', id],
+                queryFn: () => DeliveryService.getById(id),
+                staleTime: 60 * 1000,
+            });
+        }, 80);
+    }, [queryClient]);
+
+    const handleMouseLeave = useCallback(() => {
+        if (prefetchTimerRef.current) {
+            clearTimeout(prefetchTimerRef.current);
+            prefetchTimerRef.current = null;
+        }
+    }, []);
 
     const { confirm } = useConfirmation();
 
@@ -173,6 +196,8 @@ export default function DeliveryListPage() {
                 cell: (info) => (
                     <span
                         onClick={() => handleEdit(info.row.original.delivery_id, true)}
+                        onMouseEnter={() => handleMouseEnter(info.row.original.delivery_id)}
+                        onMouseLeave={handleMouseLeave}
                         className="text-amber-600 font-bold cursor-pointer hover:underline transition-all"
                     >
                         {info.getValue() || '-'}
@@ -240,6 +265,8 @@ export default function DeliveryListPage() {
                             {/* View */}
                             <button
                                 onClick={() => handleEdit(row.delivery_id, true)}
+                                onMouseEnter={() => handleMouseEnter(row.delivery_id)}
+                                onMouseLeave={handleMouseLeave}
                                 className="text-slate-400 dark:text-white/60 hover:text-amber-500 transition-colors"
                                 title="ดูรายละเอียด"
                             >
@@ -286,11 +313,11 @@ export default function DeliveryListPage() {
                 size: 190,
             }),
         ],
-        [columnHelper, page, limit, handleUpdateStatus, customerMap]
+        [columnHelper, page, limit, handleUpdateStatus, customerMap, handleMouseEnter, handleMouseLeave]
     );
 
     return (
-        <>
+        <ErrorBoundary>
             <PageListLayout
                 title="รายการจัดส่งสินค้า - Delivery Order (DO)"
                 subtitle="จัดการข้อมูลการจัดส่งสินค้าให้ลูกค้า"
@@ -420,6 +447,6 @@ export default function DeliveryListPage() {
                 isViewOnly={isViewOnly}
                 onSuccess={() => refetch()}
             />
-        </>
+        </ErrorBoundary>
     );
 }

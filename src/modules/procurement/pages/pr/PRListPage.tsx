@@ -357,7 +357,7 @@ export default function PRListPage() {
     // ====================================================================================
 
     return (
-        <>
+        <ErrorBoundary>
             <PageListLayout
                 title="รายการใบขอซื้อ"
                 subtitle="Purchase Requisition (PR)"
@@ -573,6 +573,6 @@ export default function PRListPage() {
                     prNo={historyPrNo}
                 />
             )}
-        </>
+        </ErrorBoundary>
     );
 }

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { PRService } from '@/modules/procurement/services/pr.service';
-import type { CreatePRPayload, PRHeader } from '@/modules/procurement/types';
+import type { CreatePRPayload, PRHeader, PRListResponse } from '@/modules/procurement/types';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { Send } from 'lucide-react';
 
@@ -28,7 +28,50 @@ export const usePRActions = () => {
     });
 
     const submitMutation = useMutation({
-        mutationFn: (id: number) => PRService.processDirectApproval(id)
+        mutationFn: (id: number) => PRService.processDirectApproval(id),
+        // 🚀 Optimistic Update for 160-user scale: UI feels instant
+        onMutate: async (id) => {
+            // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+            await queryClient.cancelQueries({ queryKey: ['prs'] });
+            await queryClient.cancelQueries({ queryKey: ['pr', id] });
+
+            // Snapshot the previous value
+            const previousPrs = queryClient.getQueryData(['prs']);
+            const previousPr = queryClient.getQueryData(['pr', id]);
+
+            // Optimistically update to the new value
+            queryClient.setQueryData(['prs'], (old: PRListResponse | undefined) => {
+                if (!old?.data) return old;
+                return {
+                    ...old,
+                    data: old.data.map((p: PRHeader) => 
+                        p.pr_id === id ? { ...p, status: 'PENDING' } : p
+                    )
+                };
+            });
+
+            queryClient.setQueryData(['pr', id], (old: PRHeader | undefined) => {
+                if (!old) return old;
+                return { ...old, status: 'PENDING' };
+            });
+
+            // Return a context object with the snapshotted value
+            return { previousPrs, previousPr };
+        },
+        // If the mutation fails, use the context returned from onMutate to roll back
+        onError: (_err, id, context) => {
+            if (context?.previousPrs) {
+                queryClient.setQueryData(['prs'], context.previousPrs);
+            }
+            if (context?.previousPr) {
+                queryClient.setQueryData(['pr', id], context.previousPr);
+            }
+        },
+        // Always refetch after error or success to ensure we have the correct server state
+        onSettled: (_data, _error, id) => {
+            queryClient.invalidateQueries({ queryKey: ['prs'] });
+            queryClient.invalidateQueries({ queryKey: ['pr', id] });
+        },
     });
 
     const updatePR = useCallback(async (id: number, payload: CreatePRPayload) => {
@@ -58,11 +101,11 @@ export const usePRActions = () => {
         // Kept for backward compatibility or direct API usage if needed without UI
         const success = await PRService.approvePR(id);
         if (success) {
-            // Close-First pattern: 100ms delay
-            setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ['prs'] });
-                queryClient.invalidateQueries({ queryKey: ['pr', id] });
-            }, 100);
+            // 💡 Fix: Invalidate immediately and await it to ensure UI is fresh
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['prs'] }),
+                queryClient.invalidateQueries({ queryKey: ['pr', id] })
+            ]);
         }
         return success;
     }, [queryClient]);
@@ -107,11 +150,11 @@ export const usePRActions = () => {
             icon: Send,
             onConfirm: async () => {
                 await submitMutation.mutateAsync(pr.pr_id);
-                // Close-First: Invalidate after delay
-                setTimeout(() => {
-                    queryClient.invalidateQueries({ queryKey: ['prs'] });
-                    queryClient.invalidateQueries({ queryKey: ['pr', pr.pr_id] });
-                }, 100);
+                // 💡 Fix: Invalidate immediately and await it to ensure UI is fresh
+                await Promise.all([
+                    queryClient.invalidateQueries({ queryKey: ['prs'] }),
+                    queryClient.invalidateQueries({ queryKey: ['pr', pr.pr_id] })
+                ]);
             }
         });
     }, [confirm, submitMutation, queryClient]);

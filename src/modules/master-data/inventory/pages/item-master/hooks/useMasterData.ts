@@ -14,6 +14,10 @@ import type {
     TaxCodeListItem
 } from '@/modules/master-data/inventory/types/product-types';
 
+// Caching Constants for Master Data
+const MASTER_DATA_STALE_TIME = 5 * 60 * 1000; // 5 minutes
+const MASTER_DATA_GC_TIME = 30 * 60 * 1000;    // 30 minutes
+
 export function useMasterData(enabled: boolean = true) {
     const { data: itemTypes = [] } = useQuery({
         queryKey: ['master-item-types'],
@@ -22,7 +26,9 @@ export function useMasterData(enabled: boolean = true) {
             const data = response as { items?: ItemTypeListItem[]; data?: ItemTypeListItem[] } | ItemTypeListItem[];
             return Array.isArray(data) ? data : data.items || data.data || [];
         },
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     const { data: itemGroups = [] } = useQuery({
@@ -32,7 +38,9 @@ export function useMasterData(enabled: boolean = true) {
             const data = response as { items?: ItemGroupListItem[]; data?: ItemGroupListItem[] } | ItemGroupListItem[];
             return Array.isArray(data) ? data : data.items || data.data || [];
         },
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     const { data: itemBrands = [] } = useQuery({
@@ -42,7 +50,9 @@ export function useMasterData(enabled: boolean = true) {
             const data = response as { items?: ItemBrandListItem[]; data?: ItemBrandListItem[] } | ItemBrandListItem[];
             return Array.isArray(data) ? data : data.items || data.data || [];
         },
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     const { data: itemPatterns = [] } = useQuery({
@@ -52,7 +62,9 @@ export function useMasterData(enabled: boolean = true) {
             const data = response as { items?: ItemPatternListItem[]; data?: ItemPatternListItem[] } | ItemPatternListItem[];
             return Array.isArray(data) ? data : data.items || data.data || [];
         },
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     const { data: itemDesigns = [] } = useQuery({
@@ -62,7 +74,9 @@ export function useMasterData(enabled: boolean = true) {
             const data = response as { items?: ItemDesignListItem[]; data?: ItemDesignListItem[] } | ItemDesignListItem[];
             return Array.isArray(data) ? data : data.items || data.data || [];
         },
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     const { data: itemGrades = [] } = useQuery({
@@ -72,7 +86,9 @@ export function useMasterData(enabled: boolean = true) {
             const data = response as { items?: ItemGradeListItem[]; data?: ItemGradeListItem[] } | ItemGradeListItem[];
             return Array.isArray(data) ? data : data.items || data.data || [];
         },
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     const { data: itemClasses = [] } = useQuery({
@@ -82,7 +98,9 @@ export function useMasterData(enabled: boolean = true) {
             const data = response as { items?: ItemClassListItem[]; data?: ItemClassListItem[] } | ItemClassListItem[];
             return Array.isArray(data) ? data : data.items || data.data || [];
         },
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     const { data: itemSizes = [] } = useQuery({
@@ -92,7 +110,9 @@ export function useMasterData(enabled: boolean = true) {
             const data = response as { items?: ItemSizeListItem[]; data?: ItemSizeListItem[] } | ItemSizeListItem[];
             return Array.isArray(data) ? data : data.items || data.data || [];
         },
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     const { data: itemColors = [] } = useQuery({
@@ -102,7 +122,9 @@ export function useMasterData(enabled: boolean = true) {
             const data = response as { items?: ItemColorListItem[]; data?: ItemColorListItem[] } | ItemColorListItem[];
             return Array.isArray(data) ? data : data.items || data.data || [];
         },
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     const { data: uom = [] } = useQuery({
@@ -112,7 +134,9 @@ export function useMasterData(enabled: boolean = true) {
             const data = response as { items?: UnitListItem[]; data?: UnitListItem[] } | UnitListItem[];
             return Array.isArray(data) ? data : data.items || data.data || [];
         },
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     const { data: taxCodes = [] } = useQuery({
@@ -122,7 +146,9 @@ export function useMasterData(enabled: boolean = true) {
             const data = response as { items?: TaxCodeListItem[]; data?: TaxCodeListItem[] } | TaxCodeListItem[];
             return Array.isArray(data) ? data : data.items || data.data || [];
         },
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     return { 

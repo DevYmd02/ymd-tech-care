@@ -46,11 +46,14 @@ export interface GRNHeader {
     // Aggregates
     item_count?: number;
     total_amount?: number;        // implied from schema context, useful for display
+    exchange_rate?: number;
+    items?: GRNLine[];
 }
 
 export interface GRNLine {
     grn_line_id: number;
     grn_id: number;
+    item_id: number;
     item_code: string;
     item_name: string;
     
@@ -63,9 +66,18 @@ export interface GRNLine {
     uom_name: string;             // display
     
     lot_id?: string;              // Match DB name (uuid)
+    lot_code?: string;
     batch_no?: string;
     serial_no?: string;
     expiry_date?: string;
+    
+    // Linking
+    po_line_id?: number;
+    qty_ordered?: number;
+    unit_price?: number;
+    line_total?: number;
+    qc_status?: string;
+    remark?: string;
 }
 
 // ====================================================================================

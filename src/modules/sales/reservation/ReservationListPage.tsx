@@ -15,6 +15,8 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@utils';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { formatNumber } from '@/shared/utils';
+import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
+
 // ====================================================================================
 // CONSTANTS
 // ====================================================================================
@@ -231,7 +233,7 @@ export default function ReservationListPage() {
     ], [columnHelper, page, limit, customerMap, handleView, handleEdit, handleConfirmReservation]);
 
     return (
-        <>
+        <ErrorBoundary>
             <PageListLayout
                 title="รายการจองสินค้า"
                 subtitle="Stock Reservation"
@@ -357,6 +359,6 @@ export default function ReservationListPage() {
                 onSuccess={() => refetch()}
                 readOnly={modalMode === 'view'}
             />
-        </>
+        </ErrorBoundary>
     );
 }

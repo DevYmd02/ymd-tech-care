@@ -5,12 +5,13 @@
  * @refactored Uses PageListLayout, FilterFormBuilder, useTableFilters, React Query, SmartTable
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { Scale, Eye, Pencil, Search, Plus, Trophy, Clock } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, QCStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
+import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 import { QCFormModal } from './components';
 import { createColumnHelper } from '@tanstack/react-table';
 
@@ -78,6 +79,28 @@ export default function QCListPage() {
     }, [data]);
 
     const queryClient = useQueryClient();
+    const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // 🚀 INTENT-BASED PRE-FETCHING
+    const handleMouseEnter = useCallback((id: number | undefined) => {
+        if (!id) return;
+        if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+        
+        prefetchTimerRef.current = setTimeout(() => {
+            queryClient.prefetchQuery({
+                queryKey: ['quote-comparisons', 'detail', id],
+                queryFn: () => QCService.getById(id),
+                staleTime: 60 * 1000,
+            });
+        }, 80);
+    }, [queryClient]);
+
+    const handleMouseLeave = useCallback(() => {
+        if (prefetchTimerRef.current) {
+            clearTimeout(prefetchTimerRef.current);
+            prefetchTimerRef.current = null;
+        }
+    }, []);
 
     // Modal State
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -127,7 +150,12 @@ export default function QCListPage() {
         columnHelper.accessor('qc_no', {
             header: 'เลขที่ใบ QC',
             cell: (info) => (
-                <span className="font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">
+                <span 
+                    onClick={() => handleView(info.row.original)}
+                    onMouseEnter={() => handleMouseEnter(info.row.original.qc_id)}
+                    onMouseLeave={handleMouseLeave}
+                    className="font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap cursor-pointer hover:underline decoration-indigo-300"
+                >
                     {info.getValue() || '-'}
                 </span>
             ),
@@ -243,6 +271,8 @@ export default function QCListPage() {
                     <div className="flex items-center justify-center gap-2">
                         <button
                             onClick={() => handleView(item)}
+                            onMouseEnter={() => handleMouseEnter(item.qc_id)}
+                            onMouseLeave={handleMouseLeave}
                             className="p-1 px-1.5 rounded-md text-indigo-400 hover:text-purple-600 dark:text-indigo-500/70 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                             title="ดูรายละเอียด"
                         >
@@ -271,7 +301,7 @@ export default function QCListPage() {
             size: 165,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, handleView, handleEdit, totalAccumulatedAmount]);
+    ], [columnHelper, filters.page, filters.limit, handleView, handleEdit, totalAccumulatedAmount, handleMouseEnter, handleMouseLeave]);
 
     // ====================================================================================
     // RENDER
@@ -365,7 +395,8 @@ export default function QCListPage() {
                     </form>
                 }
             >
-                <div className="h-full flex flex-col">
+                <ErrorBoundary>
+                    <div className="h-full flex flex-col">
                     {/* Desktop View: Table */}
                     <div className="hidden md:block flex-1 overflow-hidden">
                         <SmartTable
@@ -462,7 +493,8 @@ export default function QCListPage() {
                         ))}
                     </MobileListContainer>
                 </div>
-            </PageListLayout>
+            </ErrorBoundary>
+        </PageListLayout>
 
             {isFormModalOpen && (
                 <QCFormModal

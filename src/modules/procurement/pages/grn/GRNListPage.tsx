@@ -5,8 +5,8 @@
  * @refactored Uses PageListLayout, FilterField, useTableFilters (Manual Search Pattern), React Query, SmartTable
  */
 
-import { useState, useMemo } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Eye, Package, Search, Plus } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { SmartTable, PageListLayout, FilterField, MobileListCard, MobileListContainer } from '@ui';
@@ -15,6 +15,7 @@ import { GRNService } from '@/modules/procurement/services/grn.service';
 import type { GRNListParams, GRNStatus, GRNListItem } from '@/modules/procurement/types';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { ColumnDef } from '@tanstack/react-table';
+import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 import { GRNFormModal } from './components';
 
 // ====================================================================================
@@ -49,6 +50,31 @@ const STATUS_LABELS: Record<GRNStatus, string> = {
 
 export default function GRNListPage() {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [selectedGRNId, setSelectedGRNId] = useState<number | undefined>(undefined);
+    const [isViewOnly, setIsViewOnly] = useState(false);
+    const queryClient = useQueryClient();
+    const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // 🚀 INTENT-BASED PRE-FETCHING
+    const handleMouseEnter = useCallback((id: number | undefined) => {
+        if (!id) return;
+        if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+        
+        prefetchTimerRef.current = setTimeout(() => {
+            queryClient.prefetchQuery({
+                queryKey: ['grn-detail', id],
+                queryFn: () => GRNService.getById(id),
+                staleTime: 60 * 1000,
+            });
+        }, 80);
+    }, [queryClient]);
+
+    const handleMouseLeave = useCallback(() => {
+        if (prefetchTimerRef.current) {
+            clearTimeout(prefetchTimerRef.current);
+            prefetchTimerRef.current = null;
+        }
+    }, []);
 
     // 1. URL-based Filter State (Explicit Search Pattern)
     const {
@@ -89,7 +115,17 @@ export default function GRNListPage() {
     });
 
     // 3. Actions
-    const handleView = (id: number) => alert(`View GRN: ${id}`);
+    const handleView = useCallback((id: number) => {
+        setSelectedGRNId(id);
+        setIsViewOnly(true);
+        setIsCreateModalOpen(true);
+    }, []);
+
+    const handleCreateNew = useCallback(() => {
+        setSelectedGRNId(undefined);
+        setIsViewOnly(false);
+        setIsCreateModalOpen(true);
+    }, []);
 
     // 4. Columns
     const columnHelper = createColumnHelper<GRNListItem>();
@@ -103,7 +139,16 @@ export default function GRNListPage() {
         }),
         columnHelper.accessor('grn_no', {
             header: 'เลขที่เอกสาร',
-            cell: (info) => <span className="font-medium text-blue-600 dark:text-blue-400 cursor-pointer hover:underline">{info.getValue()}</span>,
+                    cell: (info) => (
+                        <span 
+                            onClick={() => handleView(info.row.original.grn_id)}
+                            onMouseEnter={() => handleMouseEnter(info.row.original.grn_id)}
+                            onMouseLeave={handleMouseLeave}
+                            className="font-bold text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
+                        >
+                            {info.getValue()}
+                        </span>
+                    ),
             enableSorting: true,
         }),
         columnHelper.accessor('po_no', {
@@ -144,6 +189,8 @@ export default function GRNListPage() {
                 <div className="flex justify-center">
                     <button
                         onClick={() => handleView(row.original.grn_id)}
+                        onMouseEnter={() => handleMouseEnter(row.original.grn_id)}
+                        onMouseLeave={handleMouseLeave}
                         className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 p-1 rounded hover:bg-gray-100 dark:hover:bg-blue-900/20 transition-all"
                         title="ดูรายละเอียด"
                     >
@@ -154,7 +201,7 @@ export default function GRNListPage() {
             size: 120,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit]);
+    ], [columnHelper, filters.page, filters.limit, handleView, handleMouseEnter, handleMouseLeave]);
 
     return (
         <>
@@ -226,7 +273,7 @@ export default function GRNListPage() {
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => setIsCreateModalOpen(true)}
+                                    onClick={handleCreateNew}
                                     className="w-full sm:w-auto h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold shadow-sm transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
                                 >
                                     <Plus size={16} strokeWidth={2.5} />
@@ -237,7 +284,8 @@ export default function GRNListPage() {
                     </form>
                 }
             >
-                <div className="h-full flex flex-col">
+                <ErrorBoundary>
+                    <div className="h-full flex flex-col">
                     {/* Desktop View: Table */}
                     <div className="hidden md:block flex-1 overflow-hidden">
                         <SmartTable
@@ -292,10 +340,13 @@ export default function GRNListPage() {
                         ))}
                     </MobileListContainer>
                 </div>
-            </PageListLayout>
+            </ErrorBoundary>
+        </PageListLayout>
 
             <GRNFormModal
                 isOpen={isCreateModalOpen}
+                id={selectedGRNId}
+                readOnly={isViewOnly}
                 onClose={() => setIsCreateModalOpen(false)}
                 onSuccess={() => refetch()}
             />

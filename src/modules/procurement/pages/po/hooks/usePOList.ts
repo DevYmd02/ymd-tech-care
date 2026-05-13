@@ -86,8 +86,12 @@ export const usePOList = () => {
     // Backend /po endpoint may return PENDING_APPROVAL even when POA has REJECTED/APPROVED it
     const { data: approvalRaw } = useQuery({
         queryKey: ['po-approval-status-overlay'],
-        queryFn: () => api.get<Record<string, unknown>>('/po-approval', { params: { limit: 1000, page: 1 } }),
-        staleTime: 30_000,
+        queryFn: ({ signal }) => api.get<Record<string, unknown>>('/po-approval', { 
+            params: { limit: 1000, page: 1 },
+            signal 
+        }),
+        staleTime: 5 * 60 * 1000, // 💡 Increase to 5 mins for high concurrency
+        enabled: !!data?.data.length, // 💡 Only fetch if we have data to overlay
     });
 
     // Build po_header_id → corrected status map

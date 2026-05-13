@@ -1,13 +1,16 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileText, Eye, Send, Package, Edit, Search, Plus, Clock, Printer } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { POStatusBadge } from '@ui';
+import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 import { usePOList, usePOActions, PO_STATUS_OPTIONS } from './hooks';
 import type { POListItem } from '@/modules/procurement/types';
 import type { POFormData } from '@/modules/procurement/schemas/po-schemas';
 import { createColumnHelper } from '@tanstack/react-table';
+import { useQueryClient } from '@tanstack/react-query';
+import { POService } from '@/modules/procurement/services/po.service';
 import type { ColumnDef } from '@tanstack/react-table';
 import { POFormModal, DocumentSourceSelectorModal } from './components';
 import { POAHistoryModal } from '@/modules/procurement/pages/poa/components/POAHistoryModal';
@@ -18,6 +21,29 @@ import type { UseFormReturn } from 'react-hook-form';
 
 export default function POListPage() {
     const [searchParams, setSearchParams] = useSearchParams();
+    const queryClient = useQueryClient();
+    const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // 🚀 INTENT-BASED PRE-FETCHING: Only fetch if the user stays on the button for 80ms
+    const handleMouseEnter = useCallback((id: number) => {
+        if (!id) return;
+        if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+        
+        prefetchTimerRef.current = setTimeout(() => {
+            queryClient.prefetchQuery({
+                queryKey: ['existing-po', id],
+                queryFn: () => POService.getById(id),
+                staleTime: 60 * 1000,
+            });
+        }, 80);
+    }, [queryClient]);
+
+    const handleMouseLeave = useCallback(() => {
+        if (prefetchTimerRef.current) {
+            clearTimeout(prefetchTimerRef.current);
+            prefetchTimerRef.current = null;
+        }
+    }, []);
 
     // ── Hooks (Business Logic) ────────────────────────────────────────────────
     const {
@@ -109,24 +135,24 @@ export default function POListPage() {
     const handleView = useCallback((id: number) => {
         setSelectedPOId(id);
         setIsViewModalOpen(true);
-    }, []);
+    }, [setSelectedPOId, setIsViewModalOpen]);
 
     const handleEdit = useCallback((id: number) => {
         setSelectedPOId(id);
         setIsEditModalOpen(true);
-    }, []);
+    }, [setSelectedPOId, setIsEditModalOpen]);
 
 
     const handleGRN = useCallback((id: number) => {
         setSelectedPOIdForGRN(id);
         setIsGRNModalOpen(true);
-    }, []);
+    }, [setSelectedPOIdForGRN, setIsGRNModalOpen]);
 
     const handleViewHistory = useCallback((id: number, poNo?: string) => {
         setHistoryPoId(id);
         setHistoryPoNo(poNo);
         setIsHistoryModalOpen(true);
-    }, []);
+    }, [setHistoryPoId, setHistoryPoNo, setIsHistoryModalOpen]);
 
     // ── Columns ───────────────────────────────────────────────────────────────
     const columnHelper = createColumnHelper<POListItem>();
@@ -166,7 +192,8 @@ export default function POListPage() {
             cell: (info) => {
                 const item = info.row.original;
                 const prDisplay = item.pr_no || (item.pr_id ? `PR: ${item.pr_id}` : null);
-                const qcDisplay = item.qc_no || (item.qc_id ? `QC: ${item.qc_id}` : null);
+                // 🎯 UI FIX: Only show QC ID if it's not just a raw numeric '1'
+                const qcDisplay = (item.qc_no && item.qc_no !== '1') ? item.qc_no : (item.qc_id && Number(item.qc_id) > 1000 ? `QC: ${item.qc_id}` : null);
                 
                 return (
                     <div className="flex flex-col whitespace-nowrap text-sm">
@@ -251,6 +278,8 @@ export default function POListPage() {
                         {/* Eye — PR pattern */}
                         <button
                             onClick={() => handleView(item.po_id)}
+                            onMouseEnter={() => handleMouseEnter(item.po_id)}
+                            onMouseLeave={handleMouseLeave}
                             className="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
                             title="ดูรายละเอียด"
                         >
@@ -287,6 +316,8 @@ export default function POListPage() {
                             <>
                                 <button
                                     onClick={() => handleEdit(item.po_id)}
+                                    onMouseEnter={() => handleMouseEnter(item.po_id)}
+                                    onMouseLeave={handleMouseLeave}
                                     className="flex items-center gap-1.5 px-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 transition-all font-bold"
                                     title="แก้ไข"
                                 >
@@ -347,10 +378,10 @@ export default function POListPage() {
             size: 200,
             enableSorting: false,
         }),
-    ], [columnHelper, filters.page, filters.limit, data?.data, handleGRN, handleDirectSubmit, handleView, handleEdit, handleViewHistory]);
+    ], [columnHelper, filters.page, filters.limit, data?.data, handleGRN, handleDirectSubmit, handleView, handleEdit, handleViewHistory, handleMouseEnter, handleMouseLeave]);
 
     return (
-        <>
+        <ErrorBoundary>
             <PageListLayout
                 title="รายการใบสั่งซื้อ"
                 subtitle="Purchase Order (PO)"
@@ -668,6 +699,6 @@ export default function POListPage() {
                 variant="info"
                 isLoading={isSubmitting}
             />
-        </>
+        </ErrorBoundary>
     );
 }

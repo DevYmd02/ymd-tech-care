@@ -2,6 +2,7 @@ import api from '@core/api/api';
 import type { AxiosRequestConfig } from 'axios';
 import { logger } from '@utils';
 import { masterDataCache } from '@/shared/utils/master-data-cache';
+import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
 import { 
     normalizeId, 
     normalizeDate, 
@@ -52,13 +53,39 @@ export const SalesOrderService = {
             const rawData = Array.isArray(response) ? response : response.data || [];
             const total = Array.isArray(response) ? response.length : response.total || 0;
 
+            // 🎯 [Performance] Step 1: Collect Unique IDs for missing names
+            const missingCustomerIds = Array.from(new Set(rawData
+                .filter(item => !normalizeCustomerName(item))
+                .map(item => {
+                    const record = item as Record<string, unknown>;
+                    const customer = record.customer as Record<string, unknown> | undefined;
+                    return normalizeId(String(record.customer_id || customer?.customer_id || ''));
+                })
+                .filter(Boolean)
+            )) as string[];
+
+            // 🎯 [Performance] Step 2: Batch Hydrate missing customers in parallel (Deduplicated)
+            const customerMap: Record<string, string> = {};
+            if (missingCustomerIds.length > 0) {
+                await Promise.all(missingCustomerIds.map(async (id) => {
+                    try {
+                        const cData = await CustomerService.getById(Number(id));
+                        if (cData) {
+                            customerMap[id] = String(cData.customer_name_th || cData.customer_name || '');
+                        }
+                    } catch { /* ignore */ }
+                }));
+            }
+
             const mappedData = rawData.map((item) => {
                 const customerObj = (item.customer || {}) as Record<string, unknown>;
+                const soObj = (item.sale_order || item.so || item.so_header || item.sale_order_header || {}) as Record<string, unknown>;
                 const sqHeader = (item.sq_header || item.sq || {}) as Record<string, unknown>;
                 const aqHeader = (item.aq_header || item.aq || {}) as Record<string, unknown>;
                 const reservation = (item.reservation || {}) as Record<string, unknown>;
                 
-                const customerName = normalizeCustomerName(item);
+                const cId = normalizeId(item.customer_id || customerObj.customer_id || sqHeader.customer_id || aqHeader.customer_id);
+                const customerName = normalizeCustomerName(item) || customerMap[cId] || (cId ? masterDataCache.getCustomerName(cId) : '');
                 const customerCode = String(item.customer_code || 
                     customerObj.customer_code || customerObj.code ||
                     sqHeader.customer_code || aqHeader.customer_code || reservation.customer_code || '');
@@ -67,10 +94,10 @@ export const SalesOrderService = {
 
                 return {
                     ...item,
-                    so_id: normalizeId(item.so_id || item.sale_order_id || item.uuid || item.header_id || item.id),
-                    so_no: String(item.so_no || ''),
+                    so_id: normalizeId(item.so_id || item.sale_order_id || item.uuid || item.header_id || item.id || soObj.so_id || soObj.id),
+                    so_no: String(soObj.so_no || item.so_no || soObj.no || item.sale_order_no || '-'),
                     so_date: normalizeDate(item.so_date),
-                    customer_id: normalizeId(item.customer_id || customerObj.customer_id || sqHeader.customer_id || aqHeader.customer_id),
+                    customer_id: cId,
                     customer_name: customerName,
                     customer_code: customerCode,
                     total_amount: totalVal,
@@ -220,7 +247,7 @@ export const SalesOrderService = {
                 const rawTaxId = r['tax_code_id'] || r['tax_id'] || r['id_tax'] || r['tax_code_ref_id'] || taxObj['id'] || taxObj['id_tax'] || taxObj['tax_id'];
 
                 r['customer_id'] = normalizeId(r['customer_id'] || customerObj['customer_id'] || customerObj['id']);
-                r['customer_name'] = normalizeCustomerName(r);
+                r['customer_name'] = normalizeCustomerName(r) || (r['customer_id'] ? masterDataCache.getCustomerName(r['customer_id'] as string) : '');
                 r['customer_code'] = String(r['customer_code'] || customerObj['customer_code'] || customerObj['code'] || '');
 
                 r['branch_id'] = normalizeId(rawBranchId);

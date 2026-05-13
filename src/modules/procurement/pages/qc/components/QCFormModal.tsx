@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FormProvider } from 'react-hook-form';
 import { AlertCircle, FileText, Search, Scale, CheckSquare, Square, Trophy, CheckCircle2, Circle, X, ShoppingBag } from 'lucide-react';
 import { WindowFormLayout } from '@ui';
+import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 
 import { QCService } from '@/modules/procurement/services/qc.service';
 import { VQService } from '@/modules/procurement/services/vq.service';
@@ -630,8 +631,17 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
           </div>
         }
       >
-
-        <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-4 space-y-4">
+        <ErrorBoundary>
+          <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-4 space-y-4 animate-form-fade-in relative">
+            <style dangerouslySetInnerHTML={{ __html: `
+                @keyframes formFadeIn {
+                    from { opacity: 0; transform: translateY(8px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-form-fade-in {
+                    animation: formFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+            `}} />
           
           {/* 🏆 Section: Winner Highlight (View mode only) */}
           {mode === 'view' && (() => {
@@ -1147,7 +1157,8 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
                )}
             </div>
           )}
-        </div>
+          </div>
+        </ErrorBoundary>
       </WindowFormLayout>
 
       {/* RFQ Selector Modal (Unlocked & Reverse Sync) */}

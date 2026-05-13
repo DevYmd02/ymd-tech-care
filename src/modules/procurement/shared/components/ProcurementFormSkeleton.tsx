@@ -1,11 +1,11 @@
 import React from 'react';
 
 /**
- * @component SalesFormSkeleton
- * @description มาตรฐาน Skeleton UI ระดับ Premium สำหรับหน้าฟอร์มในโมดูล Sales
- * ใช้ CSS Shimmer Effect แทน Pulse ธรรมดาเพื่อ UX ที่ลื่นไหลและดูทันสมัย
+ * @component ProcurementFormSkeleton
+ * @description Standard Skeleton UI for Procurement module forms (PR, PO, GRN, etc.)
+ * Uses Shimmer Effect for premium perceived performance.
  */
-export const SalesFormSkeleton: React.FC = () => {
+export const ProcurementFormSkeleton: React.FC = () => {
   return (
     <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
       <style dangerouslySetInnerHTML={{ __html: `
@@ -57,7 +57,7 @@ export const SalesFormSkeleton: React.FC = () => {
           
           <div className="flex justify-between items-center mb-6">
              <div className="h-7 w-48 bg-gray-100 dark:bg-gray-800 rounded" />
-             <div className="h-10 w-36 bg-purple-100/50 dark:bg-purple-900/20 rounded-lg" />
+             <div className="h-10 w-36 bg-blue-100/50 dark:bg-blue-900/20 rounded-lg" />
           </div>
           
           <div className="space-y-3">

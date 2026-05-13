@@ -1,5 +1,8 @@
+import { useRef } from 'react';
 import { Eye, Edit, Send, Clock, Printer } from 'lucide-react';
 import type { PRHeader } from '@/modules/procurement/types';
+import { useQueryClient } from '@tanstack/react-query';
+import { PRService } from '@/modules/procurement/services/pr.service';
 
 interface PRActionsCellProps {
     row: PRHeader;
@@ -15,15 +18,40 @@ export const PRActionsCell = ({
     onEdit, 
     onView,
     onViewHistory,
-
     onSendApproval, 
 }: PRActionsCellProps) => {
+    const queryClient = useQueryClient();
+
+    const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // 🚀 INTENT-BASED PRE-FETCHING: Only fetch if the user stays on the button for 80ms
+    const handleMouseEnter = () => {
+        if (!item.pr_id) return;
+        if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+
+        prefetchTimerRef.current = setTimeout(() => {
+            queryClient.prefetchQuery({
+                queryKey: ['pr-detail', item.pr_id],
+                queryFn: () => PRService.getDetail(item.pr_id),
+                staleTime: 60 * 1000,
+            });
+        }, 80); 
+    };
+
+    const handleMouseLeave = () => {
+        if (prefetchTimerRef.current) {
+            clearTimeout(prefetchTimerRef.current);
+            prefetchTimerRef.current = null;
+        }
+    };
 
     return (
         <div className="flex items-center justify-center gap-1">
             {/* 1. VIEW: Always Visible */}
             <button 
                 onClick={() => onView(item.pr_id)}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
                 className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all" 
                 title="ดูรายละเอียด"
             >
@@ -45,6 +73,8 @@ export const PRActionsCell = ({
             {(item.status === 'DRAFT' || item.status === 'REJECTED' || item.status === 'PENDING') && (
                 <button 
                     onClick={() => onEdit(item.pr_id)}
+                    onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
                     className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
                     title={item.status === 'REJECTED' ? 'แก้ไขและส่งอนุมัติใหม่' : 'แก้ไข'}
                 >

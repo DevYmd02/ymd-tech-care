@@ -34,7 +34,7 @@ export const AQSearchModal: React.FC<AQSearchModalProps> = React.memo(({
         queryKey: ['available-approvals'],
         queryFn: ReservationService.getAvailableApprovals,
         enabled: isOpen,
-        staleTime: 0, 
+        staleTime: 30 * 1000, 
     });
 
     // Helper to extract sq_no robustly

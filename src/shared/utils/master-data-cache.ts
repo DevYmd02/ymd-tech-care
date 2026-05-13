@@ -10,6 +10,8 @@ export interface MasterCache {
     warehouses: Record<string, unknown>[];
     employees: Record<string, unknown>[];
     departments: Record<string, unknown>[];
+    vendors: Record<string, unknown>[];
+    customers: Record<string, unknown>[];
 }
 
 const cache: MasterCache = {
@@ -17,7 +19,9 @@ const cache: MasterCache = {
     branches: [],
     warehouses: [],
     employees: [],
-    departments: []
+    departments: [],
+    vendors: [],
+    customers: []
 };
 
 export const masterDataCache = {
@@ -54,5 +58,15 @@ export const masterDataCache = {
     getDepartmentName: (id: number | string | undefined | null) => {
         const dept = masterDataCache.findById('departments', id);
         return dept ? (dept.dept_name || dept.name || dept.name_th || dept.department_name) : null;
+    },
+
+    getVendorName: (id: number | string | undefined | null) => {
+        const vendor = masterDataCache.findById('vendors', id);
+        return vendor ? (vendor.vendor_name || vendor.name || vendor.name_th) : null;
+    },
+
+    getCustomerName: (id: number | string | undefined | null) => {
+        const cust = masterDataCache.findById('customers', id);
+        return cust ? (cust.customer_name || cust.name || cust.name_th) : null;
     }
 };
