@@ -10,6 +10,7 @@ import type { QuotationFormData, QuotationHeader, QuotationListItem, QuotationLi
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import { applyClientFilters, extractArrayFromResponse, type PaginatedResponse } from '@utils/clientFilterUtils';
 import { mapQuotationFormToDTO } from '../utils/quotation-mappers';
+import type { AxiosRequestConfig } from 'axios';
 
 export interface QuotationListParams {
     sq_no?: string;
@@ -36,7 +37,7 @@ export class QuotationService {
     /**
      * ดึงรายการ Quotation
      */
-    static async getList(params?: QuotationListParams): Promise<QuotationListResponse> {
+    static async getList(params?: QuotationListParams, config?: AxiosRequestConfig): Promise<QuotationListResponse> {
         logger.debug('Fetching quotations with params:', params);
         
         // 1. Prepare API Params
@@ -54,7 +55,7 @@ export class QuotationService {
             delete apiParams.end_date;
         }
 
-        const response = await api.get<unknown>(ENDPOINTS.list, { params: apiParams });
+        const response = await api.get<unknown>(ENDPOINTS.list, { ...config, params: apiParams });
 
         // Normalize Response Helper (Map Backend Field Names to Frontend)
         const normalizeItem = (item: QuotationListItem): QuotationHeader => {
@@ -126,7 +127,7 @@ export class QuotationService {
     /**
      * ดึงรายละเอียด Quotation ตาม ID
      */
-    static async getById(id: string | number): Promise<QuotationFormData | null> {
+    static async getById(id: string | number, config?: AxiosRequestConfig): Promise<QuotationFormData | null> {
         logger.debug('Fetching quotation detail for id:', id);
         try {
             // Define expected wrapped structure to avoid 'any'
@@ -134,7 +135,7 @@ export class QuotationService {
                 data?: RawQuotationData;
             }
             
-            const response = await api.get<RawQuotationData & WrappedRawResponse>(ENDPOINTS.detail(String(id)));
+            const response = await api.get<RawQuotationData & WrappedRawResponse>(ENDPOINTS.detail(String(id)), config);
             
             // 🧪 Smart Mapping Logic: Parse strings and isolate the core quotation object
             let extracted: unknown = response;
@@ -301,12 +302,12 @@ export class QuotationService {
     /**
      * สร้าง Quotation ใหม่
      */
-    static async create(data: QuotationFormValues): Promise<void> {
+    static async create(data: QuotationFormValues, config?: AxiosRequestConfig): Promise<void> {
         const payload = mapQuotationFormToDTO(data);
         logger.info('🚀 [QuotationService] CREATE PAYLOAD:', payload);
 
         try {
-            await api.post(ENDPOINTS.list, payload);
+            await api.post(ENDPOINTS.list, payload, config);
         } catch (error) {
             const errorMsg = extractErrorMessage(error);
             logger.error(`[QuotationService] create failed: ${errorMsg}`, { error, payloadSent: payload });
@@ -317,7 +318,7 @@ export class QuotationService {
     /**
      * อัปเดตข้อมูล Quotation
      */
-    static async update(id: string | number, data: Partial<QuotationFormValues>): Promise<void> {
+    static async update(id: string | number, data: Partial<QuotationFormValues>, config?: AxiosRequestConfig): Promise<void> {
         let finalFormValues: QuotationFormValues;
 
         // 🛡️ HYDRATION GUARD: If critical fields are missing, fetch current data first
@@ -325,7 +326,7 @@ export class QuotationService {
         
         if (isPartial) {
             logger.debug(`[QuotationService] Partial update detected for ID ${id}, hydrating from server...`);
-            const currentData = await this.getById(id);
+            const currentData = await this.getById(id, config);
             if (!currentData) {
                 logger.warn(`[QuotationService] Could not hydrate data for ID ${id}, proceeding with raw partial data.`);
                 finalFormValues = data as unknown as QuotationFormValues;
@@ -340,7 +341,7 @@ export class QuotationService {
         logger.info(`🚀 [QuotationService] UPDATE (PATCH) PAYLOAD for ID ${id}:`, payload);
 
         try {
-            await api.patch(ENDPOINTS.detail(String(id)), payload);
+            await api.patch(ENDPOINTS.detail(String(id)), payload, config);
         } catch (error) {
             const errorMsg = extractErrorMessage(error);
             logger.error(`[QuotationService] update failed (ID: ${id}): ${errorMsg}`, { error, payloadSent: payload });

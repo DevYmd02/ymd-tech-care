@@ -264,30 +264,42 @@ export const POService = {
             }
         }
 
-        // Optimized Line Hydration (Parallel)
+        // 🎯 [Performance] Optimized Line Hydration (Parallel + Unique IDs)
         const lines = mappedItem.po_lines || (mappedItem as unknown as Record<string, unknown>).poLines;
         if (Array.isArray(lines)) {
-            mappedItem.po_lines = await Promise.all(
-                (lines as Record<string, unknown>[]).map(async (l) => {
-                    const needsHydration = l.item_id && (!l.item_code || l.item_code === '-' || !l.item_name || l.item_name === '-' || !l.unit_name || l.unit_name === '-');
-                    if (needsHydration) {
-                        try {
-                            const item = await ItemMasterService.getById(Number(l.item_id), config);
-                            if (item) {
-                                return {
-                                    ...l,
-                                    item_code: item.item_code || (l.item_code !== '-' ? l.item_code : ''),
-                                    item_name: item.item_name || (l.item_name !== '-' ? l.item_name : ''),
-                                    unit_name: item.unit_name || (l.unit_name !== '-' ? l.unit_name : ''),
-                                };
-                            }
-                        } catch (e) {
-                            logger.error(`[POService] Failed to hydrate item ${l.item_id}`, e);
-                        }
-                    }
-                    return l;
+            const rawLines = lines as Record<string, unknown>[];
+            
+            // 1. Extract Unique Item IDs
+            const uniqueItemIds = Array.from(new Set(rawLines.map(l => Number(l.item_id)).filter(id => !isNaN(id) && id > 0)));
+
+            // 2. Fetch Item Details in Parallel (Unique IDs only)
+            const itemResults = await Promise.all(
+                uniqueItemIds.map(async (itemId) => {
+                    try {
+                        const item = await ItemMasterService.getById(itemId, config);
+                        return { itemId, data: item };
+                    } catch { return { itemId, data: null }; }
                 })
-            ) as unknown as import('@/modules/procurement/types').POLine[];
+            );
+
+            // 3. Create Lookup Map
+            const itemLookup = new Map(itemResults.filter(r => r.data).map(r => [r.itemId, r.data]));
+
+            // 4. Map Lines efficiently
+            mappedItem.po_lines = rawLines.map((l) => {
+                const itemId = Number(l.item_id);
+                const item = itemId ? itemLookup.get(itemId) : null;
+                
+                if (item) {
+                    return {
+                        ...l,
+                        item_code: item.item_code || (l.item_code !== '-' ? String(l.item_code || '') : ''),
+                        item_name: item.item_name || (l.item_name !== '-' ? String(l.item_name || '') : ''),
+                        unit_name: item.unit_name || (l.unit_name !== '-' ? String(l.unit_name || '') : ''),
+                    };
+                }
+                return l;
+            }) as unknown as import('@/modules/procurement/types').POLine[];
         }
 
         return mappedItem;
@@ -305,22 +317,22 @@ export const POService = {
         return cleanPayload(sanitizePayload(data, KNOWN_DTO_FIELDS)) as Record<string, unknown>;
     },
 
-    create: async (data: CreatePOPayload): Promise<POListItem> => {
+    create: async (data: CreatePOPayload, config?: AxiosRequestConfig): Promise<POListItem> => {
         logger.info('[POService] Creating PO');
         CreatePOSchema.parse(data);
         const sanitized = POService.sanitizeData(data as unknown as Record<string, unknown>);
-        return await api.post<POListItem>(ENDPOINTS.create, sanitized);
+        return await api.post<POListItem>(ENDPOINTS.create, sanitized, config);
     },
 
-    update: async (id: number, data: Partial<CreatePOPayload>): Promise<POListItem> => {
+    update: async (id: number, data: Partial<CreatePOPayload>, config?: AxiosRequestConfig): Promise<POListItem> => {
         logger.info(`[POService] Updating PO: ${id}`);
         const sanitized = POService.sanitizeData(data as unknown as Record<string, unknown>);
-        return await api.patch<POListItem>(ENDPOINTS.detail(id), sanitized);
+        return await api.patch<POListItem>(ENDPOINTS.detail(id), sanitized, config);
     },
 
-    issue: async (id: number, remark?: string): Promise<SuccessResponse> => {
+    issue: async (id: number, remark?: string, config?: AxiosRequestConfig): Promise<SuccessResponse> => {
         logger.info(`[POService] Issuing PO: ${id}`);
-        return await api.post<SuccessResponse>(ENDPOINTS.issue(id), { remark });
+        return await api.post<SuccessResponse>(ENDPOINTS.issue(id), { remark }, config);
     },
 
     submit: async (id: number): Promise<SuccessResponse> => {

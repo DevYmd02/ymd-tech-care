@@ -49,6 +49,42 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+ 
+// =============================================================================
+// REQUEST DEDUPLICATION (IN-FLIGHT CACHE)
+// =============================================================================
+const pendingRequests = new Map<string, Promise<unknown>>();
+ 
+const getRequestKey = (config: AxiosRequestConfig): string => {
+  const params = config.params ? JSON.stringify(config.params) : '';
+  return `${config.method?.toUpperCase() || 'GET'}:${config.url}${params}`;
+};
+ 
+// Store the original request method
+const originalRequest = api.request.bind(api);
+ 
+// Override request method for deduplication
+api.request = (config: AxiosRequestConfig): Promise<any> => { // eslint-disable-line
+  const method = config.method?.toUpperCase() || 'GET';
+  
+  // Only deduplicate GET requests
+  if (method === 'GET') {
+    const key = getRequestKey(config);
+    if (pendingRequests.has(key)) {
+      logger.debug(`🔄 [Deduplication] Sharing in-flight request: ${config.url}`);
+      return pendingRequests.get(key)!;
+    }
+    
+    const requestPromise = originalRequest(config).finally(() => {
+      pendingRequests.delete(key);
+    }) as Promise<unknown>;
+    
+    pendingRequests.set(key, requestPromise);
+    return requestPromise as Promise<any>; // eslint-disable-line
+  }
+  
+  return originalRequest(config);
+};
 
 // =============================================================================
 // INTERCEPTORS
