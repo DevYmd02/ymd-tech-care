@@ -150,29 +150,55 @@ api.interceptors.response.use(
 
     return resBody;
   },
-  (error) => {
-    const method = error.config?.method?.toUpperCase() || 'UNKNOWN';
-    const url = error.config?.url || 'UNKNOWN';
+  async (error) => {
+    const config = error.config as CustomAxiosConfig & { _retryCount?: number };
+    const method = config?.method?.toUpperCase() || 'UNKNOWN';
+    const url = config?.url || 'UNKNOWN';
     const status = error.response?.status || 'UNKNOWN';
     const isLoginRequest = url?.includes('/auth/login');
     
+    // 🚀 RETRY LOGIC: Retry GET requests on transient errors (5xx, 429, or Network Error)
+    const isGet = method === 'GET';
+    const isRetryable = status === 429 || (typeof status === 'number' && status >= 500) || status === 'UNKNOWN';
+    const retryCount = config?._retryCount || 0;
+
+    if (isGet && isRetryable && retryCount < MAX_RETRIES) {
+      config._retryCount = retryCount + 1;
+      
+      // 💡 Smart Delay: Use Retry-After header if available for 429, else Exponential Backoff
+      let delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+      if (status === 429 && error.response?.headers?.['retry-after']) {
+        const retryAfter = parseInt(error.response.headers['retry-after'], 10);
+        if (!isNaN(retryAfter)) delay = retryAfter * 1000;
+      }
+      
+      logger.warn(`⚠️ [API Retry] [${method}] ${url} - Attempt ${config._retryCount}/${MAX_RETRIES} after ${delay}ms`);
+      
+      if (status === 429) {
+        toast.error('เซิร์ฟเวอร์หน่วงเล็กน้อย กำลังพยายามใหม่...', { id: `retry-${url}` });
+      }
+
+      await sleep(delay);
+      return api(config);
+    }
+
     if (axios.isCancel(error) || error.name === 'CanceledError') {
       logger.debug(`[API Canceled] [${method}] ${url}`);
     } else if (status === 401 && !isLoginRequest) {
-      // 🎯 SILENT 401: If it's a 401 and not a login request, it's just a session expiry.
-      // We don't want to spam the console with errors.
       logger.warn(`⚠️ [API Session Expired] [${method}] ${url}`);
     } else {
       logger.error(`❌ [API Error] [${method}] ${url} (${status})`, error);
       
-      const skipToast = (error.config as CustomAxiosConfig)?.skipToast === true;
+      const skipToast = config?.skipToast === true;
       if (!skipToast) {
         if (status === 401) {
-          // Handled by unauthorizedHandler
+          // Handled below
         } else if (status === 403) {
           toast.error('คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         } else if (status === 429) {
           toast.error('คุณทำรายการบ่อยเกินไป กรุณารอสักครู่');
+        } else if (status === 'UNKNOWN') {
+          toast.error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ต');
         } else {
           const errorMessage = extractErrorMessage(error);
           toast.error(errorMessage);
@@ -183,13 +209,9 @@ api.interceptors.response.use(
     if (status === 401 && !isLoginRequest) {
       if (!isUnauthorizedHandling) {
         isUnauthorizedHandling = true;
-        
-        // Reset flag after a delay to allow for re-login
         setTimeout(() => { isUnauthorizedHandling = false; }, 3000);
-
         localStorage.removeItem(AUTH_TOKEN_KEY);
         localStorage.removeItem(AUTH_PROFILE_KEY);
-        
         if (unauthorizedHandler) {
           unauthorizedHandler();
         }
@@ -249,6 +271,11 @@ export const extractErrorMessage = (error: unknown): string => {
 /**
  * 💡 Extract machine-readable error code for frontend mapping/i18n
  */
+const MAX_RETRIES = 2;
+const INITIAL_RETRY_DELAY = 1000;
+ 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+ 
 export const getErrorCode = (error: unknown): string | null => {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data as NestErrorPayload | undefined;
