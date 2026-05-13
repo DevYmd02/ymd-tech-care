@@ -7,6 +7,7 @@ import {
     useEmployees, 
     useDepartments 
 } from '@/modules/master-data/hooks/useMasterData';
+import { masterDataCache } from '@/shared/utils/master-data-cache';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { 
     MasterDataContext, 
@@ -37,6 +38,11 @@ const UnitsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     const { isAuthenticated } = useAuth();
     const { data } = useUnits(isAuthenticated);
     const units = useMemo(() => extractList(data), [data]);
+
+    React.useEffect(() => {
+        if (units.length > 0) masterDataCache.set('units', units);
+    }, [units]);
+
     return <UnitsContext.Provider value={units}>{children}</UnitsContext.Provider>;
 };
 
@@ -44,6 +50,11 @@ const BranchesProvider: React.FC<{ children: React.ReactNode }> = ({ children })
     const { isAuthenticated } = useAuth();
     const { data } = useBranches(isAuthenticated);
     const branches = useMemo(() => extractList(data), [data]);
+
+    React.useEffect(() => {
+        if (branches.length > 0) masterDataCache.set('branches', branches);
+    }, [branches]);
+
     return <BranchesContext.Provider value={branches}>{children}</BranchesContext.Provider>;
 };
 
@@ -51,6 +62,11 @@ const WarehousesProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { isAuthenticated } = useAuth();
     const { data } = useWarehouses(isAuthenticated);
     const warehouses = useMemo(() => extractList(data), [data]);
+
+    React.useEffect(() => {
+        if (warehouses.length > 0) masterDataCache.set('warehouses', warehouses);
+    }, [warehouses]);
+
     return <WarehousesContext.Provider value={warehouses}>{children}</WarehousesContext.Provider>;
 };
 
@@ -58,6 +74,11 @@ const EmployeesProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const { isAuthenticated } = useAuth();
     const { data } = useEmployees(isAuthenticated);
     const employees = useMemo(() => extractList(data), [data]);
+
+    React.useEffect(() => {
+        if (employees.length > 0) masterDataCache.set('employees', employees);
+    }, [employees]);
+
     return <EmployeesContext.Provider value={employees}>{children}</EmployeesContext.Provider>;
 };
 
@@ -65,6 +86,11 @@ const DepartmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { isAuthenticated } = useAuth();
     const { data } = useDepartments(isAuthenticated);
     const departments = useMemo(() => extractList(data), [data]);
+
+    React.useEffect(() => {
+        if (departments.length > 0) masterDataCache.set('departments', departments);
+    }, [departments]);
+
     return <DepartmentsContext.Provider value={departments}>{children}</DepartmentsContext.Provider>;
 };
 

@@ -184,7 +184,7 @@ export const VendorService = {
     }
   },
 
-  create: async (data: VendorFormData): Promise<VendorResponse> => {
+  create: async (data: VendorFormData, config?: AxiosRequestConfig): Promise<VendorResponse> => {
     if (USE_MOCK) {
         logger.info('🎭 [Mock Mode] Creating Vendor', data);
         const newId = Math.floor(Math.random() * 100000);
@@ -215,7 +215,7 @@ export const VendorService = {
 
     try {
       const payload = mapVendorToApi(data);
-      const response = await api.post<VendorMaster>('/vendors', payload);
+      const response = await api.post<VendorMaster>('/vendors', payload, config);
       return { success: true, data: response };
     } catch (error: unknown) {
       logger.error('[VendorService] create error:', error);
@@ -226,7 +226,7 @@ export const VendorService = {
     }
   },
 
-  update: async (vendorId: number, data: Partial<VendorFormData>): Promise<VendorResponse> => {
+  update: async (vendorId: number, data: Partial<VendorFormData>, config?: AxiosRequestConfig): Promise<VendorResponse> => {
     if (USE_MOCK) {
         const index = localVendorData.findIndex(v => v.vendor_id === vendorId);
         if (index !== -1) {
@@ -243,7 +243,7 @@ export const VendorService = {
     try {
       const isFullUpdate = data.vendorNameTh || data.vendorCode;
       const payload = isFullUpdate ? mapVendorToApi(data as VendorFormData, true) : data;
-      const response = await api.patch<VendorMaster>(`/vendors/${vendorId}`, payload);
+      const response = await api.patch<VendorMaster>(`/vendors/${vendorId}`, payload, config);
       return { success: true, data: response };
     } catch (error: unknown) {
       logger.error('[VendorService] update error:', error);
@@ -254,7 +254,7 @@ export const VendorService = {
     }
   },
 
-  delete: async (vendorId: number): Promise<{ success: boolean; message?: string }> => {
+  delete: async (vendorId: number, config?: AxiosRequestConfig): Promise<{ success: boolean; message?: string }> => {
     if (USE_MOCK) {
         const initialLength = localVendorData.length;
         if (vendorId === 1) {
@@ -268,7 +268,7 @@ export const VendorService = {
     }
     
     try {
-      await api.delete<SuccessResponse>(`/vendors/${vendorId}`);
+      await api.delete<SuccessResponse>(`/vendors/${vendorId}`, config);
       return { success: true };
     } catch (error) {
       logger.error('[VendorService] delete error:', error);
@@ -276,9 +276,9 @@ export const VendorService = {
     }
   },
 
-  block: async (vendorId: number, remark?: string): Promise<VendorResponse> => {
+  block: async (vendorId: number, remark?: string, config?: AxiosRequestConfig): Promise<VendorResponse> => {
     try {
-      const response = await api.post<VendorMaster>(`/vendors/${vendorId}/block`, { remark });
+      const response = await api.post<VendorMaster>(`/vendors/${vendorId}/block`, { remark }, config);
       return { success: true, data: response };
     } catch (error) {
       logger.error('[VendorService] block error:', error);
@@ -286,9 +286,9 @@ export const VendorService = {
     }
   },
 
-  unblock: async (vendorId: number): Promise<VendorResponse> => {
+  unblock: async (vendorId: number, config?: AxiosRequestConfig): Promise<VendorResponse> => {
     try {
-      const response = await api.post<VendorMaster>(`/vendors/${vendorId}/unblock`);
+      const response = await api.post<VendorMaster>(`/vendors/${vendorId}/unblock`, {}, config);
       return { success: true, data: response };
     } catch (error) {
       logger.error('[VendorService] unblock error:', error);
@@ -296,9 +296,9 @@ export const VendorService = {
     }
   },
 
-  setOnHold: async (vendorId: number, onHold: boolean): Promise<VendorResponse> => {
+  setOnHold: async (vendorId: number, onHold: boolean, config?: AxiosRequestConfig): Promise<VendorResponse> => {
     try {
-      const response = await api.post<VendorMaster>(`/vendors/${vendorId}/hold`, { on_hold: onHold });
+      const response = await api.post<VendorMaster>(`/vendors/${vendorId}/hold`, { on_hold: onHold }, config);
       return { success: true, data: response };
     } catch (error) {
       logger.error('[VendorService] setOnHold error:', error);
@@ -306,9 +306,9 @@ export const VendorService = {
     }
   },
 
-  updateStatus: async (vendorId: number, status: string): Promise<VendorResponse> => {
+  updateStatus: async (vendorId: number, status: string, config?: AxiosRequestConfig): Promise<VendorResponse> => {
     try {
-        const response = await api.patch<VendorMaster>(`/vendors/${vendorId}/status`, { status });
+        const response = await api.patch<VendorMaster>(`/vendors/${vendorId}/status`, { status }, config);
         return { success: true, data: response };
     } catch (error) {
         logger.error('[VendorService] updateStatus error:', error);

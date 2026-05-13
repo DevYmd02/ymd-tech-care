@@ -1,4 +1,5 @@
 import api from '@core/api/api';
+import type { AxiosRequestConfig } from 'axios';
 import { logger } from '@utils';
 import { masterDataCache } from '@/shared/utils/master-data-cache';
 import { 
@@ -8,6 +9,7 @@ import {
     normalizeItemName, 
     normalizeItemCode 
 } from '@/shared/utils/data-mapping.utils';
+import type { CustomAxiosConfig } from '@/core/api/api';
 import type { SalesOrderFormData } from '../types/sales-order.types';
 import type { SalesOrderFormValues } from '../schemas/sales-order.schemas';
 import type { ReservationHeader } from '@sales/reservation/services/reservation.service';
@@ -43,10 +45,10 @@ export interface SalesOrderHeader {
 
 export const SalesOrderService = {
     /** ดึงรายการ Sales Order */
-    getList: async (params: SalesOrderListParams = {}) => {
+    getList: async (params: SalesOrderListParams = {}, config?: CustomAxiosConfig) => {
         logger.debug('Fetching sales orders with params:', params);
         try {
-            const response = await api.get<{ data: Record<string, unknown>[], total: number } | Record<string, unknown>[]>('/sale-order', { params });
+            const response = await api.get<{ data: Record<string, unknown>[], total: number } | Record<string, unknown>[]>('/sale-order', { ...config, params });
             const rawData = Array.isArray(response) ? response : response.data || [];
             const total = Array.isArray(response) ? response.length : response.total || 0;
 
@@ -89,10 +91,10 @@ export const SalesOrderService = {
     },
 
     /** ดึงข้อมูล Sales Order รายตัว */
-    getById: async (id: string): Promise<SalesOrderFormData | null> => {
+    getById: async (id: string, config?: CustomAxiosConfig): Promise<SalesOrderFormData | null> => {
         logger.debug('Fetching sales order:', id);
         try {
-            const response = await api.get<Record<string, unknown>>(`/sale-order/${id}`);
+            const response = await api.get<Record<string, unknown>>(`/sale-order/${id}`, config);
             
             if (response) {
                 let rRaw = response as Record<string, unknown>;
@@ -131,20 +133,40 @@ export const SalesOrderService = {
 
                 const rawLines = (Array.isArray(rawLinesData) ? rawLinesData : []) as Record<string, unknown>[];
                 
-                r['lines'] = await Promise.all(rawLines.map(async (l: Record<string, unknown>) => {
+                // 🎯 [Performance] Step 1: Extract unique Item & Lot IDs for batch hydration
+                const uniqueItemIds = Array.from(new Set(rawLines.map(l => normalizeId(l['item_id'] || ((l['item'] || {}) as Record<string, unknown>)['id'])).filter(Boolean))) as string[];
+                const uniqueLotIds = Array.from(new Set(rawLines.map(l => l['lot_id']).filter(id => id && (typeof id === 'string' || typeof id === 'number')))) as (string|number)[];
+
+                // 🎯 [Performance] Step 2: Fetch Item and Lot details in parallel (Unique IDs only)
+                const [itemMasterResults, lotResults] = await Promise.all([
+                    Promise.all(uniqueItemIds.map(async (itemId) => {
+                        try {
+                            const res = await api.get<unknown>(`/item-master/${itemId}`, config);
+                            return { itemId, data: ((res as Record<string, unknown>)?.data || res) as Record<string, unknown> };
+                        } catch { return { itemId, data: null }; }
+                    })),
+                    Promise.all(uniqueLotIds.map(async (lotId) => {
+                        try {
+                            const res = await api.get<unknown>(`/item-lot/${lotId}`, config);
+                            return { lotId, data: ((res as Record<string, unknown>)?.data || res) as Record<string, unknown> };
+                        } catch { return { lotId, data: null }; }
+                    }))
+                ]);
+
+                // Create lookups for O(1) access
+                const itemLookup = new Map(itemMasterResults.filter(r => r.data).map(r => [r.itemId, r.data]));
+                const lotLookup = new Map(lotResults.filter(r => r.data).map(r => [String(r.lotId), r.data]));
+
+                // 🎯 [Performance] Step 3: Map lines using the pre-fetched lookup data
+                r['lines'] = rawLines.map((l: Record<string, unknown>) => {
                     const itemId = normalizeId(l['item_id'] || ((l['item'] || {}) as Record<string, unknown>)['id']);
                     let itemCode = normalizeItemCode(l);
                     let itemName = normalizeItemName(l);
 
-                    if ((!itemCode || !itemName) && itemId) {
-                        try {
-                            const masterRes = await api.get<unknown>(`/item-master/${itemId}`);
-                            const master = ((masterRes as Record<string, unknown>)?.data || masterRes) as Record<string, unknown>;
-                            if (master) {
-                                itemCode = itemCode || normalizeItemCode(master);
-                                itemName = itemName || normalizeItemName(master);
-                            }
-                        } catch { /* ignore */ }
+                    const master = itemId ? itemLookup.get(itemId as string) : null;
+                    if (master) {
+                        itemCode = itemCode || normalizeItemCode(master);
+                        itemName = itemName || normalizeItemName(master);
                     }
 
                     if (!itemName && itemId) itemName = `[Item ID: ${itemId}]`;
@@ -153,15 +175,9 @@ export const SalesOrderService = {
                     const lotObj = (typeof lotIdVal === 'object' && lotIdVal !== null) ? (lotIdVal as Record<string, unknown>) : ((l['lot'] || l['lot_header'] || {}) as Record<string, unknown>);
                     let lotNo = String(l['lot_no'] || l['lot_number'] || lotObj['lot_no'] || lotObj['code'] || '');
 
-                    if (!lotNo && lotIdVal && (typeof lotIdVal === 'number' || typeof lotIdVal === 'string')) {
-                        try {
-                            const lotRes = await api.get<unknown>(`/item-lot/${lotIdVal}`);
-                            const lotData = (lotRes as Record<string, unknown>)?.data || lotRes;
-                            if (lotData && typeof lotData === 'object' && !Array.isArray(lotData)) {
-                                const lotItem = lotData as Record<string, unknown>;
-                                lotNo = String(lotItem['lot_no'] || lotItem['code'] || '');
-                            }
-                        } catch { /* ignore */ }
+                    const lotData = lotIdVal ? lotLookup.get(String(lotIdVal)) : null;
+                    if (lotData) {
+                        lotNo = lotNo || String(lotData['lot_no'] || lotData['code'] || '');
                     }
 
                     return {
@@ -188,7 +204,7 @@ export const SalesOrderService = {
                         price_source_name: String(l['price_source_name'] || ''),
                         price_level_priority: l['price_level_priority'],
                     };
-                }));
+                });
 
                 const customerObj = (r['customer'] || r['customer_header'] || r['customer_ref'] || r['cust'] || {}) as Record<string, unknown>;
                 const reservationObj = (r['reservation'] || r['reservation_header'] || r['res_header'] || r['reservation_ref'] || {}) as Record<string, unknown>;
@@ -243,51 +259,53 @@ export const SalesOrderService = {
                     r['isMulticurrency'] = true;
                 }
 
-                if (rawBranchId && !r['branch_name']) {
-                    const cachedName = masterDataCache.getBranchName(rawBranchId as string | number);
-                    if (cachedName) {
-                        r['branch_name'] = cachedName;
-                    } else {
-                        try {
-                            const branchRes = await api.get<Record<string, unknown>>(`/org-branches/${rawBranchId}`);
-                            const branchData = (branchRes['data'] as Record<string, unknown>) || branchRes;
-                            if (branchData) {
-                                r['branch_name'] = String(branchData['branch_name'] || branchData['name'] || branchData['name_th'] || '');
+                // 🎯 [Performance] Step 4: Final Metadata Hydration (Branch, Employee, Dept)
+                // Use parallel fetching for any metadata missing from the cache
+                await Promise.all([
+                    (async () => {
+                        if (rawBranchId && !r['branch_name']) {
+                            const cachedName = masterDataCache.getBranchName(rawBranchId as string | number);
+                            if (cachedName) {
+                                r['branch_name'] = cachedName;
+                            } else {
+                                try {
+                                    const branchRes = await api.get<Record<string, unknown>>(`/org-branches/${rawBranchId}`, config);
+                                    const branchData = (branchRes['data'] as Record<string, unknown>) || branchRes;
+                                    if (branchData) r['branch_name'] = String(branchData['branch_name'] || branchData['name'] || branchData['name_th'] || '');
+                                } catch { /* ignore */ }
                             }
-                        } catch { /* ignore */ }
-                    }
-                }
- 
-                if (rawEmpId && !r['emp_sale_name']) {
-                    const cachedName = masterDataCache.getEmployeeName(rawEmpId as string | number);
-                    if (cachedName) {
-                        r['emp_sale_name'] = cachedName;
-                    } else {
-                        try {
-                            const empRes = await api.get<Record<string, unknown>>(`/employees/${rawEmpId}`);
-                            const empData = (empRes['data'] as Record<string, unknown>) || empRes;
-                            if (empData) {
-                                r['emp_sale_name'] = String(empData['employee_fullname'] || empData['employee_name'] || 
-                                    `${empData['employee_firstname_th'] || ''} ${empData['employee_lastname_th'] || ''}`.trim());
+                        }
+                    })(),
+                    (async () => {
+                        if (rawEmpId && !r['emp_sale_name']) {
+                            const cachedName = masterDataCache.getEmployeeName(rawEmpId as string | number);
+                            if (cachedName) {
+                                r['emp_sale_name'] = cachedName;
+                            } else {
+                                try {
+                                    const empRes = await api.get<Record<string, unknown>>(`/employees/${rawEmpId}`, config);
+                                    const empData = (empRes['data'] as Record<string, unknown>) || empRes;
+                                    if (empData) r['emp_sale_name'] = String(empData['employee_fullname'] || empData['employee_name'] || 
+                                            `${empData['employee_firstname_th'] || ''} ${empData['employee_lastname_th'] || ''}`.trim());
+                                } catch { /* ignore */ }
                             }
-                        } catch { /* ignore */ }
-                    }
-                }
- 
-                if (rawDeptId && !r['emp_dept_name']) {
-                    const cachedName = masterDataCache.getDepartmentName(rawDeptId as string | number);
-                    if (cachedName) {
-                        r['emp_dept_name'] = cachedName;
-                    } else {
-                        try {
-                            const deptRes = await api.get<Record<string, unknown>>(`/department/${rawDeptId}`);
-                            const deptData = (deptRes['data'] as Record<string, unknown>) || deptRes;
-                            if (deptData) {
-                                r['emp_dept_name'] = String(deptData['dept_name'] || deptData['name'] || deptData['name_th'] || '');
+                        }
+                    })(),
+                    (async () => {
+                        if (rawDeptId && !r['emp_dept_name']) {
+                            const cachedName = masterDataCache.getDepartmentName(rawDeptId as string | number);
+                            if (cachedName) {
+                                r['emp_dept_name'] = cachedName;
+                            } else {
+                                try {
+                                    const deptRes = await api.get<Record<string, unknown>>(`/department/${rawDeptId}`, config);
+                                    const deptData = (deptRes['data'] as Record<string, unknown>) || deptRes;
+                                    if (deptData) r['emp_dept_name'] = String(deptData['dept_name'] || deptData['name'] || deptData['name_th'] || '');
+                                } catch { /* ignore */ }
                             }
-                        } catch { /* ignore */ }
-                    }
-                }
+                        }
+                    })()
+                ]);
 
                 if (r !== rRaw) {
                     const criticalFields = [
@@ -313,12 +331,12 @@ export const SalesOrderService = {
     },
 
     /** สร้าง Sales Order ใหม่ */
-    create: async (data: SalesOrderFormData) => {
+    create: async (data: SalesOrderFormData, config?: AxiosRequestConfig) => {
         const payload = mapSalesOrderFormToDTO(data as unknown as SalesOrderFormValues, false);
         logger.info('🚀 [SalesOrderService] CREATE PAYLOAD:', payload);
         
         try {
-            const response = await api.post('/sale-order', payload);
+            const response = await api.post('/sale-order', payload, config);
             return { success: true, data: response };
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string | string[] } }; message: string };
@@ -333,12 +351,12 @@ export const SalesOrderService = {
     },
 
     /** อัปเดต Sales Order */
-    update: async (id: string, data: Partial<SalesOrderFormData>) => {
+    update: async (id: string, data: Partial<SalesOrderFormData>, config?: AxiosRequestConfig) => {
         const payload = mapSalesOrderFormToDTO(data as unknown as SalesOrderFormValues, true);
         logger.info(`🚀 [SalesOrderService] UPDATE PAYLOAD for ${id}:`, payload);
         
         try {
-            const response = await api.patch(`/sale-order/${id}`, payload);
+            const response = await api.patch(`/sale-order/${id}`, payload, config);
             return { success: true, data: response };
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string | string[] } }; message: string };
@@ -353,10 +371,10 @@ export const SalesOrderService = {
     },
 
     /** อัปเดตสถานะ Sales Order */
-    updateStatus: async (id: string, status: string) => {
+    updateStatus: async (id: string, status: string, config?: AxiosRequestConfig) => {
         logger.info(`🚀 [SalesOrderService] UPDATE STATUS for ${id}:`, { status });
         try {
-            const response = await api.patch(`/sale-order/${id}/pending`, { status, so_status: status });
+            const response = await api.patch(`/sale-order/${id}/pending`, { status, so_status: status }, config);
             return { success: true, data: response };
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string | string[] } }; message: string };
@@ -366,10 +384,10 @@ export const SalesOrderService = {
     },
 
     /** ลบ Sales Order */
-    delete: async (id: string) => {
+    delete: async (id: string, config?: AxiosRequestConfig) => {
         logger.debug('Deleting sales order:', id);
         try {
-            await api.delete(`/sale-order/${id}`);
+            await api.delete(`/sale-order/${id}`, config);
             return { success: true };
         } catch (error) {
             logger.error(`Failed to delete sales order ${id}:`, error);
@@ -378,9 +396,9 @@ export const SalesOrderService = {
     },
 
     /** ดึงรายการใบจองที่สามารถนำมาสร้าง Sales Order ได้ */
-    getAvailableRS: async (): Promise<ReservationHeader[]> => {
+    getAvailableRS: async (config?: AxiosRequestConfig): Promise<ReservationHeader[]> => {
         try {
-            const response = await api.get<unknown>('/sale-order/available-rs');
+            const response = await api.get<unknown>('/sale-order/available-rs', config);
             const data = (Array.isArray(response) ? response : (response as Record<string, unknown>)?.data || []) as Record<string, unknown>[];
             
             return data.map((item) => {

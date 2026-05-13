@@ -225,7 +225,7 @@ export const ItemMasterService = {
     }
   },
 
-  create: async (data: ItemMasterFormData): Promise<number | null> => {
+  create: async (data: ItemMasterFormData, config?: AxiosRequestConfig): Promise<number | null> => {
     if (USE_MOCK) {
       logger.info('🎭 [Mock Mode] Create Item:', data);
       return Math.floor(Math.random() * 1000);
@@ -260,7 +260,7 @@ export const ItemMasterService = {
         item_grade_id: data.item_grade_id ? Number(data.item_grade_id) : null,
         barcodes: data.barcodes || []
       };
-      const response = await api.post<SuccessResponse & { item_id?: number }>('/item-master', payload);
+      const response = await api.post<SuccessResponse & { item_id?: number }>('/item-master', payload, config);
       // Backend returns item_id, but SuccessResponse expects id. Support both.
       return Number(response.id || response.item_id);
     } catch (error) {
@@ -269,7 +269,7 @@ export const ItemMasterService = {
     }
   },
 
-  update: async (id: number, data: Partial<ItemMasterFormData>): Promise<boolean> => {
+  update: async (id: number, data: Partial<ItemMasterFormData>, config?: AxiosRequestConfig): Promise<boolean> => {
     if (USE_MOCK) {
       logger.info('🎭 [Mock Mode] Update Item:', id, data);
       return true;
@@ -311,7 +311,7 @@ export const ItemMasterService = {
         barcodes: data.barcodes || undefined
       };
 
-      await api.patch<SuccessResponse>(`/item-master/${id}`, payload);
+      await api.patch<SuccessResponse>(`/item-master/${id}`, payload, config);
       return true;
     } catch (error) {
       logger.error('[ItemMasterService] update error:', error);
@@ -319,10 +319,10 @@ export const ItemMasterService = {
     }
   },
 
-  delete: async (id: number): Promise<boolean> => {
+  delete: async (id: number, config?: AxiosRequestConfig): Promise<boolean> => {
     if (USE_MOCK) return true;
     try {
-      await api.delete<SuccessResponse>(`/item-master/${id}`);
+      await api.delete<SuccessResponse>(`/item-master/${id}`, config);
       return true;
     } catch (error) {
       logger.error('[ItemMasterService] delete error:', error);

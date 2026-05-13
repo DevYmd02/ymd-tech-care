@@ -17,7 +17,7 @@ const NON_RETRYABLE_STATUSES = [400, 401, 403, 404, 422];
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 30, // 30 seconds for transactional data (Default)
       refetchOnWindowFocus: false,
       retry: (failureCount, error) => {
         const status = (error as AxiosError)?.response?.status;

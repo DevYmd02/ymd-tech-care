@@ -12,8 +12,8 @@ import { SalesOrderService, type SalesOrderListParams } from '../services/sales-
 export const useSalesOrderList = (params: SalesOrderListParams) => {
     return useQuery({
         queryKey: ['sales-orders', params],
-        queryFn: () => SalesOrderService.getList(params),
-        staleTime: 5 * 60 * 1000,
+        queryFn: ({ signal }) => SalesOrderService.getList(params, { signal }),
+        staleTime: 1000 * 30, // 30s
     });
 };
 
@@ -23,8 +23,8 @@ export const useSalesOrderList = (params: SalesOrderListParams) => {
 export const useSalesOrderDetail = (id?: string) => {
     return useQuery({
         queryKey: ['sales-order', id],
-        queryFn: () => id ? SalesOrderService.getById(id) : Promise.resolve(null),
+        queryFn: ({ signal }) => id ? SalesOrderService.getById(id, { signal }) : Promise.resolve(null),
         enabled: !!id,
-        staleTime: 2 * 60 * 1000,
+        staleTime: 1000 * 60, // 1m
     });
 };

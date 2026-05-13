@@ -16,6 +16,8 @@ import { BranchService } from '@/modules/master-data/company/services/org-branch
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
 import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
 import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
+import { masterDataCache } from '@/shared/utils/master-data-cache';
+import type { AxiosRequestConfig } from 'axios';
 
 
 // ---------------------------------------------------------------------------
@@ -362,18 +364,18 @@ export const POAService = {
      * Status correction: if backend returns PENDING but record has a POA number → APPROVED.
      * This is the user-confirmed business rule: "มีเลข POA = อนุมัติแล้ว"
      */
-    getList: async (params?: POListParams): Promise<POListResponse> => {
+    getList: async (params?: POListParams, config?: AxiosRequestConfig): Promise<POListResponse> => {
         logger.info('[POAService] getList:', params);
 
-        // 1. Parallel Fetching — fetch ALL statuses to ensure mapping works correctly
+        // 1. Parallel Fetching — prioritize cache for master data
         const [approvalRes, poRes, poRejectedRes, empRes, branchRes, taxRes, uomRes] = await Promise.allSettled([
-            api.get<Record<string, unknown>>(ENDPOINTS.list, { params: { limit: 1000, page: 1 } }),
-            POService.getList({ limit: 1000, page: 1 }), // Fetch all raw POs to avoid status mismatch; normalization happens below
-            POService.getList({ status: 'REJECTED', limit: 1000, page: 1 }),
-            EmployeeService.getAll(),
-            BranchService.getList({ limit: 1000 }),
-            TaxCodeService.getTaxCodes(),
-            UnitService.getAll({ limit: 1000 })
+            api.get<Record<string, unknown>>(ENDPOINTS.list, { ...config, params: { ...config?.params, limit: 1000, page: 1 } }),
+            POService.getList({ limit: 1000, page: 1 }, config), 
+            POService.getList({ status: 'REJECTED', limit: 1000, page: 1 }, config),
+            masterDataCache.get('employees').length > 0 ? Promise.resolve(masterDataCache.get('employees')) : EmployeeService.getAll(config),
+            masterDataCache.get('branches').length > 0 ? Promise.resolve(masterDataCache.get('branches')) : BranchService.getList({ limit: 1000 }, config),
+            TaxCodeService.getTaxCodes(config),
+            masterDataCache.get('units').length > 0 ? Promise.resolve(masterDataCache.get('units')) : UnitService.getAll({ limit: 1000 }, config)
         ]);
 
         const rawApprovalItems = (approvalRes.status === 'fulfilled') ? extractArrayFromResponse<Record<string, unknown>>(approvalRes.value) : [];
@@ -527,7 +529,7 @@ export const POAService = {
     },
 
 
-    getById: async (id: number | string, context?: 'PO' | 'POA'): Promise<POListItem> => {
+    getById: async (id: number | string, context?: 'PO' | 'POA', config?: AxiosRequestConfig): Promise<POListItem> => {
         logger.info(`[POAService] Fetching POA Detail: ${id}, Context: ${context}`);
 
         const numericId = Number(id);
@@ -535,11 +537,11 @@ export const POAService = {
         const actualId = typeof id === 'string' ? Number(id.replace(/^(approved|pending)-/, '')) : numericId;
 
         const [res, emps, branches, taxes, uoms] = await Promise.allSettled([
-            api.get<Record<string, unknown>>(isHistory ? ENDPOINTS.detail(actualId) : ENDPOINTS.poDetail(actualId)),
-            EmployeeService.getAll(),
-            BranchService.getList({ limit: 1000 }),
-            TaxCodeService.getTaxCodes(),
-            UnitService.getAll({ limit: 1000 })
+            api.get<Record<string, unknown>>(isHistory ? ENDPOINTS.detail(actualId) : ENDPOINTS.poDetail(actualId), config),
+            masterDataCache.get('employees').length > 0 ? Promise.resolve(masterDataCache.get('employees')) : EmployeeService.getAll(config),
+            masterDataCache.get('branches').length > 0 ? Promise.resolve(masterDataCache.get('branches')) : BranchService.getList({ limit: 1000 }, config),
+            TaxCodeService.getTaxCodes(config),
+            masterDataCache.get('units').length > 0 ? Promise.resolve(masterDataCache.get('units')) : UnitService.getAll({ limit: 1000 }, config)
         ]);
 
         const employeeMap: Record<string, string> = {};
@@ -738,23 +740,21 @@ export const POAService = {
         return await api.put<SuccessResponse>(ENDPOINTS.update(id), data);
     },
 
-    approve: async (id: number): Promise<SuccessResponse> => {
-        return await api.post<SuccessResponse>(ENDPOINTS.approve(id), {});
+    approve: async (id: number, config?: AxiosRequestConfig): Promise<SuccessResponse> => {
+        return await api.post<SuccessResponse>(ENDPOINTS.approve(id), {}, config);
     },
 
-    reject: async (id: number, reject_reason?: string): Promise<SuccessResponse> => {
-        return await api.post<SuccessResponse>(ENDPOINTS.reject(id), { reject_reason });
+    reject: async (id: number, reject_reason?: string, config?: AxiosRequestConfig): Promise<SuccessResponse> => {
+        return await api.post<SuccessResponse>(ENDPOINTS.reject(id), { reject_reason }, config);
     },
 
     submitApproval: async (data: POAApprovalPayload): Promise<SuccessResponse> => {
         return await api.post<SuccessResponse>(ENDPOINTS.submit, data);
     },
     
-    bulkApprove: async (ids: number[]): Promise<SuccessResponse[]> => {
-        const results = [];
-        for (const id of ids) {
-            results.push(await POAService.approve(id));
-        }
-        return results;
+    bulkApprove: async (ids: number[], config?: AxiosRequestConfig): Promise<SuccessResponse[]> => {
+        logger.info(`[POAService] Bulk Approving ${ids.length} items`);
+        // 🎯 [Performance] Parallel execution for bulk approval
+        return await Promise.all(ids.map(id => POAService.approve(id, config)));
     }
 };
