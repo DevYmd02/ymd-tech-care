@@ -1,7 +1,6 @@
 import api from '@core/api/api';
 import { logger } from '@utils';
 import { masterDataCache } from '@/shared/utils/master-data-cache';
-import { sanitizePayload } from '@/shared/utils/payload.utils';
 import { 
     normalizeId, 
     normalizeDate, 
@@ -10,22 +9,9 @@ import {
     normalizeItemCode 
 } from '@/shared/utils/data-mapping.utils';
 import type { SalesOrderFormData } from '../types/sales-order.types';
+import type { SalesOrderFormValues } from '../schemas/sales-order.schemas';
 import type { ReservationHeader } from '@sales/reservation/services/reservation.service';
-
-/** Fields allowed by the backend DTO for Sales Order Header */
-const KNOWN_DTO_FIELDS = [
-    'so_date', 'status', 'status_remark', 'base_currency_code', 'quote_currency_code',
-    'exchange_rate', 'exchange_rate_date', 'payment_term_days', 'ship_days', 'onhold',
-    'remarks', 'discount_expression', 'ship_date', 'customer_id', 'branch_id',
-    'tax_code_id', 'emp_sale_id', 'emp_dept_id', 'sale_area_id', 'reservation_id',
-    'project_id', 'saleOrderLines'
-];
-
-/** Fields allowed by the backend DTO for Sales Order Lines */
-const KNOWN_LINE_DTO_FIELDS = [
-    'so_id', 'so_line_id', 'item_id', 'qty', 'uom_id', 'unit_price', 'net_amount',
-    'discount_expression', 'note', 'warehouse_id', 'location_id', 'lot_id', 'reservation_line_id'
-];
+import { mapSalesOrderFormToDTO } from '../utils/sales-order-mappers';
 
 export interface SalesOrderListParams {
     so_no?: string;
@@ -328,7 +314,7 @@ export const SalesOrderService = {
 
     /** สร้าง Sales Order ใหม่ */
     create: async (data: SalesOrderFormData) => {
-        const payload = SalesOrderService.sanitizeData(data, false);
+        const payload = mapSalesOrderFormToDTO(data as unknown as SalesOrderFormValues, false);
         logger.info('🚀 [SalesOrderService] CREATE PAYLOAD:', payload);
         
         try {
@@ -348,7 +334,7 @@ export const SalesOrderService = {
 
     /** อัปเดต Sales Order */
     update: async (id: string, data: Partial<SalesOrderFormData>) => {
-        const payload = SalesOrderService.sanitizeData(data, true);
+        const payload = mapSalesOrderFormToDTO(data as unknown as SalesOrderFormValues, true);
         logger.info(`🚀 [SalesOrderService] UPDATE PAYLOAD for ${id}:`, payload);
         
         try {
@@ -389,86 +375,6 @@ export const SalesOrderService = {
             logger.error(`Failed to delete sales order ${id}:`, error);
             throw error;
         }
-    },
-
-    /** Helper to clean data before sending to API */
-    sanitizeData: (data: SalesOrderFormData | Partial<SalesOrderFormData>, isUpdate = false) => {
-        const raw = { ...data } as Record<string, unknown>;
-        
-        const toISOString = (dateInput?: unknown) => {
-            if (!dateInput || dateInput === '') return undefined;
-            try {
-                const date = new Date(dateInput as string);
-                if (isNaN(date.getTime())) return undefined;
-                return date.toISOString();
-            } catch {
-                return undefined;
-            }
-        };
-
-        const isValidId = (id: unknown): boolean => {
-            if (id === null || id === undefined || id === '' || id === 0) return false;
-            const num = Number(id);
-            return !isNaN(num) && num > 0;
-        };
-
-        const transformed: Record<string, unknown> = {
-            so_date: toISOString(raw['so_date']) || new Date().toISOString(),
-            status: raw['status'] || 'DRAFT',
-            status_remark: raw['status_remark'] || '',
-            base_currency_code: raw['base_currency_code'] || raw['currency_code'] || 'THB',
-            quote_currency_code: raw['quote_currency_code'] || raw['currency_code'] || 'THB',
-            exchange_rate: Number(raw['exchange_rate'] || 1),
-            exchange_rate_date: toISOString(raw['exchange_rate_date'] || raw['so_date']) || new Date().toISOString(),
-            payment_term_days: Number(raw['payment_term_days'] || 0),
-            ship_days: Number(raw['ship_days'] || 0),
-            onhold: raw['onhold'] === true || raw['onhold'] === 'Y' ? 'Y' : 'N',
-            remarks: raw['remarks'] || '',
-            discount_expression: raw['discount_input'] || raw['discount_expression'] || '0',
-            ship_date: toISOString(raw['ship_date']),
-        };
-
-        if (isValidId(raw['customer_id'])) transformed['customer_id'] = Number(raw['customer_id']);
-        if (isValidId(raw['branch_id'])) transformed['branch_id'] = Number(raw['branch_id']);
-        if (isValidId(raw['tax_code_id'])) transformed['tax_code_id'] = Number(raw['tax_code_id']);
-        if (isValidId(raw['emp_sale_id'])) transformed['emp_sale_id'] = Number(raw['emp_sale_id']);
-        if (isValidId(raw['emp_dept_id'])) transformed['emp_dept_id'] = Number(raw['emp_dept_id']);
-        if (isValidId(raw['emp_area_id'] || raw['sale_area_id'])) {
-            transformed['sale_area_id'] = Number(raw['emp_area_id'] || raw['sale_area_id']);
-        }
-        if (isValidId(raw['reservation_id'])) transformed['reservation_id'] = Number(raw['reservation_id']);
-        
-        const project_id = raw['job_id'] || raw['project_id'];
-        if (isValidId(project_id)) transformed['project_id'] = Number(project_id);
-
-        if (raw.lines && Array.isArray(raw.lines)) {
-            const headerSoId = Number(raw['so_id'] || 0);
-            transformed.saleOrderLines = raw.lines.map((line: Record<string, unknown>) => {
-                const l: Record<string, unknown> = {
-                    so_id: headerSoId || Number(line['so_id'] || 0),
-                    item_id: Number(line['item_id']),
-                    qty: Number(line['qty_ordered'] || line['qty'] || 0),
-                    uom_id: Number(line['uom_id']),
-                    unit_price: Number(line['unit_price'] || 0),
-                    net_amount: Number(line['line_total'] || 0),
-                    discount_expression: line['line_discount_input'] || line['discount_expression'] || '0',
-                    note: line['note'] || '',
-                };
-
-                if (isValidId(line['warehouse_id'])) l['warehouse_id'] = Number(line['warehouse_id']);
-                if (isValidId(line['location_id'])) l['location_id'] = Number(line['location_id']);
-                if (isValidId(line['lot_id'])) l['lot_id'] = Number(line['lot_id']);
-                if (isValidId(line['reservation_line_id'])) l['reservation_line_id'] = Number(line['reservation_line_id']);
-
-                if (isUpdate && line.so_line_id && !isNaN(Number(line.so_line_id))) {
-                    l.so_line_id = Number(line.so_line_id);
-                }
-                
-                return sanitizePayload(l, KNOWN_LINE_DTO_FIELDS);
-            });
-        }
-
-        return sanitizePayload(transformed, KNOWN_DTO_FIELDS);
     },
 
     /** ดึงรายการใบจองที่สามารถนำมาสร้าง Sales Order ได้ */
