@@ -31,9 +31,9 @@ export const usePOCalculations = ({
     // ── Enforce THB when Multicurrency is OFF ─────────────────────────────────
     useEffect(() => {
         if (!watchIsMulticurrency) {
-            setValue('currency_code', 'THB');
-            setValue('exchange_rate', 1);
-            setValue('target_currency', 'THB');
+            setValue('currency_code', 'THB', { shouldDirty: false });
+            setValue('exchange_rate', 1, { shouldDirty: false });
+            setValue('target_currency', 'THB', { shouldDirty: false });
         }
     }, [watchIsMulticurrency, setValue]);
 
@@ -47,7 +47,7 @@ export const usePOCalculations = ({
                      ...l,
                      tax_code_id: watchHeaderTaxCodeId
                  }));
-                setValue('po_lines', updatedLines as POFormData['po_lines'], { shouldDirty: true });
+                setValue('po_lines', updatedLines as POFormData['po_lines'], { shouldDirty: false });
              }
         }
     }, [watchHeaderTaxCodeId, setValue, getValues]);

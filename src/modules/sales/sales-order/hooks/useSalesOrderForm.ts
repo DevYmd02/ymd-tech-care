@@ -12,6 +12,10 @@ import type { TaxCode } from '@master-data/tax/types/tax-types';
 import { useSalesOrderCalculations } from './useSalesOrderCalculations';
 import { useSalesOrderFormActions } from './useSalesOrderFormActions';
 import { useSalesOrderHydration } from './useSalesOrderHydration';
+import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { logger } from '@/shared/utils';
+import type { FieldErrors } from 'react-hook-form';
 
 interface UseSalesOrderFormProps {
     isOpen: boolean;
@@ -20,6 +24,8 @@ interface UseSalesOrderFormProps {
     currencies: Currency[];
     taxCodes: TaxCode[];
     uoms: UnitListItem[];
+    onClose: () => void;
+    readOnly?: boolean;
 }
 
 export function useSalesOrderForm({
@@ -29,6 +35,8 @@ export function useSalesOrderForm({
     currencies,
     taxCodes,
     uoms,
+    onClose,
+    readOnly = false,
 }: UseSalesOrderFormProps) {
     const methods = useForm<SalesOrderFormValues>({
         resolver: zodResolver(SalesOrderFormSchema) as Resolver<SalesOrderFormValues>,
@@ -39,8 +47,16 @@ export function useSalesOrderForm({
         mode: 'onBlur',
     });
 
-    const { setValue, control, reset, getValues } = methods;
-    const { isDirty } = methods.formState;
+    const { toast } = useToast();
+
+    const { setValue, control, reset, getValues, handleSubmit } = methods;
+    const { isDirty, errors } = methods.formState;
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: isDirty && !readOnly,
+        onSafeClose: onClose
+    });
 
     // 1. Hydration & Recovery
     const { recoverSalesOrderPriceSources } = useSalesOrderHydration({
@@ -101,7 +117,7 @@ export function useSalesOrderForm({
         const calculatedRate = fromRate / toRate;
         
         if (calculatedRate !== undefined && !isNaN(calculatedRate)) {
-            setValue('exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true });
+            setValue('exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true, shouldDirty: false });
         }
     }, [currencies, base_currency_code, quote_currency_code, setValue, isMulticurrency]);
 
@@ -113,14 +129,33 @@ export function useSalesOrderForm({
              const currentLines = getValues('lines') || [];
              const needsUpdate = currentLines.some(l => Number(l.tax_code_id) !== Number(tax_code_id));
              if (needsUpdate) {
-                 const updatedLines = currentLines.map(l => ({
-                     ...l,
-                     tax_code_id
-                 }));
-                 setValue('lines', updatedLines as never, { shouldDirty: true });
-             }
+                  const updatedLines = currentLines.map(l => ({
+                      ...l,
+                      tax_code_id
+                  }));
+                  setValue('lines', updatedLines as never, { shouldDirty: false });
+              }
         }
     }, [tax_code_id, setValue, getValues]);
+
+    const onInvalidSubmit = (errors: FieldErrors<SalesOrderFormValues>) => {
+        logger.error("Sales Order Validation Errors:", errors);
+        
+        const errorCount = Object.keys(errors).length;
+        if (errorCount > 0) {
+            toast(`พบข้อผิดพลาด ${errorCount} จุด กรุณาตรวจสอบข้อมูลให้ครบถ้วน`, 'error');
+        }
+
+        const firstErrorKey = Object.keys(errors)[0] as keyof SalesOrderFormValues;
+        if (firstErrorKey) {
+            const errorElement = document.getElementsByName(firstErrorKey)[0] || 
+                                document.querySelector(`[name="${firstErrorKey}"]`);
+            if (errorElement) {
+                errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (errorElement instanceof HTMLElement && 'focus' in errorElement) errorElement.focus();
+            }
+        }
+    };
 
     return {
         methods,
@@ -137,5 +172,11 @@ export function useSalesOrderForm({
         handleSelectCustomer,
         handleSelectProduct,
         handleSelectReservation,
+        handleSubmit,
+        onInvalidSubmit,
+        onClose: handleCloseAttempt,
+        blocker,
+        isDirty,
+        errors,
     };
 }

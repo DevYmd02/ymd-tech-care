@@ -62,7 +62,7 @@ export function useQuotationCalculations({
         const calculatedRate = fromRate / toRate;
         
         if (calculatedRate !== undefined && !isNaN(calculatedRate)) {
-            setValue('exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true });
+            setValue('exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true, shouldDirty: false });
         }
     }, [currencies, sourceCurrency, targetCurrency, setValue, isMulti, getValues]);
 
@@ -96,10 +96,10 @@ export function useQuotationCalculations({
         const isRoundingDiff = !isDirty && currentTotal > 0 && Math.abs(currentTotal - totalAmountValue) < 1;
 
         if (!isRoundingDiff) {
-            if (currentSubTotal !== calculatedSubTotal) setValue('sub_total', calculatedSubTotal, { shouldValidate: true });
-            if (currentDiscount !== calculatedDiscount) setValue('discount_amount', calculatedDiscount, { shouldValidate: true });
-            if (currentVat !== vatAmountValue) setValue('vat_amount', vatAmountValue, { shouldValidate: true });
-            if (currentTotal !== totalAmountValue) setValue('total_amount', totalAmountValue, { shouldValidate: true });
+            if (currentSubTotal !== calculatedSubTotal) setValue('sub_total', calculatedSubTotal, { shouldValidate: true, shouldDirty: false });
+            if (currentDiscount !== calculatedDiscount) setValue('discount_amount', calculatedDiscount, { shouldValidate: true, shouldDirty: false });
+            if (currentVat !== vatAmountValue) setValue('vat_amount', vatAmountValue, { shouldValidate: true, shouldDirty: false });
+            if (currentTotal !== totalAmountValue) setValue('total_amount', totalAmountValue, { shouldValidate: true, shouldDirty: false });
         } else {
             logger.debug('🛡️ [QuotationCalculations] Rounding Guard active. Preserving backend totals.');
         }

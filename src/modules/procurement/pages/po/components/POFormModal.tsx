@@ -413,6 +413,7 @@ export default function POFormModal({
         taxCodes,
         isLoadingTaxCodes,
         existingPO,
+        onClose: handleClose,
     } = usePOForm({ isOpen, onClose, onSuccess, poId, initialValues, isViewMode });
 
     const watchQcNo = useWatch({ control, name: 'qc_no' });
@@ -444,7 +445,7 @@ export default function POFormModal({
 
             <WindowFormLayout
                 isOpen={isOpen}
-                onClose={onClose}
+                onClose={handleClose}
                 title={
                     isView 
                         ? 'รายละเอียดใบสั่งซื้อ (VIEW PO)' 
@@ -479,7 +480,7 @@ export default function POFormModal({
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={onClose}
+                                onClick={handleClose}
                                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors"
                             >
                                 {isView ? 'ปิด' : 'ยกเลิก'}

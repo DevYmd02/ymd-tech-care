@@ -2,13 +2,14 @@ import React from 'react';
 import { useForm, type FieldErrors, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
 import { QCService } from '@/modules/procurement/services/qc.service';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { logger } from '@/shared/utils';
 import { extractErrorMessage } from '@/core/api/api';
 import { CreateQCSchema, type CreateQCFormValues, type CreateQCPayload } from '@/modules/procurement/schemas/qc-schemas';
 
-export const useQCForm = (onSuccess?: () => void, onClose?: () => void) => {
+export const useQCForm = (onSuccess?: () => void, onClose?: () => void, readOnly: boolean = false) => {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -25,7 +26,13 @@ export const useQCForm = (onSuccess?: () => void, onClose?: () => void) => {
   });
 
 
-  const { formState: { isSubmitting } } = methods;
+  const { formState: { isSubmitting, isDirty } } = methods;
+
+  // 🛡️ Unsaved Changes Guard
+  const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+    isDirty: isDirty && !readOnly,
+    onSafeClose: onClose || (() => {})
+  });
 
   /**
    * 🍞 @Agent_Toast_Synchronizer: Recursive Error Extraction for Grouped Toast
@@ -111,6 +118,8 @@ export const useQCForm = (onSuccess?: () => void, onClose?: () => void) => {
     onSubmit,
     onInvalid,
     isSubmitting,
+    onClose: handleCloseAttempt,
+    blocker
   };
 };
 

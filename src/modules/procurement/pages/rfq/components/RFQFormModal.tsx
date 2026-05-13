@@ -48,8 +48,8 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
         isCancelModalOpen, setIsCancelModalOpen,
         cancelVendorIndex, setCancelVendorIndex,
         handleCancelVendor,
-
-    } = useRFQForm(isOpen, onClose, initialPR, onSuccess, editId);
+        onClose: handleClose,
+    } = useRFQForm(isOpen, onClose, initialPR, onSuccess, editId, readOnly);
 
     const [isCancelling, setIsCancelling] = useState(false);
 
@@ -66,7 +66,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
     return (
         <WindowFormLayout
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             title={readOnly ? "ดูใบขอเสนอราคา (View RFQ)" : (isInviteMode && editId ? `ส่งใบเสนอราคาเพิ่ม (${formData.rfq_no})` : (editId ? `แก้ไขใบขอเสนอราคา (${formData.rfq_no})` : "สร้างใบขอเสนอราคา (RFQ)"))}
             titleIcon={<div className="bg-white/20 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} /></div>}
             headerColor={readOnly ? "bg-gray-600" : (isInviteMode ? "bg-blue-600" : "bg-teal-600")}
@@ -101,7 +101,7 @@ export const RFQFormModal = ({ isOpen, onClose, onSuccess, initialPR, editId, re
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={handleClose}
                             disabled={isSaving}
                             className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
                         >

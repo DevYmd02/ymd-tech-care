@@ -13,15 +13,18 @@ import type { UnitListItem } from '@master-data/types/master-data-types';
 import { DeliveryService } from '../services/delivery.service';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import type { CustomerAddress } from '@customer/customer-master/types/customer-types';
+import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
 
 interface UseDeliveryFormProps {
     isOpen: boolean;
     id?: string;
     initialData?: Partial<DeliveryFormValues>;
     uoms: UnitListItem[];
+    onClose: () => void;
+    readOnly?: boolean;
 }
 
-export function useDeliveryForm({ isOpen, id, initialData, uoms }: UseDeliveryFormProps) {
+export function useDeliveryForm({ isOpen, id, initialData, uoms, onClose, readOnly = false }: UseDeliveryFormProps) {
     const methods = useForm<DeliveryFormValues>({
         resolver: zodResolver(DeliveryFormSchema) as Resolver<DeliveryFormValues>,
         defaultValues: {
@@ -31,7 +34,13 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms }: UseDeliveryFo
         mode: 'onBlur',
     });
 
-    const { setValue, control, reset, getValues } = methods;
+    const { setValue, control, reset, getValues, formState: { isDirty } } = methods;
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: isDirty && !readOnly,
+        onSafeClose: onClose
+    });
 
     // 💡 Performance Optimization: Watch only 'lines' instead of the entire form object.
     // This prevents the entire modal from re-rendering when typing in header fields.
@@ -198,5 +207,7 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms }: UseDeliveryFo
         handleSelectProduct,
         handleSelectSalesOrder,
         handleSelectEmployee,
+        onClose: handleCloseAttempt,
+        blocker
     };
 }

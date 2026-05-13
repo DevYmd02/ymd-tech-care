@@ -23,16 +23,16 @@ interface Props {
     onClose: () => void;
     onSuccess?: () => void;
     initialPOId?: number;
+    readOnly?: boolean;
 }
 
 // ====================================================================================
 // COMPONENT
 // ====================================================================================
 
-export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }: Props) {
+export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId, readOnly = false }: Props) {
     const {
         methods,
-        fields,
         isSubmitting,
         isFetchingPO,
         warehouses,
@@ -42,10 +42,12 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
         poDetail,
         isMulticurrency,
         items,
+        fields,
         onFormSubmit,
         append,
         remove,
-    } = useGRNForm({ isOpen, initialPOId, onClose, onSuccess });
+        onClose: handleClose
+    } = useGRNForm({ isOpen, initialPOId, onClose, onSuccess, readOnly });
 
     const { register, control, handleSubmit, setValue, watch, formState: { errors } } = methods;
 
@@ -112,7 +114,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
         <FormProvider {...methods}>
             <WindowFormLayout
                 isOpen={isOpen}
-                onClose={onClose}
+                onClose={handleClose}
                 title="สร้างใบรับสินค้าใหม่ (Create GRN)"
                 titleIcon={<div className="bg-violet-500 p-2 rounded-lg shadow"><Package className="text-white" size={20} /></div>}
                 headerColor="border-violet-600 bg-violet-600 bg-gradient-to-r from-violet-700 to-violet-500 [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden"
@@ -122,7 +124,7 @@ export default function GRNFormModal({ isOpen, onClose, onSuccess, initialPOId }
                         <div className="flex items-center gap-3">
                             <button
                                 type="button"
-                                onClick={onClose}
+                                onClick={handleClose}
                                 className="px-8 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg text-sm font-medium transition-colors"
                             >
                                 ยกเลิก

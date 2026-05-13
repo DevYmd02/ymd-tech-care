@@ -67,7 +67,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const { toast } = useToast();
 
   // Form Hook
-  const { methods, onSubmit, onInvalid, isSubmitting: isFormSubmitting } = useQCForm(onSuccess, onClose);
+  const { methods, onSubmit, onInvalid, isSubmitting: isFormSubmitting, onClose: handleClose } = useQCForm(onSuccess, onClose, mode === 'view');
   const { setValue, watch } = methods;
 
   // Watch Form Values
@@ -599,7 +599,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
     <FormProvider {...methods}>
       <WindowFormLayout
         isOpen={isOpen}
-        onClose={onClose}
+        onClose={handleClose}
         title={mode === 'view' ? "รายละเอียดใบเปรียบเทียบราคา (Quote Comparison)" : "สร้างใบเปรียบเทียบราคา (Quote Comparison)"}
         titleIcon={
           <div className="bg-white/20 p-1.5 rounded-md shadow-sm">
@@ -611,7 +611,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
           <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-white dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isFormSubmitting}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
             >

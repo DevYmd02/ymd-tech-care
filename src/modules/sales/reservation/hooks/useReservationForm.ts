@@ -12,6 +12,7 @@ import {
     calculateNetTotal, 
     calculateLineTotal 
 } from '@sales/shared/utils/sales-calculations';
+import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
 
 import type { Currency } from '@master-data/types/master-data-types';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
@@ -122,7 +123,7 @@ async function recoverReservationPriceSources(
 
 
 
-export const useReservationForm = (isOpen: boolean, id?: string, initialData?: Partial<ReservationFormValues>) => {
+export const useReservationForm = (isOpen: boolean, id?: string, initialData?: Partial<ReservationFormValues>, onClose?: () => void, readOnly: boolean = false) => {
     const { toast } = useToast();
     const isEdit = !!id;
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -149,7 +150,14 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         mode: 'onBlur',
     });
 
-    const { setValue, reset, control, getValues, handleSubmit } = methods;
+    const { setValue, reset, control, getValues, handleSubmit, formState: { isDirty } } = methods;
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: isDirty && !readOnly,
+        onSafeClose: onClose || (() => {})
+    });
+
     const formData = useWatch({ control }) as ReservationFormValues;
 
     // Initialization Guard
@@ -271,7 +279,6 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     const watchedDiscountInput = useWatch({ control, name: 'discount_input' });
     const discountInput = watchedDiscountInput || '';
     const taxCodeId = useWatch({ control, name: 'tax_code_id' });
-    const { isDirty } = methods.formState;
 
     useEffect(() => {
         const calculatedSubTotal = lines.reduce((sum: number, line: ReservationLineValues) => sum + (line.line_total || 0), 0);
@@ -294,10 +301,10 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         const isRoundingDiff = !isDirty && currentTotal > 0 && Math.abs(currentTotal - totalAmountValue) < 1;
 
         if (!isRoundingDiff) {
-            if (currentSubTotal !== calculatedSubTotal) setValue('sub_total', calculatedSubTotal);
-            if (getValues('discount_amount') !== calculatedDiscount) setValue('discount_amount', calculatedDiscount);
-            if (currentVat !== vatAmountValue) setValue('vat_amount', vatAmountValue);
-            if (currentTotal !== totalAmountValue) setValue('total_amount', totalAmountValue);
+            if (currentSubTotal !== calculatedSubTotal) setValue('sub_total', calculatedSubTotal, { shouldDirty: false });
+            if (getValues('discount_amount') !== calculatedDiscount) setValue('discount_amount', calculatedDiscount, { shouldDirty: false });
+            if (currentVat !== vatAmountValue) setValue('vat_amount', vatAmountValue, { shouldDirty: false });
+            if (currentTotal !== totalAmountValue) setValue('total_amount', totalAmountValue, { shouldDirty: false });
         }
     }, [lines, discountInput, taxCodeId, taxCodes, setValue, getValues, isDirty]);
     
@@ -935,5 +942,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         handleSelectLead,
         handleSelectAQ,
         handleFetchQuotation,
+        onClose: handleCloseAttempt,
+        blocker
     };
 };

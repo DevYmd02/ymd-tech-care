@@ -39,16 +39,14 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     handleVoid,
     handleSubmit,
     handleFormError,
+    onClose: handleClose,
     formMethods,
     user,
-    isLoading
-  } = usePRForm({ isOpen, onClose, id, onSuccess });
+    isLoading,
+    readOnly
+  } = usePRForm({ isOpen, onClose, id, onSuccess, readOnly: readOnlyProp });
 
   const { register, control, watch, setValue, formState: { errors } } = formMethods;
-
-  // V-04: Force readOnly if status is not DRAFT (prevent editing APPROVED/PENDING PRs)
-  const currentStatus = watch('status');
-  const readOnly = readOnlyProp || (!!id && currentStatus !== undefined && !['DRAFT', 'PENDING', 'REJECTED'].includes(currentStatus));
 
   // Tabs state
   const [activeTab, setActiveTab] = useState('detail');
@@ -70,7 +68,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
   return (
     <WindowFormLayout
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       isLoading={isLoading}
       title={readOnly ? "รายละเอียดใบขอซื้อ (Purchase Requisition Details)" : (isEditMode ? "แก้ไขใบขอซื้อ (Edit Purchase Requisition)" : "สร้างใบขอซื้อ (Create Purchase Requisition)")}
       titleIcon={<div className="bg-red-500 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} /></div>}
@@ -94,7 +92,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                   )}
             </div>
             <div className="flex items-center gap-2">
-                <button type="button" onClick={onClose} disabled={isSubmitting || isActionLoading} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">{'ปิด'}</button>
+                <button type="button" onClick={handleClose} disabled={isSubmitting || isActionLoading} className="px-4 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-md text-sm font-medium">{'ปิด'}</button>
 
                 {/* Approve/Reject actions removed to enforce Approval (AV) Module workflow */}
 

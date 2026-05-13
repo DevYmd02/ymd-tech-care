@@ -99,7 +99,8 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         setActiveLocationLineIndex,
         activeLocationLineIndex,
         activeWarehouseLineIndex,
-    } = useReservationForm(isOpen, id, initialData);
+        onClose: handleClose,
+    } = useReservationForm(isOpen, id, initialData, onClose, readOnly);
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [pendingData, setPendingData] = useState<ReservationFormData | null>(null);
@@ -170,7 +171,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
     return (
         <WindowFormLayout
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             title={isEdit ? 'แก้ไขรายละเอียดใบสั่งจองสินค้า (Sales Reservation)' : 'สร้างใบสั่งจองใหม่ (Create Sales Reservation)'}
             headerColor="bg-purple-600"
             footer={
@@ -179,7 +180,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                     isSubmitting={isSubmitting}
                     isLoading={isLoading}
                     readOnly={readOnly}
-                    onClose={onClose}
+                    onClose={handleClose}
                 />
             }
             titleIcon={
