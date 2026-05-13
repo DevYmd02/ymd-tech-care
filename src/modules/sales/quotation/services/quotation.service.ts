@@ -5,11 +5,11 @@ import {
     normalizeDate, 
     normalizeCustomerName
 } from '@/shared/utils/data-mapping.utils';
-import { sanitizePayload, cleanPayload } from '@/shared/utils/payload.utils';
 import { masterDataCache } from '@/shared/utils/master-data-cache';
 import type { QuotationFormData, QuotationHeader, QuotationListItem, QuotationLineData, RawQuotationData, RawQuotationLine } from '@sales/quotation/types/quotation.types';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import { applyClientFilters, extractArrayFromResponse, type PaginatedResponse } from '@utils/clientFilterUtils';
+import { mapQuotationFormToDTO } from '../utils/quotation-mappers';
 
 export interface QuotationListParams {
     sq_no?: string;
@@ -31,27 +31,6 @@ const ENDPOINTS = {
     detail: (id: string | number) => `/sale-quotation/${id}`,
     create: '/sale-quotation',
 };
-
-/**
- * Whitelist for Quotation Header fields (DTO)
- * Prevents "400 Bad Request" due to UI-only fields leakage
- */
-const KNOWN_DTO_FIELDS = [
-    'sq_no', 'sq_date', 'valid_until', 'customer_id', 'branch_id', 'lead_id',
-    'quote_currency_code', 'base_currency_code', 'exchange_rate', 'exchange_rate_date',
-    'status', 'sq_status', 'remarks', 'payment_term_days', 'onhold',
-    'tax_code_id', 'sale_area_id', 'emp_sale_id', 'emp_dept_id', 'project_id', 'job_id',
-    'discount_expression', 'discount_amount', 'sub_total', 'vat_amount', 'total_amount',
-    'sq_lines'
-];
-
-/**
- * Whitelist for Quotation Line fields
- */
-const KNOWN_LINE_DTO_FIELDS = [
-    'sq_line_id', 'item_id', 'note', 'qty', 'uom_id', 
-    'unit_price', 'discount_expression', 'tax_code_id'
-];
 
 export class QuotationService {
     /**
@@ -157,8 +136,6 @@ export class QuotationService {
             
             const response = await api.get<RawQuotationData & WrappedRawResponse>(ENDPOINTS.detail(String(id)));
             
-
-
             // 🧪 Smart Mapping Logic: Parse strings and isolate the core quotation object
             let extracted: unknown = response;
             const responseType = typeof response;
@@ -322,84 +299,10 @@ export class QuotationService {
     }
 
     /**
-     * Helper to sanitize data using whitelist
-     */
-    static sanitizeData(data: Record<string, unknown>): Record<string, unknown> {
-        // Sanitize Lines first
-        if (Array.isArray(data.sq_lines)) {
-            data.sq_lines = data.sq_lines.map(line => 
-                sanitizePayload(line, KNOWN_LINE_DTO_FIELDS)
-            );
-        }
-        
-        // Sanitize Header
-        return cleanPayload(sanitizePayload(data, KNOWN_DTO_FIELDS)) as Record<string, unknown>;
-    }
-
-    /**
-     * Helper for Payload Transformation (Backend-Exact Matching)
-     */
-    private static preparePayload(data: QuotationFormValues) {
-        // 🧪 Helper for ISO Date Formatting
-        const toISOString = (dateInput?: string | null | Date) => {
-            if (!dateInput) return null;
-            try {
-                const date = typeof dateInput === 'string' ? new Date(dateInput.split('T')[0]) : dateInput;
-                if (isNaN(date.getTime())) return null;
-                return date.toISOString();
-            } catch {
-                return null;
-            }
-        };
-
-        // 🧪 Dynamic Payload Construction
-        const payload: Record<string, unknown> = {
-            status: data.status || 'DRAFT',
-            sq_status: (data as QuotationFormValues).sq_status || data.status || 'DRAFT',
-            remarks: data.remarks || '',
-            payment_term_days: Number(data.payment_term_days) || 0,
-            onhold: data.onhold || 'N',
-            base_currency_code: data.base_currency_code || data.currency_code || 'THB',
-            quote_currency_code: data.quote_currency_code || data.currency_code || 'THB',
-            exchange_rate: Number(data.exchange_rate ?? 1),
-            discount_expression: data.discount_expression !== undefined ? data.discount_expression : '0',
-            sq_date: toISOString(data.sq_date),
-            valid_until: toISOString(data.valid_until),
-            exchange_rate_date: toISOString(data.exchange_rate_date || data.sq_date || new Date())
-        };
-
-        // Standard IDs (Use explicit null/undefined check to allow 0)
-        if (data.customer_id !== undefined && data.customer_id !== null) payload.customer_id = Number(data.customer_id);
-        if (data.branch_id !== undefined && data.branch_id !== null) payload.branch_id = Number(data.branch_id);
-        if (data.lead_id) payload.lead_id = data.lead_id;
-        if (data.sale_area_id !== undefined && data.sale_area_id !== null) payload.sale_area_id = Number(data.sale_area_id);
-        if (data.emp_sale_id !== undefined && data.emp_sale_id !== null) payload.emp_sale_id = Number(data.emp_sale_id);
-        if (data.emp_dept_id !== undefined && data.emp_dept_id !== null) payload.emp_dept_id = Number(data.emp_dept_id);
-        if (data.project_id !== undefined && data.project_id !== null) payload.project_id = Number(data.project_id);
-        if (data.tax_code_id !== undefined && data.tax_code_id !== null) payload.tax_code_id = Number(data.tax_code_id);
-
-        // Lines
-        if (data.lines && data.lines.length > 0) {
-            payload.sq_lines = data.lines.map((line: QuotationLineData) => ({
-                sq_line_id: line.sq_line_id ? Number(line.sq_line_id) : undefined,
-                item_id: Number(line.item_id),
-                note: line.note || '',
-                qty: Number(line.qty) || 0,
-                uom_id: Number(line.uom_id),
-                unit_price: Number(line.unit_price) || 0,
-                discount_expression: line.discount_expression || '0',
-                tax_code_id: line.tax_code_id ? Number(line.tax_code_id) : undefined,
-            }));
-        }
-
-        return this.sanitizeData(payload);
-    }
-
-    /**
      * สร้าง Quotation ใหม่
      */
     static async create(data: QuotationFormValues): Promise<void> {
-        const payload = this.preparePayload(data);
+        const payload = mapQuotationFormToDTO(data);
         logger.info('🚀 [QuotationService] CREATE PAYLOAD:', payload);
 
         try {
@@ -433,7 +336,7 @@ export class QuotationService {
             finalFormValues = data as QuotationFormValues;
         }
 
-        const payload = this.preparePayload(finalFormValues);
+        const payload = mapQuotationFormToDTO(finalFormValues);
         logger.info(`🚀 [QuotationService] UPDATE (PATCH) PAYLOAD for ID ${id}:`, payload);
 
         try {
@@ -447,14 +350,11 @@ export class QuotationService {
 
     /**
      * 🏷️ ส่งใบเสนอราคาขออนุมัติ (Submit for Approval)
-     * ย้าย Logic การเตรียม Payload จาก Component มาไว้ที่ Service เพื่อความปลอดภัย (Issue #1)
      */
     static async submitForApproval(id: string | number): Promise<void> {
         logger.info(`[QuotationService] Submitting for approval: ${id}`);
-        // เราเรียกใช้ update() ซึ่งมีระบบ Hydration Guard อยู่แล้ว
         return this.update(id, { 
             status: 'PENDING',
-            sq_status: 'PENDING'
         } as Partial<QuotationFormValues>);
     }
 }

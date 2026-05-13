@@ -54,6 +54,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         setIsLeadSearchOpen,
         isProductSearchOpen,
         setIsProductSearchOpen,
+        activeLineIndex,
         setActiveLineIndex,
         // Confirmation State
         isConfirmOpen,
@@ -250,7 +251,12 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
             <ProductSearchModal 
                 isOpen={isProductSearchOpen}
                 onClose={() => setIsProductSearchOpen(false)}
-                onSelect={handleSelectProduct}
+                onSelect={(product) => {
+                    if (activeLineIndex !== null) {
+                        handleSelectProduct(activeLineIndex, product);
+                    }
+                    setIsProductSearchOpen(false);
+                }}
             />
 
             <LeadSearchModal 

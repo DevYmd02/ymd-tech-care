@@ -8,7 +8,7 @@ import {
   getInitialLines
 } from '@/modules/procurement/schemas/pr-schemas';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
-import type { VendorSelection, CreatePRPayload } from '@/modules/procurement/types/pr-types';
+import type { VendorSelection } from '@/modules/procurement/types/pr-types';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { extractErrorMessage } from '@/core/api/api';
 import { logger } from '@/shared/utils';
@@ -22,6 +22,7 @@ import { usePRActions } from './usePRActions';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { usePRHydration } from './usePRHydration';
+import { mapPRFormToPayload } from '@/modules/procurement/utils/pr-mappers';
 
 const PR_CONFIG = {
   MIN_LINES: 1,
@@ -426,219 +427,22 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     
     setIsActionLoading(true);
     try {
-        // Smart Clean-up: Only filter out rows that are 100% empty.
-        // A row with item_id filled but qty=0 is kept so backend validation can surface the error.
-        const activeLines = (data.lines || []).filter((line: PRLineFormData) => {
-          const isItemIdEmpty = !line.item_id || line.item_id === 0;
-          const isItemCodeEmpty = !line.item_code || line.item_code.trim() === '';
-          const isQtyZero = !line.qty || Number(line.qty) === 0;
-          const isPriceZero = !line.est_unit_price || Number(line.est_unit_price) === 0;
-          const isDescriptionEmpty = !line.description || line.description.trim() === '';
-          
-          // Row is 100% empty if ALL key fields are empty/zero — skip it
-          const isCompletelyEmpty = isItemIdEmpty && isItemCodeEmpty && isQtyZero && isPriceZero && isDescriptionEmpty;
-          
-          return !isCompletelyEmpty;
-        });
-
-        // Vendor-Item Mismatch Check: Warn before saving if items don't match header vendor
-        const headerVendorId = data.preferred_vendor_id;
-        if (headerVendorId) {
-          const mismatchedLines = activeLines.filter((l: PRLineFormData) => {
-            const itemVendor = l._item_vendor_id;
-            return itemVendor && itemVendor !== headerVendorId;
-          });
-          if (mismatchedLines.length > 0) {
-            const shouldContinue = await confirm({
-              title: 'ตรวจพบสินค้าไม่ตรง Vendor',
-              description: `ตรวจพบสินค้า ${mismatchedLines.length} รายการที่ไม่ได้ผูกกับผู้ขายเจ้านี้ คุณยังต้องการดำเนินการต่อหรือไม่?`,
-              confirmText: 'ยืนยัน',
-              cancelText: 'กลับไปแก้ไข',
-              variant: 'warning'
-            });
-            if (!shouldContinue) {
-              setIsActionLoading(false);
-              return;
-            }
-          }
-        }
-        
         const isOnHold = data.is_on_hold === 'Y' || data.is_on_hold === true;
-        const targetStatus = isOnHold ? 'DRAFT' : 'PENDING';
 
-        // ═══════════════════════════════════════════════════════════════════════
-        // 🔧 POSTMAN-SYNCED GOLDEN PAYLOAD — Mirrors production DB structure
-        // ═══════════════════════════════════════════════════════════════════════
-        // Aligned with the real Postman JSON response from production database.
-        //
-        // FORBIDDEN (400 "should not exist" / previously rejected):
-        //   ✗ department_id  ✗ purpose  ✗ pr_sub_total  ✗ total_amount
-        //   ✗ isMulticurrency  ✗ preparer_name  ✗ requester_name
-        //   ✗ vendor_name  ✗ delivery_date  ✗ is_on_hold  ✗ cancelflag
-        //   ✗ pr_discount_amount  ✗ pr_tax_amount  ✗ pr_tax_rate
-        //   ✗ cost_center_id  ✗ warehouse_id (header)  ✗ preferred_vendor_id
-        // ═══════════════════════════════════════════════════════════════════════
+        // 🎯 Use extracted mapper utility to construct wire-ready payload
+        const payload = mapPRFormToPayload(data, isEditMode);
 
-        // ─── VALID LINES: Filter to only lines with a real item_id & qty > 0 ─
-        const validLines = activeLines
-          .filter((line: PRLineFormData) => line.item_id && line.item_id !== 0 && Number(line.qty) > 0);
-
-        // ─── DIAGNOSTIC: Log raw data from RHF before any mapping
-        logger.debug('🧪 [usePRForm] RAW RHF DATA:', {
-          vendor_quote_no: data.vendor_quote_no,
-          preferred_vendor_id: data.preferred_vendor_id,
-          cost_center_id: data.cost_center_id,
-          purpose: data.purpose
-        });
-
-        // ═══════════════════════════════════════════════════════════════════════
-        // POSTMAN-SYNCED PAYLOAD — Every key matches the Postman golden response
-        // ═══════════════════════════════════════════════════════════════════════
-        const payload: CreatePRPayload = {
-          // ── HEADER (Aligned with Postman) ──
-          pr_date: data.pr_date,
-          need_by_date: data.need_by_date,
-          branch_id: Number(data.branch_id || 1),
-          requester_user_id: Number(data.requester_user_id || 2),
-          project_id: data.project_id ? Number(data.project_id) : 0,
-          
-          // 🎯 PRO-TIP FIX: Map cost_center_id & preferred_vendor_id with explicit casting
-          cost_center_id: data.cost_center_id ? Number(data.cost_center_id) : undefined,
-          preferred_vendor_id: data.preferred_vendor_id ? Number(data.preferred_vendor_id) : undefined,
-          
-          pr_base_currency_code: data.pr_base_currency_code || 'THB',
-          pr_quote_currency_code: data.pr_quote_currency_code || 'THB', // MUST BE THB, NOT USD
-          pr_exchange_rate: Number(Number(data.pr_exchange_rate || 1).toFixed(4)), // Enforce max 4 decimal places
-
-          pr_exchange_rate_date: data.pr_exchange_rate_date || data.pr_date,
-          pr_discount_raw: String(data.pr_discount_raw || '0'),
-          payment_term_days: data.payment_term_days != null ? Number(data.payment_term_days) : undefined,
-          credit_days: data.credit_days != null ? Number(data.credit_days) : undefined,
-          vendor_quote_no: data.vendor_quote_no || '',
-          shipping_method: data.shipping_method || '',
-          // 🎯 FIX 1: Save purpose/remark directly without infinite accumulator concatenation bug
-          remark: data.purpose || data.remark || '',
-          // 🎯 FIX 2: Explicitly inject the requester_name for backend processing
-          requester_name: data.requester_name || "",
-          pr_tax_code_id: data.pr_tax_code_id ? Number(data.pr_tax_code_id) : null,
-          version: Number(data.version) || 1,
-          
-          delivery_date: data.delivery_date || data.need_by_date || data.pr_date,
-
-          // ── STATUS (Postman: always "PENDING" or "DRAFT") ──
-          status: targetStatus,
-
-          // ── LINES (Sanitized — Postman-aligned keys only) ──
-          lines: validLines.map((line: PRLineFormData, index: number) => ({
-            pr_line_id: line.pr_line_id ? Number(line.pr_line_id) : undefined,
-            line_no: index + 1,
-            item_id: Number(line.item_id),
-            description: line.item_name || line.description || "No Description",
-            warehouse_id: Number(line.warehouse_id || 1),
-            location: line.location || "", 
-            qty: Number(line.qty),
-            est_unit_price: Number(line.est_unit_price),
-            uom_id: Number(line.uom_id),
-            required_receipt_type: line.required_receipt_type || "FULL",
-            line_discount_raw: String(line.line_discount_raw || '0'),
-            remark: line.remark || "",
-          })),
-        };
-
-        // ─── DIAGNOSTIC: Log payload after mapping but before stripping
-        logger.debug('🧪 [usePRForm] MAPPED PAYLOAD (Before Strip):', {
-          vendor_quote_no: payload.vendor_quote_no,
-          // preferred_vendor_id: payload.preferred_vendor_id,
-          cost_center_id: payload.cost_center_id,
-        });
-
-        // ═══════════════════════════════════════════════════════════════════════
-        // 🚀 WHITELIST-ONLY PAYLOAD RECONSTRUCTION (FINAL WIRE-READY)
-        // ═══════════════════════════════════════════════════════════════════════
-        // Instead of 'delete' logic which is prone to accidental stripping,
-        // we rebuild the object with ONLY what the backend explicitly expects.
-        // ═══════════════════════════════════════════════════════════════════════
-        const wirePayload: CreatePRPayload = {
-          // ── HEADER ──
-          ...(payload.pr_no && { pr_no: payload.pr_no }),
-          pr_date: payload.pr_date,
-          need_by_date: payload.need_by_date,
-          requester_user_id: payload.requester_user_id,
-          branch_id: payload.branch_id,
-          project_id: payload.project_id,
-          cost_center_id: payload.cost_center_id,
-          preferred_vendor_id: payload.preferred_vendor_id,
-          pr_tax_code_id: payload.pr_tax_code_id,
-          remark: payload.remark,
+        logger.info('🚀 [usePRForm] Submitting Payload', {
+          id,
+          isEditMode,
+          pr_no: payload.pr_no,
           status: payload.status,
-          // 🎯 FIX: Send version only when updating an existing document
-          ...(isEditMode && { version: payload.version }),
-          
-          // ── CURRENCY & TERMS ──
-          pr_base_currency_code: payload.pr_base_currency_code,
-          pr_quote_currency_code: payload.pr_quote_currency_code,
-          pr_exchange_rate: payload.pr_exchange_rate,
-          pr_exchange_rate_date: payload.pr_exchange_rate_date,
-          pr_discount_raw: payload.pr_discount_raw,
-          payment_term_days: payload.payment_term_days,
-          vendor_quote_no: payload.vendor_quote_no,
-          shipping_method: payload.shipping_method,
-          
-          // ── RE-ADDED FIELDS (As per Frontend Requirement) ──
-          credit_days: payload.credit_days,
-          delivery_date: payload.delivery_date,
-          requester_name: payload.requester_name,
-          
-          // ── LINES (Whitelist-only Re-mapping) ──
-          lines: payload.lines.map((line, index: number) => ({
-            pr_line_id: line.pr_line_id,
-            line_no: index + 1,
-            item_id: line.item_id,
-            description: line.remark ? `${line.description} (หมายเหตุ: ${line.remark})` : line.description,
-            warehouse_id: line.warehouse_id,
-            location: line.location,
-            location_id: line.location ? Number(line.location) : undefined, // Safe placeholder for future Backend validation release
-            qty: Number(Number(line.qty || 0).toFixed(4)),
-            est_unit_price: Number(Number(line.est_unit_price || 0).toFixed(4)),
-            uom_id: line.uom_id,
-            required_receipt_type: line.required_receipt_type,
-            line_discount_raw: line.line_discount_raw,
-          })),
-        };
-
-        // Use the wirePayload for the actual transmission
-        const finalPayload = wirePayload;
-
-        // ─── DIAGNOSTIC: Print Postman-synced payload before send ────────────
-        logger.debug('🔧 [usePRForm] POSTMAN-SYNCED PAYLOAD (wire-ready):', JSON.stringify(payload, null, 2));
-        logger.info('📦 [usePRForm] Outgoing Payload to PRService', {
-          field_count: Object.keys(payload).length,
-          fields_sent: Object.keys(payload),
-          pr_no: payload.pr_no || '(not sent — auto-gen)',
-          requester_user_id: `${payload.requester_user_id} (${typeof payload.requester_user_id})`,
-          branch_id: `${payload.branch_id} (${typeof payload.branch_id})`,
-          pr_tax_code_id: `${payload.pr_tax_code_id} (${typeof payload.pr_tax_code_id})`,
-          pr_base_currency_code: payload.pr_base_currency_code,
-          pr_quote_currency_code: payload.pr_quote_currency_code,
-          pr_exchange_rate: `${payload.pr_exchange_rate} (${typeof payload.pr_exchange_rate})`,
-          payment_term_days: `${payload.payment_term_days} (${typeof payload.payment_term_days})`,
-          credit_days: `${payload.credit_days} (${typeof payload.credit_days})`,
-          project_id: `${payload.project_id} (${typeof payload.project_id})`,
-          pr_discount_raw: payload.pr_discount_raw,
-          line_count: payload.lines.length,
-          lines_detail: payload.lines.map((l, idx: number) => ({
-            line_index: idx + 1,
-            item_id: `${l.item_id} (${typeof l.item_id})`,
-            qty: `${l.qty} (${typeof l.qty})`,
-            est_unit_price: `${l.est_unit_price} (${typeof l.est_unit_price})`,
-            uom_id: `${l.uom_id} (${typeof l.uom_id})`,
-            line_discount_raw: l.line_discount_raw,
-          })),
+          line_count: payload.lines.length
         });
         // ─────────────────────────────────────────────────────────────────────
         
         if (isEditMode && id) {
-            await updatePR(id, finalPayload);
+            await updatePR(id, payload);
             
             // 🎯 RESUBMISSION FIX: If status is PENDING, we must explicitly trigger the approval process
             // via the /pending endpoint. Otherwise, it might stay "Rejected" if stale AV records exist.
@@ -665,7 +469,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
             queryClient.invalidateQueries({ queryKey: ['pr', id] });
             PRService.clearAVCache(); // Final safety clear
         } else {
-            const { newPR } = await createPRMutation.mutateAsync(finalPayload);
+            const { newPR } = await createPRMutation.mutateAsync(payload);
             const displayNo = newPR.pr_no.startsWith('DRAFT-TEMP') ? 'รอรันเลข (NEW)' : newPR.pr_no;
             await confirm({
                 title: isOnHold ? 'บันทึกแบบร่างสำเร็จ!' : 'สร้างใบขอซื้อสำเร็จ!',
