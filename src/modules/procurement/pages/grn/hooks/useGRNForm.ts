@@ -56,6 +56,7 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess, readOnly =
     // 🛡️ Unsaved Changes Guard
     const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
         isDirty: isDirty && !readOnly,
+        enabled: isOpen,
         onSafeClose: onClose
     });
 

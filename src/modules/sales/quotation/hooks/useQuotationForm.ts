@@ -39,6 +39,7 @@ export const useQuotationForm = (isOpen: boolean, onClose: () => void, id?: stri
     // 🛡️ Unsaved Changes Guard
     const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
         isDirty: isDirty && !readOnly,
+        enabled: isOpen,
         onSafeClose: onClose
     });
 

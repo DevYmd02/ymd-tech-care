@@ -67,7 +67,7 @@ export const QCFormModal: React.FC<QCFormModalProps> = ({
   const { toast } = useToast();
 
   // Form Hook
-  const { methods, onSubmit, onInvalid, isSubmitting: isFormSubmitting, onClose: handleClose } = useQCForm(onSuccess, onClose, mode === 'view');
+  const { methods, onSubmit, onInvalid, isSubmitting: isFormSubmitting, onClose: handleClose } = useQCForm(isOpen, onSuccess, onClose, mode === 'view');
   const { setValue, watch } = methods;
 
   // Watch Form Values

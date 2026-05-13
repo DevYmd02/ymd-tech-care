@@ -167,6 +167,7 @@ export const useVQForm = (
   // 🛡️ Unsaved Changes Guard
   const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
     isDirty: isDirty && !isViewMode,
+    enabled: isOpen,
     onSafeClose: onClose || (() => {})
   });
 

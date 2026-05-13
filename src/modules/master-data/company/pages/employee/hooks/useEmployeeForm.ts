@@ -145,6 +145,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
     // 🛡️ Unsaved Changes Guard
     const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
         isDirty: (isEmployeeDirty || isAccountDirty) && !readOnly,
+        enabled: isOpen,
         onSafeClose: onClose
     });
 

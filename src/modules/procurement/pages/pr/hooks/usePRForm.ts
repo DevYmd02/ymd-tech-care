@@ -93,6 +93,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess, readOnly = false }: 
   // 🛡️ Unsaved Changes Guard
   const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
     isDirty: isDirty && !effectiveReadOnly,
+    enabled: isOpen,
     onSafeClose: onClose
   });
 
