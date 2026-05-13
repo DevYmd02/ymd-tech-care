@@ -134,7 +134,9 @@ const initialFormData: ItemFormData = {
     barcodes: [],
 };
 
-export function useItemForm(editId: number | null, onSuccess?: () => void) {
+import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
+
+export function useItemForm(editId: number | null, onClose: () => void, onSuccess?: () => void, readOnly: boolean = false) {
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 
@@ -147,10 +149,16 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
         getValues,
         setError,
         clearErrors,
-        formState: { errors }
+        formState: { errors, isDirty }
     } = useRHF<ItemFormData>({
         resolver: zodResolver(itemMasterSchema) as Resolver<ItemFormData>,
         defaultValues: initialFormData
+    });
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: isDirty && !readOnly,
+        onSafeClose: onClose
     });
 
     const formData = useWatch({ 
@@ -320,6 +328,7 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
                     queryClient.invalidateQueries({ queryKey: ['item-barcodes', editId] });
                 }
                 if (onSuccess) onSuccess();
+                onClose();
             } else {
                 throw new Error('บันทึกไม่สำเร็จ');
             }
@@ -379,6 +388,8 @@ export function useItemForm(editId: number | null, onSuccess?: () => void) {
         categories,
         control,
         setValue,
-        getValues
+        getValues,
+        onClose: handleCloseAttempt,
+        blocker
     };
 }

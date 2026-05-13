@@ -34,11 +34,9 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
         categories,
         control,
         setValue,
-        getValues
-    } = useItemForm(editId ?? null, () => {
-        if (onSuccess) onSuccess();
-        onClose();
-    });
+        getValues,
+        onClose: handleCloseAttempt
+    } = useItemForm(editId ?? null, onClose, onSuccess);
 
     // Fetch Master Data
     const { 
@@ -70,7 +68,7 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
     return (
         <DialogFormLayout
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleCloseAttempt}
             title={title}
             titleIcon={<Package className="w-5 h-5" />}
             width="max-w-7xl"
@@ -78,7 +76,7 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
             footer={
                 <div className="flex items-center justify-end gap-2 w-full">
                     <button 
-                        onClick={onClose} 
+                        onClick={handleCloseAttempt} 
                         className="px-4 py-2 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm font-medium"
                     >
                         ยกเลิก

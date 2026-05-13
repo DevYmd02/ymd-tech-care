@@ -22,6 +22,8 @@ import { logger } from '@/shared/utils';
 import { VendorSchema, type VendorSchemaType } from '../types/vendor-schemas';
 
 
+import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
+
 interface UseVendorFormProps {
     isOpen: boolean;
     onClose: () => void;
@@ -30,6 +32,7 @@ interface UseVendorFormProps {
     onSuccess?: () => void;
     predictedVendorId?: string;
     toast: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
+    readOnly?: boolean;
 }
 
 export function useVendorForm({ 
@@ -39,7 +42,8 @@ export function useVendorForm({
     initialData, 
     onSuccess, 
     predictedVendorId,
-    toast
+    toast,
+    readOnly = false
 }: UseVendorFormProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [headerTitle, setHeaderTitle] = useState('เพิ่มเจ้าหนี้ใหม่');
@@ -52,11 +56,17 @@ export function useVendorForm({
         handleSubmit: rhfHandleSubmit, 
         reset, 
         getValues,
-        formState: { errors, isSubmitting } 
+        formState: { errors, isSubmitting, isDirty } 
     } = useForm<VendorSchemaType>({
         resolver: zodResolver(VendorSchema) as Resolver<VendorSchemaType>,
         defaultValues: initialVendorFormData,
         mode: 'onChange' 
+    });
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: isDirty && !readOnly,
+        onSafeClose: onClose
     });
 
     const formData = useWatch({ 
@@ -572,6 +582,8 @@ export function useVendorForm({
         handleCreditLimitChange,
         handleSubmit: handleFormSubmit,
         clearForm,
+        onClose: handleCloseAttempt,
+        blocker,
         
         // Master Data
         vendorTypeOptions,
