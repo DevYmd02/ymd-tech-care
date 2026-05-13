@@ -158,6 +158,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     // 🛡️ Unsaved Changes Guard
     const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
         isDirty: isDirty && !readOnly,
+        enabled: isOpen,
         onSafeClose: onClose
     });
 

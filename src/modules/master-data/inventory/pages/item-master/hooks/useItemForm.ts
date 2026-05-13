@@ -136,7 +136,7 @@ const initialFormData: ItemFormData = {
 
 import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
 
-export function useItemForm(editId: number | null, onClose: () => void, onSuccess?: () => void, readOnly: boolean = false) {
+export function useItemForm(editId: number | null, isOpen: boolean, onClose: () => void, onSuccess?: () => void, readOnly: boolean = false) {
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 
@@ -158,6 +158,7 @@ export function useItemForm(editId: number | null, onClose: () => void, onSucces
     // 🛡️ Unsaved Changes Guard
     const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
         isDirty: isDirty && !readOnly,
+        enabled: isOpen,
         onSafeClose: onClose
     });
 

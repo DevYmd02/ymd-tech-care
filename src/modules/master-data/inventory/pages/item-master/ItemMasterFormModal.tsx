@@ -36,7 +36,7 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
         setValue,
         getValues,
         onClose: handleCloseAttempt
-    } = useItemForm(editId ?? null, onClose, onSuccess);
+    } = useItemForm(editId ?? null, isOpen, onClose, onSuccess);
 
     // Fetch Master Data
     const { 

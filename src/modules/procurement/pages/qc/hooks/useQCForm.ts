@@ -9,7 +9,7 @@ import { logger } from '@/shared/utils';
 import { extractErrorMessage } from '@/core/api/api';
 import { CreateQCSchema, type CreateQCFormValues, type CreateQCPayload } from '@/modules/procurement/schemas/qc-schemas';
 
-export const useQCForm = (onSuccess?: () => void, onClose?: () => void, readOnly: boolean = false) => {
+export const useQCForm = (isOpen: boolean, onSuccess?: () => void, onClose?: () => void, readOnly: boolean = false) => {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -31,6 +31,7 @@ export const useQCForm = (onSuccess?: () => void, onClose?: () => void, readOnly
   // 🛡️ Unsaved Changes Guard
   const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
     isDirty: isDirty && !readOnly,
+    enabled: isOpen,
     onSafeClose: onClose || (() => {})
   });
 

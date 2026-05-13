@@ -155,6 +155,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     // 🛡️ Unsaved Changes Guard
     const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
         isDirty: isDirty && !readOnly,
+        enabled: isOpen,
         onSafeClose: onClose || (() => {})
     });
 

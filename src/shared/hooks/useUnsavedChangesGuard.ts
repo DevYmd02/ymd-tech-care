@@ -15,23 +15,25 @@ import { useConfirmation } from '@/shared/hooks/useConfirmation';
 interface UseUnsavedChangesGuardProps {
     isDirty: boolean;
     onSafeClose: () => void;
+    enabled?: boolean;
     message?: string;
 }
 
 export const useUnsavedChangesGuard = ({
     isDirty,
     onSafeClose,
+    enabled = true,
     message = 'คุณมีข้อมูลที่ยังไม่ได้บันทึก ต้องการออกจากหน้านี้โดยไม่บันทึกใช่หรือไม่?'
 }: UseUnsavedChangesGuardProps) => {
     
+    const shouldGuard = isDirty && enabled;
+
     // 🌐 1. Browser-level Guard (onbeforeunload)
     // This triggers when the user refreshes or closes the tab.
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (isDirty) {
+            if (shouldGuard) {
                 e.preventDefault();
-                // Modern browsers require setting returnValue to a string, 
-                // though most display their own generic message.
                 e.returnValue = message; 
                 return message;
             }
@@ -39,7 +41,7 @@ export const useUnsavedChangesGuard = ({
 
         window.addEventListener('beforeunload', handleBeforeUnload);
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [isDirty, message]);
+    }, [shouldGuard, message]);
 
     // 🚀 2. React Router Guard (useBlocker)
     // NOTE: This is currently disabled because the app uses <BrowserRouter>.
@@ -56,7 +58,7 @@ export const useUnsavedChangesGuard = ({
     // 🖱️ 3. Manual Close Handler
     // Use this for the "Close" button in your modals.
     const handleCloseAttempt = useCallback(async () => {
-        if (!isDirty) {
+        if (!shouldGuard) {
             onSafeClose();
             return;
         }
@@ -72,7 +74,7 @@ export const useUnsavedChangesGuard = ({
         if (confirmed) {
             onSafeClose();
         }
-    }, [isDirty, onSafeClose, message, confirm]);
+    }, [shouldGuard, onSafeClose, message, confirm]);
 
     return {
         blocker: null, // Return null to avoid breaking components that destructure it
