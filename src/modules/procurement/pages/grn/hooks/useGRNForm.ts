@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';
@@ -12,16 +12,17 @@ import { useWarehouses, useDepartments, useCurrencies, useEmployees } from '@mas
 import type { CreateGRNPayload } from '../../../types/grn-types';
 import type { POLine } from '../../../types/po-types';
 import { calculateLineTotal } from '@/modules/procurement/utils/pricing.utils';
-import type { Resolver } from 'react-hook-form';
+import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
 
 interface UseGRNFormProps {
     isOpen: boolean;
     initialPOId?: number;
     onClose: () => void;
     onSuccess?: () => void;
+    readOnly?: boolean;
 }
 
-export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess }: UseGRNFormProps) {
+export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess, readOnly = false }: UseGRNFormProps) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -50,7 +51,14 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess }: UseGRNFo
         },
     });
 
-    const { control, reset, setValue } = methods;
+    const { control, reset, setValue, formState: { isDirty } } = methods;
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: isDirty && !readOnly,
+        onSafeClose: onClose
+    });
+
     const { fields, replace, remove, append } = useFieldArray({
         control,
         name: 'items',
@@ -100,24 +108,24 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess }: UseGRNFo
             // Financial Defaults
             const poCurrencyCode = poDetail.quote_currency_code || poDetail.currency_code || 'THB';
             if (poCurrencyCode !== 'THB') {
-                setValue('isMulticurrency', true);
-                setValue('curr_type_code', poCurrencyCode);
-                setValue('exchange_rate', poDetail.exchange_rate || 1);
-                setValue('rate_date', (poDetail as unknown as Record<string, unknown>).exchange_rate_date as string || new Date().toISOString().split('T')[0]);
+                setValue('isMulticurrency', true, { shouldDirty: false });
+                setValue('curr_type_code', poCurrencyCode, { shouldDirty: false });
+                setValue('exchange_rate', poDetail.exchange_rate || 1, { shouldDirty: false });
+                setValue('rate_date', ((poDetail as unknown as Record<string, unknown>).exchange_rate_date as string || new Date().toISOString().split('T')[0]), { shouldDirty: false });
                 
                 const matchedCurr = currencies.find(c => (c.currency_code || (c as unknown as Record<string, unknown>).code) === poCurrencyCode);
-                if (matchedCurr) setValue('curr_id', String(matchedCurr.currency_id || matchedCurr.id));
+                if (matchedCurr) setValue('curr_id', String(matchedCurr.currency_id || matchedCurr.id), { shouldDirty: false });
             } else {
-                setValue('isMulticurrency', false);
-                setValue('curr_type_code', 'THB');
-                setValue('exchange_rate', 1);
+                setValue('isMulticurrency', false, { shouldDirty: false });
+                setValue('curr_type_code', 'THB', { shouldDirty: false });
+                setValue('exchange_rate', 1, { shouldDirty: false });
                 const thb = currencies.find(c => (c.currency_code || (c as unknown as Record<string, unknown>).code) === 'THB');
-                if (thb) setValue('curr_id', String(thb.currency_id || thb.id));
+                if (thb) setValue('curr_id', String(thb.currency_id || thb.id), { shouldDirty: false });
             }
 
             // Defaults for Header
             if (poDetail.ship_to_warehouse_id) {
-                setValue('warehouse_id', poDetail.ship_to_warehouse_id);
+                setValue('warehouse_id', poDetail.ship_to_warehouse_id, { shouldDirty: false });
             }
         }
     }, [poDetail, replace, setValue, currencies]);
@@ -197,5 +205,7 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess }: UseGRNFo
         onFormSubmit,
         append,
         remove,
+        onClose: handleCloseAttempt,
+        blocker
     };
 }

@@ -17,6 +17,7 @@ import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { logger } from '@/shared/utils';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard';
 
 
 // ====================================================================================
@@ -42,6 +43,7 @@ export const usePOForm = ({
     onSuccess,
     poId,
     initialValues,
+    isViewMode = false,
 }: UsePOFormOptions) => {
     const { toast } = useToast();
     const { user } = useAuth();
@@ -107,7 +109,7 @@ export const usePOForm = ({
         setValue,
         getValues,
         trigger,
-        formState: { errors },
+        formState: { errors, isDirty },
     } = formMethods;
 
     const { fields, append, remove, replace, update } = useFieldArray({ control, name: 'po_lines' });
@@ -175,9 +177,15 @@ export const usePOForm = ({
     // ── Default Currency Sync ─────────────────────────────────────────────
     useEffect(() => {
         if (!isOpen || poId || isHydrating) return;
-        if (!getValues('currency_code')) setValue('currency_code', 'THB');
-        if (!getValues('target_currency')) setValue('target_currency', 'THB');
+        if (!getValues('currency_code')) setValue('currency_code', 'THB', { shouldDirty: false });
+        if (!getValues('target_currency')) setValue('target_currency', 'THB', { shouldDirty: false });
     }, [isOpen, poId, isHydrating, setValue, getValues]);
+    
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: isDirty && !isViewMode,
+        onSafeClose: onClose
+    });
 
 
     // 🎯 INITIAL FORM HYDRATION / RESET
@@ -404,6 +412,12 @@ export const usePOForm = ({
 
     const onInvalidSubmit = (errors: FieldErrors<POFormData>) => {
         logger.error("Form Validation Errors:", errors);
+        
+        const errorCount = Object.keys(errors).length;
+        if (errorCount > 0) {
+            toast(`พบข้อผิดพลาด ${errorCount} จุด กรุณาตรวจสอบข้อมูลให้ครบถ้วน`, 'error');
+        }
+
         const firstErrorKey = Object.keys(errors)[0] as keyof POFormData;
         if (firstErrorKey) {
             const errorElement = document.getElementsByName(firstErrorKey)[0] || 
@@ -445,7 +459,9 @@ export const usePOForm = ({
         handleSelectQC,
         handleSelectItemMaster,
         handleAddLine,
-        onClose,
+        onClose: handleCloseAttempt, // Override with guarded version
+        blocker, // Expose for Router blocking if needed
+        isDirty,
         existingPO,
         isInherited: !!(getValues('rfq_id') || getValues('winning_vq_id'))
     };

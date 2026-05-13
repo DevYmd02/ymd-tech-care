@@ -23,6 +23,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { usePRHydration } from './usePRHydration';
 import { mapPRFormToPayload } from '@/modules/procurement/utils/pr-mappers';
+import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
 
 const PR_CONFIG = {
   MIN_LINES: 1,
@@ -36,9 +37,10 @@ export interface UsePRFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  readOnly?: boolean;
 }
 
-export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) => {
+export const usePRForm = ({ id, isOpen, onClose, onSuccess, readOnly = false }: UsePRFormProps) => {
   const isEditMode = !!id;
   const { user } = useAuth();
   const prevIsOpenRef = useRef(false);
@@ -83,7 +85,16 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     resolver: zodResolver(PRFormSchema) as Resolver<PRFormData>,
     mode: 'onBlur',
   });
-  const { handleSubmit, setValue, reset, watch, control, getFieldState, formState: { isSubmitting, errors } } = formMethods;
+  const { handleSubmit, setValue, reset, watch, control, getFieldState, formState: { isSubmitting, errors, isDirty } } = formMethods;
+
+  const currentStatus = watch('status');
+  const effectiveReadOnly = readOnly || (!!id && currentStatus !== undefined && !['DRAFT', 'PENDING', 'REJECTED'].includes(currentStatus));
+
+  // 🛡️ Unsaved Changes Guard
+  const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+    isDirty: isDirty && !effectiveReadOnly,
+    onSafeClose: onClose
+  });
 
 
   // 🎯 FIX: Sync requester_name from Auth User if it's currently empty (New PR)
@@ -92,8 +103,8 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     if (user && !currentRequester && !id) {
       const name = user?.employee?.employee_fullname || user?.username || '';
       if (name) {
-        setValue('requester_name', name, { shouldValidate: true });
-        setValue('requester_user_id', Number(user.id));
+        setValue('requester_name', name, { shouldValidate: true, shouldDirty: false });
+        setValue('requester_user_id', Number(user.id), { shouldDirty: false });
       }
     }
   }, [user, setValue, watch, id]);
@@ -212,7 +223,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     const isTargetChanged = prevCurrencyTypeId.current !== targetCurrencyCode;
 
     if (isSourceChanged && (targetCurrencyCode === prevCurrencyId.current || !targetCurrencyCode)) {
-      setValue('pr_quote_currency_code', 'THB');
+      setValue('pr_quote_currency_code', 'THB', { shouldDirty: false });
     }
 
     const { isDirty } = getFieldState('pr_exchange_rate');
@@ -245,9 +256,9 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
       
       // Only reset if needed to avoid infinite loops
       if (currentBase !== 'THB' || currentRate !== 1) {
-        setValue('pr_base_currency_code', 'THB');
-        setValue('pr_quote_currency_code', 'THB');
-        setValue('pr_exchange_rate', 1);
+        setValue('pr_base_currency_code', 'THB', { shouldDirty: false });
+        setValue('pr_quote_currency_code', 'THB', { shouldDirty: false });
+        setValue('pr_exchange_rate', 1, { shouldDirty: false });
       }
     }
   }, [isMulticurrency, setValue, formMethods]);
@@ -404,7 +415,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
    useEffect(() => {
       if (isMasterDataLoading || !user?.employee?.branch_id || warehouses.length === 0) return;
        const branchWarehouse = warehouses.find((w: MappedOption<WarehouseListItem>) => String(w.original?.branch_id) === String(user.employee.branch_id));
-       if (branchWarehouse) setValue('warehouse_id', Number(branchWarehouse.value));
+       if (branchWarehouse) setValue('warehouse_id', Number(branchWarehouse.value), { shouldDirty: false });
    }, [isMasterDataLoading, user?.employee?.branch_id, warehouses, setValue]);
 
    const handleVendorSelect = (vendor: VendorSelection | null) => {
@@ -579,6 +590,9 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess }: UsePRFormProps) =>
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleDelete,
     handleVoid, control, reset, formMethods, user,
+    onClose: handleCloseAttempt,
+    blocker,
+    readOnly: effectiveReadOnly,
     isLoading: isMasterDataLoading || isPRLoading // Only data loading, excluding isActionLoading to prevent UI overlap
   };
 };

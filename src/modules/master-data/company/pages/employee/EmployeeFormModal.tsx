@@ -74,22 +74,23 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
         setCreatedEmployee,
         initialData,
         resetAll,
-    } = useEmployeeForm(editId ?? null, isOpen, onSuccess);
+        onClose: handleCloseAttempt
+    } = useEmployeeForm(editId ?? null, isOpen, handleClose, onSuccess);
 
     const { register: registerAccount, formState: { errors: accountErrors } } = accountForm;
 
-    const handleClose = () => {
+    function handleClose() {
         onClose();
         // Reset after closing to avoid UI lag
         setTimeout(() => {
             resetAll();
         }, 300);
-    };
+    }
 
     return (
         <DialogFormLayout
             isOpen={isOpen}
-            onClose={handleClose}
+            onClose={handleCloseAttempt}
             title={
                 step === 1 ? (isEdit ? 'แก้ไขข้อมูลพนักงาน' : 'เพิ่มพนักงานใหม่') : 
                 step === 2 ? (isEdit ? 'แก้ไขบัญชีผู้ใช้' : 'กำหนดบัญชีผู้ใช้') : 
@@ -131,7 +132,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                             <div className="flex gap-3">
                                 <button
                                     type="button"
-                                    onClick={handleClose}
+                                    onClick={handleCloseAttempt}
                                     className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                                 >
                                     ยกเลิก

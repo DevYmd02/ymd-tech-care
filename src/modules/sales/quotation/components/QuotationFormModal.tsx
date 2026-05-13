@@ -73,7 +73,9 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         loadingPriceLines,
         isLoadingDetail,
         priceLevelNames,
-    } = useQuotationForm(isOpen, id, initialData);
+        onInvalidSubmit,
+        onClose: handleClose,
+    } = useQuotationForm(isOpen, onClose, id, initialData, readOnly);
 
     const { setValue, watch } = methods;
 
@@ -135,7 +137,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
             <div className="flex gap-2">
                 <button 
                     type="button" 
-                    onClick={onClose}
+                    onClick={handleClose}
                     disabled={isSubmitting}
                     className="h-10 px-6 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
                 >
@@ -162,7 +164,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
     return (
         <WindowFormLayout
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             title={readOnly ? 'รายละเอียดใบเสนอราคา (VIEW Sales Quotation)' : (isEdit ? 'แก้ไขใบเสนอราคา (EDIT Sales Quotation)' : 'สร้างใบเสนอราคาใหม่ (CREATE Sales Quotation)')}
             headerColor={readOnly ? 'bg-slate-600' : 'bg-blue-600'}
             footer={ModalFooter}
@@ -177,7 +179,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                     <SalesFormSkeleton />
                 ) : (
                     <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
-                        <form id="quotation-form" onSubmit={handleSubmit(onFormSubmit)} className="max-w-[1400px] mx-auto space-y-6">
+                        <form id="quotation-form" onSubmit={handleSubmit(onFormSubmit, onInvalidSubmit)} className="max-w-[1400px] mx-auto space-y-6">
                             
                             {/* 1. Header Section */}
                             <div className={cardClass}>

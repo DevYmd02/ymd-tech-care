@@ -20,7 +20,6 @@ interface CustomerFormModalProps {
 export function CustomerFormModal(props: CustomerFormModalProps) {
     const { 
         isOpen, 
-        onClose, 
         id, 
         initialData
     } = props;
@@ -33,6 +32,7 @@ export function CustomerFormModal(props: CustomerFormModalProps) {
         addressFields,
         addAddress,
         removeAddress,
+        onClose: handleClose
     } = useCustomerForm({ ...props, id });
 
     const { register, formState: { isSubmitting } } = methods;
@@ -57,7 +57,7 @@ export function CustomerFormModal(props: CustomerFormModalProps) {
             <div className="flex gap-3">
                 <button 
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     className={styles.btnSecondary}
                 >
                     ยกเลิก
@@ -79,7 +79,7 @@ export function CustomerFormModal(props: CustomerFormModalProps) {
     return (
         <DialogFormLayout
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             title={headerTitle}
             subtitle="กรอกข้อมูลลูกค้า/ลูกหนี้"
             footer={FormFooter}

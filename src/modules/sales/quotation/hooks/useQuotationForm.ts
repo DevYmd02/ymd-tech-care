@@ -9,8 +9,12 @@ import { useQuotationMasterData } from './useQuotationMasterData';
 import { useQuotationCalculations } from './useQuotationCalculations';
 import { useQuotationHydration } from './useQuotationHydration';
 import { useQuotationActions } from './useQuotationActions';
+import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { logger } from '@/shared/utils';
+import type { FieldErrors } from 'react-hook-form';
 
-export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: QuotationHeader) => {
+export const useQuotationForm = (isOpen: boolean, onClose: () => void, id?: string, initialData?: QuotationHeader, readOnly = false) => {
     const isEdit = !!id;
     const [isSubmitting, setIsSubmitting] = useState(false);
     
@@ -20,7 +24,6 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     // 🛡️ Confirmation State (Required by QuotationFormModal)
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [pendingData, setPendingData] = useState<QuotationFormValues | null>(null);
-
     // React Hook Form Setup
     const methods = useForm<QuotationFormValues>({
         resolver: zodResolver(QuotationFormSchema) as Resolver<QuotationFormValues>,
@@ -29,7 +32,15 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
     });
 
     const { setValue, reset, control, getValues, handleSubmit } = methods;
-    const { isDirty } = methods.formState;
+    const { isDirty, errors } = methods.formState;
+
+    const { toast } = useToast();
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: isDirty && !readOnly,
+        onSafeClose: onClose
+    });
 
     // 1. Master Data Fetching
     const masterData = useQuotationMasterData(isOpen);
@@ -91,6 +102,25 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         currency_code, base_currency_code, tax_code_id: tax_code_watched_id
     };
 
+    const onInvalidSubmit = (errors: FieldErrors<QuotationFormValues>) => {
+        logger.error("Quotation Validation Errors:", errors);
+        
+        const errorCount = Object.keys(errors).length;
+        if (errorCount > 0) {
+            toast(`พบข้อผิดพลาด ${errorCount} จุด กรุณาตรวจสอบข้อมูลให้ครบถ้วน`, 'error');
+        }
+
+        const firstErrorKey = Object.keys(errors)[0] as keyof QuotationFormValues;
+        if (firstErrorKey) {
+            const errorElement = document.getElementsByName(firstErrorKey)[0] || 
+                                document.querySelector(`[name="${firstErrorKey}"]`);
+            if (errorElement) {
+                errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (errorElement instanceof HTMLElement && 'focus' in errorElement) errorElement.focus();
+            }
+        }
+    };
+
     return {
         // Core
         isEdit,
@@ -123,6 +153,11 @@ export const useQuotationForm = (isOpen: boolean, id?: string, initialData?: Quo
         
         // Handlers
         ...actions,
+        onInvalidSubmit,
+        onClose: handleCloseAttempt,
+        blocker,
+        isDirty,
+        errors,
         handleSelectLead: () => { /* Lead selection not fully implemented in previous version */ },
         isLoadingDetail: !masterData.isMasterDataReady, // Simplified loader check
     };

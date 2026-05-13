@@ -13,6 +13,7 @@ import type { Resolver } from 'react-hook-form';
 import { PRService } from '@/modules/procurement/services/pr.service';
 import { RFQService, type RFQCreateDTO, type RFQLineDTO } from '@/modules/procurement/services/rfq.service';
 import { logger } from '@/shared/utils';
+import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { useQuery } from '@tanstack/react-query';
 import { 
@@ -120,7 +121,7 @@ export const mapPRToRFQFormData = (
     };
 };
 
-export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRHeader | null, onSuccess?: () => void, editId?: number | null) => {
+export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRHeader | null, onSuccess?: () => void, editId?: number | null, readOnly: boolean = false) => {
     const { user } = useAuth();
     const { toast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
@@ -152,7 +153,13 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         mode: 'onBlur',
     });
 
-    const { control, handleSubmit, reset, setValue, getValues, formState: { errors } } = methods;
+    const { control, handleSubmit, reset, setValue, getValues, formState: { errors, isDirty } } = methods;
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: isDirty && !readOnly,
+        onSafeClose: onClose
+    });
 
     const { fields: lineFields, append: appendLine, remove: removeLine } = useFieldArray({
         control,
@@ -197,7 +204,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         const calculatedRate = fromRate / toRate;
         
         if (calculatedRate !== undefined && !isNaN(calculatedRate)) {
-            setValue('rfq_exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true });
+            setValue('rfq_exchange_rate', Number(calculatedRate.toFixed(6)), { shouldValidate: true, shouldDirty: false });
         }
     }, [currencies, sourceCurrency, targetCurrency, setValue]);
 
@@ -369,7 +376,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     if (match) {
                         const foundNo = String(match.approval_no || match.approved_pr_no || '');
                         logger.info(`✅ [useRFQForm] Restored AV No: ${foundNo}`);
-                        setValue('approved_pr_no', foundNo, { shouldValidate: true });
+                        setValue('approved_pr_no', foundNo, { shouldValidate: true, shouldDirty: false });
                     }
                 }
             } catch (err) {
@@ -1092,5 +1099,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
         cancelVendorIndex,
         setCancelVendorIndex,
         handleCancelVendor,
+        onClose: handleCloseAttempt,
+        blocker
     };
 };

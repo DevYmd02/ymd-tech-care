@@ -139,6 +139,9 @@ export function SalesOrderFormModal({
         handleSelectCustomer,
         handleSelectProduct,
         handleSelectReservation,
+        handleSubmit,
+        onInvalidSubmit,
+        onClose: handleClose,
     } = useSalesOrderForm({
         isOpen,
         id,
@@ -146,6 +149,8 @@ export function SalesOrderFormModal({
         currencies: (currencies || []) as Currency[],
         taxCodes: (taxCodes || []) as TaxCode[],
         uoms: (uoms || []) as UnitListItem[],
+        onClose,
+        readOnly: isViewOnly,
     });
 
     const { watch } = methods;
@@ -156,7 +161,6 @@ export function SalesOrderFormModal({
     };
 
     const { confirm } = useConfirmation();
-    const { handleSubmit } = methods;
 
     // --------------------------------------------------------
     // Form Submit
@@ -208,10 +212,7 @@ export function SalesOrderFormModal({
         });
 
         if (isConfirmed) {
-            handleSubmit(onFormSubmit, (errors) => {
-                logger.error('Form validation failed:', errors);
-                toast('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน', 'error');
-            })();
+            handleSubmit(onFormSubmit, onInvalidSubmit)();
         }
     };
 
@@ -234,7 +235,7 @@ export function SalesOrderFormModal({
             <div className="flex gap-2">
                 <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     disabled={isSubmitting}
                     className="h-10 px-6 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
                 >
@@ -268,7 +269,7 @@ export function SalesOrderFormModal({
     return (
         <WindowFormLayout
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             title={
                 isViewOnly 
                     ? 'รายละเอียดใบสั่งขาย (Sales Order)'
@@ -291,7 +292,7 @@ export function SalesOrderFormModal({
                     <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
                         <form
                             id="so-form"
-                            onSubmit={handleSubmit(onFormSubmit)}
+                            onSubmit={handleSubmit(onFormSubmit, onInvalidSubmit)}
                             className={`max-w-[1400px] mx-auto space-y-6 ${effectiveIsViewOnly ? 'opacity-90' : ''}`}
                         >
                             {/* 1. Header */}

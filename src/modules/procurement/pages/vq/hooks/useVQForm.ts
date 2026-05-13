@@ -16,6 +16,7 @@ const formatDateForInputHelper = (dateStr: string | Date | null | undefined): st
   return d.toISOString().split('T')[0];
 };
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
+import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import type { VQListItem, VQStatus, QuotationLine, QuotationHeader, VQPendingQueueItem } from '@/modules/procurement/types/vq-types';
 import { useVQMasterData } from './useVQMasterData';
@@ -161,7 +162,14 @@ export const useVQForm = (
     }
   });
 
-  const { control, reset, handleSubmit, setValue, getValues, trigger } = formMethods;
+  const { control, reset, handleSubmit, setValue, getValues, trigger, formState: { isDirty } } = formMethods;
+
+  // 🛡️ Unsaved Changes Guard
+  const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+    isDirty: isDirty && !isViewMode,
+    onSafeClose: onClose || (() => {})
+  });
+
   const { fields, append, remove, replace, insert } = useFieldArray({
     control,
     name: 'vq_lines'
@@ -216,10 +224,10 @@ export const useVQForm = (
     
     if (!isMulticurrency) {
       if (getValues('currency') !== 'THB' || getValues('exchange_rate') !== 1) {
-        setValue('currency', 'THB');
-        setValue('exchange_rate', 1);
-        setValue('target_currency', 'THB');
-        setValue('exchange_rate_date', '');
+        setValue('currency', 'THB', { shouldDirty: false });
+        setValue('exchange_rate', 1, { shouldDirty: false });
+        setValue('target_currency', 'THB', { shouldDirty: false });
+        setValue('exchange_rate_date', '', { shouldDirty: false });
       }
     }
   }, [isMulticurrency, setValue, getValues, formMethods]);
@@ -227,7 +235,7 @@ export const useVQForm = (
   // If currency is THB, exchange rate MUST be 1
   useEffect(() => {
     if (watchCurrency === 'THB' && getValues('exchange_rate') !== 1) {
-      setValue('exchange_rate', 1);
+      setValue('exchange_rate', 1, { shouldDirty: false });
     }
   }, [watchCurrency, setValue, getValues]);
 
@@ -478,14 +486,14 @@ export const useVQForm = (
             if (hydratedData.vendor_id && !hydratedData.vendor_name) {
                 VendorService.getById(hydratedData.vendor_id).then(v => {
                     if (v) {
-                        setValue('vendor_code', v.vendor_code);
-                        setValue('vendor_name', v.vendor_name);
+                        setValue('vendor_code', v.vendor_code, { shouldDirty: false });
+                        setValue('vendor_name', v.vendor_name, { shouldDirty: false });
                     }
                 });
             }
             if (hydratedData.rfq_id && !hydratedData.rfq_no) {
                 RFQService.getById(hydratedData.rfq_id).then(r => {
-                    if (r) setValue('rfq_no', r.rfq_no);
+                    if (r) setValue('rfq_no', r.rfq_no, { shouldDirty: false });
                 });
             }
 
@@ -1131,6 +1139,8 @@ export const useVQForm = (
     isMasterLoading,
     vqStatus,
     isDataLoading,
-    handleFormError
+    handleFormError,
+    onClose: handleCloseAttempt,
+    blocker
   };
 };

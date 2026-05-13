@@ -39,8 +39,9 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
     isDataLoading,
     availableVendors,
     handleSelectRFQVendor,
-    fields, append, remove, insert
-  } = useVQForm(isOpen, onClose, initialRFQ, onSuccess, vqId);
+    fields, append, remove, insert,
+    onClose: handleClose
+  } = useVQForm(isOpen, onClose, initialRFQ, onSuccess, vqId, isViewMode);
 
   const {
     register,
@@ -147,13 +148,13 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
     <FormProvider {...formMethods}>
       <WindowFormLayout
         isOpen={isOpen}
-        onClose={onClose}
+        onClose={handleClose}
         title={modalTitle}
         titleIcon={<div className="bg-white/20 p-1 rounded-md shadow-sm"><HeaderIcon size={14} strokeWidth={3} className="text-white" /></div>}
         headerColor="bg-indigo-600"
         footer={
           <div className="border-t border-gray-200 dark:border-gray-700 p-4 flex justify-end items-center bg-slate-100 dark:bg-gray-900 sticky bottom-0 z-10 gap-x-2">
-              <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors">
+              <button type="button" onClick={handleClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md text-sm font-medium transition-colors">
                   {forceViewMode ? 'ปิด' : 'ยกเลิก'}
               </button>
               {!forceViewMode && (

@@ -22,12 +22,15 @@ import {
 } from '@customer/customer-master/types/customer-types';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 
+import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
+
 interface UseCustomerFormProps {
     isOpen: boolean;
     onClose: () => void;
     id?: number;
     initialData?: CustomerMaster | null;
     onSuccess?: () => void;
+    readOnly?: boolean;
 }
 
 export interface UseCustomerFormReturn {
@@ -38,6 +41,8 @@ export interface UseCustomerFormReturn {
     addAddress: () => void;
     removeAddress: (index: number) => void;
     isLoading: boolean;
+    onClose: () => void;
+    blocker: null;
 }
 
 export function useCustomerForm({ 
@@ -45,7 +50,8 @@ export function useCustomerForm({
     onClose, 
     id, 
     initialData, 
-    onSuccess 
+    onSuccess,
+    readOnly = false
 }: UseCustomerFormProps): UseCustomerFormReturn {
     const queryClient = useQueryClient();
     
@@ -58,8 +64,14 @@ export function useCustomerForm({
         control,
         reset,
         setValue,
-        formState: { isLoading: isFormLoading },
+        formState: { isLoading: isFormLoading, isDirty },
     } = methods;
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: isDirty && !readOnly,
+        onSafeClose: onClose
+    });
 
     const { fields: addressFields, append: appendAddress, remove: removeAddress } = useFieldArray({
         control,
@@ -229,7 +241,9 @@ export function useCustomerForm({
         removeAddress: (index: number) => {
             if (index > 1) removeAddress(index);
         },
-        isLoading: isFormLoading || isFetching
+        isLoading: isFormLoading || isFetching,
+        onClose: handleCloseAttempt,
+        blocker
     };
 }
 

@@ -108,13 +108,20 @@ export const initialEmployeeData: EmployeeFormData = {
     ],
 };
 
-export function useEmployeeForm(editId: number | null, isOpen: boolean, onSuccess?: () => void) {
+import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
+
+export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose: () => void, onSuccess?: () => void, readOnly: boolean = false) {
     const queryClient = useQueryClient();
     const { toast } = useToast();
     const isEdit = !!editId;
 
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [createdEmployee, setCreatedEmployee] = useState<EmployeeMaster | null>(null);
+
+    const methods = useForm<EmployeeFormData>({
+        resolver: zodResolver(employeeSchema) as unknown as Resolver<EmployeeFormData>,
+        defaultValues: initialEmployeeData,
+    });
 
     const {
         register,
@@ -124,16 +131,21 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         control,
         setError,
         clearErrors,
-        formState: { errors }
-    } = useForm<EmployeeFormData>({
-        resolver: zodResolver(employeeSchema) as unknown as Resolver<EmployeeFormData>,
-        defaultValues: initialEmployeeData,
-    });
+        formState: { errors, isDirty: isEmployeeDirty }
+    } = methods;
 
     // --- Second Form for Account ---
     const accountForm = useForm<UserAccountFormData>({
         resolver: zodResolver(userAccountSchema),
         defaultValues: { username: '', password: '', confirmPassword: '' }
+    });
+
+    const { isDirty: isAccountDirty } = accountForm.formState;
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: (isEmployeeDirty || isAccountDirty) && !readOnly,
+        onSafeClose: onClose
     });
 
     const { fields: addressFields, append: appendAddress, remove: removeAddress } = useFieldArray({
@@ -407,6 +419,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
             }
             toast('ตั้งค่าบัญชีผู้ใช้สำเร็จ', 'success');
             if (onSuccess) onSuccess();
+            onClose();
         },
         onError: (error: Error & { response?: { data?: { message?: string } } }) => {
             logger.error('Error creating account:', error);
@@ -496,6 +509,8 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onSucces
         control,
         setStep,
         setCreatedEmployee,
-        initialData
+        initialData,
+        onClose: handleCloseAttempt,
+        blocker
     };
 }

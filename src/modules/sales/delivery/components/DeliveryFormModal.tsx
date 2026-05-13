@@ -95,6 +95,15 @@ export function DeliveryFormModal({
     // --------------------------------------------------------
     // Form Hook
     // --------------------------------------------------------
+    const deliveryForm = useDeliveryForm({
+        isOpen,
+        id,
+        initialData: (deliveryDetail || undefined) as Partial<DeliveryFormValues>,
+        uoms,
+        onClose,
+        readOnly: isViewOnly,
+    });
+
     const {
         methods,
         lines,
@@ -104,12 +113,8 @@ export function DeliveryFormModal({
         handleSelectProduct,
         handleSelectSalesOrder,
         handleSelectEmployee,
-    } = useDeliveryForm({
-        isOpen,
-        id,
-        initialData: (deliveryDetail || undefined) as Partial<DeliveryFormValues>,
-        uoms,
-    });
+        onClose: handleClose
+    } = deliveryForm;
 
     const { watch } = methods;
 
@@ -186,7 +191,7 @@ export function DeliveryFormModal({
             <div className="flex gap-2">
                 <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     disabled={isSubmitting}
                     className="h-10 px-6 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
                 >
@@ -213,7 +218,7 @@ export function DeliveryFormModal({
     return (
         <WindowFormLayout
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             title={
                 isViewOnly
                     ? 'รายละเอียดรายการจัดส่งสินค้า (Delivery Order)'
