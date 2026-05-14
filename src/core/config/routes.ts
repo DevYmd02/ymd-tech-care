@@ -92,6 +92,7 @@ export const ROUTES = {
     PRICE_LEVEL: '/master-data/price-level',
     PRICE_LIST: '/master-data/price-list',
     IC_OPTION: '/master-data/ic-option',
+    IC_DOCUMENT_LINK: '/master-data/ic-document-link',
   },
     SALES: {
     DASHBOARD: '/sales/dashboard',
@@ -103,6 +104,22 @@ export const ROUTES = {
     ORDER: '/sales/order',
     ORDER_APPROVAL: '/sales/order-approval',
     DELIVERY: '/sales/delivery',
+  },
+  INVENTORY: {
+    DASHBOARD: '/inventory/dashboard',
+    REQUISITION: '/inventory/requisition',
+    REQUISITION_APPROVAL: '/inventory/requisition-approval',
+    ISSUE: '/inventory/issue',
+    RETURN: '/inventory/return',
+    ITEM_MASTER: '/inventory/item-master',
+    STOCK_LEVEL: '/inventory/stock-level',
+    INBOUND: '/inventory/inbound',
+    OUTBOUND: '/inventory/outbound',
+    TRANSFER: '/inventory/transfer',
+    CYCLE_COUNT: '/inventory/cycle-count',
+    LOT_SERIAL: '/inventory/lot-serial',
+    COSTING: '/inventory/costing',
+    REPORTS: '/inventory/reports',
   }
 } as const;
 
@@ -120,6 +137,10 @@ export const placeholderRoutes: Record<string, PlaceholderRoute[]> = {
     ],
     inventory: [
         { path: 'inventory/dashboard', title: 'Inventory Dashboard' },
+        { path: 'inventory/requisition', title: 'ใบขอเบิก' },
+        { path: 'inventory/requisition-approval', title: 'อนุมัติใบขอเบิก' },
+        { path: 'inventory/issue', title: 'ใบเบิก' },
+        { path: 'inventory/return', title: 'รับคืนจากการเบิก' },
         { path: 'inventory/item-master', title: 'Item Master' },
         { path: 'inventory/stock-level', title: 'Stock Level' },
         { path: 'inventory/inbound', title: 'Inbound' },

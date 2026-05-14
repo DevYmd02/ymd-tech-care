@@ -31,6 +31,7 @@ import type {
     SalesChannelListItem,
     SalePeriodListItem,
     EmployeeListItem,
+    ICDocumentLinkListItem,
 } from '@/modules/master-data/types/master-data-types';
 
 // ====================================================================================
@@ -753,3 +754,64 @@ const _mockProjects: Project[] = [
 
 /** Mock data สำหรับ Project List - เฉพาะ DEV mode */
 export const mockProjects: Project[] = IS_DEV ? _mockProjects : [];
+
+// ====================================================================================
+// IC DOCUMENT LINK MOCK DATA
+// ====================================================================================
+
+const _mockICDocumentLinks: ICDocumentLinkListItem[] = [
+    {
+        id: '1',
+        docu_type_id: '1',
+        docu_type_code: '102',
+        docu_name_th: 'ใบสั่งขาย',
+        docu_name_en: 'Sales Order',
+        docu_item_no: 1,
+        docu_item_name: 'ของเปิดใช้',
+        docu_desc: 'จัดการข้อมูลเอกสารใบสั่งขาย',
+        remark: '-',
+        stock_effect_ic: 0,
+        is_active: true,
+    },
+    {
+        id: '2',
+        docu_type_id: '2',
+        docu_type_code: '103',
+        docu_name_th: 'ใบส่งสินค้า',
+        docu_name_en: 'Delivery Order',
+        docu_item_no: 2,
+        docu_item_name: 'ของปิดบัตรคิด',
+        docu_desc: 'จัดการข้อมูลเอกสารใบส่งสินค้า',
+        remark: '-',
+        stock_effect_ic: -1,
+        is_active: true,
+    },
+    {
+        id: '3',
+        docu_type_id: '3',
+        docu_type_code: '104',
+        docu_name_th: 'ใบรับคืนจากการขาย',
+        docu_name_en: 'Sales Return',
+        docu_item_no: 3,
+        docu_item_name: 'ของเปิดใช้',
+        docu_desc: 'จัดการข้อมูลเอกสารใบรับคืน',
+        remark: '-',
+        stock_effect_ic: 1,
+        is_active: true,
+    },
+    {
+        id: '4',
+        docu_type_id: '4',
+        docu_type_code: '105',
+        docu_name_th: 'ใบเบิกสินค้า',
+        docu_name_en: 'Material Issue',
+        docu_item_no: 4,
+        docu_item_name: 'ของปิดตัวอย่าง',
+        docu_desc: 'จัดการข้อมูลเอกสารใบเบิก',
+        remark: '-',
+        stock_effect_ic: -1,
+        is_active: true,
+    },
+];
+
+export const mockICDocumentLinks: ICDocumentLinkListItem[] = IS_DEV ? _mockICDocumentLinks : [];
