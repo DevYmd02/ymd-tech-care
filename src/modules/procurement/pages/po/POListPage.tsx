@@ -277,8 +277,8 @@ export default function POListPage() {
                     <div className="flex items-center justify-center gap-1">
                         {/* Eye — PR pattern */}
                         <button
-                            onClick={() => handleView(item.po_id)}
-                            onMouseEnter={() => handleMouseEnter(item.po_id)}
+                            onClick={() => handleView(item.po_header_id || item.po_id)}
+                            onMouseEnter={() => handleMouseEnter(item.po_header_id || item.po_id)}
                             onMouseLeave={handleMouseLeave}
                             className="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
                             title="ดูรายละเอียด"
@@ -289,7 +289,7 @@ export default function POListPage() {
                         {/* History Button (Show for non-DRAFT and non-PENDING) */}
                         {item.status !== 'DRAFT' && item.status !== 'PENDING_APPROVAL' && (
                             <button
-                                onClick={() => handleViewHistory(item.po_id, item.po_no)}
+                                onClick={() => handleViewHistory(item.po_header_id || item.po_id, item.po_no)}
                                 className="p-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded transition-all"
                                 title="ดูประวัติการอนุมัติ"
                             >
@@ -302,7 +302,7 @@ export default function POListPage() {
                             <button
                                 onClick={() => {
                                     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                    window.open(`${apiUrl}/po/${item.po_id}/pdf`, '_blank');
+                                    window.open(`${apiUrl}/po/${item.po_header_id || item.po_id}/pdf`, '_blank');
                                 }}
                                 className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
                                 title="พิมพ์ใบสั่งซื้อ"
@@ -315,8 +315,8 @@ export default function POListPage() {
                         {(item.status === 'DRAFT' || item.status === 'PENDING_APPROVAL') && (
                             <>
                                 <button
-                                    onClick={() => handleEdit(item.po_id)}
-                                    onMouseEnter={() => handleMouseEnter(item.po_id)}
+                                    onClick={() => handleEdit(item.po_header_id || item.po_id)}
+                                    onMouseEnter={() => handleMouseEnter(item.po_header_id || item.po_id)}
                                     onMouseLeave={handleMouseLeave}
                                     className="flex items-center gap-1.5 px-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 transition-all font-bold"
                                     title="แก้ไข"
@@ -339,7 +339,7 @@ export default function POListPage() {
                         {/* REJECTED: แก้ไขและส่งอนุมัติใหม่ */}
                         {item.status === 'REJECTED' && (
                             <button
-                                onClick={() => handleEdit(item.po_id)}
+                                onClick={() => handleEdit(item.po_header_id || item.po_id)}
                                 className="flex items-center gap-1.5 px-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 transition-all font-bold"
                                 title="แก้ไขและส่งอนุมัติใหม่"
                             >
@@ -351,7 +351,7 @@ export default function POListPage() {
                         {/* ISSUED: เปิด GRN (violet = special process) */}
                         {item.status === 'ISSUED' && (
                             <button
-                                onClick={() => handleGRN(item.po_id)}
+                                onClick={() => handleGRN(item.po_header_id || item.po_id)}
                                 className="flex items-center gap-1.5 px-2 py-1 bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-bold rounded shadow-sm transition-all"
                                 title="เปิดใบรับสินค้า"
                             >
@@ -545,7 +545,7 @@ export default function POListPage() {
                                 actions={
                                     <div className="flex flex-wrap gap-2 w-full font-bold tracking-wide">
                                         <button
-                                            onClick={() => handleView(item.po_id)}
+                                            onClick={() => handleView(item.po_header_id || item.po_id)}
                                             className="flex-1 min-w-[70px] bg-gray-50 dark:bg-slate-700 hover:bg-gray-100 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 border border-gray-200 dark:border-slate-600"
                                         >
                                             <Eye size={16} /> ดูข้อมูล
@@ -553,7 +553,7 @@ export default function POListPage() {
                                         
                                         {item.status !== 'DRAFT' && item.status !== 'PENDING_APPROVAL' && (
                                             <button
-                                                onClick={() => handleViewHistory(item.po_id, item.po_no)}
+                                                onClick={() => handleViewHistory(item.po_header_id || item.po_id, item.po_no)}
                                                 className="flex-1 min-w-[70px] bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                                             >
                                                 <Clock size={16} /> ประวัติ
@@ -564,7 +564,7 @@ export default function POListPage() {
                                             <button
                                                 onClick={() => {
                                                     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                                    window.open(`${apiUrl}/po/${item.po_id}/pdf`, '_blank');
+                                                    window.open(`${apiUrl}/po/${item.po_header_id || item.po_id}/pdf`, '_blank');
                                                 }}
                                                 className="flex-1 min-w-[70px] bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                                             >
@@ -575,7 +575,7 @@ export default function POListPage() {
                                         {(item.status === 'DRAFT' || item.status === 'PENDING_APPROVAL') && (
                                             <>
                                                 <button
-                                                    onClick={() => handleEdit(item.po_id)}
+                                                    onClick={() => handleEdit(item.po_header_id || item.po_id)}
                                                     className="flex-1 min-w-[70px] bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-600 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5"
                                                 >
                                                     <Edit size={16} /> แก้ไข
@@ -593,7 +593,7 @@ export default function POListPage() {
 
                                         {item.status === 'REJECTED' && (
                                             <button
-                                                onClick={() => handleEdit(item.po_id)}
+                                                onClick={() => handleEdit(item.po_header_id || item.po_id)}
                                                 className="w-full bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 text-amber-600 dark:text-amber-400 border border-amber-500 dark:border-amber-600 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                                             >
                                                 <Edit size={16} /> แก้ไขและส่งอนุมัติใหม่
@@ -601,7 +601,7 @@ export default function POListPage() {
                                         )}
                                         {item.status === 'ISSUED' && (
                                             <button
-                                                onClick={() => handleGRN(item.po_id)}
+                                                onClick={() => handleGRN(item.po_header_id || item.po_id)}
                                                 className="flex-[2] min-w-[120px] bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                                             >
                                                 <Package size={16} /> เปิด GRN
@@ -647,7 +647,7 @@ export default function POListPage() {
             />
 
             {/* View Modal (read-only) */}
-            {isViewModalOpen && selectedPOId && (
+            {isViewModalOpen && selectedPOId !== undefined && (
                 <POFormModal
                     isOpen={isViewModalOpen}
                     poId={selectedPOId}
@@ -658,7 +658,7 @@ export default function POListPage() {
             )}
 
             {/* Edit Modal */}
-            {isEditModalOpen && selectedPOId && (
+            {isEditModalOpen && selectedPOId !== undefined && (
                 <POFormModal
                     isOpen={isEditModalOpen}
                     poId={selectedPOId}
