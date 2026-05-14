@@ -39,7 +39,7 @@ export const RequisitionFormLines: React.FC<RequisitionFormLinesProps> = React.m
         onSearchLocation,
         onSearchLot,
     }) => {
-        const { register, control, formState: { errors } } = useFormContext<RequisitionHeaderFormData>();
+        const { register, control, getValues, formState: { errors } } = useFormContext<RequisitionHeaderFormData>();
         const lineErrors = errors.lines;
 
         return (
@@ -165,7 +165,7 @@ export const RequisitionFormLines: React.FC<RequisitionFormLinesProps> = React.m
                                                 readOnly
                                                 onClick={() => {
                                                     if (readOnly) return;
-                                                    const whId = control._formValues.lines[index].warehouse_id;
+                                                    const whId = getValues(`lines.${index}.warehouse_id`);
                                                     onSearchLocation?.(index, whId);
                                                 }}
                                                 placeholder="-- เลือกที่เก็บ --"
@@ -191,7 +191,7 @@ export const RequisitionFormLines: React.FC<RequisitionFormLinesProps> = React.m
                                                 readOnly
                                                 onClick={() => {
                                                     if (readOnly) return;
-                                                    const itemId = control._formValues.lines[index].item_id;
+                                                    const itemId = getValues(`lines.${index}.item_id`);
                                                     onSearchLot?.(index, itemId);
                                                 }}
                                                 placeholder="-- เลือก Lot --"

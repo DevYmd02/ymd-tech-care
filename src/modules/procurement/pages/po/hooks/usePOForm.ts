@@ -196,25 +196,61 @@ export const usePOForm = ({
             return;
         }
 
-        // Only reset if we haven't done it for this session, 
-        // OR if a different existing PO is being loaded.
-        if (isInitialResetDone.current && !existingPO) return;
+        // 🛡️ HYDRATION GUARD: If we have a poId but data isn't here yet, WAIT.
+        // Don't trigger a reset with empty 'existingPO' because it will clear the form.
+        if (poId && !existingPO) return;
+
+        // Only reset if we haven't done it for this session.
+        if (isInitialResetDone.current) return;
 
         const detail = (existingPO as unknown as Record<string, unknown>) || {};
         let initialPOLines: POFormData['po_lines'] = [];
 
         if (existingPO) {
-            const lines = (detail.poLines || detail.po_lines || detail.lines || []) as Record<string, unknown>[];
+            const lines = (detail.po_lines || detail.poLines || detail.lines || []) as Record<string, unknown>[];
             initialPOLines = lines.map((l: Record<string, unknown>, idx: number) => {
-                const itemCode = (l.item_code as string) || (l.item as Record<string, unknown>)?.item_code as string || (l.code as string) || '';
+                const itemObj = (l.item || {}) as Record<string, unknown>;
+                
+                // 🚀 EXHAUSTIVE ID DETECTION
+                const itemId = Number(l.item_id || l.product_id || itemObj.item_id || itemObj.product_id || itemObj.id || 0);
+                
+                const itemCode = String(
+                    l.item_code || l.itemCode || itemObj.item_code || itemObj.itemCode ||
+                    l.code || itemObj.code || l.sku || l.part_no || ''
+                ).trim();
+                
+                // 🚀 EXHAUSTIVE NAME DETECTION
+                const itemName = String(
+                    l.item_name || 
+                    l.itemName ||
+                    itemObj.item_name || 
+                    itemObj.itemName ||
+                    l.name || 
+                    itemObj.name || 
+                    l.item_id_name ||
+                    l.description || 
+                    l.remark || 
+                    l.item_description ||
+                    ''
+                ).trim();
+
+                // 🛡️ Final Sanity Clean
+                let finalItemCode = (itemCode === '-' || itemCode === 'undefined' || itemCode === 'null' || !itemCode) ? '' : itemCode;
+                const finalItemName = (itemName === '-' || itemName === 'undefined' || itemName === 'null' || !itemName) ? '' : itemName;
+
+                // 🚨 NUCLEAR FALLBACK: If code is STILL empty but we have an ID, show the ID so the user isn't blind
+                if (!finalItemCode && itemId > 0) {
+                    finalItemCode = `ID: ${itemId}`;
+                }
+
                 return {
                     line_no:         idx + 1,
-                    item_id:         Number(l.item_id || 0),
+                    item_id:         itemId,
                     po_line_id:      l.po_line_id ? Number(l.po_line_id) : undefined,
-                    id:              Number(l.po_line_id || l.item_id || 0),
-                    item_code:       itemCode,
-                    code:            itemCode,
-                    item_name:       (l.item_name as string) || (l.item as Record<string, unknown>)?.item_name as string || '',
+                    id:              Number(l.po_line_id || itemId || 0),
+                    item_code:       finalItemCode,
+                    code:            finalItemCode,
+                    item_name:       finalItemName,
                     description:     (l.description as string) || (l.remark as string) || '',
                     pr_line_id:      (l.pr_line_id as number) || null,
                     status:          (l.status as string) || 'OPEN',
@@ -268,7 +304,7 @@ export const usePOForm = ({
         });
 
         isInitialResetDone.current = true;
-    }, [isOpen, initialValues, reset, user, existingPO]);
+    }, [isOpen, initialValues, reset, user, existingPO, poId]);
     
     // ── Handlers ──────────────────────────────────────────────────────────────
     const handleVendorSelect = (vendor: VendorSearchItem) => {

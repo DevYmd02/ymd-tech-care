@@ -147,23 +147,49 @@ export const usePOHydration = ({
                         prL = source as PRLine;
                     }
 
-                    // 🚀 CRITICAL: Robust Item Code Detection
+                    // 🚀 CRITICAL: Robust Item Code & Name Detection
                     const vqLTyped = vqL as unknown as Record<string, unknown>;
                     const prLTyped = prL as unknown as Record<string, unknown>;
+                    const vqItem = (vqLTyped?.item || {}) as Record<string, unknown>;
+                    const prItem = (prLTyped?.item || {}) as Record<string, unknown>;
                     
                     const price = Number(vqL?.unit_price || prL?.unit_price || 0);
                     const qty = Number(vqL?.qty || prL?.qty || 1);
                     const discExpr = String(vqL?.discount_expression || '0');
                     
-                    const finalItemCode = vqL?.item_code || (vqLTyped?.item as Record<string, unknown>)?.item_code as string || prL?.item_code || (prLTyped?.item as Record<string, unknown>)?.item_code as string || '';
+                    const finalItemCode = String(
+                        vqL?.item_code || vqLTyped.itemCode || vqItem.item_code || vqItem.itemCode ||
+                        vqLTyped.code || prL?.item_code || prLTyped.itemCode || prItem.item_code || 
+                        prItem.itemCode || prLTyped.code || ''
+                    ).trim();
+
+                    const finalItemName = String(
+                        vqL?.item_name || 
+                        vqLTyped.itemName ||
+                        vqItem.item_name || 
+                        vqItem.itemName ||
+                        vqLTyped.name || 
+                        prL?.item_name || 
+                        prLTyped.itemName ||
+                        prItem.item_name || 
+                        prItem.itemName ||
+                        prLTyped.name || 
+                        prL?.description ||
+                        ''
+                    ).trim();
+
+                    const cleanCode = (finalItemCode === '-' || finalItemCode === 'undefined' || finalItemCode === 'null' || !finalItemCode) 
+                        ? (Number(vqL?.item_id || prL?.item_id) > 0 ? `ID: ${vqL?.item_id || prL?.item_id}` : '') 
+                        : finalItemCode;
+                    const cleanName = (finalItemName === '-' || finalItemName === 'undefined' || finalItemName === 'null' || !finalItemName) ? '' : finalItemName;
 
                     return {
                         line_no: index + 1,
-                        item_id: Number(vqL?.item_id || prL?.item_id || 0),
+                        item_id: Number(vqL?.item_id || prL?.item_id || vqItem.item_id || prItem.item_id || 0),
                         id: Number(vqL?.item_id || prL?.item_id || index + 1),
-                        item_code: finalItemCode,
-                        code: finalItemCode, // Added for UI compatibility
-                        item_name: vqL?.item_name || (vqLTyped?.item as Record<string, unknown>)?.item_name as string || prL?.item_name || (prLTyped?.item as Record<string, unknown>)?.item_name as string || '',
+                        item_code: cleanCode,
+                        code: cleanCode, 
+                        item_name: cleanName,
                         description: vqL?.remark || prL?.description || prL?.item_name || '',
                         pr_line_id: Number(vqL?.pr_line_id || prL?.pr_line_id || 0),
                         status: 'OPEN',

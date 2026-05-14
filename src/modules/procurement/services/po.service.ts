@@ -79,7 +79,8 @@ const KNOWN_DTO_FIELDS = [
 const KNOWN_LINE_DTO_FIELDS = [
     'po_line_id', 'item_id', 'qty', 'unit_price', 'uom_id',
     'discount_expression', 'note', 'pr_line_id', 'rfq_line_id',
-    'line_no', 'status', 'required_receipt_type', 'description'
+    'line_no', 'status', 'required_receipt_type', 'description',
+    'item_code', 'item_name', 'uom_name', 'code'
 ];
 
 export const POService = {
@@ -305,18 +306,50 @@ export const POService = {
 
             // 4. Map Lines efficiently
             mappedItem.po_lines = rawLines.map((l) => {
-                const itemId = Number(l.item_id);
+                const itemObj = (l.item || {}) as Record<string, unknown>;
+                const lineObj = l as unknown as Record<string, unknown>;
+                const itemId = Number(l.item_id || lineObj.product_id || itemObj.item_id || itemObj.product_id || itemObj.id || 0);
                 const item = itemId ? itemLookup.get(itemId) : null;
                 
+                const rawItemCode = String(
+                    l.item_code || lineObj.itemCode || lineObj.code || 
+                    itemObj.item_code || itemObj.itemCode || itemObj.code || 
+                    lineObj.sku || lineObj.part_no || ''
+                ).trim();
+
+                // 🚀 EXHAUSTIVE NAME DETECTION
+                const rawItemName = String(
+                    l.item_name || 
+                    lineObj.itemName ||
+                    lineObj.name ||
+                    itemObj.item_name || 
+                    itemObj.itemName ||
+                    itemObj.name || 
+                    l.description || 
+                    l.remark || 
+                    lineObj.item_id_name ||
+                    ''
+                ).trim();
+
+                const finalItemCode = (rawItemCode === '-' || rawItemCode === 'undefined' || rawItemCode === 'null' || !rawItemCode) ? '' : rawItemCode;
+                const finalItemName = (rawItemName === '-' || rawItemName === 'undefined' || rawItemName === 'null' || !rawItemName) ? '' : rawItemName;
+
                 if (item) {
                     return {
                         ...l,
-                        item_code: item.item_code || (l.item_code !== '-' ? String(l.item_code || '') : ''),
-                        item_name: item.item_name || (l.item_name !== '-' ? String(l.item_name || '') : ''),
-                        uom_name: item.uom_name || (l.uom_name !== '-' ? String(l.uom_name || '') : ''),
+                        item_id: itemId,
+                        item_code: item.item_code || finalItemCode || (item as unknown as Record<string, unknown>).code as string || (itemId > 0 ? `ID: ${itemId}` : ''),
+                        item_name: item.item_name || finalItemName || (item as unknown as Record<string, unknown>).name as string || '',
+                        uom_name: item.uom_name || String(lineObj.uom_name || ''),
                     };
                 }
-                return l;
+                
+                return {
+                    ...l,
+                    item_id: itemId,
+                    item_code: finalItemCode || (itemId > 0 ? `ID: ${itemId}` : ''),
+                    item_name: finalItemName,
+                };
             }) as unknown as import('@/modules/procurement/types').POLine[];
         }
 
@@ -377,3 +410,4 @@ export const POService = {
         return await api.get<PRWaitingForQC[]>(ENDPOINTS.waitingForQC, { ...config, params });
     },
 };
+

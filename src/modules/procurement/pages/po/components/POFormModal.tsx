@@ -170,7 +170,6 @@ const POSummaryPanel = ({ control, taxCodes, isView }: { control: Control<POForm
 
 interface POFormLineRowProps {
     idx: number;
-    field: POLine & { id: string };
     isView: boolean;
     isLockedByQC: boolean;
     isLoadingUnits: boolean;
@@ -186,7 +185,6 @@ interface POFormLineRowProps {
 
 const POFormLineRow = ({ 
     idx, 
-    field, 
     isView, 
     isLockedByQC, 
     isLoadingUnits, 
@@ -206,16 +204,22 @@ const POFormLineRow = ({
             <td className="px-3 py-2 text-center text-[13px] text-gray-600 font-medium border-r border-gray-200 dark:border-gray-700">{idx + 1}</td>
             <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                 <div className="relative w-full flex items-center">
-                    <input
-                        value={line?.item_code || line?.code || field.code || field.item_code || ''}
-                        className={cn(
-                            "w-full pr-10 border rounded px-3 !h-9 text-[13px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 shadow-sm",
-                            errors.po_lines?.[idx]?.item_id ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300 dark:border-slate-700 focus:ring-blue-500"
+                    <Controller
+                        control={control}
+                        name={`po_lines.${idx}.item_code`}
+                        render={({ field: codeField }) => (
+                            <input
+                                {...codeField}
+                                value={codeField.value || (line as Record<string, unknown>)?.item_code as string || (line as Record<string, unknown>)?.code as string || ''}
+                                className={cn(
+                                    "w-full pr-10 border rounded px-3 !h-9 text-[13px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 shadow-sm",
+                                    errors.po_lines?.[idx]?.item_id ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300 dark:border-slate-700 focus:ring-blue-500"
+                                )}
+                                placeholder={isView ? "" : "ค้นหารหัส..."}
+                                readOnly
+                            />
                         )}
-                        placeholder="ค้นหารหัส..."
-                        readOnly
                     />
-                    <input type="hidden" {...register(`po_lines.${idx}.item_code`)} />
                     <input type="hidden" {...register(`po_lines.${idx}.id`)} />
                     <input type="hidden" {...register(`po_lines.${idx}.item_id`)} />
                     <input type="hidden" {...register(`po_lines.${idx}.item_name`)} />
@@ -839,11 +843,10 @@ export default function POFormModal({
                                                 </td>
                                             </tr>
                                         )}
-                                        {fields.map((field: POLine & { id: string }, idx: number) => (
+                                        {fields.map((field, idx) => (
                                             <POFormLineRow
                                                 key={field.id}
                                                 idx={idx}
-                                                field={field}
                                                 isView={isView}
                                                 isLockedByQC={isLockedByQC}
                                                 isLoadingUnits={isLoadingUnits}
