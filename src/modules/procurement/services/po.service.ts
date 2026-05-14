@@ -183,7 +183,7 @@ export const POService = {
 
             return {
                 ...item,
-                po_id: Number(normalizeId(item.po_id || rawItem.id)),
+                po_id: Number(normalizeId(item.po_id || item.po_header_id || rawItem.id)),
                 po_date: normalizeDate(item.po_date),
                 status: normalizePOStatus(item.status),
                 branch_name: bName || String(rawItem.branch_name || ''),
