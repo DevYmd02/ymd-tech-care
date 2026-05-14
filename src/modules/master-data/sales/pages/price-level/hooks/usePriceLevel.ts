@@ -8,8 +8,8 @@ import { PriceLevelService } from '../services/price-level.service';
 import type { PriceLevel } from '../types/price-level.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
-import type { ItemListItem, UnitListItem } from '@/modules/master-data/inventory/types/product-types';
+import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
+import type { ItemListItem, UOMListItem } from '@/modules/master-data/inventory/types/product-types';
 import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
 import { logger } from '@/shared/utils';
 
@@ -40,7 +40,7 @@ export function usePriceLevel(isActive: boolean = true) {
             const [priceLevels, itemsResponse, unitsResponse, levelNames] = await Promise.all([
                 PriceLevelService.getList(),
                 ItemMasterService.getAll({ limit: 1000 }), // Get enough items for mapping
-                UnitService.getAll(),
+                UOMService.getAll(),
                 PriceLevelNameService.getList().catch(() => []), // Fallback to empty array if 404
 
             ]);
@@ -52,7 +52,7 @@ export function usePriceLevel(isActive: boolean = true) {
             setLevelNameMap(nameMap);
 
             const itemMap = new Map<number, ItemListItem>((itemsResponse.items || []).map((item: ItemListItem) => [Number(item.item_id), item]));
-            const unitMap = new Map<number, UnitListItem>((unitsResponse.items || []).map((unit: UnitListItem) => [Number(unit.unit_id), unit]));
+            const unitMap = new Map<number, UOMListItem>((unitsResponse.items || []).map((unit: UOMListItem) => [Number(unit.uom_id), unit]));
 
             const mappedData = priceLevels.map((pl: PriceLevel) => {
                 const item = itemMap.get(Number(pl.item_id));
@@ -63,7 +63,7 @@ export function usePriceLevel(isActive: boolean = true) {
                     item_code: item?.item_code || pl.item_code || '-',
                     item_name: item?.item_name || pl.item_name || '-',
                     item_name_en: item?.item_name_en || pl.item_name_en || '',
-                    uom_name: unit?.unit_name || pl.uom_name || '-',
+                    uom_name: unit?.uom_name || pl.uom_name || '-',
                 };
             });
 

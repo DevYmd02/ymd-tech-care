@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MasterDataService } from '@master-data';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
-import { UnitService } from '@inventory/services/unit.service';
+import { UOMService } from '@inventory/services/uom.service';
 import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
 import { WarehouseService } from '@inventory/services/warehouse.service';
 import { LocationService } from '@inventory/services/inventory-master.service';
@@ -83,7 +83,7 @@ export const useReservationMasterData = (isOpen: boolean) => {
     // Units (UOMs)
     const { data: uomResponse } = useQuery({
         queryKey: ['master-units'],
-        queryFn: () => UnitService.getAll({ limit: 1000 }),
+        queryFn: () => UOMService.getAll({ limit: 1000 }),
         enabled: isOpen,
         staleTime: 5 * 60 * 1000,
     });

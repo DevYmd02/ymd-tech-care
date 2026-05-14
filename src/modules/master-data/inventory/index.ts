@@ -7,7 +7,7 @@
 // Services
 export { WarehouseService } from './services/warehouse.service';
 export { ItemMasterService } from './services/item-master.service';
-export { UnitService } from './services/unit.service';
+export { UOMService } from './services/uom.service';
 export { ProductCategoryService } from './services/product-category.service';
 export { ItemTypeService } from './services/item-type.service';
 

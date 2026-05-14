@@ -77,7 +77,7 @@ const StandardCostList = React.lazy(() => import('@/modules/master-data/sales/pa
 const WarehouseList = React.lazy(() => import('@/modules/master-data/inventory/pages/warehouse/WarehouseList'));
 const ProductCategoryList = React.lazy(() => import('@/modules/master-data/inventory/pages/category/ProductCategoryList'));
 const ItemTypeList = React.lazy(() => import('@/modules/master-data/inventory/pages/item-type/ItemTypeList'));
-const UnitList = React.lazy(() => import('@/modules/master-data/inventory/pages/unit/UnitList'));
+const UOMList = React.lazy(() => import('@/modules/master-data/inventory/pages/uom/UOMList'));
 const ItemMasterList = React.lazy(() => import('@/modules/master-data/inventory/pages/item-master/ItemMasterList'));
 const UOMConversionList = React.lazy(() => import('@/modules/master-data/inventory/pages/uom-conversion/UOMConversionList'));
 const ItemBarcodeList = React.lazy(() => import('@/modules/master-data/inventory/pages/item-barcode/ItemBarcodeList'));
@@ -283,7 +283,7 @@ function AppContent() {
             <Route path="master-data/warehouse" element={<WarehouseList />} />
             <Route path="master-data/product-category" element={<ProductCategoryList />} />
             <Route path="master-data/item-type" element={<ItemTypeList />} />
-            <Route path="master-data/unit" element={<UnitList />} />
+            <Route path="master-data/uom" element={<UOMList />} />
 
             <Route path="master-data/item" element={<ItemMasterList />} />
             <Route path="master-data/uom-conversion" element={<UOMConversionList />} />

@@ -313,7 +313,7 @@ export const POService = {
                         ...l,
                         item_code: item.item_code || (l.item_code !== '-' ? String(l.item_code || '') : ''),
                         item_name: item.item_name || (l.item_name !== '-' ? String(l.item_name || '') : ''),
-                        unit_name: item.unit_name || (l.unit_name !== '-' ? String(l.unit_name || '') : ''),
+                        uom_name: item.uom_name || (l.uom_name !== '-' ? String(l.uom_name || '') : ''),
                     };
                 }
                 return l;

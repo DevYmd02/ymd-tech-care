@@ -180,7 +180,7 @@ export default function ItemBarcodeList() {
             ),
         },
         {
-            accessorKey: 'unit_name',
+            accessorKey: 'uom_name',
             header: 'หน่วย',
             cell: ({ getValue }) => <span className="text-gray-500">{getValue() as string || '-'}</span>
         },

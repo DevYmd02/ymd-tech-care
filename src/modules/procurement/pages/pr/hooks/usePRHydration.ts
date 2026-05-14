@@ -5,7 +5,7 @@ import { LocationService } from '@/modules/master-data/inventory/services/invent
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import { logger } from '@/shared/utils';
 import type { PRLine } from '@/modules/procurement/types/pr-types';
-import type { ItemListItem, UnitListItem, WarehouseListItem } from '@/modules/master-data/types/master-data-types';
+import type { ItemListItem, UOMListItem, WarehouseListItem } from '@/modules/master-data/types/master-data-types';
 import type { VendorListItem } from '@/modules/master-data/vendor/types/vendor-types';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
 import type { MappedOption } from './usePRMasterData';
@@ -23,7 +23,7 @@ interface UsePRHydrationProps {
   isMasterDataLoading: boolean;
   warehouses: MappedOption<WarehouseListItem>[];
   masterItems: ItemListItem[];
-  masterUnits: UnitListItem[];
+  masterUnits: UOMListItem[];
   onDataLoaded: (data: Partial<PRFormData>) => void;
 }
 
@@ -75,7 +75,7 @@ export const usePRHydration = ({
       // 2. Map Lines
       const mappedLines: PRLineFormData[] = (pr.lines || []).map((line: PRLine) => {
         const matchedItem = masterItems?.find(i => String(i.item_id) === String(line.item_id));
-        const matchedUnit = masterUnits?.find(u => String(u.uom_id || u.unit_id) === String(line.uom_id));
+        const matchedUnit = masterUnits?.find(u => String(u.uom_id || u.uom_id) === String(line.uom_id));
         const lineWhId = line.warehouse_id || pr.warehouse_id || 1;
         const matchedWh = warehouses.find(w => String(w.value) === String(lineWhId));
         const locName = locationLookup[Number(line.location)] || line.location_name || line.location || '';
@@ -87,7 +87,7 @@ export const usePRHydration = ({
           item_name: matchedItem?.item_name || line.item_name || '',
           description: line.description || line.item_name || matchedItem?.item_name || '',
           qty: Number(line.qty) || 0,
-          uom: matchedUnit?.uom_name || matchedUnit?.unit_name || line.uom || '',
+          uom: matchedUnit?.uom_name || matchedUnit?.uom_name || line.uom || '',
           uom_id: line.uom_id ? Number(line.uom_id) : undefined,
           est_unit_price: Number(line.est_unit_price) || 0,
           est_amount: (Number(line.qty) || 0) * (Number(line.est_unit_price) || 0),
@@ -97,8 +97,8 @@ export const usePRHydration = ({
           warehouse_id: Number(lineWhId), 
           warehouse_code: matchedWh?.original?.warehouse_code || '',
           location: line.location || '',
-          _base_uom_name: matchedItem?.uom_name || matchedItem?.unit_name || '',
-          _base_uom_id: matchedItem?.uom_id || matchedItem?.unit_id ? Number(matchedItem.uom_id || matchedItem.unit_id) : undefined,
+          _base_uom_name: matchedItem?.uom_name || matchedItem?.uom_name || '',
+          _base_uom_id: matchedItem?.uom_id || matchedItem?.uom_id ? Number(matchedItem.uom_id || matchedItem.uom_id) : undefined,
           _purchasing_uom_name: matchedItem?.purchasing_unit_name || '',
           _purchasing_uom_id: matchedItem?.purchasing_unit_id ? Number(matchedItem.purchasing_unit_id) : undefined,
           location_name: locName, 

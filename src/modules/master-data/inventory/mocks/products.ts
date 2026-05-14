@@ -17,7 +17,7 @@ export interface ProductLookup {
     /** หมวดสินค้า */
     category_name: string;
     /** หน่วยนับ */
-    unit_name: string;
+    uom_name: string;
     /** ประเภทสินค้า (Badge) */
     item_type_code: string;
     /** ราคา/หน่วย (Mock) */
@@ -36,7 +36,7 @@ export const MOCK_PRODUCTS: ProductLookup[] = [
         item_name: 'แผ่นเหล็ก เกรด A',
         item_name_en: 'Steel Sheet Grade A',
         category_name: 'Raw Materials (วัตถุดิบ)',
-        unit_name: 'Sheet (แผ่น)',
+        uom_name: 'Sheet (แผ่น)',
         item_type_code: 'RM',
         unit_price: 500,
         unit: 'Sheet (แผ่น)'
@@ -46,7 +46,7 @@ export const MOCK_PRODUCTS: ProductLookup[] = [
         item_name: 'โน้ตบุ๊ก Dell Latitude',
         item_name_en: 'Notebook Dell Latitude',
         category_name: 'IT Assets (สินทรัพย์ไอที)',
-        unit_name: 'Unit (เครื่อง)',
+        uom_name: 'Unit (เครื่อง)',
         item_type_code: 'ASSET',
         unit_price: 25000,
         unit: 'Unit (เครื่อง)'
@@ -56,7 +56,7 @@ export const MOCK_PRODUCTS: ProductLookup[] = [
         item_name: 'ปั๊มไฮดรอลิก รุ่น X',
         item_name_en: 'Hydraulic Pump Model X',
         category_name: 'Spare Parts (อะไหล่)',
-        unit_name: 'Set (ชุด)',
+        uom_name: 'Set (ชุด)',
         item_type_code: 'SP',
         unit_price: 15000,
         unit: 'Set (ชุด)'
@@ -66,7 +66,7 @@ export const MOCK_PRODUCTS: ProductLookup[] = [
         item_name: 'กระดาษ A4 Double A',
         item_name_en: 'A4 Paper Double A',
         category_name: 'Office Supplies (วัสดุสำนักงาน)',
-        unit_name: 'Ream (รีม)',
+        uom_name: 'Ream (รีม)',
         item_type_code: 'CON',
         unit_price: 120,
         unit: 'Ream (รีม)'
@@ -76,7 +76,7 @@ export const MOCK_PRODUCTS: ProductLookup[] = [
         item_name: 'หมวกนิรภัย 3M',
         item_name_en: 'Safety Helmet 3M',
         category_name: 'Safety Gear (อุปกรณ์ความปลอดภัย)',
-        unit_name: 'Piece (ใบ)',
+        uom_name: 'Piece (ใบ)',
         item_type_code: 'CON',
         unit_price: 450,
         unit: 'Piece (ใบ)'

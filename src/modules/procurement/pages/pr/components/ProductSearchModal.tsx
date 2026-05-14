@@ -3,7 +3,7 @@ import { useFormContext } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import { DialogFormLayout } from '@ui';
 
@@ -46,7 +46,7 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({
   // Safe UOM Lookup Map (Defensive Programming)
   const { data: unitsData } = useQuery({
     queryKey: ['master-units-lookup'],
-    queryFn: () => UnitService.getAll({ limit: 1000 }), // Fix Pagination Trap
+    queryFn: () => UOMService.getAll({ limit: 1000 }), // Fix Pagination Trap
     enabled: isOpen,
     staleTime: 5 * 60 * 1000,
   });
@@ -55,15 +55,15 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({
     const map: Record<number, string> = {};
     const items = unitsData?.items || []; // Fix Array Structure Trap
     items.forEach(u => {
-      const id = Number(u.uom_id || u.unit_id); // Fix Type-safey
-      if (id) map[id] = u.uom_name || u.unit_name || '';
+      const id = Number(u.uom_id || u.uom_id); // Fix Type-safey
+      if (id) map[id] = u.uom_name || u.uom_name || '';
     });
     return map;
   }, [unitsData]);
 
   // 4. 🚩 Strict onSelect Payload
   const handleSelect = (item: ItemListItem) => {
-    const resolvedUomId = Number(item.uom_id || item.unit_id);
+    const resolvedUomId = Number(item.uom_id || item.uom_id);
     
     // Reverse Lookup ID using the text mapping if direct ID is 0
     let fallbackId = 0;
@@ -77,7 +77,7 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({
       ...item,
       item_id: Number(item.item_id),
       uom_id: resolvedUomId || fallbackId || 0,
-      uom_name: item.uom_name || item.unit_name || item.base_uom_name, // Fix selection carry over
+      uom_name: item.uom_name || item.base_uom_name || '', // Fix selection carry over
       standard_cost: Number(item.standard_cost || 0),
     });
   };
@@ -172,7 +172,7 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = ({
                           <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.warehouse_code || p.warehouse || '-'}</td>
                           <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{p.location || '-'}</td>
                           <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">
-                             {p.uom_name || p.unit_name || p.base_uom_name || (Number(p.unit_id || p.uom_id) ? unitMap[Number(p.unit_id || p.uom_id)] : undefined) || '-'}
+                             {p.uom_name || p.uom_name || p.base_uom_name || (Number(p.uom_id || p.uom_id) ? unitMap[Number(p.uom_id || p.uom_id)] : undefined) || '-'}
                           </td>
                           <td className="px-3 py-3 text-right text-emerald-600 dark:text-emerald-400 font-medium">
                               {p.stock_qty?.toLocaleString(undefined, { minimumFractionDigits: 2 }) ?? '0.00'}

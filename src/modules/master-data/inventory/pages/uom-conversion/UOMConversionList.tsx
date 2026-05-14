@@ -7,7 +7,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { RefreshCcw, Edit2, Trash2 } from 'lucide-react';
 import { UOMConversionFormModal } from './UOMConversionFormModal';
 import { UOMConversionService } from '@/modules/master-data/inventory/services/uom-conversion.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import type { UOMConversionListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
@@ -83,19 +83,19 @@ export default function UOMConversionList() {
             
             if (needsLookup) {
                 const [unitsRes, itemsRes] = await Promise.all([
-                    UnitService.getAll(),
+                    UOMService.getAll(),
                     ItemMasterService.getAll({ limit: 1000 }) // Fetch a reasonable chunk
                 ]);
 
-                const unitMap = new Map(unitsRes.items?.map(u => [u.unit_id, u]));
+                const unitMap = new Map(unitsRes.items?.map(u => [u.uom_id, u]));
                 const itemMap = new Map(itemsRes.items?.map(i => [i.item_id, i]));
 
                 items = items.map(i => ({
                     ...i,
                     item_code: i.item_code || itemMap.get(i.item_id)?.item_code || '',
                     item_name: i.item_name || itemMap.get(i.item_id)?.item_name || '',
-                    from_unit_name: i.from_unit_name || unitMap.get(i.from_unit_id)?.unit_name || unitMap.get(i.from_unit_id)?.unit_code || '',
-                    to_unit_name: i.to_unit_name || unitMap.get(i.to_unit_id)?.unit_name || unitMap.get(i.to_unit_id)?.unit_code || '',
+                    from_unit_name: i.from_unit_name || unitMap.get(i.from_unit_id)?.uom_name || unitMap.get(i.from_unit_id)?.uom_code || '',
+                    to_unit_name: i.to_unit_name || unitMap.get(i.to_unit_id)?.uom_name || unitMap.get(i.to_unit_id)?.uom_code || '',
                 }));
             }
             

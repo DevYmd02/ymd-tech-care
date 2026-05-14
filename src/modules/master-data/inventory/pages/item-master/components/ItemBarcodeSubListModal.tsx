@@ -106,7 +106,7 @@ export function ItemBarcodeSubListModal({ isOpen, onClose, item_id, item_code, i
                                     barcodes.map((item) => (
                                         <tr key={item.id} className="border-b border-gray-200 dark:border-gray-700 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/40">
                                             <td className="px-4 py-2 font-medium">{item.barcode}</td>
-                                            <td className="px-4 py-2">{item.unit_name || '-'}</td>
+                                            <td className="px-4 py-2">{item.uom_name || '-'}</td>
                                             <td className="px-4 py-2 text-center">
                                                 {item.is_primary ? (
                                                     <span className="px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 rounded text-xxs font-semibold">หลัก</span>

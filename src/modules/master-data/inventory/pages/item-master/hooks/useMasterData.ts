@@ -10,7 +10,7 @@ import type {
     ItemClassListItem,
     ItemSizeListItem,
     ItemColorListItem,
-    UnitListItem,
+    UOMListItem,
     TaxCodeListItem
 } from '@/modules/master-data/inventory/types/product-types';
 
@@ -131,7 +131,7 @@ export function useMasterData(enabled: boolean = true) {
         queryKey: ['uom'],
         queryFn: async () => {
             const response = await api.get<unknown>('/uom');
-            const data = response as { items?: UnitListItem[]; data?: UnitListItem[] } | UnitListItem[];
+            const data = response as { items?: UOMListItem[]; data?: UOMListItem[] } | UOMListItem[];
             return Array.isArray(data) ? data : data.items || data.data || [];
         },
         enabled,

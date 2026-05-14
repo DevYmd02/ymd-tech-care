@@ -4,7 +4,7 @@ import { useAuth } from '@/core/auth/contexts/AuthContext';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { MasterDataService } from '@/modules/master-data';
-import type { BranchListItem, ItemListItem, UnitListItem, Currency } from '@/modules/master-data/types/master-data-types';
+import type { BranchListItem, ItemListItem, UOMListItem, Currency } from '@/modules/master-data/types/master-data-types';
 import type { VendorSearchItem, VendorMaster } from '@/modules/master-data/vendor/types/vendor-types';
 import type { RFQVendor, RFQLine, RFQDetailResponse, RFQStatus } from '@/modules/procurement/types/rfq-types';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
@@ -35,7 +35,7 @@ import {
 export const mapPRToRFQFormData = (
     pr: PRHeader,
     itemsMap?: ItemListItem[],
-    unitsMap?: UnitListItem[],
+    unitsMap?: UOMListItem[],
     vendorDetail?: VendorMaster | null
 ): Partial<RFQFormValues> => {
     return {
@@ -76,12 +76,12 @@ export const mapPRToRFQFormData = (
 
             // Look up unit from master data by uom_id (real API may not include uom string)
             const masterUnit = unitsMap && uom_id
-                ? unitsMap.find(u => u.unit_id === uom_id || Number(u.unit_id) === uom_id)
+                ? unitsMap.find(u => u.uom_id === uom_id || Number(u.uom_id) === uom_id)
                 : undefined;
 
             const item_code = line.item_code || masterItem?.item_code || '';
             const item_name = line.item_name || masterItem?.item_name || '';
-            const uom       = line.uom       || masterUnit?.unit_name || masterItem?.unit_name || '';
+            const uom       = line.uom       || masterUnit?.uom_name || masterItem?.uom_name || '';
 
             logger.debug(`[mapPRToRFQ] line ${index + 1}: item_id=${item_id}, found=${!!masterItem}, item_code=${item_code}, uom_id=${uom_id}, uom=${uom}`);
 
@@ -175,7 +175,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
     // Master Data State
     const [branches, setBranches] = useState<BranchListItem[]>([]);
     const [items, setItems] = useState<ItemListItem[]>([]);
-    const [units, setUnits] = useState<UnitListItem[]>([]);
+    const [units, setUnits] = useState<UOMListItem[]>([]);
 
     const { data: currencies } = useQuery({
         queryKey: ['master-currencies'],
@@ -277,7 +277,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                     item_name: originalLine?.item_name || (avLineRec.item_name as string) || (avLineRec.description as string) || masterItem?.item_name || '',
                     description: originalLine?.description || (avLineRec.description as string) || masterItem?.item_name || '',
                     qty: qty, // 🎯 This is the new quantity from AV
-                    uom: originalLine?.uom || (avLineRec.uom as string) || masterItem?.unit_name || '',
+                    uom: originalLine?.uom || (avLineRec.uom as string) || masterItem?.uom_name || '',
                     uom_id: originalLine?.uom_id || (avLineRec.uom_id as number) || 0,
                     required_receipt_type: originalLine?.required_receipt_type || 'FULL',
                     // 🎯 IMPROVED: Prefer Original Line (PR) date if AV line date is ambiguous
@@ -419,7 +419,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                 const [branchesData, itemsData, unitsData] = await Promise.all([
                     MasterDataService.getBranches(),
                     MasterDataService.getItems(),
-                    MasterDataService.getUnits()
+                    MasterDataService.getUOMs()
                 ]);
                 setBranches(branchesData);
                 setItems(itemsData);
@@ -555,7 +555,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
 
                     // 🎯 Master Data Lookup
                     const masterItem = items.find(it => Number(it.item_id) === item_id || it.id === item_id);
-                    const masterUnit = units.find(u => Number(u.unit_id) === uom_id || u.id === uom_id);
+                    const masterUnit = units.find(u => Number(u.uom_id) === uom_id || u.id === uom_id);
 
                     const item_code = line.item_code || line.itemCode || line.product_code || 
                                      (line.item as Record<string, unknown>)?.item_code as string || (line.product as Record<string, unknown>)?.product_code as string || 
@@ -565,7 +565,7 @@ export const useRFQForm = (isOpen: boolean, onClose: () => void, initialPR?: PRH
                                      (line.item as Record<string, unknown>)?.item_name as string || (line.product as Record<string, unknown>)?.product_name as string || 
                                      masterItem?.item_name || '';
                     
-                    const uom       = line.uom || masterUnit?.unit_name || (masterItem as unknown as Record<string, unknown>)?.unit_name as string || '';
+                    const uom       = line.uom || masterUnit?.uom_name || (masterItem as unknown as Record<string, unknown>)?.uom_name as string || '';
 
                     return {
                         line_no: i + 1,

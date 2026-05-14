@@ -83,17 +83,17 @@ const VQFormModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialRFQ, 
 
       // 🧩 Fallback matching by Name string since Backend might omit ID fields
       const matchedUnit = units?.find((u) => {
-        const prodName = product.uom_name || product.unit_name || product.base_uom_name || product.sale_uom_name || '';
+        const prodName = product.uom_name || product.uom_name || product.base_uom_name || product.sale_uom_name || '';
         if (!prodName) return false;
-        return (u.uom_name === prodName) || (u.unit_name === prodName);
+        return (u.uom_name === prodName) || (u.uom_name === prodName);
       });
-      const finalUomId = Number(product.uom_id || product.unit_id || matchedUnit?.uom_id || matchedUnit?.unit_id || 0);
+      const finalUomId = Number(product.uom_id || product.uom_id || matchedUnit?.uom_id || matchedUnit?.uom_id || 0);
 
       setValue(`vq_lines.${index}.item_id`, Number(product.item_id));
       setValue(`vq_lines.${index}.item_code`, String(product.item_code || ''));
       setValue(`vq_lines.${index}.item_name`, String(product.item_name || ''));
       setValue(`vq_lines.${index}.uom_id`, finalUomId);
-      setValue(`vq_lines.${index}.uom_name`, String(matchedUnit?.uom_name || matchedUnit?.unit_name || product.uom_name || product.unit_name || product.base_uom_name || ''));
+      setValue(`vq_lines.${index}.uom_name`, String(matchedUnit?.uom_name || matchedUnit?.uom_name || product.uom_name || product.uom_name || product.base_uom_name || ''));
       setValue(`vq_lines.${index}.unit_price`, Number(product.standard_cost) || 0);
       setValue(`vq_lines.${index}.qty`, 1);
       

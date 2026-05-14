@@ -4,7 +4,7 @@ import { Plus, Trash2, Package, Search, AlertCircle } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import type { ReservationLineValues, ReservationFormValues } from '../../schemas/reservation-schemas';
 import type { ReservationLineData } from '../../types/reservation.types';
-import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
+import type { UOMListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
 import { formatNumber } from '@/shared/utils';
 import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
@@ -18,7 +18,7 @@ interface ReservationLineTableProps {
     onSearchLot?: (index: number) => void;
     onSearchWarehouse?: (index: number) => void;
     onSearchLocation?: (index: number) => void;
-    uoms?: UnitListItem[];
+    uoms?: UOMListItem[];
     warehouses?: WarehouseListItem[];
     locations?: Location[];
     priceLevelNames?: import('@sales-master/pages/price-level-name/types/price-level-name.types').PriceLevelName[];
@@ -221,8 +221,8 @@ export function ReservationLineTable({
                                         >
                                             <option value="">-- หน่วย --</option>
                                             {uoms.map((u) => (
-                                                <option key={String(u.id || u.unit_id)} value={String(u.id || u.unit_id)}>
-                                                    {u.unit_name || u.uom_name}
+                                                <option key={String(u.id || u.uom_id)} value={String(u.id || u.uom_id)}>
+                                                    {u.uom_name || u.uom_name}
                                                 </option>
                                             ))}
                                         </select>

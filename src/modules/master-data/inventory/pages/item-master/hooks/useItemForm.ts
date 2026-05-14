@@ -7,7 +7,7 @@ import { useDebounce } from '@/shared/hooks/useDebounce';
 
 import { logger } from '@/shared/utils';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import type { ItemMaster, ItemMasterFormData } from '@/modules/master-data/types/master-data-types';
@@ -198,9 +198,9 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
 
     // Real Data Fetching
     const { data: units = [] } = useQuery({
-        queryKey: ['units'],
+        queryKey: ['uoms'],
         queryFn: async () => {
-            const res = await UnitService.getAll();
+            const res = await UOMService.getAll();
             return res.items || [];
         }
     });
@@ -230,7 +230,7 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
                 item_name_en: item.item_name_en || '',
                 marketing_name: item.marketing_name || '',
                 billing_name: item.billing_name || '',
-                base_uom_id: item.base_uom_id || item.unit_id || 0,
+                base_uom_id: item.base_uom_id || item.uom_id || 0,
                 purchase_uom_id: item.purchase_uom_id || item.purchasing_unit_id || 0,
                 sale_uom_id: item.sale_uom_id || item.sales_unit_id || 0,
                 tax_code_id: item.tax_code_id || 0,

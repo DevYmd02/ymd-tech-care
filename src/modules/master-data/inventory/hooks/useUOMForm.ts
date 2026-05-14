@@ -4,28 +4,28 @@ import { z } from 'zod';
 import { useForm, useWatch, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { UnitService } from '../services/unit.service';
+import { UOMService } from '../services/uom.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils';
-import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
+import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
 
 export const unitSchema = z.object({
-    unit_code: z.string().min(1, 'กรุณากรอกรหัสหน่วยนับ').max(20, 'รหัสหน่วยนับต้องไม่เกิน 20 ตัวอักษร'),
-    unit_name: z.string().min(1, 'กรุณากรอกชื่อหน่วยนับ').max(200, 'ชื่อหน่วยนับต้องไม่เกิน 200 ตัวอักษร'),
-    unit_name_en: z.string().max(200, 'ชื่อภาษาอังกฤษต้องไม่เกิน 200 ตัวอักษร').optional(),
+    uom_code: z.string().min(1, 'กรุณากรอกรหัสหน่วยนับ').max(20, 'รหัสหน่วยนับต้องไม่เกิน 20 ตัวอักษร'),
+    uom_name: z.string().min(1, 'กรุณากรอกชื่อหน่วยนับ').max(200, 'ชื่อหน่วยนับต้องไม่เกิน 200 ตัวอักษร'),
+    uom_name_en: z.string().max(200, 'ชื่อภาษาอังกฤษต้องไม่เกิน 200 ตัวอักษร').optional(),
     is_active: z.boolean(),
 });
 
-export type UnitFormData = z.infer<typeof unitSchema>;
+export type UOMFormData = z.infer<typeof unitSchema>;
 
-const initialFormData: UnitFormData = {
-    unit_code: '',
-    unit_name: '',
-    unit_name_en: '',
+const initialFormData: UOMFormData = {
+    uom_code: '',
+    uom_name: '',
+    uom_name_en: '',
     is_active: true,
 };
 
-export function useUnitForm(editId: number | null, initialData?: UnitListItem | null, onSuccess?: () => void) {
+export function useUOMForm(editId: number | null, initialData?: UOMListItem | null, onSuccess?: () => void) {
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 
@@ -38,24 +38,24 @@ export function useUnitForm(editId: number | null, initialData?: UnitListItem | 
         setError,
         clearErrors,
         formState: { errors }
-    } = useForm<UnitFormData>({
-        resolver: zodResolver(unitSchema) as Resolver<UnitFormData>,
+    } = useForm<UOMFormData>({
+        resolver: zodResolver(unitSchema) as Resolver<UOMFormData>,
         defaultValues: initialFormData
     });
 
     const formData = useWatch({ 
         control,
         defaultValue: initialFormData
-    }) as UnitFormData;
+    }) as UOMFormData;
 
-    const codeValue = formData.unit_code;
+    const codeValue = formData.uom_code;
     const debouncedCode = useDebounce(codeValue, 500);
 
     const { data: duplicateCheckData } = useQuery({
         queryKey: ['unit-check-duplicate', debouncedCode],
         queryFn: async () => {
             if (!debouncedCode) return { items: [] };
-            return UnitService.getAll({ unit_code: debouncedCode });
+            return UOMService.getAll({ uom_code: debouncedCode });
         },
         enabled: !!debouncedCode && debouncedCode.trim().length >= 1,
     });
@@ -64,35 +64,35 @@ export function useUnitForm(editId: number | null, initialData?: UnitListItem | 
         if (duplicateCheckData?.items && debouncedCode) {
             const matches = duplicateCheckData.items;
             const isDuplicate = matches.some(item => 
-                item.unit_code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
+                item.uom_code?.toLowerCase() === debouncedCode.trim().toLowerCase() && 
                 item.id !== editId
             );
 
             if (isDuplicate) {
-                setError('unit_code', { type: 'manual', message: 'รหัสหน่วยนับซ้ำในระบบ' });
-            } else if (errors.unit_code?.message === 'รหัสหน่วยนับซ้ำในระบบ') {
-                clearErrors('unit_code');
+                setError('uom_code', { type: 'manual', message: 'รหัสหน่วยนับซ้ำในระบบ' });
+            } else if (errors.uom_code?.message === 'รหัสหน่วยนับซ้ำในระบบ') {
+                clearErrors('uom_code');
             }
         }
-    }, [duplicateCheckData, debouncedCode, editId, setError, clearErrors, errors.unit_code?.message]);
+    }, [duplicateCheckData, debouncedCode, editId, setError, clearErrors, errors.uom_code?.message]);
 
     // Hydrate form when data is provided
     useEffect(() => {
         if (initialData) {
             reset({
-                unit_code: initialData.unit_code || initialData.uom_code || '',
-                unit_name: initialData.unit_name || initialData.uom_name || '',
-                unit_name_en: initialData.unit_name_en || initialData.uom_nameeng || '',
+                uom_code: initialData.uom_code || initialData.uom_code || '',
+                uom_name: initialData.uom_name || initialData.uom_name || '',
+                uom_name_en: initialData.uom_name_en || initialData.uom_nameeng || '',
                 is_active: initialData.is_active ?? true,
             });
         }
     }, [initialData, reset]);
 
     const saveMutation = useMutation({
-        mutationFn: (data: UnitFormData) => {
+        mutationFn: (data: UOMFormData) => {
             return editId 
-                ? UnitService.update(editId, { unit_id: editId, ...data })
-                : UnitService.create(data);
+                ? UOMService.update(editId, { uom_id: editId, ...data })
+                : UOMService.create(data);
         },
         onSuccess: async (res) => {
             if (res.success) {
@@ -104,7 +104,7 @@ export function useUnitForm(editId: number | null, initialData?: UnitListItem | 
                     hideCancel: true
                 });
                 
-                queryClient.invalidateQueries({ queryKey: ['units'] });
+                queryClient.invalidateQueries({ queryKey: ['uoms'] });
                 if (onSuccess) onSuccess();
             } else {
                 throw new Error(res.message || 'บันทึกไม่สำเร็จ');
@@ -116,7 +116,7 @@ export function useUnitForm(editId: number | null, initialData?: UnitListItem | 
             const isDuplicate = errorMsg.includes('duplicate') || errorMsg.includes('ซ้ำ');
             
             if (isDuplicate) {
-                setError('unit_code', { message: 'รหัสหน่วยนับซ้ำในระบบ' });
+                setError('uom_code', { message: 'รหัสหน่วยนับซ้ำในระบบ' });
                 return;
             }
 
@@ -130,7 +130,7 @@ export function useUnitForm(editId: number | null, initialData?: UnitListItem | 
         }
     });
 
-    const handleSave: SubmitHandler<UnitFormData> = (data) => {
+    const handleSave: SubmitHandler<UOMFormData> = (data) => {
         saveMutation.mutate(data);
     };
 

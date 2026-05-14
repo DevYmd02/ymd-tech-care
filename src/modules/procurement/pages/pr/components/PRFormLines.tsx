@@ -3,7 +3,7 @@ import { useFormContext, Controller } from 'react-hook-form';
 import { FileBox, Eraser, Plus, Trash2, Search, AlertTriangle } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
-import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
+import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
 import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
 
 interface PRFormLinesProps {
@@ -17,7 +17,7 @@ interface PRFormLinesProps {
     openWarehouseSearch: (index: number) => void;
     openLocationSearch: (index: number) => void;
     readOnly?: boolean;
-    masterUnits?: UnitListItem[];
+    masterUnits?: UOMListItem[];
 }
 
 export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
@@ -174,9 +174,9 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                             control={control}
                                             render={({ field }) => {
                                                 // Dropdown must show ALL system units unconditionally for flexible select
-                                                const options = masterUnits.map((u: UnitListItem) => ({ 
-                                                    id: Number(u.uom_id || u.unit_id), 
-                                                    name: u.uom_name || u.unit_name 
+                                                const options = masterUnits.map((u: UOMListItem) => ({ 
+                                                    id: Number(u.uom_id || u.uom_id), 
+                                                    name: u.uom_name || u.uom_name 
                                                 }));
 
                                                 // Fallback edit mode guard (Trap 1 style safety)

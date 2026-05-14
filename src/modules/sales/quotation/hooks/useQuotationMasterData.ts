@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { MasterDataService } from '@master-data';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
-import { UnitService } from '@inventory/services/unit.service';
+import { UOMService } from '@inventory/services/uom.service';
 import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
 import type { Currency } from '@master-data/types/master-data-types';
 import type { TaxCode } from '@master-data/tax/types/tax-types';
@@ -81,7 +81,7 @@ export function useQuotationMasterData(isOpen: boolean) {
 
     const { data: uomResponse } = useQuery({
         queryKey: ['master-units'],
-        queryFn: () => UnitService.getAll({ limit: 1000 }),
+        queryFn: () => UOMService.getAll({ limit: 1000 }),
         enabled: isOpen,
         staleTime: MASTER_STALE,
     });

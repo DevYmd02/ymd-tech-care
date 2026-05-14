@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { ItemBarcodeService } from '../services/item-barcode.service';
-import { UnitService } from '../services/unit.service';
+import { UOMService } from '../services/uom.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils';
 import type { ItemBarcodeListItem, ItemBarcode } from '../types/product-types';
@@ -90,9 +90,9 @@ export function useItemBarcodeForm(
 
     // Load units for dropdown
     const { data: unitData } = useQuery({
-        queryKey: ['units-dropdown'],
+        queryKey: ['uoms-dropdown'],
         queryFn: async () => {
-            const res = await UnitService.getAll();
+            const res = await UOMService.getAll();
             return res?.items || [];
         },
         staleTime: 5 * 60 * 1000 // 5 mins
@@ -110,7 +110,7 @@ export function useItemBarcodeForm(
                 barcode: initialData.barcode || '',
                 uom_id: String(
                     ('uom_id' in initialData ? initialData.uom_id : undefined) ?? 
-                    ('unit_id' in initialData ? (initialData as ItemBarcodeListItem).unit_id : undefined) ?? 
+                    ('uom_id' in initialData ? (initialData as ItemBarcodeListItem).uom_id : undefined) ?? 
                     ''
                 ),
                 is_primary: initialData.is_primary ?? false,

@@ -4,7 +4,7 @@ import {
     ITEM_COSTING_METHODS
 } from '@/modules/master-data/inventory/constants/itemConstants';
 
-import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
+import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
 
 /**
  * @interface ItemStockDetailsProps
@@ -14,7 +14,7 @@ interface ItemStockDetailsProps {
     formData: ItemFormData;
     onChange: ItemFormChangeHandler;
     errors: FieldErrors<ItemFormData>;
-    uom?: UnitListItem[];
+    uom?: UOMListItem[];
     editId?: number | null;
 }
 

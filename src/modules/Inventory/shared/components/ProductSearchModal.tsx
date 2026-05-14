@@ -121,7 +121,7 @@ export const ProductSearchModal: React.FC<ProductSearchModalProps> = React.memo(
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded text-[10px] font-bold uppercase border border-gray-200 dark:border-gray-600">
-                                                    {product.uom_name || product.unit_name || product.base_uom_name || '-'}
+                                                    {product.uom_name || product.uom_name || product.base_uom_name || '-'}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-center">

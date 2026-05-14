@@ -1,25 +1,25 @@
 import { Ruler, Save, X, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
-import { useUnitForm } from '../../hooks/useUnitForm';
-import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
+import { useUOMForm } from '../../hooks/useUOMForm';
+import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
 
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     editId?: number | null;
-    initialData?: UnitListItem | null;
+    initialData?: UOMListItem | null;
     onSuccess?: () => void;
 }
 
-export function UnitFormModal({ isOpen, onClose, editId, initialData, onSuccess }: Props) {
+export function UOMFormModal({ isOpen, onClose, editId, initialData, onSuccess }: Props) {
     const {
         register,
         errors,
         isSaving,
         handleSave,
         clearForm
-    } = useUnitForm(editId || null, initialData, onSuccess);
+    } = useUOMForm(editId || null, initialData, onSuccess);
 
     const handleClose = () => {
         clearForm();
@@ -75,13 +75,13 @@ export function UnitFormModal({ isOpen, onClose, editId, initialData, onSuccess 
                             รหัสหน่วยนับ <span className="text-red-500">*</span>
                         </label>
                         <input
-                            {...register('unit_code')}
+                            {...register('uom_code')}
                             type="text"
                             placeholder="กรอกรหัสหน่วยนับ"
-                            className={`${styles.input} ${errors.unit_code ? 'border-red-500 focus:ring-red-200' : ''}`}
+                            className={`${styles.input} ${errors.uom_code ? 'border-red-500 focus:ring-red-200' : ''}`}
                         />
-                        {errors.unit_code && (
-                            <p className="text-red-500 text-xs mt-1">{errors.unit_code.message}</p>
+                        {errors.uom_code && (
+                            <p className="text-red-500 text-xs mt-1">{errors.uom_code.message}</p>
                         )}
                     </div>
 
@@ -107,13 +107,13 @@ export function UnitFormModal({ isOpen, onClose, editId, initialData, onSuccess 
                         ชื่อหน่วยนับ (ภาษาไทย) <span className="text-red-500">*</span>
                     </label>
                     <input
-                        {...register('unit_name')}
+                        {...register('uom_name')}
                         type="text"
                         placeholder="กรอกชื่อหน่วยนับ"
-                        className={`${styles.input} ${errors.unit_name ? 'border-red-500 focus:ring-red-200' : ''}`}
+                        className={`${styles.input} ${errors.uom_name ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
-                    {errors.unit_name && (
-                        <p className="text-red-500 text-xs mt-1">{errors.unit_name.message}</p>
+                    {errors.uom_name && (
+                        <p className="text-red-500 text-xs mt-1">{errors.uom_name.message}</p>
                     )}
                 </div>
 
@@ -123,13 +123,13 @@ export function UnitFormModal({ isOpen, onClose, editId, initialData, onSuccess 
                         ชื่อหน่วยนับ (ภาษาอังกฤษ)
                     </label>
                     <input
-                        {...register('unit_name_en')}
+                        {...register('uom_name_en')}
                         type="text"
                         placeholder="Unit Name (English)"
                         className={styles.input}
                     />
-                    {errors.unit_name_en && (
-                        <p className="text-red-500 text-xs mt-1">{errors.unit_name_en.message}</p>
+                    {errors.uom_name_en && (
+                        <p className="text-red-500 text-xs mt-1">{errors.uom_name_en.message}</p>
                     )}
                 </div>
 

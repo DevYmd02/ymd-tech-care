@@ -96,7 +96,7 @@ export const ItemTab: React.FC<ItemTabProps> = ({
                                                 <Hash size={14} className="text-gray-400" />
                                                 <span className="text-sm text-gray-600 dark:text-gray-400 w-24">Unit:</span>
                                                 <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                    {item.unit_name || '-'}
+                                                    {item.uom_name || '-'}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">

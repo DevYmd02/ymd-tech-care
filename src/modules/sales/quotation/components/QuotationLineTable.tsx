@@ -3,7 +3,7 @@ import { Plus, Trash2, Package, Search, AlertCircle, Loader2 } from 'lucide-reac
 import { useFormContext, useFieldArray, useWatch } from 'react-hook-form';
 import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
 import type { QuotationLineValues, QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
-import type { UnitListItem } from '@inventory/types/product-types';
+import type { UOMListItem } from '@inventory/types/product-types';
 import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/price-level-name.types';
 import { formatNumber } from '@/shared/utils';
 
@@ -14,7 +14,7 @@ interface QuotationLineTableProps {
     onSearchProduct?: (index: number) => void;
     onQtyBlur?: (index: number) => void;
     loadingPriceLines?: Set<number>;
-    uoms?: UnitListItem[];
+    uoms?: UOMListItem[];
     priceLevelNames?: PriceLevelName[];
     readOnly?: boolean;
     currencySymbol?: string;
@@ -45,7 +45,7 @@ const QuotationLineRow = memo(({
     onSearchProduct?: (index: number) => void;
     onQtyBlur?: (index: number) => void;
     loadingPriceLines: Set<number>;
-    uoms: UnitListItem[];
+    uoms: UOMListItem[];
     priceLevelNames: PriceLevelName[];
     currencySymbol: string;
     onRemoveLine: (index: number) => void;
@@ -134,8 +134,8 @@ const QuotationLineRow = memo(({
                 >
                     <option value="">-- หน่วย --</option>
                     {uoms.map((u) => (
-                        <option key={String(u.id || u.unit_id)} value={String(u.id || u.unit_id)}>
-                            {u.unit_name || u.uom_name}
+                        <option key={String(u.id || u.uom_id)} value={String(u.id || u.uom_id)}>
+                            {u.uom_name || u.uom_name}
                         </option>
                     ))}
                 </select>

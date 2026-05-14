@@ -1,17 +1,17 @@
 import React from 'react';
 import { Ruler, ChevronDown, ChevronUp, Database, Edit2, Trash2 } from 'lucide-react';
-import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
+import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
 
-interface UnitTabProps {
-    data: UnitListItem[];
+interface UOMTabProps {
+    data: UOMListItem[];
     expandedId: number | null;
     toggleExpand: (id: number) => void;
     handleEdit: (id: number) => void;
-    handleStatusToggle: (data: UnitListItem) => void;
+    handleStatusToggle: (data: UOMListItem) => void;
     dbRelation: { dbTable: string; relations: string[]; fk: string };
 }
 
-export const UnitTab: React.FC<UnitTabProps> = ({
+export const UOMTab: React.FC<UOMTabProps> = ({
     data,
     expandedId,
     toggleExpand,
@@ -40,8 +40,8 @@ export const UnitTab: React.FC<UnitTabProps> = ({
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <div className="flex flex-wrap items-start gap-x-2 gap-y-1 mb-0.5">
-                                            <span className="font-semibold text-gray-900 dark:text-white line-clamp-2" title={unit.unit_name}>
-                                                {unit.unit_name}
+                                            <span className="font-semibold text-gray-900 dark:text-white line-clamp-2" title={unit.uom_name}>
+                                                {unit.uom_name}
                                             </span>
                                             <span className={`px-2 py-0.5 text-xs font-medium rounded-full shrink-0 ${
                                                 unit.is_active 
@@ -52,11 +52,11 @@ export const UnitTab: React.FC<UnitTabProps> = ({
                                             </span>
                                         </div>
                                         <div className="text-sm text-gray-500 flex flex-wrap gap-x-2">
-                                            <span className="whitespace-nowrap">Code: {unit.unit_code}</span>
-                                            {unit.unit_name_en && (
+                                            <span className="whitespace-nowrap">Code: {unit.uom_code}</span>
+                                            {unit.uom_name_en && (
                                                 <>
                                                     <span className="hidden sm:inline text-gray-300">|</span>
-                                                    <span className="truncate">{unit.unit_name_en}</span>
+                                                    <span className="truncate">{unit.uom_name_en}</span>
                                                 </>
                                             )}
                                         </div>

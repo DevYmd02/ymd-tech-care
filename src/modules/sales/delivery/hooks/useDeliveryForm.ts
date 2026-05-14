@@ -9,7 +9,7 @@ import {
 } from '../schemas/delivery.schemas';
 import { logger } from '@/shared/utils';
 import type { ItemListItem } from '@inventory/types/product-types';
-import type { UnitListItem } from '@master-data/types/master-data-types';
+import type { UOMListItem } from '@master-data/types/master-data-types';
 import { DeliveryService } from '../services/delivery.service';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import type { CustomerAddress } from '@customer/customer-master/types/customer-types';
@@ -19,7 +19,7 @@ interface UseDeliveryFormProps {
     isOpen: boolean;
     id?: string;
     initialData?: Partial<DeliveryFormValues>;
-    uoms: UnitListItem[];
+    uoms: UOMListItem[];
     onClose: () => void;
     readOnly?: boolean;
 }
@@ -118,15 +118,15 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms, onClose, readOn
             line.item_code = product.item_code || '';
             line.item_name = product.item_name || '';
 
-            const productUomId = product.uom_id || product.unit_id || product.sale_uom_id || product.base_uom_id;
+            const productUomId = product.uom_id || product.uom_id || product.sale_uom_id || product.base_uom_id;
             if (productUomId) {
                 line.uom_id = String(productUomId);
             } else {
                 const foundByName = uoms.find(u =>
-                    (u.unit_name && u.unit_name === product.unit_name) ||
+                    (u.uom_name && u.uom_name === product.uom_name) ||
                     (u.uom_name && u.uom_name === product.uom_name)
                 );
-                line.uom_id = foundByName ? String(foundByName.id || foundByName.unit_id) : '';
+                line.uom_id = foundByName ? String(foundByName.id || foundByName.uom_id) : '';
             }
 
             line.qty_shipped = 1;

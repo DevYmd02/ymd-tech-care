@@ -16,7 +16,7 @@ import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
 
 import type { Currency } from '@master-data/types/master-data-types';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
-import type { ItemListItem, UnitListItem } from '@inventory/types/product-types';
+import type { ItemListItem, UOMListItem } from '@inventory/types/product-types';
 import type { LotNo, Location as LocationItem } from '@inventory/types/inventory-master.types';
 import type { EstimateHeader } from '@sales/estimate/services/estimate.service';
 import type { WarehouseListItem } from '@master-data/types/master-data-types';
@@ -401,15 +401,15 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             line.item_code = product.item_code || '';
             line.item_name = product.item_name || '';
             
-            const productUomId = product.uom_id || product.unit_id;
-            const productUomName = product.uom_name || product.base_uom_name || product.unit_name;
+            const productUomId = product.uom_id || product.uom_id;
+            const productUomName = product.uom_name || product.base_uom_name || product.uom_name;
             const safeUoms = Array.isArray(uoms) ? uoms : [];
-            const foundUom = safeUoms.find((u: UnitListItem) => 
-                (productUomId && (String(u.id) === String(productUomId) || String(u.unit_id) === String(productUomId))) ||
-                (productUomName && (u.unit_name?.trim() === productUomName?.trim() || u.uom_name?.trim() === productUomName?.trim()))
+            const foundUom = safeUoms.find((u: UOMListItem) => 
+                (productUomId && (String(u.id) === String(productUomId) || String(u.uom_id) === String(productUomId))) ||
+                (productUomName && (u.uom_name?.trim() === productUomName?.trim() || u.uom_name?.trim() === productUomName?.trim()))
             );
 
-            line.uom_id = foundUom ? String(foundUom.id || foundUom.unit_id) : String(productUomId || productUomName || 'PCS');
+            line.uom_id = foundUom ? String(foundUom.id || foundUom.uom_id) : String(productUomId || productUomName || 'PCS');
             line.unit_price = Number(product.standard_cost || 0);
             line.qty_reserved = 1; 
             line.line_discount_input = '';
@@ -792,7 +792,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                         qty_reserved: qtyToUse,
                         warehouse_id: '', 
                         location_id: '',  
-                        uom_id: String(qLine.uom_id || qLine.unit_id || 'PCS'),
+                        uom_id: String(qLine.uom_id || qLine.uom_id || 'PCS'),
                         unit_price: price,
                         lot_no: '',
                         line_discount_input: ldInput,

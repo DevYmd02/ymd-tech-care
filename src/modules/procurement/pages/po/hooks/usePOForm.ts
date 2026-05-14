@@ -326,14 +326,14 @@ export const usePOForm = ({
 
     const handleSelectItemMaster = useCallback((index: number, item: ItemSelectorResult) => {
         const anyItem = item as unknown as Record<string, unknown>;
-        const prodUomId = anyItem.uom_id || anyItem.unit_id || anyItem.base_uom_id || anyItem.sale_uom_id;
-        const prodUomName = (anyItem.uom_name || anyItem.unit_name || anyItem.base_uom_name || anyItem.sale_uom_name || '') as string;
+        const prodUomId = anyItem.uom_id || anyItem.uom_id || anyItem.base_uom_id || anyItem.sale_uom_id;
+        const prodUomName = (anyItem.uom_name || anyItem.uom_name || anyItem.base_uom_name || anyItem.sale_uom_name || '') as string;
 
         const safeUnits = Array.isArray(units) ? units : [];
         const matchedUnit = safeUnits.find((u: unknown) => {
             const ut = u as Record<string, unknown>;
             if (prodUomId && (String(ut.id) === String(prodUomId) || String(ut.uom_id) === String(prodUomId))) return true;
-            const uName = (ut.uom_name || ut.unit_name || '') as string;
+            const uName = (ut.uom_name || ut.uom_name || '') as string;
             if (prodUomName && uName.trim() === (prodUomName as string).trim()) return true;
             return false;
         }) as Record<string, unknown> | undefined;

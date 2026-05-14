@@ -148,7 +148,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
 
       const unitLookup: Record<number, string> = {};
       masterUnits.forEach(u => {
-        unitLookup[u.unit_id] = u.unit_name || u.unit_name_en || '';
+        unitLookup[u.uom_id] = u.uom_name || u.uom_name_en || '';
       });
 
       const locationLookup: Record<number, string> = {};

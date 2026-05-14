@@ -113,7 +113,7 @@ export function normalizeSQ(raw: unknown): SQForApproval | null {
       item_name: String(line.item_name || item.item_name || item.item_name_th || line.description || line.name || ''),
       qty: Number(line.qty || line.quantity || 0),
       uom_id: Number(line.uom_id || uom.uom_id || uom.id || 0),
-      uom_name: String(line.uom_name || uom.uom_name || uom.unit_name || uom.name || ''),
+      uom_name: String(line.uom_name || uom.uom_name || uom.uom_name || uom.name || ''),
       unit_price: Number(line.unit_price || line.price || 0),
       discount_expression: String(line.discount_expression || line.line_discount_input || '0'),
       discount_amount: Number(line.line_discount || line.discount_amount || 0),

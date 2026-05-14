@@ -51,7 +51,6 @@ export interface ItemSelectorResult {
     name?: string;
     description?: string;
     uom_id?: number | string;
-    unit_id?: number | string;
     standard_price?: number | string;
     standard_cost?: number | string;
     unit_price?: number | string;

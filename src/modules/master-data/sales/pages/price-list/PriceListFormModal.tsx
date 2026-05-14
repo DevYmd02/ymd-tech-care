@@ -18,7 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
 import { logger } from '@/shared/utils';
 
 interface Props {
@@ -60,8 +60,8 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
     });
 
     const { data: unitsData } = useQuery({
-        queryKey: ['units-lookup'],
-        queryFn: () => UnitService.getAll({ page: 1, limit: 1000 }),
+        queryKey: ['uoms-lookup'],
+        queryFn: () => UOMService.getAll({ page: 1, limit: 1000 }),
     });
 
     const handleAddProduct = () => {
@@ -81,8 +81,8 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
 
     const handleSelectProduct = (product: ItemListItem) => {
         // Smart UOM Mapping: Try ID match first, fallback to Name match if ID is missing (0/null)
-        let targetUomId = product.uom_id ? String(product.uom_id) : (product.unit_id ? String(product.unit_id) : '');
-        const targetUomName = product.uom_name || product.unit_name || '';
+        let targetUomId = product.uom_id ? String(product.uom_id) : (product.uom_id ? String(product.uom_id) : '');
+        const targetUomName = product.uom_name || product.uom_name || '';
         const targetPrice = Number(product.standard_cost || 0);
 
         // Debug diagnostic
@@ -92,11 +92,11 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
         if (!targetUomId || targetUomId === '0' || targetUomId === 'undefined') {
             const matchedUnit = unitsData?.items.find(u => 
                 (u.uom_name && u.uom_name === targetUomName) || 
-                (u.unit_name && u.unit_name === targetUomName)
+                (u.uom_name && u.uom_name === targetUomName)
             );
             if (matchedUnit) {
                 logger.info('✅ Smart Match found UOM by Name:', matchedUnit);
-                targetUomId = String(matchedUnit.uom_id || matchedUnit.unit_id);
+                targetUomId = String(matchedUnit.uom_id || matchedUnit.uom_id);
             } else {
                 logger.warn('⚠️ No UOM match found for name:', targetUomName);
             }

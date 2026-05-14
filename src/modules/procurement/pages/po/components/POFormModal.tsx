@@ -32,7 +32,7 @@ import { cn } from '@/shared/utils';
 import type { POFormData, POLine } from '@/modules/procurement/schemas/po-schemas';
 import { usePOForm } from '../hooks/usePOForm';
 import type {
-    UnitListItem,
+    UOMListItem,
     Currency
 } from '@/modules/master-data/types/master-data-types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
@@ -174,7 +174,7 @@ interface POFormLineRowProps {
     isView: boolean;
     isLockedByQC: boolean;
     isLoadingUnits: boolean;
-    units: UnitListItem[];
+    units: UOMListItem[];
     handleOpenProductSearch: (index: number) => void;
     remove: (index: number) => void;
     handleAddLine: () => void;
@@ -276,7 +276,7 @@ const POFormLineRow = ({
                     disabled={isView || isLockedByQC || isLoadingUnits}
                 >
                     <option value="">{isLoadingUnits ? 'โหลด...' : 'หน่วย'}</option>
-                    {Array.isArray(units) && units.map((u: UnitListItem) => <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.unit_name}</option>)}
+                    {Array.isArray(units) && units.map((u: UOMListItem) => <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.uom_name}</option>)}
                 </select>
             </td>
             <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
