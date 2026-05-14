@@ -139,7 +139,7 @@ export function useQuotationActions({
             line.item_code = product.item_code || '';
             line.item_name = product.item_name || '';
             
-            const productUomId = product.uom_id || product.unit_id || product.sale_uom_id || product.base_uom_id || product.sales_unit_id;
+            const productUomId = product.uom_id || product.uom_id || product.sale_uom_id || product.base_uom_id || product.sales_unit_id;
             line.uom_id = Number(productUomId || 0);
 
             line.unit_price = Number(product.standard_cost || product.price || 0);

@@ -8,7 +8,7 @@ import type { SuccessResponse } from '@/shared/types/api.types';
 
 /**
  * Maps raw backend item fields to frontend ItemListItem fields.
- * Backend may return uom_id/uom_name/base_uom_id instead of unit_id/unit_name.
+ * Backend may return uom_id/uom_name/base_uom_id instead of uom_id/uom_name.
  */
 /**
  * Maps raw backend item fields to frontend ItemListItem fields cautiously.
@@ -38,10 +38,9 @@ function mapItemFields(raw: RawItemListItem): ItemListItem {
     standard_cost: raw.standard_cost ? Number(raw.standard_cost) : undefined,
     category_id: Number(raw.category_id || 0),
     category_name: String(raw.category_name || ''),
-    unit_id: Number(raw.unit_id || raw.uom_id || raw.base_uom_id || raw.purchasing_unit_id || raw.purchase_uom_id || 0),
-    unit_name: String(raw.unit_name || raw.uom_name || raw.base_uom_name || raw.purchasing_unit_name || ''),
-    uom_id: Number(raw.uom_id || raw.unit_id || raw.base_uom_id || raw.purchasing_unit_id || raw.purchase_uom_id || 0),
-    uom_name: String(raw.uom_name || raw.unit_name || raw.base_uom_name || raw.purchasing_unit_name || ''),
+    uom_id: Number(raw.uom_id || raw.uom_id || raw.base_uom_id || raw.purchasing_unit_id || raw.purchase_uom_id || 0),
+    uom_name: String(raw.uom_name || raw.uom_name || raw.base_uom_name || raw.purchasing_unit_name || ''),
+
     purchasing_unit_id: raw.purchasing_unit_id ? Number(raw.purchasing_unit_id) : undefined,
     purchasing_unit_name: raw.purchasing_unit_name ? String(raw.purchasing_unit_name) : undefined,
     is_active: Boolean(raw.is_active ?? true),
@@ -92,8 +91,8 @@ function mapItemDetailFields(raw: RawItemDetail): ItemMaster {
     item_type_id: raw.item_type_id ? Number(raw.item_type_id) : undefined,
     item_type_code: raw.item_type_code ? String(raw.item_type_code) : undefined,
     item_type_name: raw.item_type_name ? String(raw.item_type_name) : undefined,
-    unit_id: raw.unit_id ? Number(raw.unit_id) : undefined,
-    unit_name: String(raw.unit_name || ''),
+    uom_id: raw.uom_id ? Number(raw.uom_id) : undefined,
+    uom_name: String(raw.uom_name || ''),
     purchasing_unit_id: raw.purchasing_unit_id ? Number(raw.purchasing_unit_id) : undefined,
     purchasing_unit_name: raw.purchasing_unit_name ? String(raw.purchasing_unit_name) : undefined,
     sales_unit_id: raw.sales_unit_id ? Number(raw.sales_unit_id) : undefined,
@@ -139,8 +138,8 @@ function mapItemDetailFields(raw: RawItemDetail): ItemMaster {
           return {
             item_barcode_id: Number(b.item_barcode_id || b.barcode_id || b.id || 0),
             barcode: String(b.barcode || b.item_barcode_code || ''),
-            uom_id: b.uom_id ? Number(b.uom_id) : (b.unit_id ? Number(b.unit_id) : undefined),
-            unit_name: b.unit_name ? String(b.unit_name) : '',
+            uom_id: b.uom_id ? Number(b.uom_id) : (b.uom_id ? Number(b.uom_id) : undefined),
+            uom_name: b.uom_name ? String(b.uom_name) : '',
             is_primary: Boolean(b.is_primary || b.is_default || false),
             is_active: Boolean(b.is_active ?? true),
             item_id: Number(raw.item_id || 0),
@@ -194,7 +193,7 @@ export const ItemMasterService = {
       // Handle direct array from Axios (api.ts usually returns response.data directly)
       const rawArray = Array.isArray(response) ? response : (response.data || response.items || []);
 
-      // Map backend uom_id/uom_name → frontend unit_id/unit_name
+      // Map backend uom_id/uom_name → frontend uom_id/uom_name
       const itemsArray = rawArray.map((item: unknown) => mapItemFields(item as RawItemListItem));
 
       return {

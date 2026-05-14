@@ -32,7 +32,7 @@ import type {
   BranchListItem, 
   DepartmentListItem, 
   EmployeeListItem, 
-  UnitListItem,
+  UOMListItem,
   Project,
   SaleAreaListItem,
   Currency
@@ -325,8 +325,8 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
                 if (match) { l.item_name = match.item_name || match.description || ''; l.item_code = match.item_code || l.item_code; }
               }
               if (isPlaceholder(l.uom_name)) {
-                const match = (contextUnits as unknown as (UnitListItem & { id?: number })[]).find(u => Number(u.uom_id || u.id) === Number(l.uom_id));
-                if (match) l.uom_name = match.uom_name || (match as unknown as { unit_name?: string }).unit_name || '';
+                const match = (contextUnits as unknown as (UOMListItem & { id?: number })[]).find(u => Number(u.uom_id || u.id) === Number(l.uom_id));
+                if (match) l.uom_name = match.uom_name || (match as unknown as { uom_name?: string }).uom_name || '';
               }
             });
           }

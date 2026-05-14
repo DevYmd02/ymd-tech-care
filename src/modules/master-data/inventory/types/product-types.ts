@@ -401,36 +401,7 @@ export const initialItemColorFormData: ItemColorFormData = {
 // ====================================================================================
 // UOM - หน่วยนับ    
 // ====================================================================================
-export interface UOMMaster extends BaseMasterData {
-    uom_id: number;
-    uom_code: string;
-    uom_name: string;
-    uom_nameeng?: string;
-}
-
-export interface UOMFormData {
-    uom_code: string;
-    uom_name: string;
-    uom_nameeng: string;
-    is_active: boolean;
-}   
-
-export interface UOMListItem {
-    uom_id: number;
-    uom_code: string;
-    uom_name: string;
-    uom_nameeng: string;
-    is_active: boolean;
-
-    [key: string]: string | number | boolean;
-}
-
-export const initialUOMFormData: UOMFormData = {
-    uom_code: '',
-    uom_name: '',
-    uom_nameeng: '',
-    is_active: true,
-};
+;
 
 // ====================================================================================
 // TAX CODE - รหัสภาษี
@@ -472,53 +443,51 @@ export const initialTaxCodeFormData: TaxCodeFormData = {
 // UNIT OF MEASURE - กำหนดรหัสหน่วยนับ
 // ====================================================================================
 
-export interface UnitMaster extends BaseMasterData {
-    unit_id: number;
-    unit_code: string;
-    unit_name: string;
-    unit_name_en?: string;
+export interface UOMMaster extends BaseMasterData {
+    uom_id: number;
+    uom_code: string;
+    uom_name: string;
+    uom_name_en?: string;
 }
 
-export interface UnitFormData {
-    unitCode: string;
-    unitCodeSearch: string;
-    unitName: string;
-    unitNameEn: string;
+export interface UOMFormData {
+    uomCode: string;
+    uomCodeSearch: string;
+    uomName: string;
+    uomNameEn: string;
     isActive: boolean;
 }
 
-export interface UnitListItem {
+export interface UOMListItem {
     id: number;
-    unit_id: number;
-    unit_code: string;
-    unit_name: string;
-    unit_name_en?: string;
+    uom_id: number;
+    uom_code: string;
+    uom_name: string;
+    uom_name_en?: string;
     is_active: boolean;
     created_at: string;
     // Backend API mapping
-    uom_id?: number;
-    uom_code?: string;
-    uom_name?: string;
+
     uom_nameeng?: string;
 }
 
-export const initialUnitFormData: UnitFormData = {
-    unitCode: '',
-    unitCodeSearch: '',
-    unitName: '',
-    unitNameEn: '',
+export const initialUOMFormData: UOMFormData = {
+    uomCode: '',
+    uomCodeSearch: '',
+    uomName: '',
+    uomNameEn: '',
     isActive: true,
 };
 
-export interface UnitCreateRequest {
-    unit_code: string;
-    unit_name: string;
-    unit_name_en?: string;
+export interface UOMCreateRequest {
+    uom_code: string;
+    uom_name: string;
+    uom_name_en?: string;
     is_active?: boolean;
 }
 
-export interface UnitUpdateRequest extends Partial<UnitCreateRequest> {
-    unit_id: number;
+export interface UOMUpdateRequest extends Partial<UOMCreateRequest> {
+    uom_id: number;
 }
 
 // ====================================================================================
@@ -542,8 +511,8 @@ export interface ItemMaster extends BaseMasterData {
     item_type_id?: number;
     item_type_code?: string;
     item_type_name?: string;
-    unit_id?: number;
-    unit_name: string;
+    uom_id?: number;
+    uom_name: string;
     purchasing_unit_id?: number;
     purchasing_unit_name?: string;
     sales_unit_id?: number;
@@ -607,8 +576,8 @@ export interface ItemMasterFormData {
     item_type_id?: number;
     item_type_code?: string;
     item_type_name?: string;
-    unit_id?: number;
-    unit_name?: string;
+    uom_id?: number;
+    uom_name?: string;
     purchasing_unit_id?: number;
     purchasing_unit_name?: string;
     sales_unit_id?: number;
@@ -660,14 +629,12 @@ export interface ItemListItem {
     category_id: number;
     category_name: string;
     item_type_code?: string;
-    unit_name: string;
-    unit_id?: number;
+    uom_name: string;
     preferred_vendor_id?: number;
     is_active: boolean;
     created_at: string;
     // W-01: Extended fields for proper PR mapping
     uom_id: number;
-    uom_name?: string;
     warehouse_id?: number;
     warehouse_code?: string;
     purchasing_unit_id?: number;
@@ -713,8 +680,8 @@ category_name: '',
 item_type_id: 0,
 item_type_code: '',
 item_type_name: '',
-unit_id: 0,
-unit_name: '',
+uom_id: 0,
+uom_name: '',
 purchasing_unit_id: 0,
 purchasing_unit_name: '',
 sales_unit_id: 0,
@@ -742,7 +709,7 @@ export interface ItemBarcode {
     item_name: string;
     barcode: string;
     uom_id?: number;
-    unit_name?: string;
+    uom_name?: string;
     is_primary: boolean;
     is_active: boolean;
     created_at: string;
@@ -765,8 +732,8 @@ export interface ItemBarcodeListItem {
     item_code: string;
     item_name: string;
     barcode: string;
-    unit_id?: number;
-    unit_name?: string;
+    uom_id?: number;
+    uom_name?: string;
     is_primary: boolean;
     is_active: boolean;
     created_at: string;

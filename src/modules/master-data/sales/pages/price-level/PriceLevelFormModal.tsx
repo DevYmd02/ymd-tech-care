@@ -8,8 +8,8 @@ import { DollarSign, Save, X, Search } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 import type { Path } from 'react-hook-form';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
-import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
+import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
+import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
 import { usePriceLevelForm } from './hooks/usePriceLevelForm';
 import type { PriceLevelFormData } from './types/price-level.types';
 import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
@@ -34,7 +34,7 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
     } = usePriceLevelForm(editId ?? null, onSuccess, isOpen);
 
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
-    const [units, setUnits] = useState<UnitListItem[]>([]);
+    const [units, setUnits] = useState<UOMListItem[]>([]);
     const [levelNameMap, setLevelNameMap] = useState<Map<number, string>>(new Map());
 
     // Fetch units and level names
@@ -42,7 +42,7 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
         const fetchData = async () => {
             try {
                 const [unitRes, levelNames] = await Promise.all([
-                    UnitService.getAll(),
+                    UOMService.getAll(),
                     PriceLevelNameService.getList().catch(() => []), // Fallback
                 ]);
                 setUnits(unitRes.items || []);
@@ -164,7 +164,7 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
                                 <select {...register('uomId')} className={styles.input}>
                                     <option value="">เลือกหน่วยนับ</option>
                                     {units.map(unit => (
-                                        <option key={unit.unit_id} value={unit.unit_id}>{unit.unit_name}</option>
+                                        <option key={unit.uom_id} value={unit.uom_id}>{unit.uom_name}</option>
                                     ))}
                                 </select>
                                 {errors.uomId && <p className="text-red-500 text-xs mt-1">{errors.uomId.message}</p>}

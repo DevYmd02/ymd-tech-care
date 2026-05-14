@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { MasterDataService } from '../services/master-data.service';
-import { UnitService } from '@inventory/services/unit.service';
+import { UOMService } from '@inventory/services/uom.service';
 import { WarehouseService } from '@inventory/services/warehouse.service';
 import { LocationService } from '@inventory/services/inventory-master.service';
 import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
@@ -9,7 +9,7 @@ import { VendorService } from '@master-data/vendor/services/vendor.service';
 import type { 
     BranchListItem, 
     WarehouseListItem, 
-    UnitListItem, 
+    UOMListItem, 
     Currency, 
     DepartmentListItem 
 } from '../types/master-data-types';
@@ -38,9 +38,9 @@ export function useBranches(enabled = true) {
  * Hook to fetch all units (UOMs)
  */
 export function useUnits(enabled = true, limit = 1000) {
-    return useQuery<ListResponse<UnitListItem>>({
+    return useQuery<ListResponse<UOMListItem>>({
         queryKey: ['master-units', limit],
-        queryFn: () => UnitService.getAll({ limit }),
+        queryFn: () => UOMService.getAll({ limit }),
         enabled,
         staleTime: MASTER_DATA_STALE_TIME,
         gcTime: MASTER_DATA_GC_TIME,

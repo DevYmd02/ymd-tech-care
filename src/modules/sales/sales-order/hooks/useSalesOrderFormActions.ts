@@ -3,7 +3,7 @@ import type { UseFormSetValue, UseFormGetValues, Path } from 'react-hook-form';
 import type { SalesOrderFormValues, SalesOrderLineValues } from '../schemas/sales-order.schemas';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import type { ItemListItem } from '@inventory/types/product-types';
-import type { UnitListItem } from '@master-data/types/master-data-types';
+import type { UOMListItem } from '@master-data/types/master-data-types';
 import type { ReservationHeader } from '@sales/reservation/services/reservation.service';
 import { ReservationService } from '@sales/reservation/services/reservation.service';
 import { OrgEmployeeService } from '@master-data/company/services/employee.service';
@@ -13,7 +13,7 @@ import { logger } from '@/shared/utils';
 interface UseSalesOrderFormActionsProps {
     setValue: UseFormSetValue<SalesOrderFormValues>;
     getValues: UseFormGetValues<SalesOrderFormValues>;
-    uoms: UnitListItem[];
+    uoms: UOMListItem[];
     tax_code_id?: number;
     recoverPriceSources: (lines: SalesOrderLineValues[], customerId: number, branchId: number) => Promise<void>;
 }
@@ -143,16 +143,16 @@ export function useSalesOrderFormActions({
             line.item_code = product.item_code || '';
             line.item_name = product.item_name || '';
             
-            const productUomId = product.uom_id || product.unit_id || product.sale_uom_id || product.base_uom_id || product.sales_unit_id;
+            const productUomId = product.uom_id || product.uom_id || product.sale_uom_id || product.base_uom_id || product.sales_unit_id;
             
             if (productUomId) {
                 line.uom_id = String(productUomId);
             } else {
                 const foundByName = uoms.find(u => 
-                    (u.unit_name && u.unit_name === product.unit_name) || 
+                    (u.uom_name && u.uom_name === product.uom_name) || 
                     (u.uom_name && u.uom_name === product.uom_name)
                 );
-                line.uom_id = foundByName ? String(foundByName.id || foundByName.unit_id) : '';
+                line.uom_id = foundByName ? String(foundByName.id || foundByName.uom_id) : '';
             }
 
             line.unit_price = Number(product.standard_cost || product.price || 0);

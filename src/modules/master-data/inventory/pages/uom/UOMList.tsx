@@ -1,13 +1,13 @@
 /**
- * @file UnitList.tsx
+ * @file UOMList.tsx
  * @description หน้ารายการหน่วยนับ (Unit of Measure List) - Refactored for Standardization
  */
 
 import { useState, useMemo, useCallback } from 'react';
 import { Ruler, Edit2, Trash2 } from 'lucide-react';
-import { UnitFormModal } from './UnitFormModal';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
-import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
+import { UOMFormModal } from './UOMFormModal';
+import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
+import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
@@ -21,7 +21,7 @@ const STATUS_OPTIONS = [
     { value: 'INACTIVE', label: 'ไม่ใช้งาน' },
 ];
 
-export default function UnitList() {
+export default function UOMList() {
 
     // ==================== STATE & FILTERS ====================
     const {
@@ -34,15 +34,15 @@ export default function UnitList() {
     } = useTableFilters({
         defaultLimit: 10,
         customParamKeys: {
-            search: 'unit_code',
-            search2: 'unit_name',
+            search: 'uom_code',
+            search2: 'uom_name',
             status: 'status'
         }
     });
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
-    const [editingData, setEditingData] = useState<UnitListItem | null>(null); // ✅ เพิ่ม
+    const [editingData, setEditingData] = useState<UOMListItem | null>(null); // ✅ เพิ่ม
 
     // ==================== FILTER CONFIG ====================
     const filterConfig: FilterFieldConfig<Extract<keyof typeof filters, string>>[] = useMemo(() => [
@@ -71,9 +71,9 @@ export default function UnitList() {
 
     // ==================== DATA FETCHING ====================
     const { data: response, isLoading, refetch } = useQuery({
-        queryKey: ['units', filters],
+        queryKey: ['uoms', filters],
         queryFn: async () => {
-            const result = await UnitService.getAll();
+            const result = await UOMService.getAll();
             let items = result.items || [];
 
             // Client-side filtering
@@ -83,21 +83,21 @@ export default function UnitList() {
             if (filters.search) {
                 const term = filters.search.toLowerCase();
                 items = items.filter(u =>
-                    String(u.uom_code || u.unit_code || '').toLowerCase().includes(term)
+                    String(u.uom_code || u.uom_code || '').toLowerCase().includes(term)
                 );
             }
             if (filters.search2) {
                 const term = filters.search2.toLowerCase();
                 items = items.filter(u =>
-                    String(u.uom_name || u.unit_name || '').toLowerCase().includes(term)
+                    String(u.uom_name || u.uom_name || '').toLowerCase().includes(term)
                 );
             }
 
             // Sorting
             if (sortConfig) {
                 items.sort((a, b) => {
-                    const fieldValA = a[sortConfig.key as keyof UnitListItem];
-                    const fieldValB = b[sortConfig.key as keyof UnitListItem];
+                    const fieldValA = a[sortConfig.key as keyof UOMListItem];
+                    const fieldValB = b[sortConfig.key as keyof UOMListItem];
                     const valA = fieldValA != null ? String(fieldValA) : '';
                     const valB = fieldValB != null ? String(fieldValB) : '';
                     return sortConfig.direction === 'asc'
@@ -122,7 +122,7 @@ export default function UnitList() {
     };
 
     // ✅ รับ item ทั้ง row มาด้วย
-    const handleEdit = useCallback((id: number, item: UnitListItem) => {
+    const handleEdit = useCallback((id: number, item: UOMListItem) => {
         setEditingId(id);
         setEditingData(item); // ✅ เก็บข้อมูล row ที่คลิก
         setIsModalOpen(true);
@@ -130,7 +130,7 @@ export default function UnitList() {
 
     const handleDelete = useCallback(async (id: number) => {
         if (confirm('คุณต้องการลบข้อมูลหน่วยนับนี้หรือไม่?')) {
-            await UnitService.delete(id);
+            await UOMService.delete(id);
             refetch();
         }
     }, [refetch]);
@@ -142,7 +142,7 @@ export default function UnitList() {
     };
 
     // ==================== TABLE COLUMNS ====================
-    const columns = useMemo<ColumnDef<UnitListItem>[]>(() => [
+    const columns = useMemo<ColumnDef<UOMListItem>[]>(() => [
         {
             id: 'sequence',
             header: 'ลำดับ',
@@ -156,11 +156,11 @@ export default function UnitList() {
                 <span
                     className="font-medium text-blue-600 dark:text-blue-400 cursor-pointer hover:underline"
                     onClick={() => handleEdit(
-                        Number(row.original.uom_id || row.original.unit_id),
+                        Number(row.original.uom_id || row.original.uom_id),
                         row.original // ✅ ส่ง row ไปด้วย
                     )}
                 >
-                    {String(row.original.uom_code || row.original.unit_code || '-')}
+                    {String(row.original.uom_code || row.original.uom_code || '-')}
                 </span>
             ),
             size: 150,
@@ -169,7 +169,7 @@ export default function UnitList() {
             id: 'uom_name',
             header: 'ชื่อ (ไทย)',
             cell: ({ row }) => (
-                <span>{String(row.original.uom_name || row.original.unit_name || '-')}</span>
+                <span>{String(row.original.uom_name || row.original.uom_name || '-')}</span>
             ),
         },
         {
@@ -177,7 +177,7 @@ export default function UnitList() {
             header: 'ชื่อ (EN)',
             cell: ({ row }) => (
                 <span className="text-gray-500">
-                    {String(row.original.uom_nameeng || row.original.unit_name_en || '-')}
+                    {String(row.original.uom_nameeng || row.original.uom_name_en || '-')}
                 </span>
             ),
         },
@@ -199,7 +199,7 @@ export default function UnitList() {
                 <div className="flex items-center justify-center gap-2">
                     <button
                         onClick={() => handleEdit(
-                            Number(row.original.uom_id || row.original.unit_id),
+                            Number(row.original.uom_id || row.original.uom_id),
                             row.original // ✅ ส่ง row ไปด้วย
                         )}
                         className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
@@ -208,7 +208,7 @@ export default function UnitList() {
                         <Edit2 size={18} />
                     </button>
                     <button
-                        onClick={() => handleDelete(Number(row.original.uom_id || row.original.unit_id))}
+                        onClick={() => handleDelete(Number(row.original.uom_id || row.original.uom_id))}
                         className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="ลบ"
                     >
@@ -279,7 +279,7 @@ export default function UnitList() {
             </div>
 
             {/* ✅ ส่ง initialData เข้า Modal */}
-            <UnitFormModal
+            <UOMFormModal
                 isOpen={isModalOpen}
                 onClose={handleModalClose}
                 editId={editingId}

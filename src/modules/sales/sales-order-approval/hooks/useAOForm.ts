@@ -529,7 +529,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
               const res = await api.get<Record<string, unknown>>(`/uom/${line.uom_id}`);
               const uom = (res?.data || res) as Record<string, unknown>;
               if (uom) {
-                line.uom_name = String(uom.uom_name || uom.unit_name || uom.name || uom.name_th || line.uom_name || '-');
+                line.uom_name = String(uom.uom_name || uom.uom_name || uom.name || uom.name_th || line.uom_name || '-');
               }
             } catch { /* ignore */ }
           }

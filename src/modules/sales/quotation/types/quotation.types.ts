@@ -53,7 +53,6 @@ export interface RawQuotationLine {
     product_name?: string;
     code?: string;
     name?: string;
-    unit_id?: string | number;
 }
 
 export interface RawQuotationData {

@@ -53,7 +53,7 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
         departments,
         employees,
         projects,
-        units,
+        uoms,
     } = useRequisitionForm({ isOpen, onClose, editId, onSuccess });
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -71,16 +71,16 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
     const handleSelectProduct = (product: Product) => {
         if (activeLineIndex !== null) {
             // 1. หา UOM ID จาก product โดยตรงก่อน
-            let targetUomId = String(product.uom_id || product.unit_id || product.base_uom_id || product.purchasing_unit_id || '');
+            let targetUomId = String(product.uom_id || product.uom_id || product.base_uom_id || product.purchasing_unit_id || '');
             
-            // 2. ถ้าหาไม่เจอ หรือเพื่อความชัวร์ ให้ลองหาจากชื่อหน่วยนับใน list units (Fallback)
+            // 2. ถ้าหาไม่เจอ หรือเพื่อความชัวร์ ให้ลองหาจากชื่อหน่วยนับใน list uoms (Fallback)
             if (!targetUomId || targetUomId === '0') {
-                const foundUnit = units.find(u => 
-                    (u.uom_name && (u.uom_name === product.uom_name || u.uom_name === product.unit_name)) ||
-                    (u.unit_name && (u.unit_name === product.uom_name || u.unit_name === product.unit_name))
+                const foundUom = uoms.find(u => 
+                    (u.uom_name && (u.uom_name === product.uom_name || u.uom_name === product.uom_name)) ||
+                    (u.uom_name && (u.uom_name === product.uom_name || u.uom_name === product.uom_name))
                 );
-                if (foundUnit) {
-                    targetUomId = String(foundUnit.uom_id || foundUnit.unit_id || foundUnit.id);
+                if (foundUom) {
+                    targetUomId = String(foundUom.uom_id || foundUom.uom_id || foundUom.id);
                 }
             }
 
@@ -271,12 +271,12 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
                                         removeLine={removeLine}
                                         updateLine={updateLine}
                                         readOnly={readOnly}
-                                        uomOptions={units.map(u => {
+                                        uomOptions={uoms.map(u => {
                                             const item = u as unknown as Record<string, unknown>;
-                                            const uId = String(u.uom_id ?? u.unit_id ?? item.id ?? '');
+                                            const uId = String(u.uom_id ?? u.uom_id ?? item.id ?? '');
                                             return { 
                                                 id: uId, 
-                                                name: u.uom_name || u.unit_name || String(item.name || '') 
+                                                name: u.uom_name || u.uom_name || String(item.name || '') 
                                             };
                                         })}
                                         onSearchProduct={handleOpenProductSearch}

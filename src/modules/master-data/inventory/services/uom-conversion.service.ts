@@ -13,8 +13,8 @@ interface RawUOMConversion {
   is_purchase_uom: boolean;
   is_active: boolean;
   item?: { item_code: string; item_name: string } | null;
-  from_uom?: { unit_name?: string; unit_code?: string } | null;
-  to_uom?: { unit_name?: string; unit_code?: string } | null;
+  from_uom?: { uom_name?: string; uom_code?: string } | null;
+  to_uom?: { uom_name?: string; uom_code?: string } | null;
   created_at: string;
 }
 
@@ -50,9 +50,9 @@ export const UOMConversionService = {
           item_code: item.item?.item_code || '',
           item_name: item.item?.item_name || '',
           from_unit_id: item.from_uom_id,
-          from_unit_name: item.from_uom?.unit_name || item.from_uom?.unit_code || '',
+          from_unit_name: item.from_uom?.uom_name || item.from_uom?.uom_code || '',
           to_unit_id: item.to_uom_id,
-          to_unit_name: item.to_uom?.unit_name || item.to_uom?.unit_code || '',
+          to_unit_name: item.to_uom?.uom_name || item.to_uom?.uom_code || '',
           conversion_factor: Number(item.factor || 0),
           is_purchase_unit: !!item.is_purchase_uom,
           is_active: !!item.is_active,
@@ -88,9 +88,9 @@ export const UOMConversionService = {
             item_code: item.item?.item_code || '',
             item_name: item.item?.item_name || '',
             from_unit_id: item.from_uom_id,
-            from_unit_name: item.from_uom?.unit_name || item.from_uom?.unit_code || '',
+            from_unit_name: item.from_uom?.uom_name || item.from_uom?.uom_code || '',
             to_unit_id: item.to_uom_id,
-            to_unit_name: item.to_uom?.unit_name || item.to_uom?.unit_code || '',
+            to_unit_name: item.to_uom?.uom_name || item.to_uom?.uom_code || '',
             conversion_factor: Number(item.factor || 0),
             is_purchase_unit: !!item.is_purchase_uom,
             is_active: !!item.is_active,

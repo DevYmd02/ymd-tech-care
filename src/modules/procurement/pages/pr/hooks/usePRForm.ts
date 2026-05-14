@@ -391,11 +391,11 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess, readOnly = false }: 
           warehouse_code: warehouses.find(w => String(w.value) === String(product.warehouse_id || product.warehouse || 1))?.original?.warehouse_code || '',
           location: product.location || '',
           // 🎯 THE CRITICAL FIX: Bind the UOM Data using backend-provided keys
-          uom: product.uom_name || product.unit_name || 'ชิ้น',
-          uom_id: Number(product.uom_id || product.unit_id || 1),
+          uom: product.uom_name || product.uom_name || 'ชิ้น',
+          uom_id: Number(product.uom_id || product.uom_id || 1),
           // Store valid units for this product so select list filters intelligently (Trap 2 fix)
-          _base_uom_name: product.uom_name || product.unit_name || '',
-          _base_uom_id: Number(product.uom_id || product.unit_id || 1),
+          _base_uom_name: product.uom_name || product.uom_name || '',
+          _base_uom_id: Number(product.uom_id || product.uom_id || 1),
           _purchasing_uom_name: product.purchasing_unit_name || '',
           _purchasing_uom_id: product.purchasing_unit_id ? Number(product.purchasing_unit_id) : undefined,
           est_unit_price: unitPrice,

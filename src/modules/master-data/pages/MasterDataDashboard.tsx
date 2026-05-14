@@ -29,7 +29,7 @@ const WarehouseFormModal = lazy(() => import('@/modules/master-data/inventory/pa
 const ItemMasterFormModal = lazy(() => import('@/modules/master-data/inventory/pages/item-master/ItemMasterFormModal').then(m => ({ default: m.ItemMasterFormModal })));
 const CostCenterFormModal = lazy(() => import('@/modules/master-data/accounting/pages/cost-center/CostCenterFormModal').then(m => ({ default: m.CostCenterFormModal })));
 const ProjectFormModal = lazy(() => import('@/modules/master-data/project/pages/ProjectFormModal').then(m => ({ default: m.ProjectFormModal })));
-const UnitFormModal = lazy(() => import('@/modules/master-data/inventory/pages/unit/UnitFormModal').then(m => ({ default: m.UnitFormModal })));
+const UOMFormModal = lazy(() => import('@/modules/master-data/inventory/pages/uom/UOMFormModal').then(m => ({ default: m.UOMFormModal })));
 const CategoryFormModal = lazy(() => import('@/modules/master-data/inventory/pages/category/CategoryFormModal').then(m => ({ default: m.CategoryFormModal })));
 
 // Lazy loaded Tab components
@@ -39,7 +39,7 @@ const WarehouseTab = lazy(() => import('./dashboard/tabs/WarehouseTab').then(m =
 const CostCenterTab = lazy(() => import('./dashboard/tabs/CostCenterTab').then(m => ({ default: m.CostCenterTab })));
 const ProjectTab = lazy(() => import('./dashboard/tabs/ProjectTab').then(m => ({ default: m.ProjectTab })));
 const ItemTab = lazy(() => import('./dashboard/tabs/ItemTab').then(m => ({ default: m.ItemTab })));
-const UnitTab = lazy(() => import('./dashboard/tabs/UnitTab').then(m => ({ default: m.UnitTab })));
+const UOMTab = lazy(() => import('./dashboard/tabs/UOMTab').then(m => ({ default: m.UOMTab })));
 const CategoryTab = lazy(() => import('./dashboard/tabs/CategoryTab').then(m => ({ default: m.CategoryTab })));
 
 // Import sub-components
@@ -55,7 +55,7 @@ import type {
     CostCenter,
     Project,
     ItemListItem,
-    UnitListItem,
+    UOMListItem,
     ProductCategoryListItem
 } from '@/modules/master-data/types/master-data-types';
 import type { TabType, TabConfig, TabLabel } from '../types';
@@ -98,7 +98,7 @@ const DB_RELATIONS: Record<TabType, { dbTable: string; relations: string[]; fk: 
     'unit': {
         dbTable: 'uom',
         relations: ['item_master', 'po_detail', 'pr_detail'],
-        fk: 'unit_id'
+        fk: 'uom_id'
     },
     'category': {
         dbTable: 'product_category',
@@ -135,7 +135,7 @@ export default function MasterDataDashboard() {
     // Items handled by useQuery below
     const [costCenters, setCostCenters] = useState<CostCenter[]>([]);
     const [projects, setProjects] = useState<Project[]>([]);
-    const [units, setUnits] = useState<UnitListItem[]>([]);
+    const [units, setUnits] = useState<UOMListItem[]>([]);
     const [categories, setCategories] = useState<ProductCategoryListItem[]>([]);
 
     // REFACTORED: Use useQuery for items (Cache Shared with ItemMasterList)
@@ -214,7 +214,7 @@ export default function MasterDataDashboard() {
                     break;
                 }
                 case 'unit': {
-                    const data = await MasterDataService.getUnits();
+                    const data = await MasterDataService.getUOMs();
                     setUnits(data || []);
                     break;
                 }
@@ -301,7 +301,7 @@ export default function MasterDataDashboard() {
 
             if (skipTab !== 'unit') {
                 try {
-                    const data = await MasterDataService.getUnits();
+                    const data = await MasterDataService.getUOMs();
                     setUnits(data || []);
                 } catch (error) {
                     logger.error('Failed to fetch units for counts', error);
@@ -363,7 +363,7 @@ export default function MasterDataDashboard() {
         setIsModalOpen(true);
     };
 
-    type MasterDataEntity = CostCenter | Project | BranchListItem | WarehouseListItem | UnitListItem | ProductCategoryListItem;
+    type MasterDataEntity = CostCenter | Project | BranchListItem | WarehouseListItem | UOMListItem | ProductCategoryListItem;
 
     const handleStatusToggle = async (data: MasterDataEntity) => {
         try {
@@ -384,8 +384,8 @@ export default function MasterDataDashboard() {
                 const res = await MasterDataService.toggleWarehouseStatus(warehouse.id, !warehouse.is_active);
                 if (res.success) fetchData();
             } else if (activeTab === 'unit') {
-                const unit = data as UnitListItem;
-                const res = await MasterDataService.toggleUnitStatus(unit.id, !unit.is_active);
+                const unit = data as UOMListItem;
+                const res = await MasterDataService.toggleUOMStatus(unit.id, !unit.is_active);
                 if (res.success) fetchData();
             } else if (activeTab === 'category') {
                 const category = data as ProductCategoryListItem;
@@ -503,8 +503,8 @@ export default function MasterDataDashboard() {
                 );
             case 'unit':
                 return (units || []).filter(u =>
-                    u.unit_code?.toLowerCase().includes(term) ||
-                    u.unit_name?.toLowerCase().includes(term)
+                    u.uom_code?.toLowerCase().includes(term) ||
+                    u.uom_name?.toLowerCase().includes(term)
                 );
             case 'category':
                 return (categories || []).filter(c =>
@@ -630,8 +630,8 @@ export default function MasterDataDashboard() {
                         dbRelation={currentTab}
                     />
                 ) : activeTab === 'unit' ? (
-                    <UnitTab 
-                        data={paginatedData as UnitListItem[]}
+                    <UOMTab 
+                        data={paginatedData as UOMListItem[]}
                         expandedId={expandedId}
                         toggleExpand={toggleExpand}
                         handleEdit={handleEdit}
@@ -759,11 +759,11 @@ export default function MasterDataDashboard() {
                     />
                 )}
                 {isModalOpen && activeTab === 'unit' && (
-                    <UnitFormModal 
+                    <UOMFormModal 
                         isOpen={true} 
                         onClose={handleModalClose} 
                         editId={editingId}
-                        initialData={editingId ? units.find(u => u.unit_id === editingId) : null}
+                        initialData={editingId ? units.find(u => u.uom_id === editingId) : null}
                         onSuccess={fetchData}
                     />
                 )}

@@ -530,7 +530,7 @@ export const DeliveryService = {
                 let itemName = String(l['item_name'] || item['item_name'] || item['item_name_th'] || item['name'] || '');
 
                 let uomId = String(l['uom_id'] || uom['uom_id'] || uom['id'] || '');
-                let uomName = String(l['uom_name'] || uom['uom_name'] || uom['name'] || uom['unit_name'] || '');
+                let uomName = String(l['uom_name'] || uom['uom_name'] || uom['name'] || uom['uom_name'] || '');
 
                 if (itemId && (!itemCode || !itemName)) {
                     try {
@@ -540,8 +540,8 @@ export const DeliveryService = {
                             itemCode = masterItem.item_code || itemCode;
                             itemName = masterItem.item_name || itemName;
                             if (!uomId) {
-                                uomId = String(masterItem.unit_id || masterItem.base_uom_id || '');
-                                uomName = masterItem.unit_name || '';
+                                uomId = String(masterItem.uom_id || masterItem.base_uom_id || '');
+                                uomName = masterItem.uom_name || '';
                             }
                         }
                     } catch (err) {

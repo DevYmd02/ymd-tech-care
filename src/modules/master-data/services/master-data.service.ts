@@ -2,7 +2,7 @@ import type { AxiosRequestConfig } from 'axios';
 import type {
   BranchListItem,
   WarehouseListItem,
-  UnitListItem,
+  UOMListItem,
   CostCenter,
   Project,
   ProductCategoryListItem,
@@ -19,7 +19,7 @@ import type { CustomerMaster } from '@/modules/master-data/customer/customer-mas
 import { BranchService } from '@/modules/master-data/company/services/org-branch.service';
 import { WarehouseService } from '@/modules/master-data/inventory/services/warehouse.service';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
 import { CostCenterService } from '@/modules/master-data/accounting/services/cost-center.service';
 import { ProjectService } from '@/modules/master-data/project/services/project.service';
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
@@ -108,24 +108,25 @@ export const MasterDataService = {
     }
   },
 
-  getUnits: async (config?: AxiosRequestConfig): Promise<UnitListItem[]> => {
+  getUOMs: async (config?: AxiosRequestConfig): Promise<UOMListItem[]> => {
     try {
-      const response = await UnitService.getAll({ limit: 1000 }, config);
+      const response = await UOMService.getAll({ limit: 1000 }, config);
       return response.items || [];
     } catch (error) {
-      logger.error('[MasterDataService] getUnits failed:', error);
+      logger.error('[MasterDataService] getUOMs failed:', error);
       return [];
     }
   },
 
-  toggleUnitStatus: async (id: number, isActive: boolean) => {
+  toggleUOMStatus: async (id: number, isActive: boolean) => {
     try {
-      return await UnitService.toggleStatus(id, isActive);
+      return await UOMService.toggleStatus(id, isActive);
     } catch (error) {
-      logger.error('[MasterDataService] toggleUnitStatus failed:', error);
+      logger.error('[MasterDataService] toggleUOMStatus failed:', error);
       return { success: false, message: 'Failed to toggle status' };
     }
   },
+
 
   getCostCenters: async (config?: AxiosRequestConfig): Promise<CostCenter[]> => {
     try {

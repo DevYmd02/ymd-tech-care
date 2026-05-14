@@ -326,7 +326,7 @@ export const ReservationService = {
                             item_code: itemCode,
                             item_name: itemName,
                             qty_reserved: Number(l.qty || l.qty_reserved || 0),
-                            uom_id: String(l.uom_id || l.unit_id || ''),
+                            uom_id: String(l.uom_id || l.uom_id || ''),
                             warehouse_id: String(l.warehouse_id || ''),
                             location_id: String(l.location_id || ''),
                             lot_no: lotNo,

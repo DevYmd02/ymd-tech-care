@@ -14,7 +14,7 @@ import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import { EmployeeService } from '@master-data/employee/services/employee.service';
 import { ItemMasterService } from '@inventory/services/item-master.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 import type { FieldErrors } from 'react-hook-form';
 import { logger } from '@/shared/utils';
@@ -174,7 +174,7 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
                         // Fetch item and unit details in parallel for each row
                         const [itemDetail, unitDetail] = await Promise.all([
                             itmId ? ItemMasterService.getById(itmId) : Promise.resolve(null),
-                            uomId ? UnitService.get(uomId) : Promise.resolve(null)
+                            uomId ? UOMService.get(uomId) : Promise.resolve(null)
                         ]);
 
                         return {
@@ -188,7 +188,7 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
                             remark: line.remarks || line.remark || '',
                             itemCode: itemDetail?.item_code || line.item_code || '',
                             itemName: itemDetail?.item_name || line.item_name || '',
-                            uomName: unitDetail?.unit_name || unitDetail?.uom_name || line.uom_name || '-'
+                            uomName: unitDetail?.uom_name || unitDetail?.uom_name || line.uom_name || '-'
                         };
                     }));
 

@@ -14,7 +14,7 @@ import type { POStatus } from '@/modules/procurement/schemas/po-schemas';
 import { EmployeeService } from '@/modules/master-data/employee/services/employee.service';
 import { BranchService } from '@/modules/master-data/company/services/org-branch.service';
 import { TaxCodeService } from '@/modules/master-data/tax/services/tax-code.service';
-import { UnitService } from '@/modules/master-data/inventory/services/unit.service';
+import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
 import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
 import { masterDataCache } from '@/shared/utils/master-data-cache';
 import type { AxiosRequestConfig } from 'axios';
@@ -69,7 +69,6 @@ interface POALineResponse {
     discount_expression?: string;
     uom_id?: number | string;
     uom_name?: string;
-    unit_name?: string;
     receipt_type?: string;
     is_approved?: boolean;
     remarks?: string;
@@ -240,7 +239,7 @@ const mapPOAResponseToListItem = (
             uom_name: String(
                 (l.uom_name && !['-','undefined'].includes(String(l.uom_name))) ? l.uom_name :
                 (uomMap && l.uom_id && uomMap[String(l.uom_id).toLowerCase()]) ? uomMap[String(l.uom_id).toLowerCase()] :
-                (l.unit_name && !['-','undefined'].includes(String(l.unit_name))) ? l.unit_name :
+                (l.uom_name && !['-','undefined'].includes(String(l.uom_name))) ? l.uom_name :
                 (poHeader.po_lines?.[idx] as POALineResponse)?.uom_name || '-'
             ),
             // 🎯 AV PATTERN: Do NOT force is_approved to true if not explicitly set.
@@ -375,7 +374,7 @@ export const POAService = {
             masterDataCache.get('employees').length > 0 ? Promise.resolve(masterDataCache.get('employees')) : EmployeeService.getAll(config),
             masterDataCache.get('branches').length > 0 ? Promise.resolve(masterDataCache.get('branches')) : BranchService.getList({ limit: 1000 }, config),
             TaxCodeService.getTaxCodes(config),
-            masterDataCache.get('units').length > 0 ? Promise.resolve(masterDataCache.get('units')) : UnitService.getAll({ limit: 1000 }, config)
+            masterDataCache.get('units').length > 0 ? Promise.resolve(masterDataCache.get('units')) : UOMService.getAll({ limit: 1000 }, config)
         ]);
 
         const rawApprovalItems = (approvalRes.status === 'fulfilled') ? extractArrayFromResponse<Record<string, unknown>>(approvalRes.value) : [];
@@ -420,8 +419,8 @@ export const POAService = {
             const uValue = uomRes.value as unknown as { items?: Record<string, unknown>[] } | Record<string, unknown>[];
             const uItems = Array.isArray(uValue) ? uValue : (uValue?.items || []);
             uItems.forEach((u) => {
-                const id = String(u.uom_id || u.unit_id || u.id || '').toLowerCase();
-                if (id) uomMap[id] = String(u.uom_name || u.unit_name || u.name || '');
+                const id = String(u.uom_id || u.uom_id || u.id || '').toLowerCase();
+                if (id) uomMap[id] = String(u.uom_name || u.uom_name || u.name || '');
             });
         }
 
@@ -541,7 +540,7 @@ export const POAService = {
             masterDataCache.get('employees').length > 0 ? Promise.resolve(masterDataCache.get('employees')) : EmployeeService.getAll(config),
             masterDataCache.get('branches').length > 0 ? Promise.resolve(masterDataCache.get('branches')) : BranchService.getList({ limit: 1000 }, config),
             TaxCodeService.getTaxCodes(config),
-            masterDataCache.get('units').length > 0 ? Promise.resolve(masterDataCache.get('units')) : UnitService.getAll({ limit: 1000 }, config)
+            masterDataCache.get('units').length > 0 ? Promise.resolve(masterDataCache.get('units')) : UOMService.getAll({ limit: 1000 }, config)
         ]);
 
         const employeeMap: Record<string, string> = {};
@@ -581,8 +580,8 @@ export const POAService = {
             const uValue = uoms.value as unknown as { items?: Record<string, unknown>[] } | Record<string, unknown>[];
             const uItems = Array.isArray(uValue) ? uValue : (uValue?.items || []);
             uItems.forEach((u) => {
-                const uid = String(u.uom_id || u.unit_id || u.id || '').toLowerCase();
-                if (uid) uomMap[uid] = String(u.uom_name || u.unit_name || u.name || '');
+                const uid = String(u.uom_id || u.uom_id || u.id || '').toLowerCase();
+                if (uid) uomMap[uid] = String(u.uom_name || u.uom_name || u.name || '');
             });
         }
 

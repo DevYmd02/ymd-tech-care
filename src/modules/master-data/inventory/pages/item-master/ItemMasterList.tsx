@@ -1,7 +1,7 @@
 /**
  * @file ItemMasterList.tsx
  * @description รายการสินค้า (Item Master) - Refactored for Standardization
- * @purpose แสดงรายการสินค้า ใช้ SmartTable และ FilterFormBuilder ตาม Pattern UnitList
+ * @purpose แสดงรายการสินค้า ใช้ SmartTable และ FilterFormBuilder ตาม Pattern UOMList
  */
 import { useState, useMemo, useCallback } from 'react';
 import { Package, Edit2, Trash2 } from 'lucide-react';

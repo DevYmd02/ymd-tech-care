@@ -15,8 +15,7 @@ interface ItemBarcodeRawResponse extends Record<string, unknown> {
     barcode?: string;
     item_barcode_code?: string;
     uom_id?: number;
-    unit_id?: number;
-    unit_name?: string;
+    uom_name?: string;
     is_primary?: boolean;
     is_default?: boolean;
     is_active?: boolean;
@@ -62,8 +61,8 @@ export const ItemBarcodeService = {
           item_code: String(b.item_code || ''),
           item_name: String(b.item_name || ''),
           barcode: String(b.barcode || b.item_barcode_code || ''),
-          unit_id: Number(b.uom_id || b.unit_id || 0),
-          unit_name: String(b.unit_name || ''),
+          uom_id: Number(b.uom_id || b.uom_id || 0),
+          uom_name: String(b.uom_name || ''),
           is_primary: Boolean(b.is_primary || b.is_default || false),
           is_active: Boolean(b.is_active ?? true),
           created_at: String(b.created_at || new Date().toISOString())
@@ -83,12 +82,12 @@ export const ItemBarcodeService = {
               item_barcode_id: Number(response.item_barcode_id || response.barcode_id || response.id || 0),
               item_id: Number(response.item_id || 0),
               barcode: String(response.barcode || response.item_barcode_code || ''),
-              uom_id: Number(response.uom_id || response.unit_id || 0),
+              uom_id: Number(response.uom_id || response.uom_id || 0),
               is_primary: Boolean(response.is_primary || response.is_default || false),
               is_active: Boolean(response.is_active ?? true),
               item_code: String(response.item_code || ''),
               item_name: String(response.item_name || ''),
-              unit_name: String(response.unit_name || ''),
+              uom_name: String(response.uom_name || ''),
               created_at: String(response.created_at || new Date().toISOString()),
               updated_at: String(response.updated_at || new Date().toISOString())
           };

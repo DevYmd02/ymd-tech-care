@@ -1,7 +1,7 @@
 import { Plus, Trash2, ShoppingBag, Search, AlertCircle } from 'lucide-react';
 import { useFormContext, useFieldArray, useWatch } from 'react-hook-form';
 import type { SalesOrderLineValues, SalesOrderFormValues } from '../schemas/sales-order.schemas';
-import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
+import type { UOMListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
 import { formatNumber } from '@/shared/utils';
 import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
@@ -15,7 +15,7 @@ interface SalesOrderLineTableProps {
     onSearchWarehouse?: (index: number) => void;
     onSearchLocation?: (index: number) => void;
     onSearchLot?: (index: number) => void;
-    uoms: UnitListItem[];
+    uoms: UOMListItem[];
     warehouses: WarehouseListItem[];
     locations: Location[];
     priceLevelNames?: PriceLevelName[];
@@ -31,7 +31,7 @@ interface SalesOrderLineRowProps {
     onSearchLocation?: (index: number) => void;
     onSearchLot?: (index: number) => void;
     onRemoveLine: (index: number) => void;
-    uoms: UnitListItem[];
+    uoms: UOMListItem[];
     warehouses: WarehouseListItem[];
     locations: Location[];
     priceLevelNames?: PriceLevelName[];
@@ -166,9 +166,9 @@ const SalesOrderLineRow = ({
                     style={{ colorScheme: 'dark' }}
                 >
                     <option value="">-- หน่วย --</option>
-                    {uoms.map((u: UnitListItem) => (
-                        <option key={String(u.id || u.unit_id)} value={String(u.id || u.unit_id)}>
-                            {u.unit_name || u.uom_name}
+                    {uoms.map((u: UOMListItem) => (
+                        <option key={String(u.id || u.uom_id)} value={String(u.id || u.uom_id)}>
+                            {u.uom_name || u.uom_name}
                         </option>
                     ))}
                 </select>

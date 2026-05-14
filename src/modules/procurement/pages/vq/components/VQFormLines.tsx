@@ -1,13 +1,13 @@
 import React, { useMemo } from 'react';
 import { Controller, useFormContext, useWatch, type FieldArrayWithId } from 'react-hook-form';
 import { Search, Plus, Trash2, FileText } from 'lucide-react';
-import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
+import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
 import type { QuotationFormData } from '@/modules/procurement/schemas/vq-schemas';
 
 export interface VQFormLinesProps {
     forceViewMode: boolean;
     isLineReadonly: boolean;
-    units: UnitListItem[];
+    units: UOMListItem[];
     onOpenProductSearch: (index: number) => void;
     updateLineCalculation: (index: number) => void;
     createEmptyLine: () => QuotationFormData['vq_lines'][0];
@@ -182,7 +182,7 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                                                 name={`vq_lines.${index}.uom_id`}
                                                                 control={control}
                                                                 render={({ field: controllerField }) => {
-                                                                    const uomName = units.find(u => u.unit_id === Number(controllerField.value))?.unit_name || controllerField.value || '-';
+                                                                    const uomName = units.find(u => u.uom_id === Number(controllerField.value))?.uom_name || controllerField.value || '-';
                                                                     return (
                                                                         <input
                                                                             type="text"
@@ -201,13 +201,13 @@ export const VQFormLines: React.FC<VQFormLinesProps> = ({
                                                             onChange={(e) => {
                                                                 const selectedId = Number(e.target.value);
                                                                 setValue(`vq_lines.${index}.uom_id`, selectedId, { shouldValidate: true });
-                                                                const name = units.find(u => u.unit_id === selectedId)?.unit_name || '';
+                                                                const name = units.find(u => u.uom_id === selectedId)?.uom_name || '';
                                                                 setValue(`vq_lines.${index}.uom_name`, name);
                                                             }}                                                            className="w-full h-8 px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent dark:text-white text-center cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed disabled:bg-gray-50 transition-all shadow-sm"
                                                         >
                                                             <option value={0}>- หน่วย -</option>
-                                                            {units.map((u: UnitListItem) => (
-                                                                <option key={u.unit_id} value={u.unit_id}>{u.unit_name}</option>
+                                                            {units.map((u: UOMListItem) => (
+                                                                <option key={u.uom_id} value={u.uom_id}>{u.uom_name}</option>
                                                             ))}
                                                         </select>
                                                     )}

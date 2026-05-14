@@ -1,7 +1,7 @@
 import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { useWarehouses, useProjects, useTaxCodes, useCurrencies, useUnits } from '@/modules/master-data/hooks/useMasterData';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
-import type { ItemListItem, CostCenter, Project, WarehouseListItem, UnitListItem, Currency } from '@/modules/master-data/types/master-data-types';
+import type { ItemListItem, CostCenter, Project, WarehouseListItem, UOMListItem, Currency } from '@/modules/master-data/types/master-data-types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import { logger } from '@/shared/utils';
 import { useQuery } from '@tanstack/react-query';
@@ -59,7 +59,7 @@ export const usePRMasterData = (enabled = true) => {
     const costCenters = useMemo(() => extractArray<CostCenter>(costCentersRes), [costCentersRes]);
     const projects = useMemo(() => extractArray<Project>(projectsRes), [projectsRes]);
     const masterItems = useMemo(() => extractArray<ItemListItem>(itemsRes), [itemsRes]);
-    const units = useMemo(() => extractArray<UnitListItem>(unitsRes), [unitsRes]);
+    const units = useMemo(() => extractArray<UOMListItem>(unitsRes), [unitsRes]);
     const currencies = useMemo(() => extractArray<Currency>(currenciesRes), [currenciesRes]);
 
     const purchaseTaxOptions = useMemo(() => {

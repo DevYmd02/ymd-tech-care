@@ -5,12 +5,12 @@
 
 import { Package, Plus, Trash2, Search } from 'lucide-react';
 import type { DeliveryLineValues } from '../schemas/delivery.schemas';
-import type { UnitListItem, WarehouseListItem } from '@master-data/types/master-data-types';
+import type { UOMListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@master-data/inventory/types/inventory-master.types';
 
 interface DeliveryLineTableProps {
     lines: DeliveryLineValues[];
-    uoms: UnitListItem[];
+    uoms: UOMListItem[];
     warehouses?: WarehouseListItem[];
     locations?: Location[];
     onAddLine: () => void;
@@ -192,11 +192,11 @@ export function DeliveryLineTable({
                                             <option value="" className="bg-white dark:bg-[#1e293b]">-- หน่วย --</option>
                                             {uoms.map((u) => (
                                                 <option 
-                                                    key={String(u.id || u.unit_id)} 
-                                                    value={String(u.id || u.unit_id)}
+                                                    key={String(u.id || u.uom_id)} 
+                                                    value={String(u.id || u.uom_id)}
                                                     className="bg-white dark:bg-[#1e293b]"
                                                 >
-                                                    {u.unit_name || u.uom_name || ''}
+                                                    {u.uom_name || u.uom_name || ''}
                                                 </option>
                                             ))}
                                         </select>

@@ -391,7 +391,7 @@ export const sidebarMenuItems: MenuItem[] = [
                 subItems: [
                     { id: 'ic-document-link', label: 'กำหนดเอกสารเชื่อม IC', path: '/master-data/ic-document-link' },
                     { id: 'item-master', label: 'กำหนดรหัสสินค้าและบริการ', path: '/master-data/item' },
-                    { id: 'unit', label: 'กำหนดหน่วยนับ', path: '/master-data/unit' },
+                    { id: 'unit', label: 'กำหนดหน่วยนับ', path: '/master-data/uom' },
                     { id: 'item-type', label: 'กำหนดประเภทสินค้า', path: '/master-data/item-type' },
                     { id: 'item-group', label: 'กำหนดกลุ่มสินค้า', path: '/master-data/item-group' },
                     { id: 'item-category', label: 'กำหนดหมวดสินค้า', path: '/master-data/product-category' },

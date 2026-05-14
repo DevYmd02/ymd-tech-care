@@ -147,9 +147,9 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
         enabled: isOpen,
     });
 
-    const { data: units = [] } = useQuery({
-        queryKey: ['units-options'],
-        queryFn: () => MasterDataService.getUnits(),
+    const { data: uoms = [] } = useQuery({
+        queryKey: ['uoms-options'],
+        queryFn: () => MasterDataService.getUOMs(),
         staleTime: 5 * 60 * 1000,
         enabled: isOpen,
     });
@@ -325,6 +325,6 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
         departments,
         employees,
         projects,
-        units,
+        uoms,
     };
 }

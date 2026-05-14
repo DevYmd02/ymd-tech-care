@@ -1,7 +1,7 @@
 import { useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue, type UseFormGetValues } from 'react-hook-form';
 import { Plus, Trash2, ScanBarcode, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { ItemFormData } from '../hooks/useItemForm';
-import type { UnitListItem } from '@/modules/master-data/types/master-data-types';
+import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
 
 interface Props {
     control: Control<ItemFormData>;
@@ -9,7 +9,7 @@ interface Props {
     setValue: UseFormSetValue<ItemFormData>;
     getValues: UseFormGetValues<ItemFormData>;
     errors: FieldErrors<ItemFormData>;
-    units: UnitListItem[];
+    units: UOMListItem[];
     editId?: number | null;
 }
 
@@ -94,7 +94,7 @@ export const ItemBarcodeFieldArray: React.FC<Props> = ({
                                                 >
                                                     <option value="">-- เลือกหน่วยนับ --</option>
                                                     {units.map(u => (
-                                                        <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.unit_name} ({u.uom_code || u.unit_code})</option>
+                                                        <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.uom_name} ({u.uom_code || u.uom_code})</option>
                                                     ))}
                                                 </select>
                                                 {errors.barcodes?.[index]?.uom_id && (

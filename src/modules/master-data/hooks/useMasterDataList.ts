@@ -4,7 +4,7 @@
  * @module hooks/useMasterDataList
  * 
  * @purpose Reduce code duplication across master data list pages:
- * - BranchList, WarehouseList, UnitList, ProductCategoryList, ItemTypeList
+ * - BranchList, WarehouseList, UOMList, ProductCategoryList, ItemTypeList
  * - VendorList, VendorDashboard
  * 
  * @example
@@ -70,7 +70,7 @@ export interface UseMasterDataListOptions<T, IdType = string> {
 
   /**
    * ชื่อ field ที่เป็น primary key
-   * @example 'branch_id', 'warehouse_id', 'unit_id'
+   * @example 'branch_id', 'warehouse_id', 'uom_id'
    */
   idField: keyof T;
 

@@ -6,7 +6,7 @@ import {
     type SalesOrderFormValues,
     getSalesOrderDefaultValues 
 } from '../schemas/sales-order.schemas';
-import type { Currency, UnitListItem } from '@master-data/types/master-data-types';
+import type { Currency, UOMListItem } from '@master-data/types/master-data-types';
 import type { TaxCode } from '@master-data/tax/types/tax-types';
 
 import { useSalesOrderCalculations } from './useSalesOrderCalculations';
@@ -23,7 +23,7 @@ interface UseSalesOrderFormProps {
     initialData?: Partial<SalesOrderFormValues>;
     currencies: Currency[];
     taxCodes: TaxCode[];
-    uoms: UnitListItem[];
+    uoms: UOMListItem[];
     onClose: () => void;
     readOnly?: boolean;
 }

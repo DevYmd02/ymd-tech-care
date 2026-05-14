@@ -37,7 +37,7 @@ export const masterDataCache = {
         const idStr = String(id);
         
         return list.find(item => {
-            const itemId = String(item.id || item[`${key.slice(0, -1)}_id`] || item.branch_id || item.employee_id || item.department_id || item.warehouse_id || item.unit_id);
+            const itemId = String(item.id || item[`${key.slice(0, -1)}_id`] || item.branch_id || item.employee_id || item.department_id || item.warehouse_id || item.uom_id);
             return itemId === idStr;
         }) || null;
     },

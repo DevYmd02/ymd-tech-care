@@ -19,7 +19,7 @@ import { useSalesOrderForm } from '../hooks';
 import { SalesOrderService } from '../services/sales-order.service';
 import type { SalesOrderFormValues } from '../schemas/sales-order.schemas';
 import type { SalesOrderFormData } from '../types/sales-order.types';
-import type { Currency, UnitListItem } from '@master-data/types/master-data-types';
+import type { Currency, UOMListItem } from '@master-data/types/master-data-types';
 import type { TaxCode } from '@master-data/tax/types/tax-types';
 import type { EmployeeDeptMaster } from '@master-data/company/types/employee-dept.types';
 import type { Project } from '@master-data/project/types/project-types';
@@ -149,7 +149,7 @@ export function SalesOrderFormModal({
         initialData: (soDetail || initialData) as Partial<SalesOrderFormValues>,
         currencies: (currencies || []) as Currency[],
         taxCodes: (taxCodes || []) as TaxCode[],
-        uoms: (uoms || []) as UnitListItem[],
+        uoms: (uoms || []) as UOMListItem[],
         onClose,
         readOnly: isViewOnly,
     });
