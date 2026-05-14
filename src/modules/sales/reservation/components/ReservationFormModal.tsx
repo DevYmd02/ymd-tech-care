@@ -19,6 +19,7 @@ import { ReservationService } from '../services/reservation.service';
 import type { ReservationFormData } from '../types/reservation.types';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@utils';
+import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 
 import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
 
@@ -193,7 +194,17 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                 {isLoading && !watch('reservation_no') ? (
                     <SalesFormSkeleton />
                 ) : (
-                    <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 relative">
+                    <ErrorBoundary>
+                         <style dangerouslySetInnerHTML={{ __html: `
+                            @keyframes formFadeIn {
+                                from { opacity: 0; transform: translateY(8px); }
+                                to { opacity: 1; transform: translateY(0); }
+                            }
+                            .animate-form-fade-in {
+                                animation: formFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                            }
+                        `}} />
+                        <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 relative animate-form-fade-in">
                         <form 
                             id="reservation-form" 
                             onSubmit={handleSubmit(onFormSubmit, (errors) => {
@@ -281,7 +292,8 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                             </div>
                         </div>
                     </form>
-                </div>
+                    </div>
+                </ErrorBoundary>
                 )}
             {/* Confirmation Modal */}
             <ConfirmationModal 

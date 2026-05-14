@@ -1,6 +1,9 @@
 import api from '@core/api/api';
 import { logger } from '@utils';
 import type { ReservationFormData } from '../types/reservation.types';
+import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
+import type { ItemLot } from '@/modules/master-data/inventory/types/item-lot-types';
+import type { ListResponse, DataListResponse } from '@/shared/types/api.types';
 
 export interface ReservationListParams {
     reservation_no?: string;
@@ -228,25 +231,79 @@ export const ReservationService = {
                     if (response[f]) response[f] = String(response[f]);
                 });
                 
-                // 🛠️ Line Mapping with Enrichment (Back to fetching if missing)
+                // 🛠️ Line Mapping with Batch Enrichment (Fixes N+1 Waterfall)
                 const rawLines = (response.saleReservationLines || response.lines || []) as Record<string, unknown>[];
-                if (Array.isArray(rawLines)) {
-                    response.lines = await Promise.all(rawLines.map(async (l: Record<string, unknown>) => {
+                if (Array.isArray(rawLines) && rawLines.length > 0) {
+                    // 1. Collect unique IDs for batch fetching
+                    const uniqueItemIds = [...new Set(rawLines
+                        .map(l => {
+                            const itemObj = (l.item || l.item_master || l.master_item || l.product || {}) as Record<string, unknown>;
+                            return String(l.item_id || itemObj.item_id || itemObj.id || '');
+                        })
+                        .filter(id => !!id)
+                    )];
+
+                    const uniqueLotIds = [...new Set(rawLines
+                        .map(l => {
+                            const lotIdVal = l.lot_id;
+                            if (lotIdVal && (typeof lotIdVal === 'number' || typeof lotIdVal === 'string')) return String(lotIdVal);
+                            const lotObj = (l.lot || l.item_lot || {}) as Record<string, unknown>;
+                            return String(lotObj.lot_id || lotObj.id || '');
+                        })
+                        .filter(id => !!id && !isNaN(Number(id)))
+                    )];
+
+                    // 2. Fetch all required Master Data in parallel (Batch)
+                    const [itemsMap, lotsMap] = await Promise.all([
+                        (async () => {
+                            const map: Record<string, { code: string; name: string }> = {};
+                            if (uniqueItemIds.length === 0) return map;
+                            try {
+                                // Fetch a batch of items (using a large limit to cover the set)
+                                // In a real production API, we would use /item-master?ids=...
+                                const itemsRes = await api.get<ListResponse<ItemListItem> | DataListResponse<ItemListItem> | ItemListItem[]>('/item-master', { params: { limit: 1000 } });
+                                const itemsData = Array.isArray(itemsRes) 
+                                    ? itemsRes 
+                                    : ('data' in itemsRes ? itemsRes.data : itemsRes.items) || [];
+                                itemsData.forEach(item => {
+                                    const id = String(item.item_id || item.id || '');
+                                    if (id) map[id] = { 
+                                        code: String(item.item_code), 
+                                        name: String(item.item_name) 
+                                    };
+                                });
+                            } catch (err) { logger.error('Batch Item fetch failed:', err); }
+                            return map;
+                        })(),
+                        (async () => {
+                            const map: Record<string, string> = {};
+                            if (uniqueLotIds.length === 0) return map;
+                            try {
+                                const lotsRes = await api.get<ListResponse<ItemLot> | DataListResponse<ItemLot> | ItemLot[]>('/item-lot', { params: { limit: 1000 } });
+                                const lotsData = Array.isArray(lotsRes) 
+                                    ? lotsRes 
+                                    : ('data' in lotsRes ? lotsRes.data : lotsRes.items) || [];
+                                lotsData.forEach(lot => {
+                                    const id = String(lot.lot_id);
+                                    if (id) map[id] = String(lot.lot_no);
+                                });
+                            } catch (err) { logger.error('Batch Lot fetch failed:', err); }
+                            return map;
+                        })()
+                    ]);
+
+                    // 3. Map lines with enriched data from maps
+                    response.lines = rawLines.map((l: Record<string, unknown>) => {
                         const itemObj = (l.item || l.item_master || l.master_item || l.product || {}) as Record<string, unknown>;
                         const itemId = String(l.item_id || itemObj.item_id || itemObj.id || '');
+                        
                         let itemCode = String(l.item_code || l.code || itemObj.item_code || itemObj.code || itemObj.sku || '');
                         let itemName = String(l.item_name || l.name || itemObj.item_name || itemObj.name || itemObj.description || '');
-                        
-                        // 🚀 Re-Enrich Items if missing (Essential fallback)
-                        if ((!itemCode || !itemName) && itemId) {
-                            try {
-                                const masterRes = await api.get<unknown>(`/item-master/${itemId}`);
-                                const master = ((masterRes as Record<string, unknown>)?.data || masterRes) as Record<string, unknown>;
-                                if (master) {
-                                    itemCode = itemCode || String(master.item_code || master.code || '');
-                                    itemName = itemName || String(master.item_name || master.name || '');
-                                }
-                            } catch { /* ignore */ }
+
+                        // Enrich from map if missing
+                        if ((!itemCode || !itemName) && itemId && itemsMap[itemId]) {
+                            itemCode = itemCode || itemsMap[itemId].code;
+                            itemName = itemName || itemsMap[itemId].name;
                         }
 
                         // Final fallback for name
@@ -255,30 +312,11 @@ export const ReservationService = {
                         const lotIdVal = l.lot_id;
                         const lotObj = (typeof lotIdVal === 'object' && lotIdVal !== null) ? (lotIdVal as Record<string, unknown>) : ((l.lot || l.item_lot || {}) as Record<string, unknown>);
                         let lotNo = String(l.lot_no || l.lot_number || lotObj.lot_no || lotObj.code || '');
+                        const effectiveLotId = (typeof lotIdVal === 'number' || typeof lotIdVal === 'string') ? String(lotIdVal) : String(lotObj.lot_id || lotObj.id || '');
                         
-                        // 🚀 Re-Enrich Lots if missing or if lotNo looks like an ID (Essential fallback)
-                        const isLotNoNumericId = /^\d+$/.test(lotNo) && lotNo.length < 10 && lotNo === String(lotIdVal);
-                        
-                        if ((!lotNo || isLotNoNumericId) && lotIdVal && (typeof lotIdVal === 'number' || typeof lotIdVal === 'string')) {
-                            try {
-                                const lotRes = await api.get<unknown>(`/item-lot/${lotIdVal}`);
-                                const lotData = (lotRes as Record<string, unknown>)?.data || lotRes;
-                                if (lotData && typeof lotData === 'object' && !Array.isArray(lotData)) {
-                                    const lotItem = lotData as Record<string, unknown>;
-                                    lotNo = String(lotItem.lot_no || lotItem.code || lotNo);
-                                }
-                            } catch {
-                                // Fallback to list search if direct ID access fails
-                                try {
-                                    const lotRes = await api.get<unknown>('/item-lot', { params: { lot_id: lotIdVal, limit: 1 } });
-                                    const lotData = (lotRes as Record<string, unknown>)?.data || (lotRes as Record<string, unknown>)?.items || lotRes;
-                                    const lotItems = Array.isArray(lotData) ? lotData : [];
-                                    if (lotItems.length > 0) {
-                                        const firstLot = lotItems[0] as Record<string, unknown>;
-                                        lotNo = String(firstLot.lot_no || firstLot.code || lotNo);
-                                    }
-                                } catch { /* ignore */ }
-                            }
+                        // Enrich lot from map
+                        if (!lotNo && effectiveLotId && lotsMap[effectiveLotId]) {
+                            lotNo = lotsMap[effectiveLotId];
                         }
 
                         return {
@@ -302,7 +340,9 @@ export const ReservationService = {
                             price_source_name: String(l.price_source_name || ''),
                             price_level_priority: l.price_level_priority !== undefined ? Number(l.price_level_priority) : undefined,
                         };
-                    }));
+                    });
+                } else {
+                    response.lines = [];
                 }
             }
 

@@ -1,4 +1,4 @@
-import api, { USE_MOCK } from '@/core/api/api';
+import api from '@/core/api/api';
 import type { AxiosRequestConfig } from 'axios';
 import type { POListParams, POListResponse, POListItem } from '@/modules/procurement/types';
 import { CreatePOSchema, type POStatus } from '@/modules/procurement/schemas/po-schemas';
@@ -14,8 +14,8 @@ import type { SuccessResponse } from '@/shared/types/api.types';
 import { applyClientFilters, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import { PRService } from './pr.service';
-import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { QCService } from './qc.service';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import type { PRWaitingForQC } from '@/modules/procurement/types/pr-types';
 
 /**
@@ -90,23 +90,11 @@ export const POService = {
     getList: async (params?: POListParams, config?: AxiosRequestConfig): Promise<POListResponse> => {
         logger.info('[POService] Fetching PO List', params);
 
-        // 🎯 SEARCH WINDOW OPTIMIZATION
+        // 🎯 SEARCH WINDOW OPTIMIZATION: Always rely on server-side pagination for 100+ users.
         const apiParams = { ...(params || {}) };
-        const needsHybridFallback = !!(params?.po_no || params?.vendor_name || params?.status || params?.date_from || params?.date_to || params?.poa_no || params?.pr_no);
-
-        if (needsHybridFallback && !USE_MOCK) {
-            logger.debug('🚀 [POService] Hybrid Fallback Triggered: Increasing search window to 500 items.');
-            apiParams.limit = 500;
-            apiParams.page = 1;
-            
-            if (apiParams.status === 'PENDING_APPROVAL') {
-                (apiParams as unknown as Record<string, unknown>).status = 'PENDING';
-            }
-            
-            delete apiParams.po_no;
-            delete apiParams.vendor_name;
-            delete apiParams.date_from;
-            delete apiParams.date_to;
+        
+        if (apiParams.status === 'PENDING_APPROVAL') {
+            (apiParams as unknown as Record<string, unknown>).status = 'PENDING';
         }
 
         const response = await api.get<POListResponse>(ENDPOINTS.list, { ...config, params: apiParams });
@@ -114,66 +102,96 @@ export const POService = {
         
         logger.debug(`[POService] RAW BACKEND RESULT: total=${response.total}, items_returned=${rawItems.length}`);
 
-        // 🚀 BATCH HYDRATION STRATEGY (Issue #2)
-        // 1. Collect Unique IDs
-        const vendorIds = new Set<number>();
-        const prIds = new Set<number>();
-        const qcIds = new Set<number>();
-
-        rawItems.forEach(item => {
-            if (item.vendor_id) vendorIds.add(item.vendor_id);
-            if (item.pr_id && !item.pr_no) prIds.add(item.pr_id);
-            const qcId = item.qc_id || (item as unknown as Record<string, unknown>).qc_header_id as number | undefined;
-            if (qcId && !item.qc_no) qcIds.add(qcId);
-        });
-
-        // 2. Fetch in parallel (only if we have IDs)
-        const [vendorsRes, prsRes] = await Promise.all([
-            vendorIds.size > 0 ? VendorService.getList({ ...config, params: { ...config?.params, limit: 1000 } }) : Promise.resolve([]),
-            prIds.size > 0 ? Promise.all(Array.from(prIds).map(id => PRService.getDetail(id, config).catch(() => null))) : Promise.resolve([])
-        ]);
-
-        // 3. Create Lookup Maps
-        const vendorMap: Record<number, string> = {};
-        const vendors = extractArrayFromResponse<Record<string, unknown>>(vendorsRes);
-        vendors.forEach((v) => {
-            const id = Number(v.vendor_id || v.id);
-            if (id) vendorMap[id] = String(v.vendor_name || '');
-        });
-
-        const prMap: Record<number, string> = {};
-        const prs = extractArrayFromResponse<Record<string, unknown>>(prsRes);
-        prs.forEach(pr => {
-            if (pr?.pr_id && pr.pr_no) prMap[Number(pr.pr_id)] = String(pr.pr_no);
-        });
+        // 🚀 EFFICIENCY STRATEGY: Rely on joined data or global cache. 
+        // Avoid bulk fetching 1,000 vendors or firing N+1 detail calls for PRs.
 
         // 4. Final Mapping with efficient lookup
-        const allItems = await Promise.all(rawItems.map(async (item) => {
-            const bName = masterDataCache.getBranchName(item.branch_id);
-            const prNo = item.pr_no || (item.pr_id ? prMap[item.pr_id] : undefined);
-            
-            // Backup QC Lookup remains item-specific if needed, but we try to minimize it
-            let qcNo = item.qc_no;
-            if (!qcNo && prNo) {
+        // 🎯 [Performance] Step 1: Collect Unique IDs for Batch Hydration
+        const missingVendorIds = Array.from(new Set(rawItems.map(i => normalizeId(i.vendor_id)).filter(Boolean))) as string[];
+        const missingPrIds = Array.from(new Set(rawItems.map(i => normalizeId(i.pr_id || (i as unknown as Record<string, unknown>).pr_id_ref)).filter(Boolean))) as string[];
+        
+        // 🎯 [Performance] Step 2: Parallel Batch Fetch (Using Official Services)
+        const vendorMap: Record<string, string> = {};
+        const prMap: Record<string, string> = {};
+        const qcMap: Record<string, string> = {};
+
+        await Promise.all([
+            // 1. Batch Vendors
+            ...missingVendorIds.map(async (id) => {
                 try {
-                    // This is still a bit heavy, but it only triggers if qc_no is missing
-                    const qcsRes = await QCService.getList({ pr_no: prNo }, config);
-                    const qcs = extractArrayFromResponse<Record<string, unknown>>(qcsRes);
-                    if (qcs.length > 0) qcNo = qcs[0].qc_no as string;
+                    const data = await VendorService.getById(Number(id));
+                    if (data) vendorMap[id] = String(data.vendor_name || '');
                 } catch { /* ignore */ }
-            }
+            }),
+            // 2. Batch PRs
+            ...missingPrIds.map(async (id) => {
+                try {
+                    const data = await PRService.getDetail(Number(id));
+                    if (data) prMap[id] = String(data.pr_no || '');
+                } catch { /* ignore */ }
+            }),
+            // 3. Ultra-Robust QC Hydration (Direct API Call + Deep Mapping)
+            (async () => {
+                try {
+                    // Direct call to the endpoint you verified in Postman
+                    const response = await api.get<Record<string, unknown>>('/qc/qc-all', { params: { limit: 1000 } });
+                    
+                    // 🎯 DEEP EXTRACTION: Extract array regardless of nesting
+                    let qcs: Record<string, unknown>[] = [];
+                    if (Array.isArray(response)) {
+                        qcs = response as Record<string, unknown>[];
+                    } else if (response && typeof response === 'object') {
+                        const r = response as Record<string, unknown>;
+                        qcs = (Array.isArray(r.data) ? r.data : (Array.isArray(r.items) ? r.items : (Array.isArray(r.qc_list) ? r.qc_list : []))) as Record<string, unknown>[];
+                    }
+                    
+                    qcs.forEach(qc => {
+                        const actualId = qc.qc_id || qc.qc_header_id || qc.id;
+                        const actualNo = qc.qc_no || qc.qc_number || qc.qc_header_no || qc.qcNo || qc.qcNumber;
+                        const matchedPrNo = String(qc.pr_no || '').trim().toUpperCase();
+
+                        if (actualId) {
+                            const idStr = String(actualId);
+                            qcMap[idStr] = String(actualNo || '');
+                        }
+                        if (matchedPrNo && matchedPrNo !== '-' && matchedPrNo !== 'UNDEFINED') {
+                            qcMap[`PR_${matchedPrNo}`] = String(actualNo || '');
+                        }
+                    });
+                    logger.info(`[POService] Successfully hydrated QC Map with ${qcs.length} records`);
+                } catch (e) {
+                    logger.error('[POService] Ultra-Robust QC lookup failed', e);
+                }
+            })()
+        ]);
+
+        // 4. Final Mapping with efficient lookup
+        const allItems = rawItems.map((item) => {
+            const bName = masterDataCache.getBranchName(item.branch_id);
+            const rawItem = item as unknown as Record<string, unknown>;
+            const vendorObj = (rawItem.vendor || {}) as Record<string, unknown>;
+            const vId = normalizeId(item.vendor_id);
+            const prId = normalizeId(item.pr_id || (item as unknown as Record<string, unknown>).pr_id_ref);
+            const qcId = normalizeId(item.qc_id || (item as unknown as Record<string, unknown>).qc_id_ref);
+            
+            // 🎯 Use Batch Map -> Cache -> Joined Data
+            const vName = vendorMap[vId] || item.vendor_name || String(vendorObj.vendor_name || '') || (vId ? masterDataCache.getVendorName(vId) : '');
+
+            // 🕵️‍♂️ Robust PR/QC Discovery
+            const prNoStr = (prMap[prId] || ((item.pr_no && item.pr_no.length > 5) ? item.pr_no : (String(rawItem.pr_no_ref || item.pr_no || '')))).trim().toUpperCase();
+            const qcNoStr = qcMap[qcId] || qcMap[`PR_${prNoStr}`] || ((item.qc_no && item.qc_no.length > 5) ? item.qc_no : (String(rawItem.qc_no_ref || item.qc_no || '')));
 
             return {
                 ...item,
-                po_id: Number(normalizeId(item.po_id ?? (item as unknown as Record<string, unknown>).po_header_id)),
-                vendor_name: item.vendor_name || vendorMap[item.vendor_id] || undefined,
-                status: normalizePOStatus(item.status),
-                pr_no: prNo,
-                qc_no: qcNo,
+                po_id: Number(normalizeId(item.po_id || rawItem.id)),
                 po_date: normalizeDate(item.po_date),
-                branch_name: (typeof bName === 'string' ? bName : '') as string
-            };
-        }));
+                status: normalizePOStatus(item.status),
+                branch_name: bName || String(rawItem.branch_name || ''),
+                vendor_name: vName,
+                pr_no: prNoStr && prNoStr !== '1' ? prNoStr : '',
+                qc_no: qcNoStr && qcNoStr !== '1' ? qcNoStr : '',
+            } as unknown as POListItem;
+        });
 
         const result = applyClientFilters<POListItem>(allItems, params as unknown as Record<string, string | number | boolean | undefined | null>, {
             searchableFields: ['po_no', 'vendor_name', 'qc_no', 'pr_no', 'poa_no'],

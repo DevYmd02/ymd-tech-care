@@ -13,6 +13,8 @@ import { usePRForm } from '@/modules/procurement/pages/pr/hooks';
 import { WarehouseSearchModal } from '@/modules/procurement/shared/components/WarehouseSearchModal';
 import { LocationSearchModal } from '@/modules/procurement/shared/components/LocationSearchModal';
 import { SavingOverlay } from '@/shared/components/ui/feedback/SavingOverlay';
+import { ProcurementFormSkeleton } from '@/modules/procurement/shared/components/ProcurementFormSkeleton';
+import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 
 const SHIPPING_OPTIONS = [
   { label: 'รถยนต์', value: 'Car' },
@@ -69,7 +71,6 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     <WindowFormLayout
       isOpen={isOpen}
       onClose={handleClose}
-      isLoading={isLoading}
       title={readOnly ? "รายละเอียดใบขอซื้อ (Purchase Requisition Details)" : (isEditMode ? "แก้ไขใบขอซื้อ (Edit Purchase Requisition)" : "สร้างใบขอซื้อ (Create Purchase Requisition)")}
       titleIcon={<div className="bg-red-500 p-1 rounded-md shadow-sm"><FileText size={14} strokeWidth={3} /></div>}
       headerColor="bg-blue-600 [&_div.flex.items-center.space-x-1>button:not(:last-child)]:hidden"
@@ -136,7 +137,20 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
 
           <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-800 p-1.5 space-y-1 relative">
             <SavingOverlay isVisible={isActionLoading} />
-            <div className={cardClass}>
+            {isLoading ? (
+                <ProcurementFormSkeleton />
+            ) : (
+                <ErrorBoundary>
+                    <style dangerouslySetInnerHTML={{ __html: `
+                        @keyframes formFadeIn {
+                            from { opacity: 0; transform: translateY(8px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+                        .animate-form-fade-in {
+                            animation: formFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                        }
+                    `}} />
+                    <div className={`${cardClass} animate-form-fade-in`}>
                 <PRHeader 
                     costCenters={costCenters}
                     projects={projects}
@@ -418,6 +432,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                 readOnly={readOnly}
                 className="rounded-sm" // Match PR style
             />
+                </ErrorBoundary>
+            )}
         </div>
       </FormProvider>
 

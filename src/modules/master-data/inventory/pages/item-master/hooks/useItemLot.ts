@@ -104,6 +104,7 @@ export function useItemLot(itemId: number, shelfLifeDays: number = 0) {
         
         // Remove _tempId before sending to API safely
         const { _tempId, ...payload } = draft;
+        void _tempId;
         
         upsertMutation.mutate(payload as ItemLotFormData, {
             onSuccess: () => {
@@ -131,6 +132,7 @@ export function useItemLot(itemId: number, shelfLifeDays: number = 0) {
         // Save each draft sequentially to avoid race conditions and ensure stability
         for (const draft of validDrafts) {
             const { _tempId, ...payload } = draft;
+            void _tempId;
             await upsertMutation.mutateAsync(payload as ItemLotFormData);
             handleRemoveDraft(draft._tempId);
         }

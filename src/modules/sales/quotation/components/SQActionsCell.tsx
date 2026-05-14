@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Eye, Edit, Send, Clock } from 'lucide-react';
 import type { QuotationHeader } from '@sales/quotation/types/quotation.types';
+import { useQueryClient } from '@tanstack/react-query';
+import { QuotationService } from '@sales/quotation/services/quotation.service';
 
 interface SQActionsCellProps {
     row: QuotationHeader;
@@ -17,6 +19,28 @@ export const SQActionsCell: React.FC<SQActionsCellProps> = ({
     onViewHistory,
     onSendApprove,
 }) => {
+    const queryClient = useQueryClient();
+    const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleMouseEnter = (id: string) => {
+        if (!id) return;
+        if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+        
+        prefetchTimerRef.current = setTimeout(() => {
+            queryClient.prefetchQuery({
+                queryKey: ['quotation-detail', id],
+                queryFn: () => QuotationService.getById(id),
+                staleTime: 60 * 1000,
+            });
+        }, 80);
+    };
+
+    const handleMouseLeave = () => {
+        if (prefetchTimerRef.current) {
+            clearTimeout(prefetchTimerRef.current);
+            prefetchTimerRef.current = null;
+        }
+    };
     const id = String(row.id || row.sq_id);
     const status = (row.status || '').toUpperCase();
     const isDraft = status === 'DRAFT';
@@ -30,6 +54,8 @@ export const SQActionsCell: React.FC<SQActionsCellProps> = ({
             {/* 1. VIEW: Always Visible */}
             <button 
                 onClick={() => onView(id, row)}
+                onMouseEnter={() => handleMouseEnter(id)}
+                onMouseLeave={handleMouseLeave}
                 className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all" 
                 title="ดูรายละเอียด"
             >
@@ -63,6 +89,8 @@ export const SQActionsCell: React.FC<SQActionsCellProps> = ({
             {(isDraft || isPending) && (
                 <button 
                     onClick={() => onEdit(id, row)}
+                    onMouseEnter={() => handleMouseEnter(id)}
+                    onMouseLeave={handleMouseLeave}
                     className="flex items-center gap-1 pl-1.5 pr-2 py-1 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded shadow-sm border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-all whitespace-nowrap"
                     title="แก้ไข"
                 >

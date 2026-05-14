@@ -4,8 +4,8 @@
  * @route /sales/order
  */
 
-import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useMemo, useCallback, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShoppingCart, Search, Plus, Edit, Eye, Send, Clock } from 'lucide-react';
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
@@ -13,7 +13,6 @@ import { SalesOrderService, type SalesOrderHeader } from '@sales/sales-order/ser
 import { logger } from '@/shared/utils';
 import { SalesOrderFormModal } from './components/SalesOrderFormModal';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
-import { CustomerService } from '@customer/customer-master/services/customer.service';
 import { formatNumber } from '@/shared/utils';
 import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
 import { useConfirmation } from '@hooks/useConfirmation';
@@ -71,28 +70,34 @@ export default function SalesOrderListPage() {
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
     const [historySoId, setHistorySoId] = useState<string | number | undefined>(undefined);
     const [historySoNo, setHistorySoNo] = useState<string>('');
+    const queryClient = useQueryClient();
+    const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleMouseEnter = useCallback((id: string) => {
+        if (!id) return;
+        if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+        
+        prefetchTimerRef.current = setTimeout(() => {
+            queryClient.prefetchQuery({
+                queryKey: ['sales-order', id],
+                queryFn: ({ signal }) => SalesOrderService.getById(id, { signal }),
+                staleTime: 60 * 1000,
+            });
+        }, 80);
+    }, [queryClient]);
+
+    const handleMouseLeave = useCallback(() => {
+        if (prefetchTimerRef.current) {
+            clearTimeout(prefetchTimerRef.current);
+            prefetchTimerRef.current = null;
+        }
+    }, []);
 
     const { confirm } = useConfirmation();
 
-    // 🏷️ Fetch Customers for Name Lookup
-    const { data: customerResponse } = useQuery({
-        queryKey: ['master-customers-lookup'],
-        queryFn: () => CustomerService.getList({ limit: 1000 }),
-        staleTime: 30 * 60 * 1000,
-    });
-
-    const customerMap = useMemo(() => {
-        const map = new Map<string | number, string>();
-        (customerResponse?.data || []).forEach(c => {
-            map.set(String(c.customer_id), c.customer_name_th || c.customer_name || '');
-        });
-        return map;
-    }, [customerResponse]);
-
-    // API Integration
     const { data: apiData, isLoading, refetch } = useQuery({
         queryKey: ['sales-orders', soNo, customer, statusFilter, startDate, endDate, page, limit],
-        queryFn: () =>
+        queryFn: ({ signal }) =>
             SalesOrderService.getList({
                 so_no: soNo,
                 customer_name: customer,
@@ -101,7 +106,7 @@ export default function SalesOrderListPage() {
                 end_date: endDate,
                 page,
                 limit,
-            }),
+            }, { signal }),
     });
 
     const displayData = useMemo(() => apiData?.data || [], [apiData]);
@@ -127,17 +132,17 @@ export default function SalesOrderListPage() {
         setIsFormModalOpen(true);
     };
 
-    const handleEdit = (id: string, viewOnly = false) => {
+    const handleEdit = useCallback((id: string, viewOnly = false) => {
         setSelectedSoId(id);
         setIsViewOnly(viewOnly);
         setIsFormModalOpen(true);
-    };
+    }, []);
 
-    const handleViewHistory = (id: string | number, no: string) => {
+    const handleViewHistory = useCallback((id: string | number, no: string) => {
         setHistorySoId(id);
         setHistorySoNo(no);
         setIsHistoryModalOpen(true);
-    };
+    }, []);
 
     const handleSubmit = useCallback(async (id: string, rawRow?: SalesOrderHeader) => {
         // 🔍 Debug: log what ID we got and the raw data to diagnose API field names
@@ -187,6 +192,8 @@ export default function SalesOrderListPage() {
                                     handleEdit(info.row.original.so_id, !canEdit);
                                 }
                             }}
+                            onMouseEnter={() => handleMouseEnter(info.row.original.so_id)}
+                            onMouseLeave={handleMouseLeave}
                             className="text-indigo-600 font-bold cursor-pointer hover:underline transition-all"
                         >
                             {info.getValue()}
@@ -206,17 +213,11 @@ export default function SalesOrderListPage() {
             }),
             columnHelper.accessor('customer_name', {
                 header: 'ลูกค้า',
-                cell: (info) => {
-                    const customerId = info.row.original.customer_id;
-                    const nameFromLookup = customerMap.get(String(customerId));
-                    const displayName = nameFromLookup || info.getValue() || 'ไม่ระบุ';
-
-                    return (
-                        <span className="font-bold text-slate-700 dark:text-slate-100">
-                            {displayName}
-                        </span>
-                    );
-                },
+                cell: (info) => (
+                    <span className="font-bold text-slate-700 dark:text-slate-100">
+                        {info.getValue() || 'ไม่ระบุ'}
+                    </span>
+                ),
                 size: 250,
             }),
             columnHelper.accessor('total_amount', {
@@ -253,6 +254,8 @@ export default function SalesOrderListPage() {
                     <div className="flex items-center justify-center gap-3 w-full">
                         <button
                             onClick={() => handleEdit(info.row.original.so_id, true)}
+                            onMouseEnter={() => handleMouseEnter(info.row.original.so_id)}
+                            onMouseLeave={handleMouseLeave}
                             className="text-slate-400 hover:text-indigo-400 transition-colors"
                             title="ดูรายละเอียด"
                         >
@@ -281,6 +284,8 @@ export default function SalesOrderListPage() {
                             ) : (
                                 <button
                                     onClick={() => handleEdit(info.row.original.so_id, false)}
+                                    onMouseEnter={() => handleMouseEnter(info.row.original.so_id)}
+                                    onMouseLeave={handleMouseLeave}
                                     className="flex items-center gap-1.5 text-amber-500 hover:text-amber-600 font-bold text-[12px] transition-colors"
                                     title="แก้ไข"
                                 >
@@ -303,7 +308,7 @@ export default function SalesOrderListPage() {
                 size: 200,
             }),
         ],
-        [columnHelper, page, limit, handleSubmit, customerMap]
+        [columnHelper, page, limit, handleSubmit, handleEdit, handleMouseEnter, handleMouseLeave, handleViewHistory]
     );
 
     return (
@@ -397,7 +402,7 @@ export default function SalesOrderListPage() {
                         renderMobileCard={(item) => (
                             <SalesMobileCard 
                                 docNo={item.so_no}
-                                customerName={customerMap.get(String(item.customer_id)) || item.customer_name || 'ไม่ระบุ'}
+                                customerName={item.customer_name || 'ไม่ระบุ'}
                                 date={formatDisplayDate(item.so_date)}
                                 amount={item.total_amount || 0}
                                 statusBadge={<SQStatusBadge status={item.status} />}

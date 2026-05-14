@@ -6,7 +6,7 @@ import { applyMockFilters, sanitizeId } from '@/core/api/mockUtils';
 
 export const setupQCHandlers = (mock: MockAdapter) => {
   // 1. GET QC List
-  mock.onGet('/qc').reply((config: AxiosRequestConfig) => {
+  mock.onGet('/qc/qc-all').reply((config: AxiosRequestConfig) => {
     const params = config.params || {};
     // Sanitizer Layer for List (Sanitize BEFORE filtering)
     const sanitizedData = MOCK_QCS.map(qc => ({
@@ -17,7 +17,6 @@ export const setupQCHandlers = (mock: MockAdapter) => {
 
     const result = applyMockFilters(sanitizedData, params, {
         searchableFields: ['qc_no', 'pr_no', 'lowest_bidder_name'], 
-        // dateField: 'created_at' // QC might typically not be date-filtered or use created_at if available
     });
 
     return [200, result];
@@ -44,7 +43,8 @@ export const setupQCHandlers = (mock: MockAdapter) => {
   });
 
   // 2. GET QC Detail
-  mock.onGet(/\/qc\/.+/).reply((config: AxiosRequestConfig) => {
+  // 🎯 IMPROVED: Use a more specific regex to avoid matching '/qc/qc-all' or other sub-paths
+  mock.onGet(/\/qc\/\d+$/).reply((config: AxiosRequestConfig) => {
     const id = sanitizeId(config.url?.split('/').pop());
     const found = MOCK_QCS.find(q => sanitizeId(q.qc_id) === id);
     

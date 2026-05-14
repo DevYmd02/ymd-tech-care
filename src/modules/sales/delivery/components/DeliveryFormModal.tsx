@@ -24,6 +24,7 @@ import { useDeliveryForm } from '../hooks';
 import { DeliveryService } from '../services/delivery.service';
 import { DeliveryHeaderForm } from './DeliveryHeaderForm';
 import { DeliveryLineTable } from './DeliveryLineTable';
+import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 import type { DeliveryFormValues } from '../schemas/delivery.schemas';
 import type { DeliveryFormData } from '../types/delivery.types';
 import type { ItemListItem } from '@inventory/types/product-types';
@@ -238,57 +239,68 @@ export function DeliveryFormModal({
                 {isFetchingDetail && !watch('delivery_no') ? (
                     <SalesFormSkeleton />
                 ) : (
-                    <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
-                        <form
-                            id="delivery-form"
-                            onSubmit={handleSubmit(onFormSubmit)}
-                            className={`max-w-[1400px] mx-auto space-y-6 ${isViewOnly ? 'opacity-95' : ''}`}
-                        >
-                            {/* 1. Header */}
-                            <div className={cardClass}>
-                                <div className="p-6">
-                                    <DeliveryHeaderForm
-                                        branches={branches}
-                                        onSearchSalesOrder={() => setIsSalesOrderSearchOpen(true)}
-                                        onSearchEmployee={() => setIsEmployeeSearchOpen(true)}
-                                        onSearchAddress={() => setIsAddressSearchOpen(true)}
-                                    />
+                    <ErrorBoundary>
+                         <style dangerouslySetInnerHTML={{ __html: `
+                            @keyframes formFadeIn {
+                                from { opacity: 0; transform: translateY(8px); }
+                                to { opacity: 1; transform: translateY(0); }
+                            }
+                            .animate-form-fade-in {
+                                animation: formFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                            }
+                        `}} />
+                        <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 animate-form-fade-in">
+                            <form
+                                id="delivery-form"
+                                onSubmit={handleSubmit(onFormSubmit)}
+                                className={`max-w-[1400px] mx-auto space-y-6 ${isViewOnly ? 'opacity-95' : ''}`}
+                            >
+                                {/* 1. Header */}
+                                <div className={cardClass}>
+                                    <div className="p-6">
+                                        <DeliveryHeaderForm
+                                            branches={branches}
+                                            onSearchSalesOrder={() => setIsSalesOrderSearchOpen(true)}
+                                            onSearchEmployee={() => setIsEmployeeSearchOpen(true)}
+                                            onSearchAddress={() => setIsAddressSearchOpen(true)}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* 2. Lines */}
-                            <div className={cardClass}>
-                                <div className="p-6">
-                                    <DeliveryLineTable
-                                        lines={lines}
-                                        uoms={uoms}
-                                        warehouses={warehouses}
-                                        locations={locations}
-                                        onAddLine={handleAddLine}
-                                        onRemoveLine={handleRemoveLine}
-                                        onLineChange={handleLineChange}
-                                        onSearchProduct={(index: number) => {
-                                            setActiveLineIndex(index);
-                                            setIsProductSearchOpen(true);
-                                        }}
-                                        onSearchWarehouse={(index: number) => {
-                                            setActiveLineIndex(index);
-                                            setIsWarehouseSearchOpen(true);
-                                        }}
-                                        onSearchLocation={(index: number) => {
-                                            setActiveLineIndex(index);
-                                            setIsLocationSearchOpen(true);
-                                        }}
-                                        onSearchLot={(index: number) => {
-                                            setActiveLineIndex(index);
-                                            setIsLotSearchOpen(true);
-                                        }}
-                                        isViewOnly={isViewOnly}
-                                    />
+                                {/* 2. Lines */}
+                                <div className={cardClass}>
+                                    <div className="p-6">
+                                        <DeliveryLineTable
+                                            lines={lines}
+                                            uoms={uoms}
+                                            warehouses={warehouses}
+                                            locations={locations}
+                                            onAddLine={handleAddLine}
+                                            onRemoveLine={handleRemoveLine}
+                                            onLineChange={handleLineChange}
+                                            onSearchProduct={(index: number) => {
+                                                setActiveLineIndex(index);
+                                                setIsProductSearchOpen(true);
+                                            }}
+                                            onSearchWarehouse={(index: number) => {
+                                                setActiveLineIndex(index);
+                                                setIsWarehouseSearchOpen(true);
+                                            }}
+                                            onSearchLocation={(index: number) => {
+                                                setActiveLineIndex(index);
+                                                setIsLocationSearchOpen(true);
+                                            }}
+                                            onSearchLot={(index: number) => {
+                                                setActiveLineIndex(index);
+                                                setIsLotSearchOpen(true);
+                                            }}
+                                            isViewOnly={isViewOnly}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        </form>
-                    </div>
+                            </form>
+                        </div>
+                    </ErrorBoundary>
                 )}
             </FormProvider>
 

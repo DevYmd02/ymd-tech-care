@@ -10,6 +10,7 @@ import { masterDataCache } from '@/shared/utils/master-data-cache';
 
 import type { SuccessResponse } from '@/shared/types/api.types';
 import { applyClientFilters, applyClientPagination, extractArrayFromResponse } from '@/shared/utils/clientFilterUtils';
+import { unwrapResponseData } from '@/shared/utils/apiUtils';
 
 const ENDPOINTS = {
   list:    '/qc/qc-all',
@@ -95,7 +96,10 @@ export const QCService = {
 
   getById: async (id: number, config?: AxiosRequestConfig): Promise<QCListItem> => {
     logger.info(`[QCService] Fetching QC Detail: ${id}`);
-    return await api.get<QCListItem>(ENDPOINTS.detail(id), config);
+    const response = await api.get<QCListItem>(ENDPOINTS.detail(id), config);
+    const data = unwrapResponseData<QCListItem>(response);
+    logger.debug(`[QCService] Unwrapped QC Detail for ${id}:`, data);
+    return data;
   },
 
   getReadyForPO: async (config?: AxiosRequestConfig): Promise<IReadyForPOPR[]> => {

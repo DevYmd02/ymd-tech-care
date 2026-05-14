@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Edit, Printer, Eye, Send } from 'lucide-react';
 import type { ReservationHeader } from '../../services/reservation.service';
+import { useQueryClient } from '@tanstack/react-query';
+import { ReservationService } from '../../services/reservation.service';
 
 interface RSActionsCellProps {
     row: ReservationHeader;
@@ -15,6 +17,28 @@ export const RSActionsCell: React.FC<RSActionsCellProps> = ({
     onEdit,
     onConfirm
 }) => {
+    const queryClient = useQueryClient();
+    const prefetchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const handleMouseEnter = (id: string) => {
+        if (!id) return;
+        if (prefetchTimerRef.current) clearTimeout(prefetchTimerRef.current);
+        
+        prefetchTimerRef.current = setTimeout(() => {
+            queryClient.prefetchQuery({
+                queryKey: ['reservation-detail', id],
+                queryFn: () => ReservationService.getById(id),
+                staleTime: 60 * 1000,
+            });
+        }, 80);
+    };
+
+    const handleMouseLeave = () => {
+        if (prefetchTimerRef.current) {
+            clearTimeout(prefetchTimerRef.current);
+            prefetchTimerRef.current = null;
+        }
+    };
     const id = String(row.reservation_id || row.id);
 
     return (
@@ -22,6 +46,8 @@ export const RSActionsCell: React.FC<RSActionsCellProps> = ({
             {/* 1. VIEW Button (Ghost style with Eye) */}
             <button 
                 onClick={() => onView(id, row)}
+                onMouseEnter={() => handleMouseEnter(id)}
+                onMouseLeave={handleMouseLeave}
                 className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all shrink-0"
                 title="ดูรายละเอียด"
             >
@@ -32,6 +58,8 @@ export const RSActionsCell: React.FC<RSActionsCellProps> = ({
             {row.status === 'DRAFT' && (
                 <button 
                     onClick={() => onEdit(id, row)}
+                    onMouseEnter={() => handleMouseEnter(id)}
+                    onMouseLeave={handleMouseLeave}
                     className="flex items-center gap-1 px-2 py-1 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-all font-bold text-[11px] shrink-0"
                 >
                     <Edit size={14} />

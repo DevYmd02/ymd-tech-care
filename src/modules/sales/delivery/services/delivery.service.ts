@@ -2,6 +2,8 @@ import api from '@core/api/api';
 import { logger } from '@utils';
 import { masterDataCache } from '@/shared/utils/master-data-cache';
 import { sanitizePayload } from '@/shared/utils/payload.utils';
+import { CustomerService } from '@/modules/master-data/customer/customer-master/services/customer.service';
+import { SalesOrderService } from '@/modules/sales/sales-order/services/sales-order.service';
 import { 
     normalizeId, 
     normalizeDate, 
@@ -71,41 +73,56 @@ export const DeliveryService = {
             const rawData = Array.isArray(response) ? response : (response as { data: Record<string, unknown>[]; total: number }).data || [];
             const total = Array.isArray(response) ? response.length : (response as { data: unknown[]; total: number }).total || 0;
 
-            // 🚀 Optimization: Batch Enrichment (Fix N+1)
-            const soIdMap: Record<string, string> = {};
-            const uniqueSoIdsToFetch = new Set<string>();
+            // 🎯 [Performance] Step 1: Collect Unique IDs for Batch Hydration
+            const missingSoIds = Array.from(new Set(rawData
+                .map(item => {
+                    const soObj = (item.sale_order || item.so || item.so_header || item.sale_order_header || {}) as Record<string, unknown>;
+                    return normalizeId(item.so_id || soObj.so_id || soObj.id);
+                })
+                .filter(Boolean)
+            )) as string[];
 
-            rawData.forEach(item => {
-                const soObj = (item.sale_order || item.so || item.so_header || item.sale_order_header || {}) as Record<string, unknown>;
-                const soNo = String(item.so_no || soObj.so_no || soObj.no || item.sale_order_no || '');
-                const soId = normalizeId(item.so_id || soObj.so_id || soObj.id);
-                
-                if (!soNo && soId) {
-                    uniqueSoIdsToFetch.add(soId);
-                } else if (soNo && soId) {
-                    soIdMap[soId] = soNo;
-                }
-            });
+            const missingCustomerIds = Array.from(new Set(rawData
+                .map(item => {
+                    const customerObj = (item.customer || {}) as Record<string, unknown>;
+                    return normalizeId(item.customer_id || customerObj.customer_id);
+                })
+                .filter(Boolean)
+            )) as string[];
 
-            if (uniqueSoIdsToFetch.size > 0) {
-                await Promise.all(Array.from(uniqueSoIdsToFetch).map(async (id) => {
+            // 🎯 [Performance] Step 2: Parallel Batch Fetch (Using Official Services)
+            const soMap: Record<string, string> = {};
+            const customerMap: Record<string, string> = {};
+
+            await Promise.all([
+                ...missingSoIds.map(async (id) => {
                     try {
-                        const soRes = await api.get<Record<string, unknown>>(`/sale-order/${id}`);
-                        const soDataRaw = (soRes['data'] as Record<string, unknown>) || soRes;
-                        const soData = (soDataRaw['sale_order'] || soDataRaw['so_header'] || soDataRaw) as Record<string, unknown>;
-                        if (soData && soData['so_no']) {
-                            soIdMap[id] = String(soData['so_no']);
+                        const data = await SalesOrderService.getById(id);
+                        if (data) {
+                            soMap[id] = String(data.so_no || '');
                         }
                     } catch { /* ignore */ }
-                }));
-            }
+                }),
+                ...missingCustomerIds.map(async (id) => {
+                    try {
+                        const data = await CustomerService.getById(Number(id));
+                        if (data) {
+                            customerMap[id] = String(data.customer_name_th || data.customer_name || '');
+                        }
+                    } catch { /* ignore */ }
+                })
+            ]);
 
             const mappedData = rawData.map((item) => {
                 const customerObj = (item.customer || item.customer_header || item.customer_ref || {}) as Record<string, unknown>;
                 const soObj = (item.sale_order || item.so || item.so_header || item.sale_order_header || {}) as Record<string, unknown>;
 
                 const soId = normalizeId(item.so_id || soObj.so_id || soObj.id);
-                const soNo = soIdMap[soId] || String(item.so_no || soObj.so_no || soObj.no || item.sale_order_no || '');
+                const cId = normalizeId(item.customer_id || customerObj.customer_id || customerObj.id);
+                
+                // 🕵️‍♂️ Robust Discovery: Use Batch Map -> Nested Obj -> item level -> Cache
+                const soNo = soMap[soId] || String(soObj.so_no || item.so_no || soObj.no || item.sale_order_no || '-');
+                const cName = customerMap[cId] || normalizeCustomerName(item) || (cId ? masterDataCache.getCustomerName(cId) : '');
 
                 return {
                     ...item,
@@ -114,8 +131,8 @@ export const DeliveryService = {
                     delivery_date: normalizeDate(item.delivery_date),
                     so_id: soId,
                     so_no: soNo,
-                    customer_id: normalizeId(item.customer_id || customerObj.customer_id || customerObj.id),
-                    customer_name: normalizeCustomerName(item),
+                    customer_id: cId,
+                    customer_name: cName,
                     branch_id: normalizeId(item.branch_id),
                     status: item.status || 'DRAFT',
                     tracking_no: String(item.tracking_no || ''),

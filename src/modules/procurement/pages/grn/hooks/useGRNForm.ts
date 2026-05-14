@@ -13,16 +13,18 @@ import type { CreateGRNPayload } from '../../../types/grn-types';
 import type { POLine } from '../../../types/po-types';
 import { calculateLineTotal } from '@/modules/procurement/utils/pricing.utils';
 import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
+import type { GRNHeader, GRNLine } from '../../../types/grn-types';
 
 interface UseGRNFormProps {
     isOpen: boolean;
+    id?: number;
     initialPOId?: number;
     onClose: () => void;
     onSuccess?: () => void;
     readOnly?: boolean;
 }
 
-export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess, readOnly = false }: UseGRNFormProps) {
+export function useGRNForm({ isOpen, id, initialPOId, onClose, onSuccess, readOnly = false }: UseGRNFormProps) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -70,16 +72,64 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess, readOnly =
     const isMulticurrency = useWatch({ control, name: 'isMulticurrency' });
     const items = useWatch({ control, name: 'items' }) || [];
 
+    // ── Fetch Existing GRN (if id is provided) ──────────────────────────────
+    const { data: grnDetail, isFetching: isFetchingGRN } = useQuery({
+        queryKey: ['grn-detail', id],
+        queryFn: ({ signal }) => GRNService.getById(id!, { signal }),
+        enabled: isOpen && !!id,
+    });
+
     // ── Fetch PO Details ────────────────────────────────────────────────────
     const { data: poDetail, isFetching: isFetchingPO } = useQuery({
         queryKey: ['po-for-grn', po_id],
-        queryFn: () => POAService.getById(po_id!),
-        enabled: isOpen && !!po_id,
+        queryFn: ({ signal }) => POAService.getById(po_id!, 'PO', { signal }),
+        enabled: isOpen && !!po_id && !id, // Only if we don't have a GRN id
     });
 
-    // ── Sync Form with PO Detail ────────────────────────────────────────────
+    // ── Sync Form with Existing GRN Detail ─────────────────────────────────
     useEffect(() => {
-        if (poDetail) {
+        if (grnDetail) {
+            reset({
+                grn_no: grnDetail.grn_no,
+                po_id: grnDetail.po_id,
+                received_date: grnDetail.received_date,
+                warehouse_id: grnDetail.warehouse_id,
+                received_by: grnDetail.received_by,
+                status: grnDetail.status,
+                remark: grnDetail.remark || '',
+                emp_dept_id: String(grnDetail.emp_dept_id || ''),
+                job_id: grnDetail.job_id || '',
+                isMulticurrency: !!grnDetail.curr_type_code && grnDetail.curr_type_code !== 'THB',
+                curr_id: String(grnDetail.curr_id || ''),
+                curr_type_id: String(grnDetail.curr_type_id || ''),
+                curr_type_code: grnDetail.curr_type_code || 'THB',
+                exchange_rate: grnDetail.exchange_rate || 1,
+                rate_date: (grnDetail as GRNHeader & { exchange_rate_date?: string }).exchange_rate_date || new Date().toISOString().split('T')[0],
+                items: (grnDetail.items || []).map((i: GRNLine) => ({
+                    po_line_id: i.po_line_id,
+                    item_id: i.item_id,
+                    item_code: i.item_code || '',
+                    item_name: i.item_name || '',
+                    qty_ordered: i.qty_ordered || 0,
+                    qty_received: i.qty_received || 0,
+                    accepted_qty: i.accepted_qty || 0,
+                    rejected_qty: i.rejected_qty || 0,
+                    uom_id: String(i.uom_id || ''),
+                    uom_name: i.uom_name || 'PCS',
+                    unit_price: i.unit_price || 0,
+                    line_total: i.line_total || 0,
+                    qc_status: i.qc_status || 'PASS',
+                    lot_id: String(i.lot_id || ''),
+                    lot_code: i.lot_code || '',
+                    remark: i.remark || ''
+                }))
+            });
+        }
+    }, [grnDetail, reset, id]);
+
+    // ── Sync Form with PO Detail (For NEW GRN) ──────────────────────────────
+    useEffect(() => {
+        if (poDetail && !id) {
             // Populate items from PO (Using Remaining Qty)
             if (poDetail.po_lines) {
                 const poItems = poDetail.po_lines.map((line: POLine) => {
@@ -129,7 +179,7 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess, readOnly =
                 setValue('warehouse_id', poDetail.ship_to_warehouse_id, { shouldDirty: false });
             }
         }
-    }, [poDetail, replace, setValue, currencies]);
+    }, [poDetail, id, replace, setValue, currencies]);
 
     // ── Initial PO ID Support ───────────────────────────────────────────────
     useEffect(() => {
@@ -138,9 +188,9 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess, readOnly =
         }
     }, [isOpen, initialPOId, setValue]);
 
-    // ── Reset Form on Open ──────────────────────────────────────────────────
+    // ── Reset Form on Open (For NEW GRN without initial PO) ────────────────
     useEffect(() => {
-        if (isOpen && !initialPOId) {
+        if (isOpen && !initialPOId && !id) {
             reset({
                 grn_no: 'GRN2024-xxx',
                 received_date: new Date().toISOString().split('T')[0],
@@ -149,7 +199,7 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess, readOnly =
                 items: [],
             });
         }
-    }, [isOpen, initialPOId, reset]);
+    }, [isOpen, initialPOId, reset, id]);
 
     // ── Handlers ─────────────────────────────────────────────────────────────
     const onFormSubmit = async (data: GRNFormValues) => {
@@ -196,6 +246,8 @@ export function useGRNForm({ isOpen, initialPOId, onClose, onSuccess, readOnly =
         fields,
         isSubmitting,
         isFetchingPO,
+        isFetchingGRN,
+        isLoadingDetail: isFetchingGRN || (isFetchingPO && !!po_id),
         warehouses,
         departments,
         currencies,

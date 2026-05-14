@@ -137,7 +137,7 @@ export const RFQService = {
     // 🧹 Clean Parameters to prevent "undefined" in URL
     const cleanedParams = cleanParams(params || {});
     
-    // 🧹 Extract API Params — include all filters but keep pagination/sorting as core
+    // 🎯 SEARCH WINDOW OPTIMIZATION: Always rely on server-side pagination for high concurrency.
     const apiParams: Record<string, string | number | boolean | undefined | null> = { ...cleanedParams };
 
     const needsClientFilter = !!(
@@ -150,25 +150,6 @@ export const RFQService = {
         params?.date_end ||
         params?.approved_pr_no
     );
-
-    // 🎯 HYBRID FALLBACK: Strip filters from API call if client filtering is active
-    // Backend may not support these yet or may have inconsistent internal status (e.g. 'DRAFT' vs UI 'SENT')
-    if (needsClientFilter && !USE_MOCK) {
-        logger.debug('🚀 [RFQService] Hybrid Fallback Triggered: Increasing search window to 500 items.');
-        
-        // 🎯 SEARCH WINDOW OPTIMIZATION:
-        // Fetch a larger chunk from the beginning to apply client-side filters meaningfully.
-        apiParams.limit = 500;
-        apiParams.page = 1;
-
-        delete apiParams.rfq_no;
-        delete apiParams.pr_no;
-        delete apiParams.ref_pr_no;
-        delete apiParams.creator_name;
-        delete apiParams.status;
-        delete apiParams.date_start;
-        delete apiParams.date_end;
-    }
     
     // ❌ Always delete `approved_pr_no` because backend rejects it with 400 Bad Request
     delete apiParams.approved_pr_no;

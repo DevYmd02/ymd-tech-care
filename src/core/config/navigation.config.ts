@@ -137,6 +137,10 @@ export const sidebarMenuItems: MenuItem[] = [
         icon: Package,
         subItems: [
             { id: 'inv-dashboard', label: 'Warehouse Dashboard', path: '/inventory/dashboard' },
+            { id: 'requisition', label: 'ใบขอเบิก', path: '/inventory/requisition' },
+            { id: 'requisition-approval', label: 'อนุมัติใบขอเบิก', path: '/inventory/requisition-approval' },
+            { id: 'issue', label: 'ใบเบิก', path: '/inventory/issue' },
+            { id: 'issue-return', label: 'รับคืนจากการเบิก', path: '/inventory/return' },
             { id: 'item-master', label: 'สินค้า/รหัสสินค้า (Item Master)', path: '/inventory/item-master' },
             { id: 'stock-level', label: 'ผังคลัง/ทำเลจัดเก็บ', path: '/inventory/stock-level' },
             { id: 'inbound', label: 'รับเข้า (Inbound)', path: '/inventory/inbound' },
@@ -385,6 +389,7 @@ export const sidebarMenuItems: MenuItem[] = [
                 id: 'master-data-inventory',
                 label: 'Master Data คลังสินค้า',
                 subItems: [
+                    { id: 'ic-document-link', label: 'กำหนดเอกสารเชื่อม IC', path: '/master-data/ic-document-link' },
                     { id: 'item-master', label: 'กำหนดรหัสสินค้าและบริการ', path: '/master-data/item' },
                     { id: 'unit', label: 'กำหนดหน่วยนับ', path: '/master-data/unit' },
                     { id: 'item-type', label: 'กำหนดประเภทสินค้า', path: '/master-data/item-type' },

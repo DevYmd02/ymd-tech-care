@@ -36,7 +36,7 @@ export const CustomerSearchModal: React.FC<CustomerSearchModalProps> = React.mem
             limit: 100
         }),
         enabled: isOpen,
-        staleTime: 0, 
+        staleTime: 30 * 1000, 
     });
 
     const customers = useMemo(() => response?.data || [], [response]);

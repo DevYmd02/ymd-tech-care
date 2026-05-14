@@ -1,5 +1,4 @@
-import api from '@/core/api/api';
-import { USE_MOCK } from '@/core/api/api';
+import api, { type CustomAxiosConfig, USE_MOCK } from '@/core/api/api';
 import { logger } from '@/shared/utils';
 import type { GRNListParams, GRNListResponse, GRNListItem, GRNSummaryCounts, CreateGRNPayload } from '@/modules/procurement/types';
 import type { SuccessResponse } from '@/shared/types/api.types';
@@ -44,9 +43,9 @@ export const GRNService = {
         return applyClientPagination<GRNListItem>(allItems, page, limit, response.total);
     },
 
-    getById: async (id: number): Promise<GRNListItem> => {
+    getById: async (id: number, config?: CustomAxiosConfig): Promise<GRNListItem> => {
         logger.info(`[GRNService] Fetching GRN Detail: ${id}`);
-        return await api.get<GRNListItem>(`${BASE_URL}/${id}`);
+        return await api.get<GRNListItem>(`${BASE_URL}/${id}`, config);
     },
 
     getSummaryCounts: async (): Promise<GRNSummaryCounts> => {
