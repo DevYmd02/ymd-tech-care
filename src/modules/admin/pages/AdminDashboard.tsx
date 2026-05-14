@@ -20,6 +20,7 @@ import {
 import { Card } from '@ui';
 import { StatCard, QuickAccessCard } from '@ui';
 import { styles } from '@/shared/constants/styles';
+import { ROUTES } from '@/core/config/routes';
 
 // ====================================================================================
 // MAIN COMPONENT - AdminDashboard
@@ -52,14 +53,14 @@ export default function AdminDashboard() {
             icon: <TrendingUp size={28} className="text-green-600" />,
             title: 'ระบบขาย',
             description: 'จัดการใบเสนอราคา ใบสั่งขาย ลูกค้า',
-            href: '/sales',
+            href: ROUTES.SALES.DASHBOARD,
             color: 'bg-green-600'
         },
         {
             icon: <DollarSign size={28} className="text-orange-600" />,
             title: 'ระบบบัญชี',
             description: 'บัญชีจ่าย บัญชีรับ สมุดบัญชีทั่วไป',
-            href: '/accounting',
+            href: '/accounting/dashboard',
             color: 'bg-orange-600'
         }
     ];

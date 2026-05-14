@@ -106,11 +106,14 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
     };
     const handleSelectWarehouse = (warehouse: WarehouseListItem) => {
         if (activeLineIndex !== null) {
-            updateLine(activeLineIndex, 'warehouse_id', warehouse.warehouse_id);
-            updateLine(activeLineIndex, 'warehouse_name', warehouse.warehouse_name);
-            // Reset location when warehouse changes
-            updateLine(activeLineIndex, 'location_id', '');
-            updateLine(activeLineIndex, 'location_name', '');
+            updateLine(activeLineIndex, null, {
+                ...fields[activeLineIndex],
+                warehouse_id: String(warehouse.warehouse_id),
+                warehouse_name: warehouse.warehouse_name,
+                // Reset location when warehouse changes
+                location_id: '',
+                location_name: '',
+            } as RequisitionLineFormData);
         }
         setIsWarehouseSearchOpen(false);
     };
@@ -125,8 +128,11 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
     };
     const handleSelectLocation = (location: Location) => {
         if (activeLineIndex !== null) {
-            updateLine(activeLineIndex, 'location_id', location.location_id);
-            updateLine(activeLineIndex, 'location_name', location.name_th);
+            updateLine(activeLineIndex, null, {
+                ...fields[activeLineIndex],
+                location_id: String(location.location_id),
+                location_name: location.name_th,
+            } as RequisitionLineFormData);
         }
         setIsLocationSearchOpen(false);
     };
@@ -141,8 +147,11 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
     };
     const handleSelectLot = (lot: LotNo) => {
         if (activeLineIndex !== null) {
-            updateLine(activeLineIndex, 'lot_id', lot.lot_no_id);
-            updateLine(activeLineIndex, 'lot_no', lot.code);
+            updateLine(activeLineIndex, null, {
+                ...fields[activeLineIndex],
+                lot_id: String(lot.lot_no_id),
+                lot_no: lot.code,
+            } as RequisitionLineFormData);
         }
         setIsLotSearchOpen(false);
     };
