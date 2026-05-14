@@ -127,17 +127,23 @@ const QuotationLineRow = memo(({
             </td>
             <td className="px-2 py-1.5">
                 <select 
-                    value={line.uom_id || ''} 
-                    onChange={(e) => onLineChange(index, 'uom_id', e.target.value)}
+                    value={line.uom_id ? String(line.uom_id) : ""} 
+                    onChange={(e) => onLineChange(index, 'uom_id', e.target.value ? Number(e.target.value) : 0)}
                     disabled={readOnly}
                     className={`${compactInputClass} ${getFieldErrorClass(index, 'uom_id')}`}
                 >
-                    <option value="">-- หน่วย --</option>
+                    <option value="" disabled>-- หน่วย --</option>
                     {uoms.map((u) => (
-                        <option key={String(u.id || u.uom_id)} value={String(u.id || u.uom_id)}>
-                            {u.uom_name || u.uom_name}
+                        <option key={`uom-${u.uom_id}`} value={String(u.uom_id)}>
+                            {u.uom_name}
                         </option>
                     ))}
+                    {/* 🕵️ DEBUG FALLBACK: ถ้ามี ID แต่หาใน List ไม่เจอ ให้โชว์เลข ID ไว้ก่อน */}
+                    {line.uom_id && !uoms.find(u => String(u.uom_id) === String(line.uom_id)) && (
+                        <option value={String(line.uom_id)}>
+                            [Unknown ID: {line.uom_id}]
+                        </option>
+                    )}
                 </select>
             </td>
             <td className="px-2 py-1.5">

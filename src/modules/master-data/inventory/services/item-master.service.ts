@@ -38,11 +38,25 @@ function mapItemFields(raw: RawItemListItem): ItemListItem {
     standard_cost: raw.standard_cost ? Number(raw.standard_cost) : undefined,
     category_id: Number(raw.category_id || 0),
     category_name: String(raw.category_name || ''),
-    uom_id: Number(raw.uom_id || raw.uom_id || raw.base_uom_id || raw.purchasing_unit_id || raw.purchase_uom_id || 0),
-    uom_name: String(raw.uom_name || raw.uom_name || raw.base_uom_name || raw.purchasing_unit_name || ''),
+    uom_id: Number(
+        raw.uom_id || 
+        (typeof raw.uom === 'object' && raw.uom ? (raw.uom as Record<string, unknown>).uom_id || (raw.uom as Record<string, unknown>).id : 0) || 
+        raw.sale_uom_id || 
+        (typeof raw.sale_uom === 'object' && raw.sale_uom ? (raw.sale_uom as Record<string, unknown>).uom_id || (raw.sale_uom as Record<string, unknown>).id : 0) || 
+        raw.base_uom_id || 
+        (typeof raw.base_uom === 'object' && raw.base_uom ? (raw.base_uom as Record<string, unknown>).uom_id || (raw.base_uom as Record<string, unknown>).id : 0) || 
+        0
+    ),
+    uom_name: String(
+        raw.uom_name || 
+        (typeof raw.uom === 'object' && raw.uom ? (raw.uom as Record<string, unknown>).uom_name : '') || 
+        raw.sale_uom_name || 
+        (typeof raw.sale_uom === 'object' && raw.sale_uom ? (raw.sale_uom as Record<string, unknown>).uom_name : '') || 
+        raw.base_uom_name || 
+        (typeof raw.base_uom === 'object' && raw.base_uom ? (raw.base_uom as Record<string, unknown>).uom_name : '') || 
+        ''
+    ),
 
-    purchasing_unit_id: raw.purchasing_unit_id ? Number(raw.purchasing_unit_id) : undefined,
-    purchasing_unit_name: raw.purchasing_unit_name ? String(raw.purchasing_unit_name) : undefined,
     is_active: Boolean(raw.is_active ?? true),
     created_at: String(raw.created_at || new Date().toISOString()),
     // Spread remaining optional fields safely if needed, or map explicitly

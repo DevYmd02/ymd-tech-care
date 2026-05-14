@@ -72,6 +72,7 @@ export const useQuotationForm = (isOpen: boolean, onClose: () => void, id?: stri
         setValue,
         getValues,
         tax_code_id: Number(tax_code_id),
+        uoms: masterData.uoms,
     });
 
     // 5. Watch for UI (formData)
