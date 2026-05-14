@@ -56,14 +56,18 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms, onClose, readOn
             return;
         }
 
-        // Only reset if not initialized or if we are switching to a different ID
-        if (!isInitializedRef.current && initialData) {
+        // Only reset if not initialized
+        // If we have an ID (Edit mode), wait for initialData to be loaded
+        // If we don't have an ID (Create mode), we can initialize immediately
+        const shouldInitialize = !isInitializedRef.current && (!id || (id && initialData));
+
+        if (shouldInitialize) {
             reset({
                 ...getDeliveryDefaultValues(),
-                ...initialData,
-            });
+                ...(initialData || {}),
+            } as DeliveryFormValues);
             isInitializedRef.current = true;
-            logger.debug('[useDeliveryForm] Form initialized with data:', id);
+            logger.debug('[useDeliveryForm] Form initialized:', id || 'new');
         }
     }, [isOpen, initialData, reset, id]);
 
