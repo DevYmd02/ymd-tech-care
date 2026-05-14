@@ -79,7 +79,7 @@ export function useQuotationMasterData(isOpen: boolean) {
         staleTime: MASTER_STALE,
     });
 
-    const { data: uomResponse } = useQuery({
+    const { data: uomResponse, isLoading: isLoadingUoms } = useQuery({
         queryKey: ['master-units'],
         queryFn: () => UOMService.getAll({ limit: 1000 }),
         enabled: isOpen,
@@ -87,12 +87,9 @@ export function useQuotationMasterData(isOpen: boolean) {
     });
     const uoms = useMemo(() => uomResponse?.items || [], [uomResponse]);
 
-    const isMasterDataReady = useMemo(() => (
-        (branches?.length > 0 || !isOpen) && 
-        (taxCodes?.length > 0 || !isOpen) && 
-        (departments?.length > 0 || !isOpen) &&
-        (uoms?.length > 0 || !isOpen)
-    ), [branches?.length, taxCodes?.length, departments?.length, uoms?.length, isOpen]);
+    // Optimize Readiness Check: Use isLoading status instead of .length > 0
+    // This prevents hanging if a master data list is legitimately empty.
+    const isMasterDataReady = !isLoadingUoms; 
 
     return {
         branches,

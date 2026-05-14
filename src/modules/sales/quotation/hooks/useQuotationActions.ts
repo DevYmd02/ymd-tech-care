@@ -7,18 +7,20 @@ import {
 } from '@sales/shared/utils/sales-calculations';
 import type { QuotationFormValues, QuotationLineValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
-import type { ItemListItem } from '@inventory/types/product-types';
+import type { ItemListItem, UOMListItem } from '@inventory/types/product-types';
 
 interface UseQuotationActionsProps {
     setValue: UseFormSetValue<QuotationFormValues>;
     getValues: UseFormGetValues<QuotationFormValues>;
     tax_code_id?: number;
+    uoms?: UOMListItem[];
 }
 
 export function useQuotationActions({
     setValue,
     getValues,
     tax_code_id,
+    uoms,
 }: UseQuotationActionsProps) {
     const [loadingPriceLines, setLoadingPriceLines] = useState<Set<number>>(new Set());
 
@@ -131,16 +133,43 @@ export function useQuotationActions({
     }, [setValue]);
 
     const handleSelectProduct = useCallback((index: number, product: ItemListItem) => {
-        const currentLines = getValues('lines') || [];
-        const newLines = [...currentLines];
+        const lines = getValues('lines') || [];
+        const newLines = [...lines];
         const line = newLines[index];
+
         if (line) {
             line.item_id = Number(product.item_id || product.id || 0);
             line.item_code = product.item_code || '';
             line.item_name = product.item_name || '';
             
-            const productUomId = product.uom_id || product.uom_id || product.sale_uom_id || product.base_uom_id || product.sales_unit_id;
-            line.uom_id = Number(productUomId || 0);
+            // 🎯 Phase 1: Deep extract UOM ID
+            const rawProduct = product as unknown as Record<string, unknown>;
+            const uomData = rawProduct.uom as Record<string, unknown> | undefined;
+            const saleUomData = rawProduct.sale_uom as Record<string, unknown> | undefined;
+            const baseUomData = rawProduct.base_uom as Record<string, unknown> | undefined;
+            
+            let resolvedUomId = 
+                product.uom_id || 
+                (uomData?.uom_id as number) || 
+                (uomData?.id as number) || 
+                product.sale_uom_id || 
+                (saleUomData?.uom_id as number) ||
+                (saleUomData?.id as number) ||
+                product.base_uom_id ||
+                (baseUomData?.uom_id as number) ||
+                (baseUomData?.id as number);
+
+            // 🎯 Phase 2: Name-based recovery
+            if (!resolvedUomId && product.uom_name && uoms) {
+                const matchedUom = uoms.find((u: UOMListItem) => 
+                    String(u.uom_name || '').trim().toLowerCase() === String(product.uom_name).trim().toLowerCase()
+                );
+                if (matchedUom) {
+                    resolvedUomId = matchedUom.uom_id || matchedUom.id;
+                }
+            }
+                
+            line.uom_id = resolvedUomId ? Number(resolvedUomId) : 0;
 
             line.unit_price = Number(product.standard_cost || product.price || 0);
             line.qty = 1;
@@ -149,7 +178,7 @@ export function useQuotationActions({
             setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
             handleLinePriceSync(index);
         }
-    }, [getValues, setValue, handleLinePriceSync]);
+    }, [getValues, setValue, handleLinePriceSync, uoms]);
 
     return {
         handleAddLine,

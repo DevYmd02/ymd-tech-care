@@ -7,9 +7,10 @@ import { type PaginatedListResponse } from '@/shared/types/api.types';
 import { type TableFilters } from '@/shared/hooks/useTableFilters';
 
 // ✅ กำหนด type Backend response ชัดเจน
-interface UomResponse {
-    uom_id: number;
-    uom_code: string;
+interface UomResponse extends Record<string, unknown> {
+    uom_id?: number;
+    id?: number;
+    uom_code?: string;
     uom_name: string;
     uom_nameeng?: string;
     is_active: boolean;
@@ -25,14 +26,15 @@ export interface UnitFilters extends Partial<TableFilters> {
 
 // ✅ type-safe ไม่ใช้ any
 function mapUomToUnit(item: UomResponse): UOMListItem {
+    const finalId = Number(item.uom_id || item.id || 0);
     return {
-        id: item.uom_id,
-        uom_id: item.uom_id,
-        uom_code: item.uom_code,
+        id: finalId,
+        uom_id: finalId,
+        uom_code: item.uom_code || '',
         uom_name: item.uom_name,
         uom_name_en: item.uom_nameeng ?? '',
-        is_active: item.is_active ?? true,
-        created_at: item.created_at || new Date().toISOString(),
+        is_active: item.is_active,
+        created_at: item.created_at,
     };
 }
  
