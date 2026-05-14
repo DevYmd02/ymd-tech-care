@@ -94,6 +94,9 @@ const LocationList = React.lazy(() => import('@/modules/master-data/inventory/pa
 const ShelfList = React.lazy(() => import('@/modules/master-data/inventory/pages/shelf/ShelfList'));
 const LotNoList = React.lazy(() => import('@/modules/master-data/inventory/pages/lot-no/LotNoList'));
 const ICDocumentLinkList = React.lazy(() => import('@/modules/master-data/inventory/pages/ic-document-link/ICDocumentLinkList'));
+
+// Inventory Transaction Pages
+const RequisitionListPage = React.lazy(() => import('@/modules/Inventory/requisition/RequisitionListPage'));
 // Currency Pages
 const CurrencyCodeList = React.lazy(() => import('@/modules/master-data/currency/pages/code/CurrencyCodeList'));
 const ExchangeRateTypeList = React.lazy(() => import('@/modules/master-data/currency/pages/type/ExchangeRateTypeList'));
@@ -328,6 +331,11 @@ function AppContent() {
             <Route path="sales/order-approval" element={<SalesOrderApproveListPage />} />
             <Route path="sales/delivery" element={<DeliveryListPage />} />
 
+            {/* ==================== INVENTORY MODULE ROUTES ==================== */}
+            <Route path="inventory">
+              <Route path="requisition" element={<RequisitionListPage />} />
+            </Route>
+
             {/* ==================== PLACEHOLDER ROUTES ==================== */}
             
             {/* Procurement Placeholders */}
@@ -335,10 +343,12 @@ function AppContent() {
               <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
             ))}
 
-            {/* Inventory Placeholders */}
-            {placeholderRoutes.inventory.map(({ path, title }) => (
-              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-            ))}
+            {/* Inventory Placeholders (excluding implemented routes) */}
+            {placeholderRoutes.inventory
+              .filter(({ path }) => path !== 'inventory/requisition')
+              .map(({ path, title }) => (
+                <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+              ))}
 
             {/* Roles Placeholders */}
             {placeholderRoutes.roles.map(({ path, title }) => (
