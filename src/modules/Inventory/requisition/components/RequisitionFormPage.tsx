@@ -1,0 +1,333 @@
+/**
+ * @file RequisitionFormPage.tsx
+ * @description หน้าฟอร์มสร้าง/แก้ไขใบขอเบิก (Issue Requisition)
+ * @pattern ตาม Sales module pattern (Card-based, Animation, Footer styling)
+ */
+
+import React, { useState } from 'react';
+import { FormProvider, type SubmitHandler } from 'react-hook-form';
+import { ClipboardList, Save, Loader2 } from 'lucide-react';
+import { WindowFormLayout } from '@ui';
+import { ConfirmationModal } from '@system/ConfirmationModal';
+import { RequisitionFormHeader } from '../components/RequisitionFormHeader';
+import { RequisitionFormLines } from '../components/RequisitionFormLines';
+import { useRequisitionForm } from '../hooks/useRequisitionForm';
+import type { RequisitionHeaderFormData, RequisitionLineFormData } from '../schemas/requisition.schemas';
+import { ProductSearchModal, type Product } from '../../shared/components/ProductSearchModal';
+import { WarehouseSearchModal } from '../../shared/components/WarehouseSearchModal';
+import { LocationSearchModal } from '../../shared/components/LocationSearchModal';
+import { LotSearchModal } from '../../shared/components/LotSearchModal';
+import type { WarehouseListItem } from '@master-data/inventory/types/warehouse-types';
+import type { Location, LotNo } from '@master-data/inventory/types/inventory-master.types';
+
+interface RequisitionFormPageProps {
+    isOpen: boolean;
+    onClose: () => void;
+    editId?: string | null;
+    onSuccess?: () => void;
+    readOnly?: boolean;
+}
+
+const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden';
+
+export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
+    isOpen,
+    onClose,
+    editId,
+    onSuccess,
+    readOnly = false,
+}) => {
+    const {
+        formMethods,
+        onSubmit,
+        handleFormError,
+        isSaving,
+        isLoading,
+        isEditMode,
+        fields,
+        addLine,
+        removeLine,
+        updateLine,
+        docLinks,
+        branches,
+        departments,
+        employees,
+        projects,
+        units,
+    } = useRequisitionForm({ isOpen, onClose, editId, onSuccess });
+
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [pendingData, setPendingData] = useState<RequisitionHeaderFormData | null>(null);
+
+    // 🔍 Product Search Modal State
+    const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
+    const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
+
+    const handleOpenProductSearch = (index: number) => {
+        setActiveLineIndex(index);
+        setIsProductSearchOpen(true);
+    };
+
+    const handleSelectProduct = (product: Product) => {
+        if (activeLineIndex !== null) {
+            // 1. หา UOM ID จาก product โดยตรงก่อน
+            let targetUomId = String(product.uom_id || product.unit_id || product.base_uom_id || product.purchasing_unit_id || '');
+            
+            // 2. ถ้าหาไม่เจอ หรือเพื่อความชัวร์ ให้ลองหาจากชื่อหน่วยนับใน list units (Fallback)
+            if (!targetUomId || targetUomId === '0') {
+                const foundUnit = units.find(u => 
+                    (u.uom_name && (u.uom_name === product.uom_name || u.uom_name === product.unit_name)) ||
+                    (u.unit_name && (u.unit_name === product.uom_name || u.unit_name === product.unit_name))
+                );
+                if (foundUnit) {
+                    targetUomId = String(foundUnit.uom_id || foundUnit.unit_id || foundUnit.id);
+                }
+            }
+
+            // อัปเดตข้อมูลทั้งแถวในครั้งเดียวเพื่อป้องกันการเขียนทับข้อมูลกัน (Race Condition)
+            updateLine(activeLineIndex, null, {
+                ...fields[activeLineIndex],
+                item_id: String(product.item_id || product.id || ''),
+                item_code: product.item_code || '',
+                item_name: product.item_name || '',
+                uom_id: targetUomId,
+                warehouse_id: product.warehouse_id ? String(product.warehouse_id) : fields[activeLineIndex].warehouse_id,
+                warehouse_name: product.warehouse || fields[activeLineIndex].warehouse_name,
+            } as RequisitionLineFormData);
+        }
+        setIsProductSearchOpen(false);
+    };
+
+    // 🔍 Warehouse Search Modal State
+    const [isWarehouseSearchOpen, setIsWarehouseSearchOpen] = useState(false);
+    const handleOpenWarehouseSearch = (index: number) => {
+        setActiveLineIndex(index);
+        setIsWarehouseSearchOpen(true);
+    };
+    const handleSelectWarehouse = (warehouse: WarehouseListItem) => {
+        if (activeLineIndex !== null) {
+            updateLine(activeLineIndex, 'warehouse_id', warehouse.warehouse_id);
+            updateLine(activeLineIndex, 'warehouse_name', warehouse.warehouse_name);
+            // Reset location when warehouse changes
+            updateLine(activeLineIndex, 'location_id', '');
+            updateLine(activeLineIndex, 'location_name', '');
+        }
+        setIsWarehouseSearchOpen(false);
+    };
+
+    // 🔍 Location Search Modal State
+    const [isLocationSearchOpen, setIsLocationSearchOpen] = useState(false);
+    const [activeWarehouseId, setActiveWarehouseId] = useState<string | number | undefined>(undefined);
+    const handleOpenLocationSearch = (index: number, warehouseId?: string | number) => {
+        setActiveLineIndex(index);
+        setActiveWarehouseId(warehouseId);
+        setIsLocationSearchOpen(true);
+    };
+    const handleSelectLocation = (location: Location) => {
+        if (activeLineIndex !== null) {
+            updateLine(activeLineIndex, 'location_id', location.location_id);
+            updateLine(activeLineIndex, 'location_name', location.name_th);
+        }
+        setIsLocationSearchOpen(false);
+    };
+
+    // 🔍 Lot Search Modal State
+    const [isLotSearchOpen, setIsLotSearchOpen] = useState(false);
+    const [activeItemId, setActiveItemId] = useState<string | number | undefined>(undefined);
+    const handleOpenLotSearch = (index: number, itemId?: string | number) => {
+        setActiveLineIndex(index);
+        setActiveItemId(itemId);
+        setIsLotSearchOpen(true);
+    };
+    const handleSelectLot = (lot: LotNo) => {
+        if (activeLineIndex !== null) {
+            updateLine(activeLineIndex, 'lot_id', lot.lot_no_id);
+            updateLine(activeLineIndex, 'lot_no', lot.code);
+        }
+        setIsLotSearchOpen(false);
+    };
+
+    // 💾 Form Submission Handler
+    const onFormSubmit: SubmitHandler<RequisitionHeaderFormData> = (data) => {
+        setPendingData(data);
+        setIsConfirmOpen(true);
+    };
+
+    const handleConfirmSave = async () => {
+        if (!pendingData) return;
+        setIsConfirmOpen(false);
+        await onSubmit(pendingData);
+    };
+
+    // ── Title ──────────────────────────────────────────────────────────────────────
+    const formTitle = readOnly
+        ? 'รายละเอียดใบขอเบิก (VIEW Issue Requisition)'
+        : isEditMode
+            ? 'แก้ไขใบขอเบิก (EDIT Issue Requisition)'
+            : 'สร้างใบขอเบิกใหม่ (CREATE Issue Requisition)';
+
+    // ── Footer ─────────────────────────────────────────────────────────────────────
+    const ModalFooter = (
+        <div className="flex justify-between items-center w-full bg-slate-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4">
+            <div />
+            <div className="flex gap-2">
+                <button 
+                    type="button" 
+                    onClick={onClose}
+                    disabled={isSaving}
+                    className="h-10 px-6 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+                >
+                    {isEditMode ? 'ปิด' : 'ยกเลิก'}
+                </button>
+                {!readOnly && (
+                    <button 
+                        type="submit" 
+                        form="requisition-form"
+                        disabled={isSaving}
+                        className="h-10 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                    >
+                        {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                        {isSaving ? 'กำลังบันทึก...' : (isEditMode ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล')}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+
+    return (
+        <WindowFormLayout
+            isOpen={isOpen}
+            onClose={onClose}
+            title={formTitle}
+            headerColor={readOnly ? 'bg-slate-600' : 'bg-blue-600'}
+            footer={ModalFooter}
+            titleIcon={
+                <div className="bg-white/20 p-1.5 rounded shadow-sm text-white">
+                    <ClipboardList size={16} strokeWidth={3} />
+                </div>
+            }
+        >
+            <FormProvider {...formMethods}>
+                <style dangerouslySetInnerHTML={{ __html: `
+                    @keyframes formFadeIn {
+                        from { opacity: 0; transform: translateY(8px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                    .animate-form-fade-in {
+                        animation: formFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                    }
+                `}} />
+                <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 animate-form-fade-in">
+                    {isLoading ? (
+                        <div className="flex items-center justify-center h-40">
+                            <Loader2 className="animate-spin text-blue-600" size={32} />
+                        </div>
+                    ) : (
+                        <form id="requisition-form" onSubmit={formMethods.handleSubmit(onFormSubmit, handleFormError)} className="max-w-[1400px] mx-auto space-y-6">
+                            {/* 1. Header Section */}
+                            <div className={cardClass}>
+                                <div className="p-6">
+                                    <RequisitionFormHeader
+                                        docLinks={docLinks}
+                                        deptOptions={departments.map(d => {
+                                            const item = d as unknown as Record<string, unknown>;
+                                            return { 
+                                                id: String(d.emp_dept_id || d.department_id || item.id || ''), 
+                                                name: d.emp_dept_name || d.department_name || String(item.dept_name || '') 
+                                            };
+                                        })}
+                                        jobOptions={projects.map(p => {
+                                            const item = p as unknown as Record<string, unknown>;
+                                            return { 
+                                                id: String(p.project_id || item.id || ''), 
+                                                name: p.project_name || String(item.name || '') 
+                                            };
+                                        })}
+                                        branchOptions={branches.map(b => {
+                                            const item = b as unknown as Record<string, unknown>;
+                                            return { 
+                                                id: String(b.branch_id || item.id || ''), 
+                                                name: b.branch_name || String(item.name || '') 
+                                            };
+                                        })}
+                                        empOptions={employees.map(e => {
+                                            const item = e as unknown as Record<string, unknown>;
+                                            return { 
+                                                id: String(e.employee_id || item.id || ''), 
+                                                name: e.employee_fullname || String(item.name || '') 
+                                            };
+                                        })}
+                                        readOnly={readOnly}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* 2. Line Items Section */}
+                            <div className={cardClass}>
+                                <div className="p-6">
+                                    <RequisitionFormLines
+                                        fields={fields}
+                                        addLine={addLine}
+                                        removeLine={removeLine}
+                                        updateLine={updateLine}
+                                        readOnly={readOnly}
+                                        uomOptions={units.map(u => {
+                                            const item = u as unknown as Record<string, unknown>;
+                                            const uId = String(u.uom_id ?? u.unit_id ?? item.id ?? '');
+                                            return { 
+                                                id: uId, 
+                                                name: u.uom_name || u.unit_name || String(item.name || '') 
+                                            };
+                                        })}
+                                        onSearchProduct={handleOpenProductSearch}
+                                        onSearchWarehouse={handleOpenWarehouseSearch}
+                                        onSearchLocation={handleOpenLocationSearch}
+                                        onSearchLot={handleOpenLotSearch}
+                                    />
+                                </div>
+                            </div>
+                        </form>
+                    )}
+                </div>
+            </FormProvider>
+
+            <ConfirmationModal 
+                isOpen={isConfirmOpen}
+                onClose={() => !isSaving && setIsConfirmOpen(false)}
+                onConfirm={handleConfirmSave}
+                title="ยืนยันการบันทึกข้อมูล"
+                description="คุณต้องการบันทึกข้อมูลใบขอเบิกนี้ใช่หรือไม่?"
+                confirmText="ยืนยันการบันทึก"
+                cancelText="ยกเลิก"
+                variant="info"
+                isLoading={isSaving}
+            />
+
+            <ProductSearchModal
+                isOpen={isProductSearchOpen}
+                onClose={() => setIsProductSearchOpen(false)}
+                onSelect={handleSelectProduct}
+            />
+
+            <WarehouseSearchModal
+                isOpen={isWarehouseSearchOpen}
+                onClose={() => setIsWarehouseSearchOpen(false)}
+                onSelect={handleSelectWarehouse}
+            />
+
+            <LocationSearchModal
+                isOpen={isLocationSearchOpen}
+                onClose={() => setIsLocationSearchOpen(false)}
+                onSelect={handleSelectLocation}
+                warehouseId={activeWarehouseId}
+            />
+
+            <LotSearchModal
+                isOpen={isLotSearchOpen}
+                onClose={() => setIsLotSearchOpen(false)}
+                onSelect={handleSelectLot}
+                itemId={activeItemId}
+            />
+        </WindowFormLayout>
+    );
+};
