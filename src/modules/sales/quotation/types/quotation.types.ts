@@ -25,6 +25,7 @@ export interface QuotationLineData {
 }
 
 export interface RawQuotationLine {
+    id?: string | number;
     sq_line_id?: string | number;
     sq_id?: string | number;
     item_id?: string | number;

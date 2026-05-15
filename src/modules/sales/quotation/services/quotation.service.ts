@@ -167,12 +167,11 @@ export class QuotationService {
         try {
             const response = await api.get<unknown>(ENDPOINTS.detail(String(id)), config);
             
-            // 1. Unified Response Extraction (Trust api.ts unwrapping, handle root arrays)
+            // 1. Unified Response Extraction
             let raw: Record<string, unknown> | null = null;
             if (response && typeof response === 'object') {
                 raw = Array.isArray(response) ? (response[0] as Record<string, unknown>) : (response as Record<string, unknown>);
-                // Deep discovery fallback for { data: { ... } } if api.ts skipped unwrapping
-                if (raw && !raw.sq_id && raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)) {
+                if (raw && !raw.sq_id && !raw.id && raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)) {
                     raw = raw.data as Record<string, unknown>;
                 }
             }
@@ -182,11 +181,20 @@ export class QuotationService {
                 return null;
             }
 
-            // 2. Determine where the lines are located — EXHAUSTIVE DETECTION
-            const priority = ['saleQuotationLines', 'sale_quotation_lines', 'sq_lines', 'lines', 'items', 'sale_quotation_detail', 'sale_quotation_line', 'sq_line'];
+            // 2. Exhaustive Detection helper
+            const pick = (pref: string, ...fallbacks: string[]) => {
+                if (raw![pref] !== undefined && raw![pref] !== null) return raw![pref];
+                for (const f of fallbacks) {
+                    if (raw![f] !== undefined && raw![f] !== null) return raw![f];
+                }
+                return undefined;
+            };
+
+            // 3. Determine where the lines are located
+            const linePriority = ['saleQuotationLines', 'sale_quotation_lines', 'sq_lines', 'lines', 'items', 'sale_quotation_detail', 'sale_quotation_line', 'sq_line'];
             let rawLines: RawQuotationLine[] = [];
             
-            for (const p of priority) {
+            for (const p of linePriority) {
                 const val = raw[p];
                 if (Array.isArray(val) && val.length > 0) {
                     rawLines = val as RawQuotationLine[];
@@ -199,74 +207,62 @@ export class QuotationService {
                 if (firstArray) rawLines = raw[firstArray] as RawQuotationLine[];
             }
             
-            // 3. Assemble the final strictly-typed object
-            const safeRaw = { ...raw };
-            delete safeRaw.lines;
-            delete safeRaw.saleQuotationLines;
-            
-            // 🕵️ Aggressive ID & Field Discovery helper
-            const pick = (pref: string, ...fallbacks: string[]) => {
-                if (raw[pref] !== undefined && raw[pref] !== null) return raw[pref];
-                for (const f of fallbacks) {
-                    if (raw[f] !== undefined && raw[f] !== null) return raw[f];
-                }
-                return undefined;
-            };
-
+            // 4. Assemble the final object with robust fallbacks
             const result: QuotationFormData = {
-                ...safeRaw,
-                sq_id: normalizeId(raw.sq_id),
-                sq_no: String(raw.sq_no || ''),
-                sq_date: normalizeDate(raw.sq_date),
-                customer_id: normalizeId(raw.customer_id),
-                branch_id: normalizeId(raw.branch_id),
-                branch_name: (masterDataCache.getBranchName(raw.branch_id as number | string) || '') as string,
+                sq_id: normalizeId(pick('sq_id', 'id')),
+                sq_no: String(pick('sq_no', 'no') || ''),
+                sq_date: normalizeDate(pick('sq_date', 'date', 'sqDate')),
+                customer_id: normalizeId(pick('customer_id', 'customerId')),
+                branch_id: normalizeId(pick('branch_id', 'branchId')),
+                branch_name: (masterDataCache.getBranchName(pick('branch_id', 'branchId') as number | string) || '') as string,
+                lead_id: normalizeId(pick('lead_id', 'leadId')),
+                
                 currency_code: String(pick('quote_currency_code', 'currency_code', 'currency') || 'THB'),
                 base_currency_code: String(pick('base_currency_code', 'home_currency') || 'THB'),
                 quote_currency_code: String(pick('quote_currency_code', 'currency_code') || 'THB'),
                 exchange_rate: Number(pick('exchange_rate', 'rate') || 1),
-                exchange_rate_date: normalizeDate(raw.exchange_rate_date || raw.sq_date || raw.date),
-                status: String(raw.status || raw.sq_status || 'DRAFT'),
-                sub_total: Number(raw.quote_sub_total || raw.base_sub_total || raw.sub_total || raw.total_sub_total || 0),
-                discount_expression: (() => {
-                    const expr = String(raw.discount_expression || raw.discount_input || raw.discount_rate || raw.discount || raw.header_discount || '');
-                    if (expr && expr !== '0' && expr !== 'null' && expr !== 'undefined') return expr;
-                    const amt = Number(raw.quote_discount_amount || raw.base_discount_amount || raw.discount_amount || raw.total_discount || 0);
-                    return amt > 0 ? String(amt) : '0';
-                })(),
-                discount_amount: Number(raw.quote_discount_amount || raw.base_discount_amount || raw.discount_amount || raw.total_discount || 0),
-                vat_amount: Number(raw.quote_tax_amount || raw.base_tax_amount || raw.vat_amount || raw.total_vat || 0),
-                total_amount: Number(raw.quote_total_amount || raw.base_total_amount || raw.total_amount || 0),
+                exchange_rate_date: normalizeDate(pick('exchange_rate_date', 'exchangeRateDate', 'sq_date', 'date')),
+                
+                status: String(pick('status', 'sq_status', 'workflow_status') || 'DRAFT'),
+                valid_until: normalizeDate(pick('valid_until', 'expiry_date', 'expireDate')),
+                
+                sub_total: Number(pick('quote_sub_total', 'base_sub_total', 'sub_total', 'total_sub_total') || 0),
+                discount_amount: Number(pick('quote_discount_amount', 'base_discount_amount', 'discount_amount', 'total_discount') || 0),
+                discount_expression: String(pick('discount_expression', 'discount_input', 'discount_rate', 'discount', 'header_discount') || '0'),
+                vat_amount: Number(pick('quote_tax_amount', 'base_tax_amount', 'vat_amount', 'total_vat') || 0),
+                total_amount: Number(pick('quote_total_amount', 'base_total_amount', 'total_amount') || 0),
+                
                 payment_term_days: Number(pick('payment_term_days', 'credit_term') || 0),
-                onhold: String(raw.onhold || 'N'),
-                remarks: String(raw.remarks || ''),
-                tax_code_id: (String(pick('tax_code_id', 'tax_id') ?? '') || '') as string,
+                onhold: String(pick('onhold', 'on_hold') || 'N'),
+                remarks: String(pick('remarks', 'remark', 'note') || ''),
+                tax_code_id: normalizeId(pick('tax_code_id', 'tax_id')),
+                
+                sale_area_id: normalizeId(pick('sale_area_id', 'emp_area_id', 'area_id')),
+                emp_sale_id: normalizeId(pick('emp_sale_id', 'sale_id', 'employee_id')),
+                emp_dept_id: normalizeId(pick('emp_dept_id', 'dept_id', 'department_id')),
+                project_id: normalizeId(pick('project_id', 'projectId', 'job_id')),
+                
                 isMulticurrency: Boolean(
-                    raw.isMulticurrency || 
-                    (raw.base_currency_code && String(raw.base_currency_code) !== 'THB') ||
-                    (raw.quote_currency_code && String(raw.quote_currency_code) !== 'THB') ||
-                    (raw.base_currency_code !== raw.quote_currency_code)
+                    pick('isMulticurrency', 'is_multicurrency') || 
+                    (pick('base_currency_code') && String(pick('base_currency_code')) !== 'THB') ||
+                    (pick('quote_currency_code') && String(pick('quote_currency_code')) !== 'THB')
                 ),
-                lines: rawLines.map(line => {
-                    const sourceVal = line.price_source !== undefined ? line.price_source : line.source;
-                    const sourceNameRaw = line.price_source_name || line.source_name || '';
-                    
-                    return {
-                        ...line,
-                        sq_line_id: normalizeId(line.sq_line_id),
-                        item_id: normalizeId(line.item_id || line.product_id),
-                        item_code: String(line.item_code || line.product_code || ''),
-                        item_name: String(line.item_name || line.product_name || ''),
-                        qty: Number(line.qty || 0),
-                        uom_id: normalizeId(line.uom_id),
-                        unit_price: Number(line.unit_price || 0),
-                        discount_expression: String(line.discount_expression || line.line_discount_input || '0'),
-                        line_discount: Number(line.line_discount || 0),
-                        line_total: Number(line.line_total || line.net_amount || line.total_amount || 0),
-                        price_source: sourceVal !== undefined ? Number(sourceVal) : undefined,
-                        price_source_name: sourceNameRaw || undefined,
-                    } as QuotationLineData;
-                })
+                
+                lines: rawLines.map(line => ({
+                    sq_line_id: normalizeId(line.sq_line_id || line.id),
+                    item_id: normalizeId(line.item_id || line.product_id),
+                    item_code: String(line.item_code || line.product_code || line.code || ''),
+                    item_name: String(line.item_name || line.product_name || line.name || ''),
+                    qty: Number(line.qty || 0),
+                    uom_id: normalizeId(line.uom_id),
+                    unit_price: Number(line.unit_price || 0),
+                    discount_expression: String(line.discount_expression || line.line_discount_input || '0'),
+                    line_discount: Number(line.line_discount || 0),
+                    line_total: Number(line.line_total || line.net_amount || line.total_amount || 0),
+                    price_source: line.price_source !== undefined ? Number(line.price_source) : (line.source !== undefined ? Number(line.source) : undefined),
+                    price_source_name: line.price_source_name || line.source_name || '',
+                    note: line.note || '',
+                } as QuotationLineData))
             };
 
             logger.debug(`[QuotationService] Successfully fetched detail for id: ${id}`, result);
@@ -330,8 +326,17 @@ export class QuotationService {
     /**
      * 🏷️ ส่งใบเสนอราคาขออนุมัติ (Submit for Approval)
      */
-    static async submitForApproval(id: string | number): Promise<void> {
+    static async submitForApproval(id: string | number, currentData?: Partial<QuotationFormValues>): Promise<void> {
         logger.info(`[QuotationService] Submitting for approval: ${id}`);
+        
+        // 🚀 If currentData is provided (from UI state), use it directly to avoid extra hydration
+        if (currentData && currentData.lines && currentData.sq_date && currentData.customer_id) {
+            return this.update(id, { 
+                ...currentData,
+                status: 'PENDING',
+            } as Partial<QuotationFormValues>);
+        }
+
         return this.update(id, { 
             status: 'PENDING',
         } as Partial<QuotationFormValues>);

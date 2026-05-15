@@ -50,14 +50,14 @@ export const mapQuotationFormToDTO = (data: QuotationFormValues): Record<string,
         exchange_rate_date: toISOString(data.exchange_rate_date || data.sq_date || new Date())
     };
 
-    if (data.customer_id !== undefined && data.customer_id !== null) payload.customer_id = Number(data.customer_id);
-    if (data.branch_id !== undefined && data.branch_id !== null) payload.branch_id = Number(data.branch_id);
+    if (data.customer_id) payload.customer_id = Number(data.customer_id);
+    if (data.branch_id) payload.branch_id = Number(data.branch_id);
     if (data.lead_id) payload.lead_id = data.lead_id;
-    if (data.sale_area_id !== undefined && data.sale_area_id !== null) payload.sale_area_id = Number(data.sale_area_id);
-    if (data.emp_sale_id !== undefined && data.emp_sale_id !== null) payload.emp_sale_id = Number(data.emp_sale_id);
-    if (data.emp_dept_id !== undefined && data.emp_dept_id !== null) payload.emp_dept_id = Number(data.emp_dept_id);
-    if (data.project_id !== undefined && data.project_id !== null) payload.project_id = Number(data.project_id);
-    if (data.tax_code_id !== undefined && data.tax_code_id !== null) payload.tax_code_id = Number(data.tax_code_id);
+    if (data.sale_area_id) payload.sale_area_id = Number(data.sale_area_id);
+    if (data.emp_sale_id) payload.emp_sale_id = Number(data.emp_sale_id);
+    if (data.emp_dept_id) payload.emp_dept_id = Number(data.emp_dept_id);
+    if (data.project_id) payload.project_id = Number(data.project_id);
+    if (data.tax_code_id) payload.tax_code_id = Number(data.tax_code_id);
 
     if (data.lines && data.lines.length > 0) {
         payload.sq_lines = data.lines.map((line: QuotationLineData) => ({

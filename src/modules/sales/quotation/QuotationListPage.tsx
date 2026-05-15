@@ -14,6 +14,7 @@ import { logger } from '@/shared/utils';
 import type { QuotationHeader } from '@sales/quotation/types/quotation.types';
 import { QuotationFormModal } from '@sales/quotation/components/QuotationFormModal';
 import { useQuotationList } from '@sales/quotation/hooks/useQuotation';
+import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import { useQuery } from '@tanstack/react-query';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import { ConfirmationModal } from '@system/ConfirmationModal';
@@ -72,7 +73,7 @@ export default function QuotationListPage() {
     const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('create');
     const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
     const [isApproveLoading, setIsApproveLoading] = useState(false);
-    const [pendingApproveId, setPendingApproveId] = useState<string | null>(null);
+    const [pendingApproveRow, setPendingApproveRow] = useState<QuotationHeader | null>(null);
     
     // 🏷️ History Modal State
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -134,18 +135,20 @@ export default function QuotationListPage() {
         setIsModalOpen(true);
     };
 
-    const handleSendApprove = (id: string) => {
-        setPendingApproveId(id);
+    const handleSendApprove = (_id: string, row?: QuotationHeader) => {
+        setPendingApproveRow(row || null);
         setIsApproveConfirmOpen(true);
     };
 
     const confirmSendApprove = async () => {
-        if (!pendingApproveId) return;
+        if (!pendingApproveRow) return;
+        const id = String(pendingApproveRow.id || pendingApproveRow.sq_id);
+        
         setIsApproveLoading(true);
         try {
-            // ✅ Centralized logic in Service (Issue #1)
-            // Service will automatically handle detail hydration to ensure data integrity
-            await QuotationService.submitForApproval(pendingApproveId);
+            // ✅ Centralized logic in Service
+            // We pass the current row data to skip redundant hydration if possible
+            await QuotationService.submitForApproval(id, pendingApproveRow as unknown as Partial<QuotationFormValues>);
             
             refetch();
             setIsApproveConfirmOpen(false);
@@ -155,7 +158,7 @@ export default function QuotationListPage() {
             toast('เกิดข้อผิดพลาดในการส่งอนุมัติ กรุณาลองใหม่อีกครั้ง', 'error');
         } finally {
             setIsApproveLoading(false);
-            setPendingApproveId(null);
+            setPendingApproveRow(null);
         }
     };
 
@@ -279,7 +282,7 @@ export default function QuotationListPage() {
                     row={info.row.original}
                     onView={handleView}
                     onEdit={handleEdit}
-                    onSendApprove={handleSendApprove}
+                    onSendApprove={(id) => handleSendApprove(id, info.row.original)}
                     onViewHistory={handleViewHistory}
                 />
             ),
@@ -408,7 +411,7 @@ export default function QuotationListPage() {
                                     {/* 3. SEND APPROVE (For Draft Only) - High Priority Action */}
                                     {item.status === 'DRAFT' && (
                                         <button 
-                                            onClick={() => handleSendApprove(String(item.id || item.sq_id))}
+                                            onClick={() => handleSendApprove(String(item.id || item.sq_id), item)}
                                             className="flex-1 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
                                         >
                                             <Send size={14} /> ส่งอนุมัติ
