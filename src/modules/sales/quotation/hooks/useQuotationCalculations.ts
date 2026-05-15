@@ -93,13 +93,22 @@ export function useQuotationCalculations({
         const currentVat = getValues('vat_amount') || 0;
         const currentDiscount = getValues('discount_amount') || 0;
 
-        const isRoundingDiff = !isDirty && currentTotal > 0 && Math.abs(currentTotal - totalAmountValue) < 1;
+        const isRoundingDiff = !isDirty && currentTotal > 0 && Math.abs(currentTotal - totalAmountValue) < 0.1;
+        
+        // 🔄 FORCE SYNC: If sub_total is missing (0) but lines exist, we MUST fill it.
+        const needsHydration = (currentSubTotal === 0 && calculatedSubTotal > 0) || 
+                               (currentDiscount === 0 && calculatedDiscount > 0) ||
+                               (currentVat === 0 && vatAmountValue > 0);
 
-        if (!isRoundingDiff) {
+        if (!isRoundingDiff || needsHydration) {
             if (currentSubTotal !== calculatedSubTotal) setValue('sub_total', calculatedSubTotal, { shouldValidate: true, shouldDirty: false });
             if (currentDiscount !== calculatedDiscount) setValue('discount_amount', calculatedDiscount, { shouldValidate: true, shouldDirty: false });
             if (currentVat !== vatAmountValue) setValue('vat_amount', vatAmountValue, { shouldValidate: true, shouldDirty: false });
             if (currentTotal !== totalAmountValue) setValue('total_amount', totalAmountValue, { shouldValidate: true, shouldDirty: false });
+            
+            if (needsHydration) {
+                logger.debug('💧 [QuotationCalculations] Summary fields hydrated from lines.');
+            }
         } else {
             logger.debug('🛡️ [QuotationCalculations] Rounding Guard active. Preserving backend totals.');
         }
@@ -113,3 +122,4 @@ export function useQuotationCalculations({
         tax_code_id
     };
 }
+

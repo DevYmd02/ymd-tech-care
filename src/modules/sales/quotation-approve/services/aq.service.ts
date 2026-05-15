@@ -63,7 +63,7 @@ const mapToAQListItem = (
 
   return {
     row_key: `${isHistory ? 'history' : 'pending'}-${obj.aq_id || obj.id || sqId || index}`,
-    aq_id: Number(obj.aq_id || obj.id || 0),
+    aq_id: Number(obj.aq_id || (isHistory ? obj.id : 0) || 0),
     aq_no: String(obj.aq_no || ''),
     aq_date: String(obj.aq_date || '').split('T')[0],
     sq_id: sqId,

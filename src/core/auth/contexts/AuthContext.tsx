@@ -5,6 +5,7 @@ import { AuthService } from '@/core/auth/auth.service';
 import type { LoginPayload, UserProfile } from '@/core/auth/auth.service';
 import { setUnauthorizedHandler, AUTH_TOKEN_KEY, AUTH_PROFILE_KEY } from '@/core/api/api';
 import { logger } from '@/shared/utils';
+import { masterDataCache } from '@/shared/utils/master-data-cache';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const clearAuthStorage = () => {
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(AUTH_PROFILE_KEY);
+  masterDataCache.clear();
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

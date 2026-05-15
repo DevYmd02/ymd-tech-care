@@ -5,7 +5,8 @@ import {
     useBranches, 
     useWarehouses, 
     useEmployees, 
-    useDepartments 
+    useDepartments,
+    useVendors
 } from '@/modules/master-data/hooks/useMasterData';
 import { masterDataCache } from '@/shared/utils/master-data-cache';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
@@ -21,17 +22,15 @@ import {
     MasterDataRefetchContext
 } from '@core/contexts/MasterDataContext';
 
+import { normalizeListResponse } from '@/shared/utils/apiUtils';
+
 // =============================================================================
 // ATOMIC DATA PROVIDERS
 // =============================================================================
 
 /** Helper to extract array from various query response shapes */
-const extractList = (data: unknown) => {
-    if (Array.isArray(data)) return data;
-    const d = data as Record<string, unknown>; // Specific cast for safe property access
-    if (d?.items && Array.isArray(d.items)) return d.items;
-    if (d?.data && Array.isArray(d.data)) return d.data;
-    return [];
+const extractList = (data: unknown): Record<string, unknown>[] => {
+    return normalizeListResponse<Record<string, unknown>>(data).items;
 };
 
 const UnitsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -92,6 +91,22 @@ const DepartmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, [departments]);
 
     return <DepartmentsContext.Provider value={departments}>{children}</DepartmentsContext.Provider>;
+};
+
+const VendorsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { isAuthenticated } = useAuth();
+    const { data } = useVendors(isAuthenticated);
+    const vendors = useMemo(() => extractList(data), [data]);
+
+    React.useEffect(() => {
+        if (vendors.length > 0) {
+            vendors.forEach(v => {
+                if (v.vendor_id) masterDataCache.setVendor(Number(v.vendor_id), String(v.vendor_name || ''));
+            });
+        }
+    }, [vendors]);
+
+    return <>{children}</>; // Vendors don't have a dedicated legacy context yet, just populating singleton
 };
 
 // =============================================================================
@@ -156,9 +171,11 @@ export const MasterDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                         <WarehousesProvider>
                             <EmployeesProvider>
                                 <DepartmentsProvider>
-                                    <LegacyMasterDataProvider>
-                                        {children}
-                                    </LegacyMasterDataProvider>
+                                    <VendorsProvider>
+                                        <LegacyMasterDataProvider>
+                                            {children}
+                                        </LegacyMasterDataProvider>
+                                    </VendorsProvider>
                                 </DepartmentsProvider>
                             </EmployeesProvider>
                         </WarehousesProvider>

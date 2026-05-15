@@ -53,6 +53,10 @@ export interface RawQuotationLine {
     product_name?: string;
     code?: string;
     name?: string;
+    // Common alternatives
+    net_amount?: number | string;
+    total_amount?: number | string;
+    line_total_amount?: number | string;
 }
 
 export interface RawQuotationData {
@@ -90,6 +94,15 @@ export interface RawQuotationData {
     workflow_status?: string;
     lines?: RawQuotationLine[];
     saleQuotationLines?: RawQuotationLine[];
+    // Header alternatives
+    quote_total_amount?: number | string;
+    quote_tax_amount?: number | string;
+    quote_sub_total?: number | string;
+    quote_discount_amount?: number | string;
+    base_total_amount?: number | string;
+    base_tax_amount?: number | string;
+    base_sub_total?: number | string;
+    base_discount_amount?: number | string;
 }
 
 export interface QuotationFormData {

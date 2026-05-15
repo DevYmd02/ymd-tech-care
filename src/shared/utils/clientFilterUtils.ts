@@ -38,6 +38,8 @@ export interface PaginatedResponse<T> {
   page: number;
   limit: number;
   totalPages: number;
+  /** 🚩 Flag indicating results might be incomplete due to client-side filtering limits */
+  isPartial?: boolean;
 }
 
 // ─── Core Filter Function ────────────────────────────────────────────────────
@@ -175,7 +177,10 @@ export const applyClientFilters = <T extends object>(
 
   logger.debug(`🔍 [ClientFilter] Filtered ${data.length} → ${total} items (page ${page}/${totalPages}, limit ${limit})`);
 
-  return { data: items, total, page, limit, totalPages };
+  // 🚩 PARTIAL DETECTION: If we are at the expansion limit, results might be missing
+  const isPartial = options.backendTotal !== undefined && data.length < options.backendTotal && data.length >= limit;
+
+  return { data: items, total, page, limit, totalPages, isPartial };
 };
 
 
@@ -283,7 +288,8 @@ export const prepareHybridParams = (
     
     return {
         apiParams,
-        needsClientFilter
+        needsClientFilter,
+        isExpansionTriggered: needsClientFilter
     };
 };
 

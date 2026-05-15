@@ -167,7 +167,7 @@ function mapItemDetailFields(raw: RawItemDetail): ItemMaster {
 }
 
 export const ItemMasterService = {
-  getAll: async (params?: { q?: string; vendor_id?: string; limit?: number }, config?: AxiosRequestConfig): Promise<ListResponse<ItemListItem>> => {
+  getAll: async (params?: { q?: string; vendor_id?: string; ids?: string | number[]; limit?: number }, config?: AxiosRequestConfig): Promise<ListResponse<ItemListItem>> => {
     if (USE_MOCK) {
       logger.info('🎭 [Mock Mode] Serving Item List', params);
       let items = [...mockItems];

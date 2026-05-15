@@ -472,6 +472,8 @@ export default function POListPage() {
                 }
             >
                 <div className="h-full flex flex-col">
+                    {/* Results Capping Alert Removed */}
+
                     {/* Desktop View: Table */}
                     <div className="hidden md:block flex-1 overflow-hidden">
                         <SmartTable

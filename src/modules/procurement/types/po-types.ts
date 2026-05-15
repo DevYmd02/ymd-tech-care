@@ -156,7 +156,8 @@ export interface POListResponse {
     total: number;
     page: number;
     limit: number;
-  totalPages: number;
+    totalPages: number;
+    isPartial?: boolean;
 }
 export interface POLineItemInput {
     item_id: number; // or item_code if searching

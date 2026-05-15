@@ -80,29 +80,40 @@ export const usePOList = () => {
         queryKey: ['purchase-orders', apiFilters],
         queryFn: ({ signal }) => POService.getList(apiFilters, { signal }),
         placeholderData: keepPreviousData,
+        staleTime: 10 * 1000, // 💡 Reduce background noise for 100+ concurrent users
     });
 
     // 🛡️ POA Status Overlay: fetch approval records to get the true status
     // Backend /po endpoint may return PENDING_APPROVAL even when POA has REJECTED/APPROVED it
     const { data: approvalRaw } = useQuery({
-        queryKey: ['po-approval-status-overlay'],
-        queryFn: ({ signal }) => api.get<Record<string, unknown>>('/po-approval', { 
-            params: { limit: 1000, page: 1 },
-            signal 
-        }),
-        staleTime: 5 * 60 * 1000, // 💡 Increase to 5 mins for high concurrency
-        enabled: !!data?.data.length, // 💡 Only fetch if we have data to overlay
+        queryKey: ['po-approval-status-overlay', data?.data.map(i => i.po_id || i.po_header_id).join(',')],
+        queryFn: ({ signal }) => {
+            // 💡 REVERT: Backend is strict and does not support po_ids filtering
+            return api.get<Record<string, unknown>>('/po-approval', { 
+                params: { limit: 1000, page: 1 }, 
+                signal 
+            });
+        },
+        staleTime: 5 * 60 * 1000, 
+        enabled: !!data?.data?.length,
+        gcTime: 10 * 60 * 1000, // 💡 Clear from memory after 10 mins
     });
 
     // Build po_header_id → corrected status map
     const poaStatusMap = useMemo(() => {
         const map = new Map<number, POStatus>();
         const items = extractArrayFromResponse<Record<string, unknown>>(approvalRaw ?? {});
+        if (!items.length) return map;
+
         items.forEach((a) => {
-            const poId = Number(a.po_header_id || 0);
+            const poId = Number(a.po_header_id || a.po_id || 0);
             const rawStatus = String(a.status || '').toUpperCase().trim();
             if (poId && OVERRIDABLE_STATUSES.has(rawStatus)) {
-                map.set(poId, rawStatus as POStatus);
+                // If multiple records exist, we want the latest one (higher approval_id)
+                const existing = map.get(poId);
+                if (!existing) {
+                    map.set(poId, rawStatus as POStatus);
+                }
             }
         });
         return map;

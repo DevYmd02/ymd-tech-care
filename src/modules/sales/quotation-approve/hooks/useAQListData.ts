@@ -62,18 +62,52 @@ export const useAQListData = (params: UseAQListDataParams) => {
   };
 
   const mergedData = useMemo((): AQListItem[] => {
-    // Merge actionable and fallback pending, then add history
-    const pendingIds = new Set<number>();
-    const uniquePending: AQListItem[] = [];
+    // 1. Group all records by sq_id
+    const rawAll = [
+      ...(actionableData || []),
+      ...(fallbackData || []),
+      ...(historyData || [])
+    ];
 
-    [...(actionableData || []), ...(fallbackData || [])].forEach(item => {
-      if (item.sq_id && !pendingIds.has(item.sq_id)) {
-        pendingIds.add(item.sq_id);
-        uniquePending.push(item);
+    const sqGroups = new Map<number, AQListItem[]>();
+    rawAll.forEach(item => {
+      if (!item.sq_id) return;
+      if (!sqGroups.has(item.sq_id)) sqGroups.set(item.sq_id, []);
+      sqGroups.get(item.sq_id)!.push(item);
+    });
+
+    // 2. Select the "best" record for each SQ
+    const result: AQListItem[] = [];
+    sqGroups.forEach((items) => {
+      // Priority 1: Any record that is actually PENDING (needs action)
+      // If an SQ is pending, we want the "Pending" version to show the "Consider" button.
+      const pendingItem = items.find(it => it.status === 'PENDING');
+      if (pendingItem) {
+        result.push(pendingItem);
+        return;
+      }
+
+      // Priority 2: Record with an actual AQ Number (History / Already Processed)
+      // This ensures we show the AQ No. and Approver name for approved/rejected SQs.
+      const historyItems = items
+        .filter(it => !!it.aq_no && it.aq_no !== '' && it.aq_no !== '— รอพิจารณา —')
+        .sort((a, b) => (Number(b.aq_id) || 0) - (Number(a.aq_id) || 0));
+        
+      if (historyItems.length > 0) {
+        result.push(historyItems[0]);
+        return;
+      }
+
+      // Priority 3: Fallback to any non-draft record
+      // EXCLUDE 'DRAFT' status as it shouldn't be in the approval list
+      const fallbackItem = items.find(it => it.status !== 'DRAFT');
+      if (fallbackItem) {
+        result.push(fallbackItem);
       }
     });
 
-    return [...uniquePending, ...(historyData || [])];
+    // Sort by SQ date descending (standard behavior)
+    return result.sort((a, b) => String(b.sq_date || '').localeCompare(String(a.sq_date || '')));
   }, [actionableData, fallbackData, historyData]);
 
   const filteredData = useMemo(() => {
