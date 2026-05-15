@@ -236,13 +236,13 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                         <div className={cardClass}>
                             <div className="p-6">
                                 <QuotationSummary 
-                                    subTotal={formData.sub_total || 0}
-                                    discountInput={formData.discount_expression}
-                                    discountAmount={formData.discount_amount || 0}
+                                    subTotal={watch('sub_total') || 0}
+                                    discountInput={watch('discount_expression')}
+                                    discountAmount={watch('discount_amount') || 0}
                                     taxRate={taxRate}
-                                    vatAmount={formData.vat_amount || 0}
-                                    totalAmount={formData.total_amount || 0}
-                                    currencySymbol={formData.base_currency_code || formData.currency_code || 'บาท'}
+                                    vatAmount={watch('vat_amount') || 0}
+                                    totalAmount={watch('total_amount') || 0}
+                                    currencySymbol={watch('base_currency_code') || watch('currency_code') || 'บาท'}
                                     lineCount={watch('lines')?.length || 0}
                                     onDiscountChange={(val) => setValue('discount_expression', val, { shouldValidate: true, shouldDirty: true })}
                                     readOnly={readOnly}

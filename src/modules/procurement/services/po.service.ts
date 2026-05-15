@@ -17,6 +17,7 @@ import { PRService } from './pr.service';
 import { QCService } from './qc.service';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import type { PRWaitingForQC } from '@/modules/procurement/types/pr-types';
+import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 
 /**
  * Helper: Status Normalization
@@ -83,6 +84,11 @@ const KNOWN_LINE_DTO_FIELDS = [
     'item_code', 'item_name', 'uom_name', 'code'
 ];
 
+// 🚀 Singleton Cache for QC Data to optimize 100+ concurrent user performance
+let qcMapCache: Record<string, string> = {};
+let lastQcFetchTime = 0;
+const QC_CACHE_TTL = 30 * 1000; // 30 seconds cache for list view consistency
+
 export const POService = {
     /**
      * Fetch PO List with full data hydration (Vendors, PRs, QCs).
@@ -91,7 +97,6 @@ export const POService = {
     getList: async (params?: POListParams, config?: AxiosRequestConfig): Promise<POListResponse> => {
         logger.info('[POService] Fetching PO List', params);
 
-        // 🎯 SEARCH WINDOW OPTIMIZATION: Always rely on server-side pagination for 100+ users.
         const apiParams = { ...(params || {}) };
         
         if (apiParams.status === 'PENDING_APPROVAL') {
@@ -103,65 +108,72 @@ export const POService = {
         
         logger.debug(`[POService] RAW BACKEND RESULT: total=${response.total}, items_returned=${rawItems.length}`);
 
-        // 🚀 EFFICIENCY STRATEGY: Rely on joined data or global cache. 
-        // Avoid bulk fetching 1,000 vendors or firing N+1 detail calls for PRs.
+        // 🚀 EFFICIENCY STRATEGY: Optimized for 100+ Concurrent Users
+        // 1. Identify missing data that ISN'T already in the list or global cache
+        // 🚀 BATCH HYDRATION: Fetch missing Vendor/PR names in parallel efficiently
+        // We use the MasterData cache to avoid redundant calls
+        const missingVendorIds = Array.from(new Set(
+            rawItems
+                .map(i => normalizeId(i.vendor_id))
+                .filter(id => id && !masterDataCache.getVendorName(id))
+        )) as string[];
 
-        // 4. Final Mapping with efficient lookup
-        // 🎯 [Performance] Step 1: Collect Unique IDs for Batch Hydration
-        const missingVendorIds = Array.from(new Set(rawItems.map(i => normalizeId(i.vendor_id)).filter(Boolean))) as string[];
-        const missingPrIds = Array.from(new Set(rawItems.map(i => normalizeId(i.pr_id || (i as unknown as Record<string, unknown>).pr_id_ref)).filter(Boolean))) as string[];
-        
-        // 🎯 [Performance] Step 2: Parallel Batch Fetch (Using Official Services)
-        const vendorMap: Record<string, string> = {};
-        const prMap: Record<string, string> = {};
-        const qcMap: Record<string, string> = {};
+        const missingPrIds = Array.from(new Set(
+            rawItems
+                .map(i => normalizeId(i.pr_id))
+                .filter(id => id && !masterDataCache.getPRNo(id))
+        )) as string[];
 
+        // 🧠 Optimization: If more than 5 vendors are missing, fetch the whole list (it's often faster than 5+ individual calls)
+        if (missingVendorIds.length > 5) {
+            try {
+                const vendorsRes = await VendorService.getList(config);
+                (vendorsRes.items || []).forEach(v => {
+                    masterDataCache.setVendor(v.vendor_id, v.vendor_name);
+                });
+                missingVendorIds.length = 0;
+            } catch (err) {
+                logger.warn('[POService] Failed to batch fetch vendors, falling back to individual calls', err);
+            }
+        }
+
+        const hasMissingQcNos = rawItems.some(i => !i.qc_no && (i.qc_id || (i as unknown as Record<string, unknown>).qc_id_ref));
+        const now = Date.now();
+        const shouldFetchQc = hasMissingQcNos && (now - lastQcFetchTime > QC_CACHE_TTL);
+
+        // Parallel execution for missing pieces
         await Promise.all([
-            // 1. Batch Vendors
-            ...missingVendorIds.map(async (id) => {
-                try {
-                    const data = await VendorService.getById(Number(id));
-                    if (data) vendorMap[id] = String(data.vendor_name || '');
-                } catch { /* ignore */ }
-            }),
-            // 2. Batch PRs
-            ...missingPrIds.map(async (id) => {
-                try {
-                    const data = await PRService.getDetail(Number(id));
-                    if (data) prMap[id] = String(data.pr_no || '');
-                } catch { /* ignore */ }
-            }),
-            // 3. Ultra-Robust QC Hydration (Direct API Call + Deep Mapping)
+            ...missingVendorIds.map(id => 
+                VendorService.getById(Number(id), config).then(v => {
+                    if (v) masterDataCache.setVendor(v.vendor_id, v.vendor_name);
+                })
+            ),
+            ...missingPrIds.map(id => 
+                PRService.getDetail(Number(id), config).then(p => {
+                    if (p) masterDataCache.setPR(p.pr_id, p.pr_no);
+                })
+            ),
             (async () => {
+                if (!shouldFetchQc) return;
                 try {
-                    // Direct call to the endpoint you verified in Postman
-                    const response = await api.get<Record<string, unknown>>('/qc/qc-all', { params: { limit: 1000 } });
+                    const qcRes = await api.get<Record<string, unknown>>('/qc/qc-all', { params: { limit: 1000 }, signal: config?.signal });
+                    const qcs = extractArrayFromResponse<Record<string, unknown>>(qcRes);
                     
-                    // 🎯 DEEP EXTRACTION: Extract array regardless of nesting
-                    let qcs: Record<string, unknown>[] = [];
-                    if (Array.isArray(response)) {
-                        qcs = response as Record<string, unknown>[];
-                    } else if (response && typeof response === 'object') {
-                        const r = response as Record<string, unknown>;
-                        qcs = (Array.isArray(r.data) ? r.data : (Array.isArray(r.items) ? r.items : (Array.isArray(r.qc_list) ? r.qc_list : []))) as Record<string, unknown>[];
-                    }
-                    
+                    const newMap: Record<string, string> = {};
                     qcs.forEach(qc => {
-                        const actualId = qc.qc_id || qc.qc_header_id || qc.id;
-                        const actualNo = qc.qc_no || qc.qc_number || qc.qc_header_no || qc.qcNo || qc.qcNumber;
-                        const matchedPrNo = String(qc.pr_no || '').trim().toUpperCase();
-
-                        if (actualId) {
-                            const idStr = String(actualId);
-                            qcMap[idStr] = String(actualNo || '');
-                        }
-                        if (matchedPrNo && matchedPrNo !== '-' && matchedPrNo !== 'UNDEFINED') {
-                            qcMap[`PR_${matchedPrNo}`] = String(actualNo || '');
-                        }
+                        const id = String(qc.qc_id || qc.qc_header_id || qc.id || '');
+                        const no = String(qc.qc_no || qc.qc_number || '');
+                        const prNo = String(qc.pr_no || '').trim().toUpperCase();
+                        
+                        if (id) newMap[id] = no;
+                        if (prNo && prNo !== '-' && prNo !== 'UNDEFINED') newMap[`PR_${prNo}`] = no;
                     });
-                    logger.info(`[POService] Successfully hydrated QC Map with ${qcs.length} records`);
+                    
+                    qcMapCache = newMap;
+                    lastQcFetchTime = now;
+                    logger.debug(`[POService] Refreshed QC Map Cache with ${qcs.length} items`);
                 } catch (e) {
-                    logger.error('[POService] Ultra-Robust QC lookup failed', e);
+                    logger.error('[POService] QC Hydration failed', e);
                 }
             })()
         ]);
@@ -170,17 +182,16 @@ export const POService = {
         const allItems = rawItems.map((item) => {
             const bName = masterDataCache.getBranchName(item.branch_id);
             const rawItem = item as unknown as Record<string, unknown>;
-            const vendorObj = (rawItem.vendor || {}) as Record<string, unknown>;
             const vId = normalizeId(item.vendor_id);
             const prId = normalizeId(item.pr_id || (item as unknown as Record<string, unknown>).pr_id_ref);
             const qcId = normalizeId(item.qc_id || (item as unknown as Record<string, unknown>).qc_id_ref);
             
-            // 🎯 Use Batch Map -> Cache -> Joined Data
-            const vName = vendorMap[vId] || item.vendor_name || String(vendorObj.vendor_name || '') || (vId ? masterDataCache.getVendorName(vId) : '');
-
-            // 🕵️‍♂️ Robust PR/QC Discovery
-            const prNoStr = (prMap[prId] || ((item.pr_no && item.pr_no.length > 5) ? item.pr_no : (String(rawItem.pr_no_ref || item.pr_no || '')))).trim().toUpperCase();
-            const qcNoStr = qcMap[qcId] || qcMap[`PR_${prNoStr}`] || ((item.qc_no && item.qc_no.length > 5) ? item.qc_no : (String(rawItem.qc_no_ref || item.qc_no || '')));
+            // 🎯 Priority: Already in Item -> Global Cache
+            const vName = item.vendor_name || masterDataCache.getVendorName(vId) || '';
+            const prNoStr = (item.pr_no || masterDataCache.getPRNo(prId) || String(rawItem.pr_no_ref || '')).trim().toUpperCase();
+            
+            // 🎯 Lookup QC from persistent cache
+            const qcNoStr = item.qc_no || qcMapCache[qcId] || qcMapCache[`PR_${prNoStr}`] || String(rawItem.qc_no_ref || '');
 
             return {
                 ...item,
@@ -291,18 +302,19 @@ export const POService = {
             // 1. Extract Unique Item IDs
             const uniqueItemIds = Array.from(new Set(rawLines.map(l => Number(l.item_id)).filter(id => !isNaN(id) && id > 0)));
 
-            // 2. Fetch Item Details in Parallel (Unique IDs only)
-            const itemResults = await Promise.all(
-                uniqueItemIds.map(async (itemId) => {
-                    try {
-                        const item = await ItemMasterService.getById(itemId, config);
-                        return { itemId, data: item };
-                    } catch { return { itemId, data: null }; }
-                })
-            );
-
+            // 2. Fetch Item Details in Batch (Optimized for 100+ Concurrent Users)
+            // 🚀 SUCCESS: Replaced N+1 parallel calls with a single batched list call
+            let itemResults: ItemListItem[] = [];
+            if (uniqueItemIds.length > 0) {
+                const itemResponse = await ItemMasterService.getAll({ 
+                    ids: uniqueItemIds.join(','), 
+                    limit: uniqueItemIds.length 
+                }, config);
+                itemResults = itemResponse.items || [];
+            }
+            
             // 3. Create Lookup Map
-            const itemLookup = new Map(itemResults.filter(r => r.data).map(r => [r.itemId, r.data]));
+            const itemLookup = new Map(itemResults.map(item => [Number(item.item_id), item]));
 
             // 4. Map Lines efficiently
             mappedItem.po_lines = rawLines.map((l) => {

@@ -14,6 +14,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
+import { logger } from '@/shared/utils';
 
 import { requisitionHeaderSchema } from '../schemas/requisition.schemas';
 import type { RequisitionHeaderFormData, RequisitionLineFormData } from '../schemas/requisition.schemas';
@@ -245,17 +246,22 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
 
     // ── Submit Handler ────────────────────────────────────────────────────────────
     const onSubmit = useCallback(
-        (data: RequisitionHeaderFormData) => {
+        async (data: RequisitionHeaderFormData) => {
             // Prepare payload
             const payload = { ...data };
             if (payload.issue_req_no === 'ระบบจะกรอกอัตโนมัติ') {
                 payload.issue_req_no = ''; // Let backend generate
             }
 
-            if (isEditMode && editId) {
-                updateMutation.mutate({ id: editId, data: payload });
-            } else {
-                createMutation.mutate(payload);
+            try {
+                if (isEditMode && editId) {
+                    await updateMutation.mutateAsync({ id: editId, data: payload });
+                } else {
+                    await createMutation.mutateAsync(payload);
+                }
+            } catch (error) {
+                // Error is handled by mutation's onError
+                logger.error('[RequisitionForm] Submit failed:', error);
             }
         },
         [isEditMode, editId, createMutation, updateMutation]

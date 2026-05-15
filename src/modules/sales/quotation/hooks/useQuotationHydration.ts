@@ -125,33 +125,52 @@ export function useQuotationHydration({
         }
     }, [setValue, getValues]);
 
-    const mapApiToForm = useCallback((apiData: QuotationFormData): QuotationFormValues => {
+    const mapApiToForm = useCallback((apiData: QuotationFormData | QuotationHeader): QuotationFormValues => {
         const toFormDate = (dateStr?: string | null) => {
             if (!dateStr) return '';
             return dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
         };
 
+        const baseCurr = String(apiData.base_currency_code || 'THB');
+        const quoteCurr = String(apiData.quote_currency_code || (apiData as QuotationFormData).currency_code || (apiData as QuotationHeader).currency || 'THB');
+        
+        const isMulti = apiData.isMulticurrency === true || 
+                        (baseCurr !== 'THB') || 
+                        (quoteCurr !== 'THB' && quoteCurr !== '') ||
+                        (baseCurr !== quoteCurr);
+
+        // Safe property access for union types
+        const rawDate = (apiData as QuotationFormData).sq_date || (apiData as QuotationHeader).date || '';
+        const rawValidUntil = (apiData as QuotationFormData).valid_until || (apiData as QuotationHeader).expiry_date || '';
+        const rawExchangeDate = apiData.exchange_rate_date || rawDate;
+
         return {
             sq_id: String(apiData.sq_id || ''),
-            sq_no: apiData.sq_no || '',
-            sq_date: toFormDate(apiData.sq_date),
+            sq_no: String(apiData.sq_no || ''),
+            sq_date: toFormDate(rawDate),
             lead_id: apiData.lead_id || null,
             customer_id: Number(apiData.customer_id || 0),
-            branch_id: apiData.branch_id ? Number(apiData.branch_id) : 0,
-            currency_code: apiData.currency_code || 'THB',
-            isMulticurrency: apiData.isMulticurrency === true || (!!apiData.sq_id && !!apiData.base_currency_code),
-            base_currency_code: apiData.base_currency_code || 'THB',
-            quote_currency_code: apiData.quote_currency_code || 'THB',
+            branch_id: Number(apiData.branch_id || 0),
+            currency_code: quoteCurr,
+            isMulticurrency: isMulti,
+            base_currency_code: baseCurr,
+            quote_currency_code: quoteCurr,
             exchange_rate: Number(apiData.exchange_rate || 1),
-            exchange_rate_date: toFormDate(apiData.exchange_rate_date),
+            exchange_rate_date: toFormDate(String(rawExchangeDate || '')),
             status: ((apiData.status || '').toUpperCase() as QuotationFormValues['status']) || 'DRAFT',
-            valid_until: toFormDate(apiData.valid_until),
-            sub_total: Number(apiData.sub_total || 0),
-            discount_expression: apiData.discount_expression || '0',
-            discount_amount: Number(apiData.discount_amount || 0),
-            vat_amount: Number(apiData.vat_amount || 0),
-            total_amount: Number(apiData.total_amount || 0),
-            remarks: apiData.remarks || '',
+            valid_until: toFormDate(rawValidUntil),
+            sub_total: Number(apiData.sub_total || (apiData as Record<string, unknown>).quote_sub_total || (apiData as Record<string, unknown>).base_sub_total || 0),
+            discount_expression: (() => {
+                const r = apiData as Record<string, unknown>;
+                const expr = String(r.discount_expression || r.discount_input || r.discount_rate || r.discount || r.header_discount || '');
+                if (expr && expr !== '0' && expr !== 'null' && expr !== 'undefined') return expr;
+                const amt = Number(apiData.discount_amount || r.quote_discount_amount || r.base_discount_amount || r.total_discount || 0);
+                return amt > 0 ? String(amt) : '0';
+            })(),
+            discount_amount: Number(apiData.discount_amount || (apiData as Record<string, unknown>).quote_discount_amount || (apiData as Record<string, unknown>).base_discount_amount || (apiData as Record<string, unknown>).total_discount || 0),
+            vat_amount: Number(apiData.vat_amount || (apiData as Record<string, unknown>).quote_tax_amount || (apiData as Record<string, unknown>).base_tax_amount || 0),
+            total_amount: Number(apiData.total_amount || (apiData as Record<string, unknown>).quote_total_amount || (apiData as Record<string, unknown>).base_total_amount || 0),
+            remarks: String(apiData.remarks || ''),
             payment_term_days: Number(apiData.payment_term_days || 0),
             onhold: (apiData.onhold === 'Y' ? 'Y' : 'N') as QuotationFormValues['onhold'],
             tax_code_id: apiData.tax_code_id ? Number(apiData.tax_code_id) : 0,
@@ -160,23 +179,23 @@ export function useQuotationHydration({
             emp_sale_id: apiData.emp_sale_id ? Number(apiData.emp_sale_id) : 0,
             emp_dept_id: apiData.emp_dept_id ? Number(apiData.emp_dept_id) : 0,
             project_id: apiData.project_id ? Number(apiData.project_id) : 0,
-            sq_status: apiData.sq_status || '',
-            status_remark: apiData.status_remark || '',
-            lines: (apiData.lines || []).map(lineRaw => {
-                const line = lineRaw as RawQuotationLine;
+            sq_status: String(apiData.sq_status || ''),
+            status_remark: String(apiData.status_remark || ''),
+            lines: (apiData.lines || (apiData as QuotationFormData).saleQuotationLines || []).map(line => {
+                const lineRaw = line as RawQuotationLine;
                 return {
-                    sq_line_id: String(line.sq_line_id || ''),
-                    sq_id: String(line.sq_id || ''),
-                    item_id: Number(line.item_id || 0),
-                    item_code: line.item_code || '',
-                    item_name: line.item_name || '',
-                    qty: Number(line.qty || 0),
-                    uom_id: Number(line.uom_id || 0),
+                    sq_line_id: String(lineRaw.sq_line_id || ''),
+                    sq_id: String(lineRaw.sq_id || ''),
+                    item_id: Number(lineRaw.item_id || lineRaw.product_id || 0),
+                    item_code: lineRaw.item_code || lineRaw.product_code || lineRaw.code || '',
+                    item_name: lineRaw.item_name || lineRaw.product_name || lineRaw.name || '',
+                    qty: Number(lineRaw.qty || 0),
+                    uom_id: Number(lineRaw.uom_id || 0),
                     unit_price: Number(line.unit_price || 0),
                     discount_expression: line.line_discount_input || line.discount_expression || '0',
                     line_discount: Number(line.line_discount || 0),
                     tax_code_id: line.tax_code_id ? Number(line.tax_code_id) : null,
-                    line_total: Number(line.line_total || 0),
+                    line_total: Number(lineRaw.line_total || lineRaw.net_amount || lineRaw.total_amount || 0),
                     note: line.note || '',
                     price_source: line.price_source ? Number(line.price_source) : undefined,
                     price_source_name: line.price_source_name || '',

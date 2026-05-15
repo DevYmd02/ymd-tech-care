@@ -163,8 +163,10 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
     };
 
     const handleConfirmSave = async () => {
-        if (!pendingData) return;
-        setIsConfirmOpen(false);
+        if (!pendingData || isSaving) return;
+        // 🎯 Note: We don't close the confirm modal here. 
+        // The isSaving status will show a loader in the modal, and the successful mutation 
+        // will call onClose() which unmounts the entire page anyway.
         await onSubmit(pendingData);
     };
 

@@ -55,8 +55,23 @@ const api = axios.create({
 // =============================================================================
 const pendingRequests = new Map<string, Promise<unknown>>();
  
+/**
+ * Helper to sort object keys for stable stringification
+ */
+const sortObject = (obj: unknown): unknown => {
+  if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+  
+  const record = obj as Record<string, unknown>;
+  return Object.keys(record)
+    .sort()
+    .reduce((result: Record<string, unknown>, key) => {
+      result[key] = sortObject(record[key]);
+      return result;
+    }, {});
+};
+
 const getRequestKey = (config: AxiosRequestConfig): string => {
-  const params = config.params ? JSON.stringify(config.params) : '';
+  const params = config.params ? JSON.stringify(sortObject(config.params)) : '';
   return `${config.method?.toUpperCase() || 'GET'}:${config.url}${params}`;
 };
  

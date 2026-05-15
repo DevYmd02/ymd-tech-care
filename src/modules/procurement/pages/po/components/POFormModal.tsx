@@ -6,13 +6,13 @@
  *
  *  Business logic extracted to usePOForm hook.
  */
-import { useMemo, useState } from 'react';
-import { FormProvider, useWatch, Controller, type Control, type FieldErrors } from 'react-hook-form';
+import { useState } from 'react';
+import { FormProvider, useWatch, Controller } from 'react-hook-form';
 import { SavingOverlay } from '@/shared/components/ui/feedback/SavingOverlay';
 import { ProcurementFormSkeleton } from '@/modules/procurement/shared/components/ProcurementFormSkeleton';
 import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 import { 
-    Save, Search, Trash2, FileText,
+    Save, Search, FileText,
     Loader2, Plus, X as XIcon, Printer
 } from 'lucide-react';
 import { POStatusBadge } from '@ui';
@@ -25,14 +25,15 @@ import { MulticurrencyWrapper } from '@/shared/components/forms/MulticurrencyWra
 import { VendorSearchModal } from '@/modules/master-data/vendor/components/selector/VendorSearchModal';
 import { ProductSearchModal } from './ProductSearchModal';
 import { PRSearchModal } from './PRSearchModal';
-import { calculatePricingSummary, parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
+import { POFormLineRow } from './POFormLineRow';
+import { POSummaryPanel } from './POSummaryPanel';
+// pricing utils moved to sub-components
 import { cn } from '@/shared/utils';
 
 
-import type { POFormData, POLine } from '@/modules/procurement/schemas/po-schemas';
+import type { POFormData } from '@/modules/procurement/schemas/po-schemas';
 import { usePOForm } from '../hooks/usePOForm';
 import type {
-    UOMListItem,
     Currency
 } from '@/modules/master-data/types/master-data-types';
 import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
@@ -55,301 +56,7 @@ const ui = {
     hint:       'text-xs text-gray-400 dark:text-gray-500 mt-1',
 };
 
-// ====================================================================================
-// SUB-COMPONENT: Row Total (isolated watch for performance)
-// ====================================================================================
-
-const RowTotal = ({ control, index }: { control: Control<POFormData>; index: number }) => {
-    const qty   = useWatch({ control, name: `po_lines.${index}.qty_ordered` }) ?? 0;
-    const price = useWatch({ control, name: `po_lines.${index}.unit_price` }) ?? 0;
-    const expr  = useWatch({ control, name: `po_lines.${index}.discount_expression` }) ?? '0';
-    const disc  = parseDiscountAmount(expr, qty * price);
-    const total = Math.max(0, qty * price - disc);
-    return <>{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</>;
-};
-
-// ====================================================================================
-// SUB-COMPONENT: Summary Panel
-// ====================================================================================
-
-const POSummaryPanel = ({ control, taxCodes, isView }: { control: Control<POFormData>; taxCodes: TaxCode[]; isView: boolean }) => {
-    // 🎯 Watch everything needed for calculation
-    const currentLines = useWatch({ control, name: 'po_lines' });
-    const taxCodeId = useWatch({ control, name: 'tax_code_id' });
-    const headerDiscountExpr = useWatch({ control, name: 'discount_expression' });
-
-    const { taxAmount, totalAmount, taxRate, totalDiscount, grossTotal } = useMemo(() => {
-        const lines = currentLines || [];
-        const items = (lines as POLine[]).map((l) => {
-            const qty = Number(l.qty_ordered ?? l.qty ?? 0);
-            const price = Number(l.unit_price ?? 0);
-            const disc = parseDiscountAmount(l.discount_expression ?? '0', qty * price);
-            return {
-                qty,
-                unit_price: price,
-                discount: disc,
-            };
-        });
-
-        const selectedTax = (Array.isArray(taxCodes) ? taxCodes : []).find(t => Number(t.tax_code_id) === Number(taxCodeId));
-        const taxRate = selectedTax ? Number(selectedTax.tax_rate) : 0;
-
-        const lineDiscountTotal = items.reduce((sum: number, item: { discount: number }) => sum + (item.discount || 0), 0);
-        const grossTotal = items.reduce((sum: number, item: { qty: number; unit_price: number }) => sum + (item.qty * item.unit_price), 0);
-
-        const subtotalBeforeGlobal = Math.max(0, grossTotal - lineDiscountTotal);
-        const globalDiscountAmount = parseDiscountAmount(headerDiscountExpr || '0', subtotalBeforeGlobal);
-
-        const summary = calculatePricingSummary(items, taxRate, false, globalDiscountAmount);
-        const fullTotalDiscount = lineDiscountTotal + globalDiscountAmount;
-
-        return {
-            ...summary,
-            taxRate,
-            totalDiscount: fullTotalDiscount,
-            grossTotal
-        };
-    }, [currentLines, taxCodeId, taxCodes, headerDiscountExpr]);
-
-    return (
-        <div className="w-80 space-y-2 bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm transition-all">
-            <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-slate-400">รวมเป็นเงิน</span>
-                <span className="font-medium text-gray-900 dark:text-white">
-                    {grossTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600 dark:text-slate-400">ส่วนลดท้ายบิล</span>
-                <div className="flex items-center gap-2">
-                    <Controller
-                        control={control}
-                        name="discount_expression"
-                        render={({ field }) => (
-                            <input
-                                {...field}
-                                type="text"
-                                className="w-20 h-7 text-right px-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-900 dark:text-slate-100"
-                                placeholder="0 หรือ 5%"
-                                readOnly={isView}
-                                onChange={(e) => {
-                                    field.onChange(e.target.value);
-                                }}
-                            />
-                        )}
-                    />
-                </div>
-            </div>
-            <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-slate-400">รวมส่วนลด</span>
-                <span className={`font-medium ${totalDiscount > 0 ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
-                    {totalDiscount > 0 ? '-' : ''}{totalDiscount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-            </div>
-            <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-slate-400">
-                    ภาษีมูลค่าเพิ่ม {taxRate ? `(${taxRate}%)` : ''}
-                </span>
-                <span className="font-medium text-gray-900 dark:text-white">
-                    {taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-            </div>
-            <div className="border-t border-gray-200 dark:border-slate-700 pt-3 flex justify-between items-baseline">
-                <span className="text-base font-bold text-gray-800 dark:text-slate-200">รวมสุทธิ</span>
-                <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                    {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-            </div>
-        </div>
-    );
-};
-
-// ====================================================================================
-// SUB-COMPONENT: Line Row (isolated watch for performance)
-// ====================================================================================
-
-interface POFormLineRowProps {
-    idx: number;
-    isView: boolean;
-    isLockedByQC: boolean;
-    isLoadingUnits: boolean;
-    units: UOMListItem[];
-    handleOpenProductSearch: (index: number) => void;
-    remove: (index: number) => void;
-    handleAddLine: () => void;
-    register: ReturnType<typeof usePOForm>['register'];
-    errors: FieldErrors<POFormData>;
-    setValue: ReturnType<typeof usePOForm>['setValue'];
-    control: Control<POFormData>;
-}
-
-const POFormLineRow = ({ 
-    idx, 
-    isView, 
-    isLockedByQC, 
-    isLoadingUnits, 
-    units, 
-    handleOpenProductSearch, 
-    remove, 
-    handleAddLine,
-    register,
-    errors,
-    setValue,
-    control
-}: POFormLineRowProps) => {
-    const line = useWatch({ control, name: `po_lines.${idx}` });
-    
-    return (
-        <tr className="border-b border-gray-100 dark:border-gray-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-            <td className="px-3 py-2 text-center text-[13px] text-gray-600 font-medium border-r border-gray-200 dark:border-gray-700">{idx + 1}</td>
-            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                <div className="relative w-full flex items-center">
-                    <Controller
-                        control={control}
-                        name={`po_lines.${idx}.item_code`}
-                        render={({ field: codeField }) => (
-                            <input
-                                {...codeField}
-                                value={codeField.value || (line as Record<string, unknown>)?.item_code as string || (line as Record<string, unknown>)?.code as string || ''}
-                                className={cn(
-                                    "w-full pr-10 border rounded px-3 !h-9 text-[13px] bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 shadow-sm",
-                                    errors.po_lines?.[idx]?.item_id ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300 dark:border-slate-700 focus:ring-blue-500"
-                                )}
-                                placeholder={isView ? "" : "ค้นหารหัส..."}
-                                readOnly
-                            />
-                        )}
-                    />
-                    <input type="hidden" {...register(`po_lines.${idx}.id`)} />
-                    <input type="hidden" {...register(`po_lines.${idx}.item_id`)} />
-                    <input type="hidden" {...register(`po_lines.${idx}.item_name`)} />
-                    {!isView && !isLockedByQC && (
-                        <button
-                            type="button"
-                            className="absolute right-1.5 z-10 p-1 text-gray-500 hover:text-blue-600 hover:bg-gray-100 rounded-md cursor-pointer transition-colors"
-                            title="ค้นหาสินค้า"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleOpenProductSearch(idx);
-                            }}
-                        >
-                            <Search size={16} className="pointer-events-none" />
-                        </button>
-                    )}
-                </div>
-                {errors?.po_lines?.[idx]?.item_id && (
-                    <p className={ui.error}>{errors.po_lines[idx]?.item_id?.message}</p>
-                )}
-            </td>
-            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                <input
-                    {...register(`po_lines.${idx}.description`)}
-                    className={cn(
-                        `${ui.input} !h-9 text-[13px] shadow-sm`,
-                        errors.po_lines?.[idx]?.description ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
-                    )}
-                    placeholder="รายละเอียดเพิ่มเติม"
-                    readOnly={isView}
-                />
-            </td>
-            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                <input
-                    type="number" step="any"
-                    {...register(`po_lines.${idx}.qty_ordered`, { valueAsNumber: true })}
-                    className={cn(
-                        `${ui.input} !h-9 text-center text-[13px] shadow-sm`,
-                        errors.po_lines?.[idx]?.qty_ordered ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
-                    )}
-                    placeholder="0.000"
-                    readOnly={isView || isLockedByQC}
-                />
-            </td>
-            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                <select
-                    {...register(`po_lines.${idx}.uom_id`, { valueAsNumber: true })}
-                    value={line?.uom_id || ''}
-                    onChange={(e) => {
-                        const val = e.target.value === '' ? 0 : Number(e.target.value);
-                        setValue(`po_lines.${idx}.uom_id`, val, { shouldValidate: true });
-                    }}
-                    className={cn(
-                        `${ui.select} !h-9 text-center px-1 text-[13px] shadow-sm`,
-                        errors.po_lines?.[idx]?.uom_id ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
-                    )}
-                    disabled={isView || isLockedByQC || isLoadingUnits}
-                >
-                    <option value="">{isLoadingUnits ? 'โหลด...' : 'หน่วย'}</option>
-                    {Array.isArray(units) && units.map((u: UOMListItem) => <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.uom_name}</option>)}
-                </select>
-            </td>
-            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                <input
-                    type="number" step="any"
-                    {...register(`po_lines.${idx}.unit_price`, { valueAsNumber: true })}
-                    className={cn(
-                        `${ui.input} !h-9 text-right text-[13px] shadow-sm`,
-                        errors.po_lines?.[idx]?.unit_price ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
-                    )}
-                    placeholder="0.0000"
-                    readOnly={isView || isLockedByQC}
-                />
-            </td>
-            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                <input
-                    type="text"
-                    {...register(`po_lines.${idx}.discount_expression`)}
-                    className={cn(
-                        `${ui.input} !h-9 text-right text-[13px] shadow-sm`,
-                        errors.po_lines?.[idx]?.discount_expression ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
-                    )}
-                    placeholder="0 หรือ 5%"
-                    readOnly={isView || isLockedByQC}
-                />
-            </td>
-            <td className="px-3 py-2 text-right font-semibold text-slate-800 dark:text-slate-200 border-r border-gray-200 dark:border-gray-700 text-[13px] bg-slate-50/50 dark:bg-slate-900/50">
-                <RowTotal control={control} index={idx} />
-            </td>
-            <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                <select
-                    {...register(`po_lines.${idx}.receipt_type`)}
-                    className={cn(
-                        `${ui.select} !h-9 text-center px-1 text-[13px] shadow-sm bg-white dark:bg-slate-800`,
-                        errors.po_lines?.[idx]?.receipt_type ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300"
-                    )}
-                    disabled={isView}
-                >
-                    <option value="GOODS">GOODS</option>
-                    <option value="SERVICE">SERVICE</option>
-                </select>
-            </td>
-            {!isView && !isLockedByQC && (
-                <td className="px-1 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                        <button
-                            type="button"
-                            onClick={handleAddLine}
-                            className="text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 p-1.5 rounded-full transition-colors"
-                            title="แทรกรายการใหม่"
-                            aria-label={`แทรกรายการใหม่ ถัดจากแถวที่ ${idx + 1}`}
-                        >
-                            <Plus size={16} strokeWidth={2.5} aria-hidden="true" />
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => remove(idx)}
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-full transition-colors"
-                            title="ลบรายการนี้"
-                            aria-label={`ลบรายการ แถวที่ ${idx + 1}`}
-                        >
-                            <Trash2 size={16} aria-hidden="true" />
-                        </button>
-                    </div>
-                </td>
-            )}
-        </tr>
-    );
-};
+// Performance Optimized: Sub-components (POFormLineRow, POSummaryPanel) moved to separate files.
 
 // ====================================================================================
 // PROPS

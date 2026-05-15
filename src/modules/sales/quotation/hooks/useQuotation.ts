@@ -12,7 +12,7 @@ import { QuotationService, type QuotationListParams } from '@sales/quotation/ser
 export const useQuotationList = (params: QuotationListParams) => {
     return useQuery({
         queryKey: ['quotations', params],
-        queryFn: () => QuotationService.getList(params),
+        queryFn: ({ signal }) => QuotationService.getList(params, { signal }),
         staleTime: 5 * 60 * 1000,
     });
 };
@@ -23,7 +23,7 @@ export const useQuotationList = (params: QuotationListParams) => {
 export const useQuotationDetail = (id?: string) => {
     return useQuery({
         queryKey: ['quotation', id],
-        queryFn: () => id ? QuotationService.getById(id) : Promise.resolve(null),
+        queryFn: ({ signal }) => id ? QuotationService.getById(id, { signal }) : Promise.resolve(null),
         enabled: !!id,
         staleTime: 2 * 60 * 1000,
     });
