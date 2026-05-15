@@ -207,7 +207,7 @@ export function DocLinkICTab() {
 
         return (
             <tr key={isNew ? 'new-row' : item.docu_type_id} ref={isNew ? lastRowRef : null} className="bg-amber-50/40 dark:bg-amber-900/10">
-                <td className="sticky left-0 z-10 px-3 py-3 bg-amber-50 dark:bg-[#1a1c23] shadow-[2px_0_5px_rgba(0,0,0,0.3)] w-[110px]">
+                <td className="sticky left-0 z-10 px-3 py-3 bg-amber-50 dark:bg-[#1a1c23] shadow-[2px_0_5px_rgba(0,0,0,0.3)] w-[140px]">
                     <input
                         ref={isNew ? codeInputRef : null}
                         type="text"
@@ -335,7 +335,7 @@ export function DocLinkICTab() {
                 <table className="min-w-[1500px] text-sm border-separate border-spacing-0 w-full">
                     <thead className="sticky top-0 z-30">
                         <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                            <th className="sticky left-0 z-30 px-3 py-3 text-left font-bold text-gray-600 dark:text-gray-300 w-[110px] bg-gray-50 dark:bg-gray-800 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
+                            <th className="sticky left-0 z-30 px-3 py-3 text-left font-bold text-gray-600 dark:text-gray-300 w-[140px] bg-gray-50 dark:bg-gray-800 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
                                 รหัส
                             </th>
                             <th className="px-3 py-3 text-left font-bold text-gray-600 dark:text-gray-300 w-[250px]">ชื่อประเภทเอกสาร TH</th>
@@ -373,7 +373,7 @@ export function DocLinkICTab() {
                                         renderEditableRow(item, false)
                                     ) : (
                                         <tr key={item.docu_type_id} className="hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-colors">
-                                            <td className="sticky left-0 z-10 px-3 py-3 font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-[#1a1c23] shadow-[2px_0_5px_rgba(0,0,0,0.3)] w-[110px]">
+                                            <td className="sticky left-0 z-10 px-3 py-3 font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-[#1a1c23] shadow-[2px_0_5px_rgba(0,0,0,0.3)] w-[140px]">
                                                 {item.docu_type_code}
                                             </td>
                                             <td className="px-3 py-3 text-gray-700 dark:text-gray-300 truncate max-w-[250px]">
