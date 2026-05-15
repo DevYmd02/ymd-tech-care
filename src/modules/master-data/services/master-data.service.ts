@@ -60,7 +60,7 @@ export const MasterDataService = {
   getBranches: async (config?: AxiosRequestConfig): Promise<BranchListItem[]> => {
     try {
       const response = await BranchService.getList(undefined, config);
-      return response.items || [];
+      return normalizeListResponse<BranchListItem>(response).items;
     } catch (error) {
       logger.error('[MasterDataService] getBranches failed:', error);
       return [];
@@ -149,7 +149,7 @@ export const MasterDataService = {
   getDepartments: async (config?: AxiosRequestConfig): Promise<DepartmentListItem[]> => {
     try {
       const response = await DepartmentService.getList({ limit: 100 }, config);
-      return response?.items || [];
+      return normalizeListResponse<DepartmentListItem>(response).items;
     } catch (error) {
       logger.error('[MasterDataService] getDepartments failed:', error);
       return [];
@@ -206,7 +206,7 @@ export const MasterDataService = {
   getCurrencies: async (config?: AxiosRequestConfig): Promise<Currency[]> => {
     try {
       const response = await CurrencyService.getCurrencies(config);
-      return response?.items || [];
+      return normalizeListResponse<Currency>(response).items;
     } catch (error) {
       logger.error('[MasterDataService] getCurrencies failed:', error);
       return [];

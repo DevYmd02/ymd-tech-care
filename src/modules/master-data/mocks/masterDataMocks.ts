@@ -86,10 +86,10 @@ const _mockBranches: BranchListItem[] = [
 // ====================================================================================
 
 export const mockDepartments: DepartmentListItem[] = [
-    { id: 1, department_id: 1, department_code: 'ACC', department_name: 'ฝ่ายบัญชี', department_name_en: 'Accounting Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { id: 2, department_id: 2, department_code: 'IT', department_name: 'ฝ่ายเทคโนโลยีสารสนเทศ', department_name_en: 'Information Technology Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { id: 3, department_id: 3, department_code: 'HR', department_name: 'ฝ่ายทรัพยากรบุคคล', department_name_en: 'Human Resources Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
-    { id: 4, department_id: 4, department_code: 'FIN', department_name: 'ฝ่ายการเงิน', department_name_en: 'Finance Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 1, department_id: 1, dept_id: 1, emp_dept_id: 1, department_code: 'ACC', dept_code: 'ACC', emp_dept_code: 'ACC', department_name: 'ฝ่ายบัญชี', dept_name: 'ฝ่ายบัญชี', emp_dept_name: 'ฝ่ายบัญชี', department_name_en: 'Accounting Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 2, department_id: 2, dept_id: 2, emp_dept_id: 2, department_code: 'IT', dept_code: 'IT', emp_dept_code: 'IT', department_name: 'ฝ่ายเทคโนโลยีสารสนเทศ', dept_name: 'ฝ่ายเทคโนโลยีสารสนเทศ', emp_dept_name: 'ฝ่ายเทคโนโลยีสารสนเทศ', department_name_en: 'Information Technology Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 3, department_id: 3, dept_id: 3, emp_dept_id: 3, department_code: 'HR', dept_code: 'HR', emp_dept_code: 'HR', department_name: 'ฝ่ายทรัพยากรบุคคล', dept_name: 'ฝ่ายทรัพยากรบุคคล', emp_dept_name: 'ฝ่ายทรัพยากรบุคคล', department_name_en: 'Human Resources Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
+    { id: 4, department_id: 4, dept_id: 4, emp_dept_id: 4, department_code: 'FIN', dept_code: 'FIN', emp_dept_code: 'FIN', department_name: 'ฝ่ายการเงิน', dept_name: 'ฝ่ายการเงิน', emp_dept_name: 'ฝ่ายการเงิน', department_name_en: 'Finance Department', is_active: true, created_at: '2023-01-01T00:00:00Z', updated_at: '2023-01-01T00:00:00Z' },
 ];
 
 export const mockSections: SectionListItem[] = [
@@ -209,6 +209,27 @@ export const mockEmployees: EmployeeListItem[] = [
         position_id: 1, 
         position_name: 'Software Engineer',
         status: 'ACTIVE', 
+        emp_type: 'S',
+        is_active: true, 
+        created_at: '2023-01-01T00:00:00Z',
+        updated_at: '2023-01-01T00:00:00Z'
+    },
+    { 
+        id: 2,
+        employee_id: 2, 
+        employee_code: 'SALES01', 
+        employee_name: 'Vichai Sales', 
+        title_name: 'Mr.',
+        first_name: 'Vichai', 
+        last_name: 'Sales',
+        email: 'vichai@ymd.com', 
+        phone: '0899999999',
+        department_id: 3, 
+        department_name: 'Sales & Marketing',
+        position_id: 2, 
+        position_name: 'Senior Sales Key Account',
+        status: 'ACTIVE', 
+        emp_type: 'S',
         is_active: true, 
         created_at: '2023-01-01T00:00:00Z',
         updated_at: '2023-01-01T00:00:00Z'
