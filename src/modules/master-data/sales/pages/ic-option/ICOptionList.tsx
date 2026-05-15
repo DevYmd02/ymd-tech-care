@@ -64,18 +64,23 @@ export default function ICOptionList() {
             header: 'ลำดับ',
             accessorFn: (_, index) => (filters.page - 1) * filters.limit + index + 1,
             size: 60,
+            enableSorting: false,
+            meta: {
+                thClassName: 'text-center px-2 py-3 font-semibold',
+                tdClassName: 'text-center px-2 py-3 text-sm',
+            },
         },
         {
             accessorKey: 'branch_code',
             header: 'รหัสสาขา',
-            size: 150,
+            size: 300,
             cell: ({ row }) => {
                 const code = row.original.branch_code;
                 const name = row.original.branch_name;
                 const id = row.original.branch_id;
                 
                 return (
-                    <div className="flex flex-col">
+                    <div className="flex items-center gap-1.5 whitespace-nowrap">
                         <span className="font-semibold text-indigo-600 dark:text-indigo-400">
                             {code ? `${code} (${name || '-'})` : `ID: ${id}`}
                         </span>
