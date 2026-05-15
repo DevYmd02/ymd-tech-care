@@ -2,7 +2,7 @@ import { useEffect, useMemo, useCallback, useState } from 'react';
 import { useForm, useWatch, type UseFormWatch, type UseFormSetValue, type UseFormRegister, type FieldErrors, type FieldValues, type SubmitHandler, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DialogFormLayout } from '@ui';
-import { Settings, Save, X, PlusCircle, AlertCircle, Package, Database, Info, List } from 'lucide-react';
+import { Settings, Save, X, PlusCircle, AlertCircle, Package, Database, Info, List, Link2 } from 'lucide-react';
 import { ICOptionService } from './services/ic-option.service';
 import { icOptionSchema, type ICOptionFormData } from './types/ic-option.types';
 import { BranchService } from '@company/services/org-branch.service';
@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';
 import { logger } from '@/shared/utils';
 import { ICOptionListTab } from './components/ICOptionListTab';
+import { DocLinkICTab } from './components/DocLinkICTab';
 
 interface ICOptionFormModalProps {
     isOpen: boolean;
@@ -120,7 +121,7 @@ const PriceSourceField = ({ name, label, register, errors, options }: PriceSourc
     </div>
 );
 
-type ModalTab = 'settings' | 'option-list';
+type ModalTab = 'settings' | 'option-list' | 'doc-link-ic';
 
 const DEFAULT_FORM_VALUES: ICOptionFormData = {
     branch_id: 0,
@@ -309,6 +310,7 @@ export default function ICOptionFormModal({
 
     const tabs = [
         { key: 'settings' as ModalTab, label: 'ตั้งค่าทั่วไป', icon: <Settings size={14} /> },
+        { key: 'doc-link-ic' as ModalTab, label: 'กำหนดเอกสารเชื่อม IC', icon: <Link2 size={14} /> },
         ...(isEditMode ? [{ key: 'option-list' as ModalTab, label: 'IC Option List', icon: <List size={14} /> }] : []),
     ];
 
@@ -527,6 +529,11 @@ export default function ICOptionFormModal({
                 {/* ── TAB: IC OPTION LIST ── */}
                 {activeTab === 'option-list' && editId && (
                     <ICOptionListTab icOptionId={editId} />
+                )}
+
+                {/* ── TAB: DOC LINK IC ── */}
+                {activeTab === 'doc-link-ic' && (
+                    <DocLinkICTab />
                 )}
 
                 </div>
