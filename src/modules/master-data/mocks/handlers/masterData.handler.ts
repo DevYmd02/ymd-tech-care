@@ -32,6 +32,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
 
   // --- DEPARTMENTS ---
   mock.onGet('/org-departments').reply((config) => [200, applyMockFilters(mockDepartments, (config.params || {}) as Record<string, FilterValue>)]);
+  mock.onGet('/department').reply((config) => [200, applyMockFilters(mockDepartments, (config.params || {}) as Record<string, FilterValue>)]);
 
   // --- SECTIONS ---
   mock.onGet('/org-sections').reply((config) => [200, applyMockFilters(mockSections, (config.params || {}) as Record<string, FilterValue>)]);
@@ -108,6 +109,7 @@ export const setupMasterDataHandlers = (mock: MockAdapter) => {
 
   // --- EMPLOYEES ---
   mock.onGet('/org-employees').reply((config) => [200, applyMockFilters(mockEmployees, (config.params || {}) as Record<string, FilterValue>)]);
+  mock.onGet('/employees').reply((config) => [200, applyMockFilters(mockEmployees, (config.params || {}) as Record<string, FilterValue>)]);
   mock.onGet(/\/org-employees\/.+/).reply((config) => {
     const id = Number(config.url?.split('/').pop());
     const found = mockEmployees.find((e: EmployeeListItem) => e.id === id);

@@ -52,35 +52,51 @@ export const normalizeListResponse = <T>(response: unknown): PaginatedListRespon
         return { items: [], total: 0, page: 1, limit: 10 };
     }
 
-    if (Array.isArray(response)) {
+    // 🎯 Use our robust unwrapper first to get rid of .data envelopes
+    const unwrapped = unwrapResponseData<unknown>(response);
+
+    if (Array.isArray(unwrapped)) {
         return {
-            items: response as T[],
-            total: response.length,
+            items: unwrapped as T[],
+            total: unwrapped.length,
             page: 1,
-            limit: response.length
+            limit: unwrapped.length
         };
     }
 
-    const res = response as Record<string, unknown>;
-    
-    // 1. Try 'items' key (Our standard)
-    if (Array.isArray(res.items)) {
-        return {
-            items: res.items as T[],
-            total: Number(res.total || res.items.length),
-            page: Number(res.page || 1),
-            limit: Number(res.limit || res.items.length)
-        };
-    }
+    if (unwrapped && typeof unwrapped === 'object') {
+        const res = unwrapped as Record<string, unknown>;
+        
+        // 1. Try 'items' key (Our standard)
+        if (Array.isArray(res.items)) {
+            return {
+                items: res.items as T[],
+                total: Number(res.total || res.items.length),
+                page: Number(res.page || 1),
+                limit: Number(res.limit || res.items.length)
+            };
+        }
 
-    // 2. Try 'data' key (Common in Master Data)
-    if (Array.isArray(res.data)) {
-        return {
-            items: res.data as T[],
-            total: Number(res.total || res.data.length),
-            page: Number(res.page || 1),
-            limit: Number(res.limit || res.data.length)
-        };
+        // 2. Try 'data' key (Common in Master Data)
+        if (Array.isArray(res.data)) {
+            return {
+                items: res.data as T[],
+                total: Number(res.total || res.data.length),
+                page: Number(res.page || 1),
+                limit: Number(res.limit || res.data.length)
+            };
+        }
+        
+        // 3. Fallback: Check if the original response had items/data (in case unwrapping was too aggressive)
+        const original = response as Record<string, unknown>;
+        if (Array.isArray(original.items)) {
+             return {
+                items: original.items as T[],
+                total: Number(original.total || original.items.length),
+                page: Number(original.page || 1),
+                limit: Number(original.limit || original.items.length)
+            };
+        }
     }
 
     // 3. Last resort: Return empty list
