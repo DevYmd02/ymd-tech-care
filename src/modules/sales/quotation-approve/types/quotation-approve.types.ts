@@ -250,5 +250,6 @@ export interface AQListItem {
   customer_name?: string;
   customer_code?: string;
   row_key?: string;
+  remarks?: string;
   [key: string]: unknown;
 }

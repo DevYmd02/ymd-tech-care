@@ -99,18 +99,18 @@ export const AOHistoryModal: React.FC<Props> = ({ isOpen, onClose, soId, soNo })
       cell: (info) => (
         <div className="flex flex-col items-center gap-1">
           <SOStatusBadge status={info.getValue()} />
-          {(() => {
-            const raw = info.row.original.raw as Record<string, unknown> | undefined;
-            const remarks = raw?.remarks || raw?.status_remark || '';
-            if (remarks) {
-              return (
-                <span className="text-[10px] text-gray-500 italic max-w-[150px] truncate" title={String(remarks)}>
-                  หมายเหตุ: {String(remarks)}
-                </span>
-              );
-            }
-            return null;
-          })()}
+            {(() => {
+              const raw = info.row.original.raw as Record<string, unknown> | undefined;
+              const remarks = raw?.remarks || raw?.status_remark || '';
+              if (remarks) {
+                return (
+                  <span className="text-[10px] text-red-500 dark:text-red-400 italic max-w-[130px] whitespace-normal break-words text-center" title={String(remarks)}>
+                    หมายเหตุ: {String(remarks)}
+                  </span>
+                );
+              }
+              return null;
+            })()}
         </div>
       ),
       size: 130,
