@@ -129,7 +129,7 @@ export const POService = {
             try {
                 const vendorsRes = await VendorService.getList(config);
                 (vendorsRes.items || []).forEach(v => {
-                    masterDataCache.setVendor(v.vendor_id, v.vendor_name);
+                    masterDataCache.upsert('vendors', { vendor_id: v.vendor_id, vendor_name: v.vendor_name });
                 });
                 missingVendorIds.length = 0;
             } catch (err) {
@@ -145,12 +145,12 @@ export const POService = {
         await Promise.all([
             ...missingVendorIds.map(id => 
                 VendorService.getById(Number(id), config).then(v => {
-                    if (v) masterDataCache.setVendor(v.vendor_id, v.vendor_name);
+                    if (v) masterDataCache.upsert('vendors', { vendor_id: v.vendor_id, vendor_name: v.vendor_name });
                 })
             ),
             ...missingPrIds.map(id => 
                 PRService.getDetail(Number(id), config).then(p => {
-                    if (p) masterDataCache.setPR(p.pr_id, p.pr_no);
+                    if (p) masterDataCache.upsert('prs', { pr_id: p.pr_id, pr_no: p.pr_no });
                 })
             ),
             (async () => {
