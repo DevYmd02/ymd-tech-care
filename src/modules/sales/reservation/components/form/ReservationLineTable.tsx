@@ -1,5 +1,5 @@
-// import { useRef } from 'react';
-// import { useToast } from '@/shared/components/ui/feedback/Toast';
+import { useRef } from 'react';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { Plus, Trash2, Package, Search, AlertCircle } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import type { ReservationLineValues, ReservationFormValues } from '../../schemas/reservation-schemas';
@@ -32,7 +32,7 @@ export function ReservationLineTable({
     onRemoveLine, 
     onLineChange, 
     onSearchProduct, 
-    // onSearchLot,
+    onSearchLot,
     onSearchWarehouse,
     onSearchLocation,
     uoms = [],
@@ -43,17 +43,17 @@ export function ReservationLineTable({
     currencySymbol = 'บาท'
 }: ReservationLineTableProps) {
     const { formState: { errors } } = useFormContext<ReservationFormValues>();
-    // const { toast } = useToast();
+    const { toast } = useToast();
     const isLocked = readOnly;
 
     // Dedup ref: prevents multiple rows firing the same toast simultaneously
-    // const toastThrottleRef = useRef(false);
-    // const showNoItemToast = () => {
-    //     if (toastThrottleRef.current) return;
-    //     toastThrottleRef.current = true;
-    //     toast('กรุณาเลือกสินค้าก่อนเลือกล็อต', 'warning');
-    //     setTimeout(() => { toastThrottleRef.current = false; }, 1500);
-    // };
+    const toastThrottleRef = useRef(false);
+    const showNoItemToast = () => {
+        if (toastThrottleRef.current) return;
+        toastThrottleRef.current = true;
+        toast('กรุณาเลือกสินค้าก่อนเลือกล็อต', 'warning');
+        setTimeout(() => { toastThrottleRef.current = false; }, 1500);
+    };
     const getLineError = (index: number) => {
         if (!errors.lines || !Array.isArray(errors.lines)) return undefined;
         return errors.lines[index];
@@ -92,7 +92,7 @@ export function ReservationLineTable({
 
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden bg-white dark:bg-gray-900">
                 <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-purple-200 dark:scrollbar-thumb-purple-500/20 scrollbar-track-transparent bg-white dark:bg-gray-900">
-                <table className="table-fixed text-sm text-left border-separate border-spacing-0 w-full min-w-[1590px]">
+                <table className="table-fixed text-sm text-left border-separate border-spacing-0 w-full min-w-[1810px]">
                     <colgroup>
                         <col className="w-[60px]" />
                         <col className="w-[200px]" />
@@ -101,7 +101,7 @@ export function ReservationLineTable({
                         <col className="w-[160px]" />
                         <col className="w-[120px]" />
                         <col className="w-[120px]" />
-                        {/* <col className="w-[220px]" /> */}
+                        <col className="w-[220px]" />
                         <col className="w-[140px]" />
                         <col className="w-[130px]" />
                         <col className="w-[160px]" />
@@ -117,7 +117,7 @@ export function ReservationLineTable({
                              <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>ที่เก็บ</th>
                              <th className={`${headerThClass} text-right text-purple-700 dark:text-purple-300/60`}>จอง (QTY)</th>
                              <th className={`${headerThClass} text-center text-purple-700 dark:text-purple-300/60`}>หน่วย</th>
-                             {/* <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>ล็อต</th> */}
+                             <th className={`${headerThClass} text-purple-700 dark:text-purple-300/60`}>ล็อต</th>
                              <th className={`${headerThClass} text-right text-purple-700 dark:text-purple-300/60`}>ราคา/หน่วย</th>
                              <th className={`${headerThClass} text-right text-purple-700 dark:text-purple-300/60`}>ส่วนลด</th>
                              <th className={`${headerThClass} text-right text-purple-700 dark:text-purple-300/60`}>ยอดรวม</th>
@@ -228,7 +228,7 @@ export function ReservationLineTable({
                                         </select>
                                     </td>
                                     
-                                     {/* <td className="px-2 py-2">
+                                     <td className="px-2 py-2">
                                          <div className="relative group/lot">
                                              <div 
                                                  onClick={!isLocked ? () => {
@@ -258,7 +258,7 @@ export function ReservationLineTable({
                                                  className={`${compactInputClass} ${getFieldErrorClass(index, 'lot_no')} pl-7 cursor-pointer font-bold text-purple-600 dark:text-purple-400 bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700 hover:border-purple-400 focus:ring-purple-500 transition-colors`}
                                              />
                                          </div>
-                                     </td> */}
+                                     </td>
 
                                     <td className="px-2 py-2">
                                         <input 
@@ -340,7 +340,7 @@ export function ReservationLineTable({
                                     {!isLocked && (
                                         <td className="px-2 py-2 text-center sticky right-[-1px] pr-[9px] bg-white dark:bg-gray-900 group-hover:bg-[#fcfaff] dark:group-hover:bg-gray-800 z-[30] transition-colors border-l border-gray-100 dark:border-gray-700 shadow-[-12px_0_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[-20px_0_30px_-15px_rgba(0,0,0,0.8)] isolate">
                                             <div className="flex items-center justify-center gap-1">
-                                                 {/* <button 
+                                                 <button 
                                                      type="button" 
                                                      onClick={() => {
                                                          if (line.item_id) {
@@ -353,7 +353,7 @@ export function ReservationLineTable({
                                                      title="จัดการล็อตและคลังสินค้า (ถ้าจำเป็น)"
                                                  >
                                                      <Package size={18} />
-                                                 </button> */}
+                                                 </button>
                                                 <button 
                                                     type="button" 
                                                     onClick={() => onRemoveLine(index)}

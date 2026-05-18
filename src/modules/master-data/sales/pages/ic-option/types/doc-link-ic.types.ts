@@ -23,6 +23,7 @@ export interface DocLinkICCreatePayload {
     remark: string;
     stock_effect_ic: 0 | 1 | 2;
     is_active: boolean;
+    doc_type_name?: string | null;
 }
 
 export interface DocLinkICUpdatePayload {
@@ -31,6 +32,7 @@ export interface DocLinkICUpdatePayload {
     remark?: string;
     stock_effect_ic?: 0 | 1 | 2;
     is_active?: boolean;
+    doc_type_name?: string | null;
 }
 
 // ==========================================

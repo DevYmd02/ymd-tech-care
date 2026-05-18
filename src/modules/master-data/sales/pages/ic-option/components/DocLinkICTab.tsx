@@ -1,15 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@ui/feedback/Toast';
+import type { Dispatch, SetStateAction } from 'react';
 import { PlusCircle, Trash2, Save, X, Loader2, PlusCircle as PlusIcon } from 'lucide-react';
-import { DocLinkICService } from '../services/doc-link-ic.service';
-import { SystemDocumentService } from '../services/system-document.service';
-import type { DocLinkIC, DocLinkICCreatePayload, DocLinkICUpdatePayload } from '../types/doc-link-ic.types';
+import { useDocLinkIC } from '../hooks/useDocLinkIC';
+import type { SubItem, EditableRow } from '../hooks/useDocLinkIC';
 import { IS_ACTIVE_OPTIONS } from '../types/doc-link-ic.types';
-import type { SystemDocument } from '../services/system-document.service';
-
-type SubItem = { docu_item_id?: string; name: string; stock_effect_ic: 0 | 1 | 2; docu_desc?: string; remark?: string; };
-type EditableRow = Partial<DocLinkIC> & { isNew?: boolean; initial_sub_items?: SubItem[]; system_document_id?: number | null; };
 
 const STOCK_TAG_COLOR: Record<number, string> = {
     0: 'bg-gray-100 text-gray-600 border border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
@@ -24,120 +17,33 @@ const STOCK_BADGE_CLS: Record<number, string> = {
 };
 
 export function DocLinkICTab() {
-    const queryClient = useQueryClient();
-    const { toast } = useToast();
-    const lastRowRef = useRef<HTMLTableRowElement>(null);
-
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editData, setEditData] = useState<EditableRow | null>(null);
-    const [isAdding, setIsAdding] = useState(false);
-    const [newRowData, setNewRowData] = useState<EditableRow | null>(null);
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
-    const { data: rawList = [], isLoading } = useQuery({
-        queryKey: ['doc-link-ic'],
-        queryFn: () => DocLinkICService.getAll(),
-    });
-
-    const { data: systemDocs = [] } = useQuery<SystemDocument[]>({
-        queryKey: ['system-documents'],
-        queryFn: () => SystemDocumentService.getAll(),
-    });
-
-    // Group flat list into parent rows with sub-items
-    const parents = rawList.filter(r => !r.doc_type_name || r.doc_type_no === 0 || r.doc_type_no === null);
-    const subItems = rawList.filter(r => r.doc_type_name && r.doc_type_no && r.doc_type_no > 0);
-
-    const getSubsFor = (item: DocLinkIC) =>
-        subItems.filter(s => Number(s.system_document_id) === Number(item.system_document_id));
-
-    const createMutation = useMutation({
-        mutationFn: (data: DocLinkICCreatePayload) => DocLinkICService.create(data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['doc-link-ic'] });
-            toast('เพิ่มประเภทเอกสารสำเร็จ', 'success');
-            setIsAdding(false); setNewRowData(null); setFieldErrors({});
-        },
-        onError: () => toast('เกิดข้อผิดพลาด', 'error'),
-    });
-
-    const updateMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: DocLinkICUpdatePayload }) => DocLinkICService.update(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['doc-link-ic'] });
-            toast('แก้ไขสำเร็จ', 'success');
-            setEditingId(null); setEditData(null); setFieldErrors({});
-        },
-        onError: () => toast('เกิดข้อผิดพลาด', 'error'),
-    });
-
-    const deleteMutation = useMutation({
-        mutationFn: (id: string) => DocLinkICService.remove(id),
-        onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['doc-link-ic'] }); toast('ลบสำเร็จ', 'success'); },
-        onError: () => toast('เกิดข้อผิดพลาด', 'error'),
-    });
-
-    useEffect(() => {
-        if (isAdding && lastRowRef.current) lastRowRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, [isAdding]);
-
-    const handleAddClick = () => {
-        setIsAdding(true);
-        setNewRowData({ isNew: true, system_document_id: null, docu_type_code: '', docu_name_th: '', docu_name_en: '', docu_desc: '', remark: '', stock_effect_ic: 0, is_active: true, initial_sub_items: [{ name: '', stock_effect_ic: 0 }] });
-        setEditingId(null); setEditData(null); setFieldErrors({});
-    };
-
-    const handleEditClick = (item: DocLinkIC) => {
-        const rowKey = String(item.doc_link_ic_id ?? item.docu_type_id);
-        const sysdoc = systemDocs.find(d => d.system_document_id === Number(item.system_document_id));
-        const subs = getSubsFor(item).map(s => ({ docu_item_id: String(s.doc_link_ic_id ?? ''), name: s.doc_type_name || '', stock_effect_ic: (s.stock_effect_ic ?? 0) as 0|1|2, docu_desc: s.docu_desc || '', remark: s.remark || '' }));
-        setEditingId(rowKey);
-        setEditData({
-            ...item,
-            docu_type_code: item.docu_type_code || sysdoc?.system_document_code || '',
-            docu_name_th: item.docu_name_th || sysdoc?.system_document_name || '',
-            docu_name_en: item.docu_name_en || sysdoc?.system_document_name_eng || sysdoc?.system_document_name || '',
-            initial_sub_items: subs.length ? subs : [{ name: '', stock_effect_ic: 0 }],
-        });
-        setIsAdding(false); setNewRowData(null); setFieldErrors({});
-    };
-
-    const handleCancel = () => { setEditingId(null); setEditData(null); setIsAdding(false); setNewRowData(null); setFieldErrors({}); };
-
-    const handleSaveNew = async () => {
-        if (!newRowData?.system_document_id) { toast('กรุณาเลือกประเภทเอกสาร', 'error'); return; }
-        const subs = (newRowData.initial_sub_items || []).filter(s => s.name.trim());
-        createMutation.mutate({
-            system_document_id: Number(newRowData.system_document_id),
-            docu_desc: newRowData.docu_desc || '',
-            remark: newRowData.remark || '',
-            stock_effect_ic: (newRowData.stock_effect_ic ?? 0) as 0|1|2,
-            is_active: newRowData.is_active ?? true,
-        });
-        for (const sub of subs) {
-            await DocLinkICService.createItem({ docu_type_id: String(newRowData.system_document_id), docu_item_no: 1, docu_item_name: sub.name, stock_effect_ic: sub.stock_effect_ic, is_active: true, system_document_id: Number(newRowData.system_document_id), doc_type_name: sub.name, docu_desc: sub.docu_desc, remark: sub.remark } as any);
-        }
-    };
-
-    const handleSaveEdit = async () => {
-        if (!editData || !editingId) return;
-        const subs = (editData.initial_sub_items || []).filter(s => s.name.trim());
-        updateMutation.mutate({ id: editingId, data: { docu_desc: editData.docu_desc || '', remark: editData.remark || '', stock_effect_ic: (editData.stock_effect_ic ?? 0) as 0|1|2, is_active: editData.is_active ?? false } });
-        const origSubs = getSubsFor(rawList.find(r => String(r.doc_link_ic_id ?? r.docu_type_id) === editingId)!);
-        const newIds = new Set(subs.filter(s => s.docu_item_id).map(s => s.docu_item_id!));
-        for (const orig of origSubs) { if (!newIds.has(String(orig.doc_link_ic_id))) await DocLinkICService.removeItem(String(orig.doc_link_ic_id)); }
-        for (const sub of subs) {
-            if (sub.docu_item_id) await DocLinkICService.updateItem(sub.docu_item_id, { doc_type_name: sub.name, docu_item_name: sub.name, stock_effect_ic: sub.stock_effect_ic, docu_desc: sub.docu_desc, remark: sub.remark } as any);
-            else await DocLinkICService.createItem({ docu_type_id: String(editData.system_document_id), docu_item_no: 1, docu_item_name: sub.name, stock_effect_ic: sub.stock_effect_ic, is_active: true, system_document_id: Number(editData.system_document_id), doc_type_name: sub.name, docu_desc: sub.docu_desc, remark: sub.remark } as any);
-        }
-        queryClient.invalidateQueries({ queryKey: ['doc-link-ic'] });
-    };
-
-    const handleDelete = (id: string) => { if (window.confirm('ลบรายการนี้?')) deleteMutation.mutate(id); };
+    const {
+        isLoading,
+        systemDocs,
+        editingId,
+        editData,
+        isAdding,
+        newRowData,
+        fieldErrors,
+        isDocFocused,
+        setIsDocFocused,
+        setEditData,
+        setNewRowData,
+        parents,
+        getSubsFor,
+        lastRowRef,
+        isSaving,
+        handleAddClick,
+        handleEditClick,
+        handleCancel,
+        handleSaveNew,
+        handleSaveEdit,
+        handleDelete,
+    } = useDocLinkIC();
 
     const inputCls = (err?: string) => `w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:ring-1 focus:ring-indigo-500 outline-none ${err ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}`;
 
-    const renderSubCell = (subs: SubItem[], isEdit: boolean, setter: (fn: (p: EditableRow | null) => EditableRow | null) => void) => (
+    const renderSubCell = (subs: SubItem[], isEdit: boolean, setter: Dispatch<SetStateAction<EditableRow | null>>) => (
         <div className="flex flex-col gap-1.5">
             {subs.map((sub, idx) => isEdit ? (
                 <div key={idx} className="flex gap-1.5 items-center">
@@ -153,7 +59,7 @@ export function DocLinkICTab() {
         </div>
     );
 
-    const renderStockCell = (subs: SubItem[], isEdit: boolean, setter: (fn: (p: EditableRow | null) => EditableRow | null) => void) => (
+    const renderStockCell = (subs: SubItem[], isEdit: boolean, setter: Dispatch<SetStateAction<EditableRow | null>>) => (
         <div className="flex flex-col gap-1.5">
             {subs.length === 0
                 ? <span className={STOCK_BADGE_CLS[0]}>{STOCK_LABEL[0]}</span>
@@ -169,7 +75,7 @@ export function DocLinkICTab() {
         </div>
     );
 
-    const renderDescCell = (subs: SubItem[], isEdit: boolean, setter: (fn: (p: EditableRow | null) => EditableRow | null) => void, parentVal: string) => (
+    const renderDescCell = (subs: SubItem[], isEdit: boolean, setter: Dispatch<SetStateAction<EditableRow | null>>, parentVal: string) => (
         <div className="flex flex-col gap-1.5">
             {subs.length === 0 ? (
                 isEdit
@@ -183,7 +89,7 @@ export function DocLinkICTab() {
         </div>
     );
 
-    const renderRemarkCell = (subs: SubItem[], isEdit: boolean, setter: (fn: (p: EditableRow | null) => EditableRow | null) => void, parentVal: string) => (
+    const renderRemarkCell = (subs: SubItem[], isEdit: boolean, setter: Dispatch<SetStateAction<EditableRow | null>>, parentVal: string) => (
         <div className="flex flex-col gap-1.5">
             {subs.length === 0 ? (
                 isEdit
@@ -201,29 +107,49 @@ export function DocLinkICTab() {
         const currentData = isNew ? newRowData : editData;
         const subs = currentData?.initial_sub_items || [];
         const setter = isNew ? setNewRowData : setEditData;
-        const isSaving = isNew ? createMutation.isPending : updateMutation.isPending;
         return (
-            <tr key={isNew ? 'new' : String(item.doc_link_ic_id ?? item.docu_type_id)} ref={isNew ? lastRowRef : null} className="bg-amber-50 dark:bg-amber-950/20">
-                <td className="sticky left-0 z-10 px-3 py-3 bg-amber-50 dark:bg-amber-950/40 shadow-[2px_0_5px_rgba(0,0,0,0.15)] w-[140px] align-top">
+            <tr key={isNew ? 'new' : String(item.doc_link_ic_id ?? item.docu_type_id)} ref={isNew ? lastRowRef : null} className="bg-[#fefaf6] dark:bg-[#1f1107]">
+                <td className="sticky left-0 z-10 px-3 py-3 bg-[#fefaf6] dark:bg-[#1f1107] shadow-[2px_0_5px_rgba(0,0,0,0.15)] w-[140px] align-top border-b border-gray-200 dark:border-gray-700/60">
                     {isNew ? (
-                        <select value={currentData?.system_document_id||''} onChange={e => { const id = e.target.value?Number(e.target.value):null; const doc = systemDocs.find(d=>d.system_document_id===id); setter(p=>({...p!,system_document_id:id,docu_type_code:doc?.system_document_code||'',docu_name_th:doc?.system_document_name||'',docu_name_en:doc?.system_document_name_eng||doc?.system_document_name||''})); }} className={inputCls(fieldErrors.system_document_id)}>
+                        <select 
+                            value={currentData?.system_document_id||''} 
+                            onFocus={() => setIsDocFocused(true)}
+                            onBlur={() => setIsDocFocused(false)}
+                            onChange={e => { 
+                                const id = e.target.value ? Number(e.target.value) : null; 
+                                const doc = systemDocs.find(d => d.system_document_id === id); 
+                                setter(p => ({
+                                    ...p!,
+                                    system_document_id: id,
+                                    docu_type_code: doc?.system_document_code || '',
+                                    docu_name_th: doc?.system_document_name || '',
+                                    docu_name_en: doc?.system_document_name_eng || doc?.system_document_name || ''
+                                })); 
+                                e.target.blur();
+                            }} 
+                            className={inputCls(fieldErrors.system_document_id)}
+                        >
                             <option value="">-- เลือก --</option>
-                            {systemDocs.map(d=><option key={d.system_document_id} value={d.system_document_id}>{d.system_document_code} - {d.system_document_name}</option>)}
+                            {systemDocs.map(d => (
+                                <option key={d.system_document_id} value={d.system_document_id}>
+                                    {isDocFocused ? `${d.system_document_code} - ${d.system_document_name}` : d.system_document_code}
+                                </option>
+                            ))}
                         </select>
                     ) : <span className="font-bold text-indigo-600 dark:text-indigo-400">{currentData?.docu_type_code}</span>}
                 </td>
-                <td className="px-3 py-3 w-[220px] align-top"><input type="text" value={currentData?.docu_name_th||''} readOnly className={inputCls()+' cursor-not-allowed opacity-60'} placeholder="ชื่อ TH (อัตโนมัติ)"/></td>
-                <td className="px-3 py-3 w-[220px] align-top"><input type="text" value={currentData?.docu_name_en||''} readOnly className={inputCls()+' cursor-not-allowed opacity-60'} placeholder="ชื่อ EN (อัตโนมัติ)"/></td>
-                <td className="px-3 py-3 w-[280px] align-top">{renderSubCell(subs, true, setter as any)}</td>
-                <td className="px-3 py-3 w-[180px] align-top">{renderStockCell(subs, true, setter as any)}</td>
-                <td className="px-3 py-3 w-[220px] align-top">{renderDescCell(subs, true, setter as any, currentData?.docu_desc || '')}</td>
-                <td className="px-3 py-3 w-[180px] align-top">{renderRemarkCell(subs, true, setter as any, currentData?.remark || '')}</td>
-                <td className="px-3 py-3 w-[100px] align-top">
+                <td className="px-3 py-3 w-[220px] align-top border-b border-gray-200 dark:border-gray-700/60"><input type="text" value={currentData?.docu_name_th||''} readOnly className={inputCls()+' cursor-not-allowed opacity-60'} placeholder="ชื่อ TH (อัตโนมัติ)"/></td>
+                <td className="px-3 py-3 w-[220px] align-top border-b border-gray-200 dark:border-gray-700/60"><input type="text" value={currentData?.docu_name_en||''} readOnly className={inputCls()+' cursor-not-allowed opacity-60'} placeholder="ชื่อ EN (อัตโนมัติ)"/></td>
+                <td className="px-3 py-3 w-[280px] align-top border-b border-gray-200 dark:border-gray-700/60">{setter && renderSubCell(subs, true, setter)}</td>
+                <td className="px-3 py-3 w-[180px] align-top border-b border-gray-200 dark:border-gray-700/60">{setter && renderStockCell(subs, true, setter)}</td>
+                <td className="px-3 py-3 w-[220px] align-top border-b border-gray-200 dark:border-gray-700/60">{setter && renderDescCell(subs, true, setter, currentData?.docu_desc || '')}</td>
+                <td className="px-3 py-3 w-[180px] align-top border-b border-gray-200 dark:border-gray-700/60">{setter && renderRemarkCell(subs, true, setter, currentData?.remark || '')}</td>
+                <td className="px-3 py-3 w-[130px] align-top border-b border-gray-200 dark:border-gray-700/60">
                     <select value={currentData?.is_active?'true':'false'} onChange={e=>setter(p=>({...p!,is_active:e.target.value==='true'}))} className={inputCls()}>
                         {IS_ACTIVE_OPTIONS.map(o=><option key={String(o.value)} value={String(o.value)}>{o.label}</option>)}
                     </select>
                 </td>
-                <td className="sticky right-0 z-10 px-3 py-3 bg-amber-50 dark:bg-amber-950/40 shadow-[-2px_0_5px_rgba(0,0,0,0.15)] align-top">
+                <td className="sticky right-0 z-10 px-3 py-3 bg-[#fefaf6] dark:bg-[#1f1107] shadow-[-2px_0_5px_rgba(0,0,0,0.15)] align-top border-b border-gray-200 dark:border-gray-700/60">
                     <div className="flex flex-col gap-1.5">
                         <button type="button" onClick={isNew?handleSaveNew:handleSaveEdit} disabled={isSaving} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center">
                             {isSaving?<Loader2 size={16} className="animate-spin"/>:<Save size={16}/>}
@@ -254,7 +180,7 @@ export function DocLinkICTab() {
                             <th className="px-3 py-3 text-left font-bold text-gray-600 dark:text-gray-300 w-[180px] border-b-2 border-gray-300 dark:border-gray-600">ผลต่อคลัง</th>
                             <th className="px-3 py-3 text-left font-bold text-gray-600 dark:text-gray-300 w-[220px] border-b-2 border-gray-300 dark:border-gray-600">คำอธิบาย</th>
                             <th className="px-3 py-3 text-left font-bold text-gray-600 dark:text-gray-300 w-[180px] border-b-2 border-gray-300 dark:border-gray-600">หมายเหตุ</th>
-                            <th className="px-3 py-3 text-center font-bold text-gray-600 dark:text-gray-300 w-[100px] border-b-2 border-gray-300 dark:border-gray-600">สถานะ</th>
+                            <th className="px-3 py-3 text-center font-bold text-gray-600 dark:text-gray-300 w-[130px] border-b-2 border-gray-300 dark:border-gray-600">สถานะ</th>
                             <th className="sticky right-0 z-30 px-3 py-3 text-center font-bold text-gray-600 dark:text-gray-300 w-[100px] bg-gray-100 dark:bg-gray-800 shadow-[-2px_0_5px_rgba(0,0,0,0.08)] border-b-2 border-gray-300 dark:border-gray-600">จัดการ</th>
                         </tr>
                     </thead>
@@ -275,18 +201,18 @@ export function DocLinkICTab() {
                                     const displayNameEN = item.docu_name_en || sysdoc?.system_document_name_eng || sysdoc?.system_document_name || '-';
                                     return (
                                         <tr key={rowKey} className="hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors">
-                                            <td className="sticky left-0 z-10 px-3 py-3 font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-900 shadow-[2px_0_5px_rgba(0,0,0,0.08)] w-[140px] align-top">{displayCode}</td>
-                                            <td className="px-3 py-3 text-gray-700 dark:text-gray-300 w-[220px] align-top">{displayNameTH}</td>
-                                            <td className="px-3 py-3 text-gray-700 dark:text-gray-300 w-[220px] align-top">{displayNameEN}</td>
-                                            <td className="px-3 py-3 w-[280px] align-top">
+                                            <td className="sticky left-0 z-10 px-3 py-3 font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-900 shadow-[2px_0_5px_rgba(0,0,0,0.08)] w-[140px] align-top border-b border-gray-200 dark:border-gray-700/60">{displayCode}</td>
+                                            <td className="px-3 py-3 text-gray-700 dark:text-gray-300 w-[220px] align-top border-b border-gray-200 dark:border-gray-700/60">{displayNameTH}</td>
+                                            <td className="px-3 py-3 text-gray-700 dark:text-gray-300 w-[220px] align-top border-b border-gray-200 dark:border-gray-700/60">{displayNameEN}</td>
+                                            <td className="px-3 py-3 w-[280px] align-top border-b border-gray-200 dark:border-gray-700/60">
                                                 <div className="flex flex-col gap-1">
                                                     {subs.length>0
-                                                        ? subs.map((s,i)=><span key={i} className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium ${STOCK_TAG_COLOR[s.stock_effect_ic??0]}`}>{s.doc_type_name||s.docu_type_code}</span>)
+                                                        ? subs.map((s,i)=><span key={i} className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium ${STOCK_TAG_COLOR[s.stock_effect_ic??0]}`}>{i+1}. {s.doc_type_name||s.docu_item_name}</span>)
                                                         : <span className="text-sm text-gray-400 italic">ไม่มีรายการย่อย</span>
                                                     }
                                                 </div>
                                             </td>
-                                            <td className="px-3 py-3 w-[180px] align-top">
+                                            <td className="px-3 py-3 w-[180px] align-top border-b border-gray-200 dark:border-gray-700/60">
                                                 <div className="flex flex-col gap-1">
                                                     {subs.length > 0
                                                         ? subs.map((s,i) => <span key={i} className={STOCK_BADGE_CLS[s.stock_effect_ic??0]}>{STOCK_LABEL[s.stock_effect_ic??0]}</span>)
@@ -294,7 +220,7 @@ export function DocLinkICTab() {
                                                     }
                                                 </div>
                                             </td>
-                                            <td className="px-3 py-3 w-[220px] align-top">
+                                            <td className="px-3 py-3 w-[220px] align-top border-b border-gray-200 dark:border-gray-700/60">
                                                 {subs.length > 0
                                                     ? <div className="flex flex-col gap-1">
                                                         {subs.map((s, i) => (
@@ -306,7 +232,7 @@ export function DocLinkICTab() {
                                                     : <span className="text-sm text-gray-600 dark:text-gray-300 truncate" title={item.docu_desc}>{item.docu_desc || sysdoc?.system_document_name || '-'}</span>
                                                 }
                                             </td>
-                                            <td className="px-3 py-3 w-[180px] align-top">
+                                            <td className="px-3 py-3 w-[180px] align-top border-b border-gray-200 dark:border-gray-700/60">
                                                 {subs.length > 0
                                                     ? <div className="flex flex-col gap-1">
                                                         {subs.map((s, i) => (
@@ -318,10 +244,10 @@ export function DocLinkICTab() {
                                                     : <span className="text-sm text-gray-600 dark:text-gray-300 truncate" title={item.remark}>{item.remark || '-'}</span>
                                                 }
                                             </td>
-                                            <td className="px-3 py-3 text-center align-top">
+                                            <td className="px-3 py-3 text-center align-top border-b border-gray-200 dark:border-gray-700/60 w-[130px]">
                                                 <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full border ${item.is_active ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'}`}>{item.is_active ? 'ใช้งาน' : 'ไม่ใช้งาน'}</span>
                                             </td>
-                                            <td className="sticky right-0 z-10 px-3 py-3 bg-white dark:bg-gray-900 shadow-[-2px_0_5px_rgba(0,0,0,0.08)] align-top">
+                                            <td className="sticky right-0 z-10 px-3 py-3 bg-white dark:bg-gray-900 shadow-[-2px_0_5px_rgba(0,0,0,0.08)] align-top border-b border-gray-200 dark:border-gray-700/60">
                                                 <div className="flex items-center justify-center gap-1">
                                                     <button type="button" onClick={()=>handleEditClick(item)} disabled={isAdding||(editingId!==null&&editingId!==item.docu_type_id)} className="p-1.5 text-gray-400 hover:text-indigo-400 hover:bg-indigo-900/30 rounded-lg transition-all disabled:opacity-20" title="แก้ไข">
                                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
