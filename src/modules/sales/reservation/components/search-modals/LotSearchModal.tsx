@@ -106,12 +106,17 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
     const masterLots = useMemo(() => {
         const records = (itemLotsResponse || []) as ItemLot[];
         
-        if (!debouncedSearch) return records;
-        
-        const q = debouncedSearch.toLowerCase();
-        return records.filter(lot => 
-            (String(lot.lot_no || '')).toLowerCase().includes(q)
-        );
+        const filtered = debouncedSearch 
+            ? records.filter(lot => (String(lot.lot_no || '')).toLowerCase().includes(debouncedSearch.toLowerCase()))
+            : records;
+
+        // Sort by expiry_date ascending (earlier expiry date first / FEFO)
+        // If a lot has no expiry_date, place it at the end.
+        return [...filtered].sort((a, b) => {
+            const dateA = a.expiry_date ? new Date(a.expiry_date).getTime() : Infinity;
+            const dateB = b.expiry_date ? new Date(b.expiry_date).getTime() : Infinity;
+            return dateA - dateB;
+        });
     }, [itemLotsResponse, debouncedSearch]);
 
     // Enrich balances with master lot data (names, dates)
@@ -127,7 +132,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
             return true;
         });
         
-        return balances.map(balance => {
+        const enriched = balances.map(balance => {
             // masterId is the reference to the master lot (lot_id in API)
             const masterId = balance.lot_id || balance.lot_no_id;
             const masterLot = masterRecords.find(l => Number(l.lot_id) === masterId);
@@ -147,6 +152,14 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                 warehouse_name: balance.warehouse_name || wh?.warehouse_name || '',
                 location_name: balance.location_name || loc?.name_th || ''
             } as LotNo;
+        });
+
+        // Sort by expiry_date ascending (earlier expiry date first / FEFO)
+        // If a lot has no expiry_date, place it at the end.
+        return enriched.sort((a, b) => {
+            const dateA = a.expiry_date ? new Date(a.expiry_date).getTime() : Infinity;
+            const dateB = b.expiry_date ? new Date(b.expiry_date).getTime() : Infinity;
+            return dateA - dateB;
         });
     }, [response, itemLotsResponse, warehouses, locations, warehouseId, locationId, ignoreFilters]);
 
