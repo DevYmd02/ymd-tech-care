@@ -203,7 +203,7 @@ export function DocLinkICItemModal({ isOpen, onClose, parentType }: DocLinkICIte
                                                         className="w-full h-8 text-xs bg-white dark:bg-gray-800 border border-emerald-200 dark:border-emerald-900/50 rounded-md"
                                                     >
                                                         <option value={1}>เพิ่มคลัง</option>
-                                                        <option value={-1}>ลดคลัง</option>
+                                                        <option value={2}>ลดคลัง</option>
                                                         <option value={0}>ไม่กระทบ</option>
                                                     </select>
                                                 </td>
@@ -257,7 +257,7 @@ export function DocLinkICItemModal({ isOpen, onClose, parentType }: DocLinkICIte
                                                                 className="w-full h-8 text-xs bg-white dark:bg-gray-800 border border-indigo-200 rounded-md"
                                                             >
                                                                 <option value={1}>เพิ่มคลัง</option>
-                                                                <option value={-1}>ลดคลัง</option>
+                                                                <option value={2}>ลดคลัง</option>
                                                                 <option value={0}>ไม่กระทบ</option>
                                                             </select>
                                                         </td>
@@ -298,10 +298,10 @@ export function DocLinkICItemModal({ isOpen, onClose, parentType }: DocLinkICIte
                                                         <td className="px-4 py-3 text-center">
                                                             <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${
                                                                 item.stock_effect_ic === 1 ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                                                item.stock_effect_ic === -1 ? 'bg-red-50 text-red-600 border-red-100' :
+                                                                item.stock_effect_ic === 2 ? 'bg-red-50 text-red-600 border-red-100' :
                                                                 'bg-gray-50 text-gray-500 border-gray-100'
                                                             }`}>
-                                                                {item.stock_effect_ic === 1 ? 'เพิ่ม' : item.stock_effect_ic === -1 ? 'ลด' : 'ไม่กระทบ'}
+                                                                {item.stock_effect_ic === 1 ? 'เพิ่ม' : item.stock_effect_ic === 2 ? 'ลด' : 'ไม่กระทบ'}
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-3 text-center">

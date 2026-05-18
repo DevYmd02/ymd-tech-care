@@ -51,15 +51,11 @@ const mapToAQListItem = (
   const customerName = (customerMap?.get(cid)) || (rawCustomerName.includes('Customer ID:') ? '' : rawCustomerName);
   const customerCode = String(obj.customer_code || sqObj?.customer_code || sqObj?.code || obj.cust_code || '');
   
-  const rawQuoteAmount = Number(obj.quote_total_amount || obj.base_total_amount || obj.total_amount || 0);
-  const sqTotalAmount = Number(sqObj?.quote_total_amount || sqObj?.base_total_amount || sqObj?.total_amount || 0);
-  
-  const displayQuoteAmount = (sqTotalAmount > 0) ? sqTotalAmount : rawQuoteAmount;
+  const displayQuoteAmount = Math.abs(Number(sqObj?.quote_total_amount || sqObj?.base_total_amount || obj.quote_total_amount || obj.base_total_amount || obj.total_amount || 0));
   const status = String(obj.status || (isHistory ? 'APPROVED' : 'PENDING')).toUpperCase();
 
-  const isRejected = status === 'REJECTED';
-  const finalQuoteAmount = isRejected ? 0 : displayQuoteAmount;
-  const finalBaseAmount = isRejected ? 0 : Number(obj.base_total_amount || sqObj?.base_total_amount || (finalQuoteAmount * Number(obj.exchange_rate || 1)));
+  const finalQuoteAmount = displayQuoteAmount;
+  const finalBaseAmount = Math.abs(Number(sqObj?.base_total_amount || obj.base_total_amount || (finalQuoteAmount * Number(obj.exchange_rate || 1))));
 
   return {
     row_key: `${isHistory ? 'history' : 'pending'}-${obj.aq_id || obj.id || sqId || index}`,
