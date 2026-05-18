@@ -8,7 +8,15 @@ import {
     useDepartments,
     useVendors
 } from '@/modules/master-data/hooks/useMasterData';
-import { masterDataCache } from '@/shared/utils/master-data-cache';
+import { 
+    masterDataCache,
+    type UomRecord,
+    type BranchRecord,
+    type WarehouseRecord,
+    type EmployeeRecord,
+    type DepartmentRecord,
+    type VendorRecord
+} from '@/shared/utils/master-data-cache';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { 
     MasterDataContext, 
@@ -39,7 +47,7 @@ const UnitsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     const units = useMemo(() => extractList(data), [data]);
 
     React.useEffect(() => {
-        if (units.length > 0) masterDataCache.set('units', units);
+        if (units.length > 0) masterDataCache.set('units', units as UomRecord[]);
     }, [units]);
 
     return <UnitsContext.Provider value={units}>{children}</UnitsContext.Provider>;
@@ -51,7 +59,7 @@ const BranchesProvider: React.FC<{ children: React.ReactNode }> = ({ children })
     const branches = useMemo(() => extractList(data), [data]);
 
     React.useEffect(() => {
-        if (branches.length > 0) masterDataCache.set('branches', branches);
+        if (branches.length > 0) masterDataCache.set('branches', branches as BranchRecord[]);
     }, [branches]);
 
     return <BranchesContext.Provider value={branches}>{children}</BranchesContext.Provider>;
@@ -63,7 +71,7 @@ const WarehousesProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const warehouses = useMemo(() => extractList(data), [data]);
 
     React.useEffect(() => {
-        if (warehouses.length > 0) masterDataCache.set('warehouses', warehouses);
+        if (warehouses.length > 0) masterDataCache.set('warehouses', warehouses as WarehouseRecord[]);
     }, [warehouses]);
 
     return <WarehousesContext.Provider value={warehouses}>{children}</WarehousesContext.Provider>;
@@ -75,7 +83,7 @@ const EmployeesProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     const employees = useMemo(() => extractList(data), [data]);
 
     React.useEffect(() => {
-        if (employees.length > 0) masterDataCache.set('employees', employees);
+        if (employees.length > 0) masterDataCache.set('employees', employees as EmployeeRecord[]);
     }, [employees]);
 
     return <EmployeesContext.Provider value={employees}>{children}</EmployeesContext.Provider>;
@@ -87,7 +95,7 @@ const DepartmentsProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const departments = useMemo(() => extractList(data), [data]);
 
     React.useEffect(() => {
-        if (departments.length > 0) masterDataCache.set('departments', departments);
+        if (departments.length > 0) masterDataCache.set('departments', departments as DepartmentRecord[]);
     }, [departments]);
 
     return <DepartmentsContext.Provider value={departments}>{children}</DepartmentsContext.Provider>;
@@ -100,9 +108,7 @@ const VendorsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
     React.useEffect(() => {
         if (vendors.length > 0) {
-            vendors.forEach(v => {
-                if (v.vendor_id) masterDataCache.setVendor(Number(v.vendor_id), String(v.vendor_name || ''));
-            });
+            masterDataCache.set('vendors', vendors as VendorRecord[]);
         }
     }, [vendors]);
 
@@ -144,6 +150,23 @@ const LegacyMasterDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     );
 };
 
+const compose = (...providers: React.FC<{ children: React.ReactNode }>[]) =>
+    providers.reduce((Prev, Curr) => ({ children }: { children: React.ReactNode }) => (
+        <Prev><Curr>{children}</Curr></Prev>
+    ));
+
+// ⚠️ Must be defined OUTSIDE MasterDataProvider
+// Defining inside would cause re-creation on every render → remount all children
+const DataProviders = compose(
+    UnitsProvider,
+    BranchesProvider,
+    WarehousesProvider,
+    EmployeesProvider,
+    DepartmentsProvider,
+    VendorsProvider,
+    LegacyMasterDataProvider
+);
+
 export const MasterDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const queryClient = useQueryClient();
     
@@ -161,29 +184,14 @@ export const MasterDataProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         queryClient.invalidateQueries({ queryKey: ['master-warehouses'] });
         queryClient.invalidateQueries({ queryKey: ['master-employees'] });
         queryClient.invalidateQueries({ queryKey: ['master-departments'] });
+        queryClient.invalidateQueries({ queryKey: ['master-vendors'] });
     }, [queryClient]);
 
     return (
         <MasterDataRefetchContext.Provider value={refetchAll}>
             <MasterDataLoadingContext.Provider value={isFetching}>
-                <UnitsProvider>
-                    <BranchesProvider>
-                        <WarehousesProvider>
-                            <EmployeesProvider>
-                                <DepartmentsProvider>
-                                    <VendorsProvider>
-                                        <LegacyMasterDataProvider>
-                                            {children}
-                                        </LegacyMasterDataProvider>
-                                    </VendorsProvider>
-                                </DepartmentsProvider>
-                            </EmployeesProvider>
-                        </WarehousesProvider>
-                    </BranchesProvider>
-                </UnitsProvider>
+                <DataProviders>{children}</DataProviders>
             </MasterDataLoadingContext.Provider>
         </MasterDataRefetchContext.Provider>
     );
 };
-
-

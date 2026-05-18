@@ -4,29 +4,87 @@
  * This is populated by the MasterDataProvider.
  */
 
+export interface BranchRecord {
+    branch_id: number;
+    branch_name: string;
+    name?: string;
+    [key: string]: unknown;
+}
+
+export interface EmployeeRecord {
+    employee_id: number;
+    employee_fullname?: string;
+    employee_firstname_th?: string;
+    employee_lastname_th?: string;
+    [key: string]: unknown;
+}
+
+export interface DepartmentRecord {
+    dept_id: number;
+    dept_name: string;
+    name?: string;
+    department_name?: string;
+    [key: string]: unknown;
+}
+
+export interface VendorRecord {
+    vendor_id: number;
+    vendor_name: string;
+    name?: string;
+    [key: string]: unknown;
+}
+
+export interface CustomerRecord {
+    customer_id: number;
+    customer_name: string;
+    name?: string;
+    [key: string]: unknown;
+}
+
+export interface UomRecord {
+    uom_id: number;
+    uom_name: string;
+    [key: string]: unknown;
+}
+
+export interface WarehouseRecord {
+    warehouse_id: number;
+    warehouse_name: string;
+    [key: string]: unknown;
+}
+
+export interface PRRecord {
+    pr_id: number;
+    pr_no: string;
+    [key: string]: unknown;
+}
+
 export interface MasterCache {
-    units: Record<string, unknown>[];
-    branches: Record<string, unknown>[];
-    warehouses: Record<string, unknown>[];
-    employees: Record<string, unknown>[];
-    departments: Record<string, unknown>[];
-    vendors: Record<string, unknown>[];
-    customers: Record<string, unknown>[];
-    prs: Record<string, unknown>[];
+    units: UomRecord[];
+    branches: BranchRecord[];
+    warehouses: WarehouseRecord[];
+    employees: EmployeeRecord[];
+    departments: DepartmentRecord[];
+    vendors: VendorRecord[];
+    customers: CustomerRecord[];
+    prs: PRRecord[];
 }
 
 const CACHE_KEY = 'erp_master_data_cache';
 
+const ID_FIELD_MAP: Record<keyof MasterCache, string> = {
+    units: 'uom_id',
+    branches: 'branch_id',
+    warehouses: 'warehouse_id',
+    employees: 'employee_id',
+    departments: 'dept_id',
+    vendors: 'vendor_id',
+    customers: 'customer_id',
+    prs: 'pr_id'
+};
+
 const loadFromSession = (): MasterCache => {
-    try {
-        const stored = sessionStorage.getItem(CACHE_KEY);
-        if (stored) {
-            return JSON.parse(stored);
-        }
-    } catch (e) {
-        console.error('[master-data-cache] Failed to load from session', e);
-    }
-    return {
+    const defaultCache: MasterCache = {
         units: [],
         branches: [],
         warehouses: [],
@@ -36,20 +94,40 @@ const loadFromSession = (): MasterCache => {
         customers: [],
         prs: []
     };
+    try {
+        const stored = sessionStorage.getItem(CACHE_KEY);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            return {
+                ...defaultCache,
+                ...parsed
+            };
+        }
+    } catch (e) {
+        console.error('[master-data-cache] Failed to load from session', e);
+    }
+    return defaultCache;
 };
 
 const cache: MasterCache = loadFromSession();
 
 const saveToSession = () => {
     try {
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+        const slimCache: Partial<MasterCache> = {};
+        (Object.keys(cache) as (keyof MasterCache)[]).forEach(key => {
+            if (key !== 'customers' && key !== 'vendors') {
+                const data = cache[key];
+                (slimCache as Record<string, unknown>)[key] = data;
+            }
+        });
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(slimCache));
     } catch (e) {
         console.warn('[master-data-cache] Failed to save to session', e);
     }
 };
 
 export const masterDataCache = {
-    set: (key: keyof MasterCache, data: Record<string, unknown>[]) => {
+    set: <K extends keyof MasterCache>(key: K, data: MasterCache[K]) => {
         cache[key] = data;
         saveToSession();
     },
@@ -60,30 +138,11 @@ export const masterDataCache = {
         if (!id) return null;
         const list = cache[key];
         const idStr = String(id);
-        
-        // 🎯 Improved Search Logic:
-        // 1. Try key-specific ID first (e.g. branch_id for 'branches')
-        // 2. Fallback to generic 'id'
-        // 3. Last resort: greedy search (for backward compatibility)
-        const specificIdKey = `${key.slice(0, -1)}_id`; // units -> unit_id, branches -> branch_id
+        const specificIdKey = ID_FIELD_MAP[key];
         
         return list.find(item => {
-            if (String(item[specificIdKey]) === idStr) return true;
-            if (String(item.id) === idStr) return true;
-            
-            // Legacy greedy fallback
-            const greedyId = String(
-                item[`${key.slice(0, -1)}_id`] || 
-                item.branch_id || 
-                item.employee_id || 
-                item.department_id || 
-                item.warehouse_id || 
-                item.uom_id ||
-                item.pr_id ||
-                item.vendor_id ||
-                item.customer_id
-            );
-            return greedyId === idStr;
+            const itemRecord = item as Record<string, unknown>;
+            return String(itemRecord[specificIdKey]) === idStr || String(itemRecord.id) === idStr;
         }) || null;
     },
 
@@ -120,20 +179,25 @@ export const masterDataCache = {
         return pr ? String(pr.pr_no || pr.no || '') : null;
     },
 
-    setVendor: (id: number, name: string) => {
-        const existing = masterDataCache.findById('vendors', id);
-        if (!existing) {
-            cache.vendors.push({ vendor_id: id, vendor_name: name });
-            saveToSession();
+    upsert: (key: keyof MasterCache, item: Record<string, unknown>) => {
+        const list = cache[key];
+        const specificIdKey = ID_FIELD_MAP[key];
+        const itemId = String(item[specificIdKey] ?? item.id ?? '');
+        
+        if (!itemId) return;
+        
+        const index = list.findIndex(existing => {
+            const existingRecord = existing as Record<string, unknown>;
+            return String(existingRecord[specificIdKey]) === itemId || String(existingRecord.id) === itemId;
+        });
+        
+        if (index !== -1) {
+            (list as unknown as Record<string, unknown>[])[index] = item;
+        } else {
+            (list as unknown as Record<string, unknown>[]).push(item);
         }
-    },
-
-    setPR: (id: number, no: string) => {
-        const existing = masterDataCache.findById('prs', id);
-        if (!existing) {
-            cache.prs.push({ pr_id: id, pr_no: no });
-            saveToSession();
-        }
+        
+        saveToSession();
     },
 
     clear: () => {

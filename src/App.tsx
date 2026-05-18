@@ -97,6 +97,7 @@ const ICDocumentLinkList = React.lazy(() => import('@/modules/master-data/invent
 
 // Inventory Transaction Pages
 const RequisitionListPage = React.lazy(() => import('@/modules/Inventory/requisition/RequisitionListPage'));
+const InventoryDashboard = React.lazy(() => import('@/modules/Inventory/dashboard/InventoryDashboard'));
 // Currency Pages
 const CurrencyCodeList = React.lazy(() => import('@/modules/master-data/currency/pages/code/CurrencyCodeList'));
 const ExchangeRateTypeList = React.lazy(() => import('@/modules/master-data/currency/pages/type/ExchangeRateTypeList'));
@@ -333,6 +334,7 @@ function AppContent() {
 
             {/* ==================== INVENTORY MODULE ROUTES ==================== */}
             <Route path="inventory">
+              <Route path="dashboard" element={<InventoryDashboard />} />
               <Route path="requisition" element={<RequisitionListPage />} />
             </Route>
 
@@ -345,7 +347,7 @@ function AppContent() {
 
             {/* Inventory Placeholders (excluding implemented routes) */}
             {placeholderRoutes.inventory
-              .filter(({ path }) => path !== 'inventory/requisition')
+              .filter(({ path }) => path !== 'inventory/requisition' && path !== 'inventory/dashboard')
               .map(({ path, title }) => (
                 <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
               ))}
