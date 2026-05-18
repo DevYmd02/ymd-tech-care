@@ -1,60 +1,6 @@
 import api from '@/core/api/api';
 import { logger } from '@/shared/utils';
-import type { DocLinkIC, DocLinkICCreatePayload, DocLinkICUpdatePayload, DocLinkICItem } from '../types/doc-link-ic.types';
-
-// ==========================================
-// MOCK DATA (FOR ISSUE REQUISITION)
-// ==========================================
-const MOCK_IC_ITEMS: DocLinkICItem[] = [
-    {
-        docu_item_id: 'item-1',
-        docu_type_id: 'type-xxx',
-        docu_item_no: 1,
-        docu_item_name: 'ขอเบิกใช้',
-        stock_effect_ic: 0,
-        is_active: true
-    },
-    {
-        docu_item_id: 'item-2',
-        docu_type_id: 'type-xxx',
-        docu_item_no: 2,
-        docu_item_name: 'ขอเบิกผลิต',
-        stock_effect_ic: 0,
-        is_active: true
-    },
-    {
-        docu_item_id: 'item-3',
-        docu_type_id: 'type-xxx',
-        docu_item_no: 3,
-        docu_item_name: 'ขอเบิกตัวอย่าง',
-        stock_effect_ic: 0,
-        is_active: true
-    },
-    {
-        docu_item_id: 'item-4',
-        docu_type_id: 'type-xxx',
-        docu_item_no: 4,
-        docu_item_name: 'ขอเบิกตัดชำรุด',
-        stock_effect_ic: 0,
-        is_active: true
-    },
-    {
-        docu_item_id: 'item-5',
-        docu_type_id: 'type-xxx',
-        docu_item_no: 5,
-        docu_item_name: 'ขอเบิกยืม',
-        stock_effect_ic: 0,
-        is_active: true
-    },
-    {
-        docu_item_id: 'item-6',
-        docu_type_id: 'type-xxx',
-        docu_item_no: 6,
-        docu_item_name: 'ขอเบิกอื่นๆ',
-        stock_effect_ic: 0,
-        is_active: true
-    },
-];
+import type { DocLinkIC, DocLinkICCreatePayload, DocLinkICUpdatePayload, DocLinkICItem, DocLinkICBackendResponse } from '../types/doc-link-ic.types';
 
 export const DocLinkICService = {
     /**
@@ -81,7 +27,7 @@ export const DocLinkICService = {
             
             // ใช้ MOCK data ไปก่อน
             logger.info(`Fetching items for docu_type_id: ${docu_type_id}`);
-            return MOCK_IC_ITEMS.filter(item => item.is_active && item.docu_item_no > 0);
+            return [];
         } catch (error) {
             logger.error(`Failed to get doc-link-ic items for ${docu_type_id}:`, error);
             throw error;
@@ -127,15 +73,32 @@ export const DocLinkICService = {
     },
 
     // ==========================================
-    // DOC LINK IC ITEM CRUD (MOCK)
+    // DOC LINK IC ITEM CRUD (Real API)
     // ==========================================
 
-    async createItem(data: Omit<DocLinkICItem, 'docu_item_id'>): Promise<DocLinkICItem> {
+    async createItem(data: Omit<DocLinkICItem, 'docu_item_id'> & { system_document_id?: number }): Promise<DocLinkICItem> {
         try {
-            logger.info('Mock: Creating doc-link-ic item', data);
+            const payload: Record<string, unknown> = {
+                system_document_id: Number(data.system_document_id ?? data.docu_type_id),
+                doc_type_no: Number(data.doc_type_no ?? data.docu_item_no ?? 0),
+                doc_type_name: data.doc_type_name ?? data.docu_item_name,
+                docu_desc: data.docu_desc !== undefined ? data.docu_desc : (data.doc_type_name ?? data.docu_item_name),
+                remark: data.remark !== undefined ? data.remark : (data.doc_type_name ?? data.docu_item_name),
+                stock_effect_ic: data.stock_effect_ic,
+                is_active: data.is_active,
+            };
+            const response = await api.post<DocLinkICBackendResponse>('/doc-link-ic', payload);
             return {
-                ...data,
-                docu_item_id: `item-new-${Date.now()}`
+                docu_item_id: String(response.doc_link_ic_id ?? response.docu_item_id ?? ''),
+                docu_type_id: String(response.system_document_id ?? response.docu_type_id ?? ''),
+                docu_item_no: Number(response.doc_type_no ?? response.docu_item_no ?? 0),
+                doc_type_no: Number(response.doc_type_no ?? response.docu_item_no ?? 0),
+                docu_item_name: response.doc_type_name || response.docu_desc || '',
+                doc_type_name: response.doc_type_name || response.docu_desc || '',
+                stock_effect_ic: response.stock_effect_ic ?? 0,
+                is_active: response.is_active ?? true,
+                docu_desc: response.docu_desc || '',
+                remark: response.remark || '',
             };
         } catch (error) {
             logger.error('Failed to create doc-link-ic item:', error);
@@ -143,10 +106,40 @@ export const DocLinkICService = {
         }
     },
 
-    async updateItem(id: string, data: Partial<DocLinkICItem>): Promise<DocLinkICItem> {
+    async updateItem(id: string, data: Partial<DocLinkICItem> & { system_document_id?: number }): Promise<DocLinkICItem> {
         try {
-            logger.info(`Mock: Updating doc-link-ic item ${id}`, data);
-            return { ...data } as DocLinkICItem;
+            const payload: Record<string, unknown> = {};
+            if (data.system_document_id !== undefined || data.docu_type_id !== undefined) {
+                payload.system_document_id = Number(data.system_document_id ?? data.docu_type_id);
+            }
+            if (data.doc_type_no !== undefined || data.docu_item_no !== undefined) {
+                payload.doc_type_no = Number(data.doc_type_no ?? data.docu_item_no);
+            }
+            if (data.doc_type_name !== undefined || data.docu_item_name !== undefined) {
+                payload.doc_type_name = data.doc_type_name ?? data.docu_item_name;
+            }
+            if (data.docu_desc !== undefined) {
+                payload.docu_desc = data.docu_desc;
+            }
+            if (data.remark !== undefined) {
+                payload.remark = data.remark;
+            }
+            if (data.stock_effect_ic !== undefined) payload.stock_effect_ic = data.stock_effect_ic;
+            if (data.is_active !== undefined) payload.is_active = data.is_active;
+
+            const response = await api.patch<DocLinkICBackendResponse>(`/doc-link-ic/${id}`, payload);
+            return {
+                docu_item_id: String(response.doc_link_ic_id ?? response.docu_item_id ?? ''),
+                docu_type_id: String(response.system_document_id ?? response.docu_type_id ?? ''),
+                docu_item_no: Number(response.doc_type_no ?? response.docu_item_no ?? 0),
+                doc_type_no: Number(response.doc_type_no ?? response.docu_item_no ?? 0),
+                docu_item_name: response.doc_type_name || response.docu_desc || '',
+                doc_type_name: response.doc_type_name || response.docu_desc || '',
+                stock_effect_ic: response.stock_effect_ic ?? 0,
+                is_active: response.is_active ?? true,
+                docu_desc: response.docu_desc || '',
+                remark: response.remark || '',
+            };
         } catch (error) {
             logger.error(`Failed to update doc-link-ic item ${id}:`, error);
             throw error;
@@ -155,9 +148,9 @@ export const DocLinkICService = {
 
     async removeItem(id: string): Promise<void> {
         try {
-            logger.info(`Mock: Removing doc-link-ic item ${id}`);
+            await api.delete(`/doc-link-ic/${id}`);
         } catch (error) {
-            logger.error(`Failed to delete doc-link-ic item ${id}:`, error);
+            logger.error(`Failed to delete doc-link-ic ${id}:`, error);
             throw error;
         }
     },
