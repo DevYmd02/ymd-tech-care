@@ -23,8 +23,7 @@ export function AOFormSummary() {
   const baseVat = (watch('quote_tax_amount') as number) || (watch('base_tax_amount') as number) || 0;
   const baseTotal = (watch('quote_total_amount') as number) || (watch('base_total_amount') as number) || 0;
 
-  const isMulticurrency = watch('isMulticurrency') as boolean;
-  const currency = isMulticurrency ? (watch('quote_currency_code') as string) : (watch('base_currency_code') as string) || 'THB';
+  const currency = (watch('base_currency_code') as string) || 'THB';
 
   return (
     <section className="flex flex-col lg:flex-row justify-between gap-8 mt-6">

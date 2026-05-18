@@ -72,6 +72,7 @@ const mapToAQListItem = (
     quote_total_amount: finalQuoteAmount,
     base_total_amount: finalBaseAmount,
     currency: String(obj.currency || obj.quote_currency_code || obj.currency_code || 'THB'),
+    remarks: String(obj.remarks || obj.status_remark || ''),
     raw: obj,
   } satisfies AQListItem;
 };

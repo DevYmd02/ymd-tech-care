@@ -28,17 +28,19 @@ const mapToAOListItem = (
   isHistory: boolean, 
   index: number,
   customerMap?: Map<string | number, string>,
-  soNoMap?: Map<string | number, string>
+  soMap?: Map<string | number, Record<string, unknown>>
 ): AOListItem => {
-  const soObj = getSoHeader(obj);
   const rawSoId = obj.so_id || obj.id || obj.sale_order_id;
   const soId = typeof rawSoId === 'object' ? String((rawSoId as Record<string, unknown>)?.id || 0) : String(rawSoId || 0);
+  const mappedSo = soMap?.get(soId);
+  const soObj = mappedSo || getSoHeader(obj);
   
   // ดึงเลขที่ SO (ลำดับความสำคัญ: จาก Map Join > จากตัวแปรตรงๆ > จากอ็อบเจกต์ซ้อน > Fallback)
-  const soNo = soNoMap?.get(soId) || String(
+  const soNo = String(
+    soObj?.so_no || 
+    soObj?.soNo || 
     obj['so_no'] || 
     obj['soNo'] || 
-    soObj?.so_no || 
     (soId && soId !== '0' ? `SO-${soId}` : '')
   );
 
@@ -71,8 +73,14 @@ const mapToAOListItem = (
   const status = String(obj.status || (isHistory ? 'APPROVED' : 'PENDING')).toUpperCase();
 
   const isRejected = status === 'REJECTED';
-  const finalQuoteAmount = isRejected ? 0 : displayQuoteAmount;
-  const finalBaseAmount = isRejected ? 0 : Number(obj.base_total_amount || (finalQuoteAmount * Number(obj.exchange_rate || 1)));
+
+  const finalQuoteAmount = isRejected
+    ? Number(soObj?.total_amount || soObj?.quote_total_amount || soObj?.base_total_amount || displayQuoteAmount)
+    : displayQuoteAmount;
+
+  const finalBaseAmount = isRejected
+    ? Number(soObj?.base_total_amount || soObj?.total_amount || soObj?.quote_total_amount || obj.base_total_amount || (finalQuoteAmount * Number(obj.exchange_rate || 1)))
+    : Number(obj.base_total_amount || (finalQuoteAmount * Number(obj.exchange_rate || 1)));
 
   return {
     row_key: `${isHistory ? 'ao' : 'pending'}-${obj.ao_id || obj.so_approval_id || obj.id || soId || index}`,
@@ -89,26 +97,26 @@ const mapToAOListItem = (
     quote_total_amount: finalQuoteAmount,
     total_amount: finalQuoteAmount,
     base_total_amount: finalBaseAmount,
-    currency: String(obj.currency || obj.quote_currency_code || obj.currency_code || soObj?.currency || 'THB'),
+    currency: String(obj.currency || obj.base_currency_code || obj.currency_code || soObj?.currency || 'THB'),
     raw: obj,
   } satisfies AOListItem;
 };
 
 export const AOService = {
-  getPendingSOs: async (customerMap?: Map<string | number, string>, soNoMap?: Map<string | number, string>): Promise<AOListItem[]> => {
+  getPendingSOs: async (customerMap?: Map<string | number, string>, soMap?: Map<string | number, Record<string, unknown>>): Promise<AOListItem[]> => {
     const res = await api.get<unknown>(ENDPOINTS.pendingSOs, {
       params: { limit: 1000, page: 1 },
     });
     const items = extractArrayFromResponse<Record<string, unknown>>(res as object);
-    return items.map((item, i) => mapToAOListItem(item, false, i, customerMap, soNoMap));
+    return items.map((item, i) => mapToAOListItem(item, false, i, customerMap, soMap));
   },
 
-  getApprovalList: async (params?: Record<string, unknown>, customerMap?: Map<string | number, string>, soNoMap?: Map<string | number, string>): Promise<AOListItem[]> => {
+  getApprovalList: async (params?: Record<string, unknown>, customerMap?: Map<string | number, string>, soMap?: Map<string | number, Record<string, unknown>>): Promise<AOListItem[]> => {
     const res = await api.get<unknown>(ENDPOINTS.approvalList, { 
       params: { limit: 1000, page: 1, ...params } 
     });
     const items = extractArrayFromResponse<Record<string, unknown>>(res as object);
-    return items.map((item, i) => mapToAOListItem(item, true, i, customerMap, soNoMap));
+    return items.map((item, i) => mapToAOListItem(item, true, i, customerMap, soMap));
   },
 
   getSOById: async (id: string | number) => {

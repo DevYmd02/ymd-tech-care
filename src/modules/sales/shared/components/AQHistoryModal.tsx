@@ -88,16 +88,20 @@ export const AQHistoryModal: React.FC<AQHistoryModalProps> = ({
     }),
     columnHelper.accessor('status', {
       header: () => <div className="text-center w-full">สถานะ</div>,
-      cell: (info) => (
-        <div className="flex flex-col items-center gap-1">
-          <SQStatusBadge status={info.getValue()} />
-          {!!info.row.original.remarks && (
-            <span className="text-[10px] text-gray-500 italic max-w-[150px] truncate" title={String(info.row.original.remarks)}>
-              หมายเหตุ: {String(info.row.original.remarks)}
-            </span>
-          )}
-        </div>
-      ),
+      cell: (info) => {
+        const raw = info.row.original.raw as Record<string, unknown> | undefined;
+        const remarks = info.row.original.remarks || raw?.remarks || raw?.status_remark || '';
+        return (
+          <div className="flex flex-col items-center gap-1">
+            <SQStatusBadge status={info.getValue()} />
+            {!!remarks && (
+              <span className="text-[10px] text-red-500 dark:text-red-400 italic max-w-[130px] whitespace-normal break-words text-center" title={String(remarks)}>
+                หมายเหตุ: {String(remarks)}
+              </span>
+            )}
+          </div>
+        );
+      },
       size: 130,
     }),
   ], []);
