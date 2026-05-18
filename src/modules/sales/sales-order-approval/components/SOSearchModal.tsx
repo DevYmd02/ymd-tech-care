@@ -61,10 +61,10 @@ export const SOSearchModal: React.FC<SOSearchModalProps> = React.memo(({
     });
 
     const soNoMap = useMemo(() => {
-        const map = new Map<string | number, string>();
+        const map = new Map<string | number, Record<string, unknown>>();
         const items = (soResponse as unknown as { data?: Record<string, unknown>[] })?.data || [];
         items.forEach((s) => {
-            map.set(String(s.so_id), String(s.so_no || ''));
+            map.set(String(s.so_id), s);
         });
         return map;
     }, [soResponse]);

@@ -42,26 +42,26 @@ export const useAOListData = (params: UseAOListDataParams) => {
     staleTime: 10 * 60 * 1000,
   });
 
-  const soNoMap = useMemo(() => {
-    const map = new Map<string | number, string>();
+  const soMap = useMemo(() => {
+    const map = new Map<string | number, Record<string, unknown>>();
     const items = (soResponse as unknown as { data?: Record<string, unknown>[] })?.data || [];
     items.forEach((s) => {
-      map.set(String(s.so_id), String(s.so_no || ''));
+      map.set(String(s.so_id), s);
     });
     return map;
   }, [soResponse]);
 
   // 2. Fetch Pending SOs
   const { data: pendingData, isLoading: isLoadingPending, refetch: refetchPending } = useQuery({
-    queryKey: ['so-approvals-pending-list', customerMap.size > 0, soNoMap.size > 0],
-    queryFn: () => AOService.getPendingSOs(customerMap, soNoMap),
+    queryKey: ['so-approvals-pending-list', customerMap.size > 0, soMap.size > 0],
+    queryFn: () => AOService.getPendingSOs(customerMap, soMap),
     staleTime: 3 * 60 * 1000,
   });
 
   // 3. Fetch History
   const { data: historyData, isLoading: isLoadingHistory, refetch: refetchHistory } = useQuery({
-    queryKey: ['so-approvals-history-list', customerMap.size > 0, soNoMap.size > 0],
-    queryFn: () => AOService.getApprovalList({ limit: 1000, page: 1 }, customerMap, soNoMap),
+    queryKey: ['so-approvals-history-list', customerMap.size > 0, soMap.size > 0],
+    queryFn: () => AOService.getApprovalList({ limit: 1000, page: 1 }, customerMap, soMap),
     staleTime: 3 * 60 * 1000,
   });
 

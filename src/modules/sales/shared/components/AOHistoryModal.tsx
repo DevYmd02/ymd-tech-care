@@ -4,6 +4,7 @@ import { Clock } from 'lucide-react';
 import { createColumnHelper } from '@tanstack/react-table';
 import { AOService } from '@sales/sales-order-approval/services/ao.service';
 import type { AOListItem } from '@sales/sales-order-approval/types/sales-order-approval.types';
+import { SalesOrderService } from '@sales/sales-order/services/sales-order.service';
 import { ModalLayout } from '@ui';
 import { SmartTable } from '@ui/data-display/SmartTable';
 import { SOStatusBadge } from './SOStatusBadge';
@@ -24,11 +25,26 @@ const formatDate = (val?: string) => {
 };
 
 export const AOHistoryModal: React.FC<Props> = ({ isOpen, onClose, soId, soNo }) => {
+  const { data: soData } = useQuery({
+    queryKey: ['so-detail-for-history', soId],
+    queryFn: () => {
+      if (!soId) return null;
+      return SalesOrderService.getById(String(soId));
+    },
+    enabled: isOpen && !!soId,
+  });
+
   const { data: historyData, isLoading } = useQuery({
-    queryKey: ['so-approval-history', soId],
+    queryKey: ['so-approval-history', soId, !!soData],
     queryFn: () => {
       if (!soId) return [];
-      return AOService.getApprovalList({ so_id: soId });
+      const soMap = new Map<string | number, Record<string, unknown>>();
+        if (soData) {
+        const rawSo = soData as unknown as Record<string, unknown>;
+        const header = (rawSo.header || rawSo.sale_order_header || rawSo.so_header || rawSo) as Record<string, unknown>;
+        soMap.set(String(soId), header);
+      }
+      return AOService.getApprovalList({ so_id: soId }, undefined, soMap);
     },
     enabled: isOpen && !!soId,
   });

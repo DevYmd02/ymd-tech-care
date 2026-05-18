@@ -184,10 +184,14 @@ function normalizeSO(raw: unknown): SOForApproval | null {
     base_total_amount: Number(obj.base_total_amount || obj.total_amount || obj.net_total || 0),
 
     
+    base_currency_code: String(obj.base_currency_code || 'THB'),
+    base_currency_id: Number(obj.base_currency_id || 1),
+    quote_currency_code: String(obj.quote_currency_code || 'THB'),
+    quote_currency_id: Number(obj.quote_currency_id || 1),
     currency_code: String(obj.currency_code || obj.base_currency_code || 'THB'),
     exchange_rate: Number(obj.exchange_rate || 1),
     exchange_rate_date: String(obj.exchange_rate_date || obj.so_date || '').split('T')[0],
-    isMulticurrency: Boolean(obj.isMulticurrency || obj.is_multicurrency || obj.base_currency_code !== 'THB'),
+    isMulticurrency: Boolean(obj.isMulticurrency || obj.is_multicurrency || (obj.base_currency_code && obj.base_currency_code !== 'THB')),
     
     remarks: String(obj.remarks || ''),
     status: (obj.status as SOForApproval['status']) || 'PENDING',
@@ -697,7 +701,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
         onhold: so.onhold || 'N',
         isMulticurrency: aoDetails && 'isMulticurrency' in aoDetails 
           ? Boolean(aoDetails.isMulticurrency) 
-          : true,
+          : (so.isMulticurrency !== undefined ? Boolean(so.isMulticurrency) : (so.base_currency_code !== 'THB' && so.base_currency_code !== '')),
         lines: mappedLines,
       } as AOFormData);
 
