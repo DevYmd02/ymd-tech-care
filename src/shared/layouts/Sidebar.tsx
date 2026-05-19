@@ -120,7 +120,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                         }}
                         title={item.label}
                         className={`
-                            w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-[13px] font-semibold cursor-pointer 
+                            w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold cursor-pointer 
                             transition-all duration-300 select-none group/item
                             ${isActive
                                 ? 'bg-blue-50/70 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 font-semibold shadow-[inset_0_0_12px_rgba(37,99,235,0.03)]'
@@ -163,8 +163,8 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                     className={`
                         flex items-center justify-between rounded-xl transition-all duration-300 group/link
                         ${depth > 0 
-                            ? 'py-2 px-3 text-[12.5px] font-medium' 
-                            : 'py-2.5 px-3.5 text-[13px] font-semibold'
+                            ? 'py-2 px-3 text-[11.5px] font-medium' 
+                            : 'py-2.5 px-3.5 text-xs font-semibold'
                         }
                         ${isCurrentPage
                             ? 'bg-[#0055A4] text-white font-semibold shadow-[0_4px_14px_rgba(0,85,164,0.25)] border-l-4 border-white/80'
