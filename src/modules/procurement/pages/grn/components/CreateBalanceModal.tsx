@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ItemLotService } from '@inventory/services/item-lot.service';
 import { MasterDataService } from '@master-data/services/master-data.service';
 import { LocationService } from '@inventory/services/inventory-master.service';
-import { GrnInventoryService } from '../../../services/grn-inventory.service';
+import { GrnInventoryService } from '@procurement/services/grn-inventory.service';
 
 import type { ItemLot } from '@inventory/types/item-lot-types';
 

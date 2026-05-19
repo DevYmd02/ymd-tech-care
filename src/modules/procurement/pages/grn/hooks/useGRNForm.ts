@@ -5,15 +5,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';
 import { logger } from '@utils';
 import { extractErrorMessage } from '@/core/api/api';
-import { GRNService } from '../../../services/grn.service';
+import { GRNService } from '@procurement/services/grn.service';
 import { POAService } from '@/modules/procurement/services';
 import { GRNFormSchema, type GRNFormValues } from '../schemas/grn.schemas';
 import { useWarehouses, useDepartments, useCurrencies, useEmployees } from '@master-data/hooks/useMasterData';
-import type { CreateGRNPayload } from '../../../types/grn-types';
-import type { POLine } from '../../../types/po-types';
+import type { CreateGRNPayload } from '@procurement/types/grn-types';
+import type { POLine } from '@procurement/types/po-types';
 import { calculateLineTotal } from '@/modules/procurement/utils/pricing.utils';
 import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
-import type { GRNHeader, GRNLine } from '../../../types/grn-types';
+import type { GRNHeader, GRNLine } from '@procurement/types/grn-types';
 
 interface UseGRNFormProps {
     isOpen: boolean;

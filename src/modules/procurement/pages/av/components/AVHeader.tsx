@@ -6,7 +6,7 @@ import type { VendorSelection } from '@/modules/procurement/types/pr-types';
 import type { CostCenter, Project } from '@/modules/master-data/types/master-data-types';
 import { VendorSearch } from '@/modules/master-data/vendor/components/selector/VendorSearch';
 import { StatusCheckbox } from '@ui';
-import type { AVFormData } from '../../../schemas/av.schema';
+import type { AVFormData } from '@procurement/schemas/av.schema';
 
 interface Props {
   prId?: number;
