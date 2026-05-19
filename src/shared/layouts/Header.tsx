@@ -70,14 +70,14 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
 
     // ==================== RENDER ====================
     return (
-        <div className="bg-white dark:bg-[#111827] border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-3 sm:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 transition-colors duration-200 relative z-50">
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 transition-colors duration-200 relative z-50">
 
             {/* ========== LEFT SECTION: Page Title & Breadcrumb ========== */}
             <div className="min-w-0 flex-1 flex items-center gap-3">
                 {/* Sidebar Toggle Button */}
                 <button 
                     onClick={onToggleSidebar}
-                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors shrink-0"
+                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 transition-colors shrink-0"
                     aria-label="Toggle sidebar"
                 >
                     {isSidebarOpen ? <ChevronLeft size={20} /> : <Menu size={20} />}
@@ -103,7 +103,7 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
                         icon: '🚧',
                         duration: 2000,
                     })}
-                    className="px-2 sm:px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded flex items-center space-x-1 transition-colors"
+                    className="px-2 sm:px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center space-x-1 transition-colors"
                     aria-label="Notifications"
                 >
                     <Bell size={18} />
@@ -124,10 +124,10 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
 
                     {/* Dropdown Menu */}
                     {isSettingsOpen && (
-                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#111827] rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
 
                             {/* Header */}
-                            <div className="px-4 py-2 border-b border-gray-100 dark:border-[#1f2937]">
+                            <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
                                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                     Appearance
                                 </p>
@@ -146,7 +146,7 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
                                             }}
                                             className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${theme === option.value
                                                 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                                                : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                                : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
                                                 }`}
                                         >
                                             <option.icon size={18} />
@@ -160,7 +160,7 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
                             </div>
 
                             {/* Divider */}
-                            <div className="border-t border-gray-100 dark:border-[#1f2937] my-2" />
+                            <div className="border-t border-gray-100 dark:border-gray-700 my-2" />
 
                             {/* Other Settings */}
                             <div className="px-4 py-2 text-xs text-gray-400 dark:text-gray-500">

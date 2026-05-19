@@ -10,42 +10,42 @@
 // ====================================================================================
 
 /** Container หลักของทุกหน้า */
-export const PAGE_CONTAINER = 'p-6 space-y-6 bg-gray-50 dark:bg-[#0b0f19] min-h-screen transition-colors duration-200';
+export const PAGE_CONTAINER = 'p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-200';
 
 
 /** Container แบบ compact (สำหรับ list pages) */
-export const PAGE_CONTAINER_COMPACT = 'p-6 space-y-4 bg-gray-50 dark:bg-[#0b0f19] min-h-screen transition-colors duration-200';
+export const PAGE_CONTAINER_COMPACT = 'p-6 space-y-4 bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-200';
 
 // ====================================================================================
 // NEW SEMANTIC COLORS
 // ====================================================================================
 
 /** Primary background (for cards, inputs, etc.) */
-export const BG_SURFACE = 'bg-white dark:bg-[#111827]';
+export const BG_SURFACE = 'bg-white dark:bg-gray-800';
 
 /** Alternate background (for pages, subtle areas) */
-export const BG_SUBTLE = 'bg-gray-50 dark:bg-[#111827]';
+export const BG_SUBTLE = 'bg-gray-50 dark:bg-gray-800';
 
 /** Active/Hover background (for list items, table rows) */
-export const BG_ACTIVE = 'bg-blue-50 dark:bg-[#1f2937]/50';
+export const BG_ACTIVE = 'bg-blue-50 dark:bg-gray-700/50';
 
 /** Header background (Table headers, Footers) */
-export const BG_HEADER = 'bg-gray-100 dark:bg-[#1f2937]';
+export const BG_HEADER = 'bg-gray-100 dark:bg-gray-700';
 
 /** Accent background (for headers, primary actions) */
 export const BG_ACCENT = 'bg-blue-600 dark:bg-blue-700';
 
 /** Default border */
-export const BORDER_DEFAULT = 'border-gray-200 dark:border-gray-800';
+export const BORDER_DEFAULT = 'border-gray-200 dark:border-gray-700';
 
 /** Subtle border (for table rows, dividers) */
-export const BORDER_SUBTLE = 'border-gray-100 dark:border-gray-800/60';
+export const BORDER_SUBTLE = 'border-gray-100 dark:border-gray-800';
 
 /** Ultra-faint border (for modern table rows) */
 export const BORDER_TABLE = 'border-transparent dark:border-transparent';
 
 /** Zebra striping for table rows */
-export const TABLE_STRIPE = 'even:bg-gray-100/50 dark:even:bg-[#1f2937]/20';
+export const TABLE_STRIPE = 'even:bg-gray-100/50 dark:even:bg-gray-700/30';
 
 /** Primary text */
 export const TEXT_PRIMARY = 'text-gray-900 dark:text-gray-100';
@@ -70,7 +70,7 @@ export const TEXT_SUCCESS = 'text-green-600 dark:text-green-400';
 // ====================================================================================
 
 /** Hover state for interactive rows/items */
-export const STATE_HOVER = 'hover:bg-blue-50 dark:hover:bg-[#1f2937]/50 transition-colors';
+export const STATE_HOVER = 'hover:bg-blue-50 dark:hover:bg-gray-700/50 transition-colors';
 
 /** Active/Selected state */
 export const STATE_ACTIVE = 'bg-blue-100/30 dark:bg-blue-900/20';
@@ -80,63 +80,63 @@ export const STATE_ACTIVE = 'bg-blue-100/30 dark:bg-blue-900/20';
 // ====================================================================================
 
 /** Card พื้นฐาน (สีขาว/เทา) */
-export const CARD = 'bg-white dark:bg-[#111827] rounded-lg shadow-sm border border-gray-200 dark:border-gray-800';
+export const CARD = 'bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700';
 
 /** Card แบบ glassmorphism */
-export const CARD_GLASS = 'bg-white dark:bg-[#111827]/70 dark:backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm';
+export const CARD_GLASS = 'bg-white dark:bg-gray-800/50 dark:backdrop-blur-sm rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm';
 
 /** Card สำหรับ hover effect */
-export const CARD_HOVER = 'bg-white dark:bg-[#111827]/50 dark:backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 hover:shadow-md dark:hover:border-gray-700 transition-all';
+export const CARD_HOVER = 'bg-white dark:bg-gray-800/50 dark:backdrop-blur-sm rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md dark:hover:border-gray-600 transition-all';
 
 // ====================================================================================
 // TABLES
 // ====================================================================================
 
 /** Table container */
-export const TABLE_CONTAINER = 'bg-white dark:bg-[#111827] rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden';
+export const TABLE_CONTAINER = 'bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden';
 
 /** Table header row */
-export const TABLE_HEADER = 'bg-gray-100 dark:bg-[#1f2937] border-b border-gray-200 dark:border-gray-800';
+export const TABLE_HEADER = 'bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600';
 
 /** Table header cell */
 export const TABLE_TH = 'px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider';
 
 /** Table body row */
-export const TABLE_TR = 'border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-[#1f2937]/50 transition-colors';
+export const TABLE_TR = 'border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors';
 
 /** Table body cell */
 export const TABLE_TD = 'px-4 py-3 text-sm text-gray-600 dark:text-gray-300';
 
 /** Table footer */
-export const TABLE_FOOTER = 'flex justify-between items-center px-4 py-3 bg-gray-50 dark:bg-[#111827] border-t border-gray-200 dark:border-gray-800';
+export const TABLE_FOOTER = 'flex justify-between items-center px-4 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600';
 
 // ====================================================================================
 // INPUTS
 // ====================================================================================
 
 /** Input พื้นฐาน */
-export const INPUT = 'w-full h-10 px-3 bg-white dark:bg-[#1f2937] border border-gray-300 dark:border-gray-700/80 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder-gray-400';
+export const INPUT = 'w-full h-10 px-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-900 dark:text-white placeholder-gray-400';
 
 /** Input แบบ compact */
-export const INPUT_SM = 'h-8 px-2 text-sm bg-gray-50 dark:bg-[#1f2937] border border-gray-300 dark:border-gray-700/80 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white';
+export const INPUT_SM = 'h-8 px-2 text-sm bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-900 dark:text-white';
 
 /** Input with flex-1 for form rows */
-export const INPUT_FLEX = 'flex-1 min-w-0 h-9 px-3 border border-gray-300 dark:border-gray-700/80 rounded-md bg-white dark:bg-[#1f2937] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+export const INPUT_FLEX = 'flex-1 min-w-0 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
 
 /** Input disabled state */
-export const INPUT_DISABLED = 'flex-1 min-w-0 h-9 px-3 border border-gray-300 dark:border-gray-700/80 rounded-md bg-white dark:bg-[#1f2937] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-800';
+export const INPUT_DISABLED = 'flex-1 min-w-0 h-9 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-600';
 
 /** Select dropdown */
-export const INPUT_SELECT = 'flex-1 h-10 px-3 border border-gray-300 dark:border-gray-700/80 rounded-lg bg-white dark:bg-[#1f2937] text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+export const INPUT_SELECT = 'flex-1 h-10 px-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
 
 /** Textarea */
-export const TEXTAREA = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-700/80 rounded-lg bg-white dark:bg-[#1f2937] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
+export const TEXTAREA = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500';
 
 /** Label สำหรับ input */
 export const LABEL = 'block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1';
 
 /** Input error state */
-export const INPUT_ERROR = 'w-full h-10 px-3 bg-white dark:bg-[#1f2937] border border-red-500 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-sm text-gray-900 dark:text-white placeholder-gray-400';
+export const INPUT_ERROR = 'w-full h-10 px-3 bg-white dark:bg-gray-700 border border-red-500 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 text-sm text-gray-900 dark:text-white placeholder-gray-400';
 
 /** Focus rings for different accents */
 export const FOCUS_RINGS = {
