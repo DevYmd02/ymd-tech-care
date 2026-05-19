@@ -560,7 +560,7 @@ export default function AdminDashboard() {
                 {/* COLUMN 2: Cyber Diagnostics & Status Control Deck */}
                 <Card className="p-6 border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
                     <div>
-                        <div className="flex justify-between items-center mb-6">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                             <div className="space-y-1">
                                 <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                                     <CheckCircle2 size={18} className="text-emerald-500" />
@@ -572,7 +572,7 @@ export default function AdminDashboard() {
                             <button
                                 onClick={handlePingCheck}
                                 disabled={pinging}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm ${pinging ? 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600' : 'bg-white hover:bg-slate-50 border-slate-200 text-indigo-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-indigo-400'}`}
+                                className={`flex-shrink-0 whitespace-nowrap flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm ${pinging ? 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-600' : 'bg-white hover:bg-slate-50 border-slate-200 text-indigo-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 dark:text-indigo-400'}`}
                             >
                                 <RefreshCw size={12} className={`${pinging ? 'animate-spin' : ''}`} />
                                 <span>{pinging ? 'กำลังตรวจ...' : 'ตรวจสอบอีกครั้ง'}</span>
