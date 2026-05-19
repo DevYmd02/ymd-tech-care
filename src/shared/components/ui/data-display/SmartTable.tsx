@@ -296,8 +296,8 @@ export function SmartTable<TData>({
                                             }}
                                             className={`${meta?.tdClassName || 'px-2 py-3 text-sm'} text-gray-700 dark:text-gray-300 transition-colors ${
                                                 stickyType 
-                                                    ? 'bg-white dark:bg-[#1f2937] group-even:bg-[#f9fafb] dark:group-even:bg-[#26303f] group-hover:bg-[#f0f7ff] dark:group-hover:bg-[#2b3544]' 
-                                                    : 'group-even:bg-[#f9fafb] dark:group-even:bg-[#26303f] group-hover:bg-[#f0f7ff] dark:group-hover:bg-[#2b3544]'
+                                                    ? 'bg-white dark:bg-[#111827] group-even:bg-[#f9fafb] dark:group-even:bg-[#1f2937]/35 group-hover:bg-[#f0f7ff] dark:group-hover:bg-[#1f2937]/75' 
+                                                    : 'group-even:bg-[#f9fafb] dark:group-even:bg-[#1f2937]/35 group-hover:bg-[#f0f7ff] dark:group-hover:bg-[#1f2937]/75'
                                             } ${
                                                 stickyType === 'left' && stickyBorders ? `border-r border-gray-100 dark:border-gray-700/50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]` :
                                                 stickyType === 'right' && stickyBorders ? `border-l border-gray-100 dark:border-gray-700/50 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]` : ''
