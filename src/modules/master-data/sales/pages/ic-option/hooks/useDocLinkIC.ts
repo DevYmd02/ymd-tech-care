@@ -5,6 +5,7 @@ import { DocLinkICService } from '../services/doc-link-ic.service';
 import { SystemDocumentService } from '../services/system-document.service';
 import type { DocLinkIC, DocLinkICCreatePayload, DocLinkICUpdatePayload, DocLinkICItem } from '../types/doc-link-ic.types';
 import type { SystemDocument } from '../services/system-document.service';
+import { extractErrorMessage } from '@/core/api/api';
 
 export type SubItem = { docu_item_id?: string; name: string; stock_effect_ic: 0 | 1 | 2; docu_desc?: string; remark?: string; };
 export type EditableRow = Partial<DocLinkIC> & { isNew?: boolean; initial_sub_items?: SubItem[]; system_document_id?: number | null; };
@@ -75,7 +76,9 @@ export function useDocLinkIC() {
             toast('เพิ่มประเภทเอกสารสำเร็จ', 'success');
             setIsAdding(false); setNewRowData(null); setFieldErrors({});
         },
-        onError: () => toast('เกิดข้อผิดพลาด', 'error'),
+        onError: (err: unknown) => {
+            toast(extractErrorMessage(err), 'error');
+        },
     });
 
     const updateMutation = useMutation({
@@ -85,13 +88,17 @@ export function useDocLinkIC() {
             toast('แก้ไขสำเร็จ', 'success');
             setEditingId(null); setEditData(null); setFieldErrors({});
         },
-        onError: () => toast('เกิดข้อผิดพลาด', 'error'),
+        onError: (err: unknown) => {
+            toast(extractErrorMessage(err), 'error');
+        },
     });
 
     const deleteMutation = useMutation({
         mutationFn: (id: string) => DocLinkICService.remove(id),
         onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['doc-link-ic'] }); toast('ลบสำเร็จ', 'success'); },
-        onError: () => toast('เกิดข้อผิดพลาด', 'error'),
+        onError: (err: unknown) => {
+            toast(extractErrorMessage(err), 'error');
+        },
     });
 
     useEffect(() => {
@@ -133,6 +140,16 @@ export function useDocLinkIC() {
         if (!newRowData) return;
         const errs: Record<string, string> = {};
         if (!newRowData.system_document_id) errs.system_document_id = 'กรุณาเลือกประเภทเอกสาร';
+        
+        // Check for duplicate active system document
+        if (newRowData.system_document_id) {
+            const isDuplicate = parents.some(p => p.is_active && Number(p.system_document_id) === Number(newRowData.system_document_id));
+            if (isDuplicate) {
+                errs.system_document_id = 'รหัสประเภทเอกสารนี้ถูกกำหนดใช้งานแล้ว';
+                toast('รหัสประเภทเอกสารนี้ถูกกำหนดใช้งานแล้ว กรุณาเลือกประเภทเอกสารอื่น', 'error');
+            }
+        }
+
         if (Object.keys(errs).length > 0) { setFieldErrors(errs); return; }
 
         const subs = (newRowData.initial_sub_items || []).filter(s => s.name.trim());

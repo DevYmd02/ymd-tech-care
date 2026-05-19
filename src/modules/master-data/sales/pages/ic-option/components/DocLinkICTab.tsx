@@ -111,31 +111,46 @@ export function DocLinkICTab() {
             <tr key={isNew ? 'new' : String(item.doc_link_ic_id ?? item.docu_type_id)} ref={isNew ? lastRowRef : null} className="bg-[#fefaf6] dark:bg-[#1f1107]">
                 <td className="sticky left-0 z-10 px-3 py-3 bg-[#fefaf6] dark:bg-[#1f1107] shadow-[2px_0_5px_rgba(0,0,0,0.15)] w-[140px] align-top border-b border-gray-200 dark:border-gray-700/60">
                     {isNew ? (
-                        <select 
-                            value={currentData?.system_document_id||''} 
-                            onFocus={() => setIsDocFocused(true)}
-                            onBlur={() => setIsDocFocused(false)}
-                            onChange={e => { 
-                                const id = e.target.value ? Number(e.target.value) : null; 
-                                const doc = systemDocs.find(d => d.system_document_id === id); 
-                                setter(p => ({
-                                    ...p!,
-                                    system_document_id: id,
-                                    docu_type_code: doc?.system_document_code || '',
-                                    docu_name_th: doc?.system_document_name || '',
-                                    docu_name_en: doc?.system_document_name_eng || doc?.system_document_name || ''
-                                })); 
-                                e.target.blur();
-                            }} 
-                            className={inputCls(fieldErrors.system_document_id)}
-                        >
-                            <option value="">-- เลือก --</option>
-                            {systemDocs.map(d => (
-                                <option key={d.system_document_id} value={d.system_document_id}>
-                                    {isDocFocused ? `${d.system_document_code} - ${d.system_document_name}` : d.system_document_code}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="space-y-1">
+                            <select 
+                                value={currentData?.system_document_id||''} 
+                                onFocus={() => setIsDocFocused(true)}
+                                onBlur={() => setIsDocFocused(false)}
+                                onChange={e => { 
+                                    const id = e.target.value ? Number(e.target.value) : null; 
+                                    const doc = systemDocs.find(d => d.system_document_id === id); 
+                                    setter(p => ({
+                                        ...p!,
+                                        system_document_id: id,
+                                        docu_type_code: doc?.system_document_code || '',
+                                        docu_name_th: doc?.system_document_name || '',
+                                        docu_name_en: doc?.system_document_name_eng || doc?.system_document_name || ''
+                                    })); 
+                                    e.target.blur();
+                                }} 
+                                className={inputCls(fieldErrors.system_document_id)}
+                            >
+                                <option value="">-- เลือก --</option>
+                                {systemDocs.map(d => {
+                                    const isUsed = parents.some(p => p.is_active && Number(p.system_document_id) === d.system_document_id);
+                                    return (
+                                        <option 
+                                            key={d.system_document_id} 
+                                            value={d.system_document_id}
+                                            disabled={isUsed}
+                                        >
+                                            {isDocFocused 
+                                                ? `${d.system_document_code} - ${d.system_document_name}${isUsed ? ' (ถูกใช้งานแล้ว)' : ''}` 
+                                                : `${d.system_document_code}${isUsed ? ' (ใช้งานแล้ว)' : ''}`
+                                            }
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                            {fieldErrors.system_document_id && (
+                                <p className="text-[10px] text-red-500 leading-tight font-medium">{fieldErrors.system_document_id}</p>
+                            )}
+                        </div>
                     ) : <span className="font-bold text-indigo-600 dark:text-indigo-400">{currentData?.docu_type_code}</span>}
                 </td>
                 <td className="px-3 py-3 w-[220px] align-top border-b border-gray-200 dark:border-gray-700/60"><input type="text" value={currentData?.docu_name_th||''} readOnly className={inputCls()+' cursor-not-allowed opacity-60'} placeholder="ชื่อ TH (อัตโนมัติ)"/></td>
