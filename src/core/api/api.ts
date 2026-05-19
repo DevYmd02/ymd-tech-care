@@ -173,8 +173,9 @@ api.interceptors.response.use(
     const isLoginRequest = url?.includes('/auth/login');
     
     // 🚀 RETRY LOGIC: Retry GET requests on transient errors (5xx, 429, or Network Error)
+    const isCancel = axios.isCancel(error) || error?.name === 'CanceledError';
     const isGet = method === 'GET';
-    const isRetryable = status === 429 || (typeof status === 'number' && status >= 500) || status === 'UNKNOWN';
+    const isRetryable = !isCancel && (status === 429 || (typeof status === 'number' && status >= 500) || status === 'UNKNOWN');
     const retryCount = config?._retryCount || 0;
 
     if (isGet && isRetryable && retryCount < MAX_RETRIES) {

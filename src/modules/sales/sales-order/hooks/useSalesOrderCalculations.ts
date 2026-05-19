@@ -37,13 +37,14 @@ export function useSalesOrderCalculations({
     const watchedLineTotals = useMemo(() => lines.map(l => l.line_total), [lines]);
 
     const totals = useMemo(() => {
+        logger.time('useSalesOrderCalculations [totals_calculation]');
         const isExisting = !!id;
         const hasLines = lines.length > 0;
 
         // 🛑 Fix Loop: Use initialData (stable) for fallback if lines haven't loaded yet
         if (isExisting && !hasLines && initialData) {
             const data = initialData as Record<string, unknown>;
-            return {
+            const staticTotals = {
                 subTotal: Number(data.sub_total || 0),
                 discountAmount: Number(data.discount_amount || 0),
                 vatAmount: Number(data.vat_amount || 0),
@@ -51,6 +52,8 @@ export function useSalesOrderCalculations({
                 taxRate: 0, 
                 isStatic: true 
             };
+            logger.timeEnd('useSalesOrderCalculations [totals_calculation]');
+            return staticTotals;
         }
 
         const subTotal = watchedLineTotals.reduce((sum: number, val: number | string | undefined | null) => sum + (Number(val) || 0), 0);
@@ -63,7 +66,7 @@ export function useSalesOrderCalculations({
         const vatAmount = calculateVatAmount(subTotal - calculatedDiscount, taxRate);
         const totalAmount = calculateNetTotal(subTotal, calculatedDiscount, vatAmount);
 
-        return {
+        const activeTotals = {
             subTotal,
             discountAmount: calculatedDiscount,
             vatAmount,
@@ -71,6 +74,8 @@ export function useSalesOrderCalculations({
             taxRate,
             isStatic: false
         };
+        logger.timeEnd('useSalesOrderCalculations [totals_calculation]');
+        return activeTotals;
     }, [watchedLineTotals, discount_input, tax_code_id, taxCodes, id, initialData, lines]);
 
     // Sync calculated totals back to the form

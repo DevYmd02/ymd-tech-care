@@ -1,6 +1,126 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Search, Tag, Check, Plus, PackagePlus, Layers, List, Edit2, MapPin } from 'lucide-react';
+import { Search, Tag, Check, Plus, PackagePlus, Layers, List, Edit2, MapPin, AlertTriangle, RefreshCw } from 'lucide-react';
+import { ErrorBoundary } from 'react-error-boundary';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
+
+interface TableErrorFallbackProps {
+    error: Error;
+    resetErrorBoundary: () => void;
+}
+
+function TableErrorFallback({ error, resetErrorBoundary }: TableErrorFallbackProps) {
+    return (
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-rose-50/50 dark:bg-rose-950/10 border border-rose-100 dark:border-rose-900/30 rounded-2xl m-6">
+            <div className="bg-rose-100 dark:bg-rose-900/40 p-3.5 rounded-full text-rose-600 dark:text-rose-400 mb-4 animate-bounce shadow-lg shadow-rose-500/10">
+                <AlertTriangle size={32} />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">ระบบไม่สามารถดึงข้อมูลล็อตได้</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mb-6 leading-relaxed">
+                {error?.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูลจากเซิร์ฟเวอร์ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตของคุณ'}
+            </p>
+            <button
+                onClick={resetErrorBoundary}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-500/25 active:scale-95 transition-all flex items-center gap-2"
+            >
+                <RefreshCw size={16} />
+                <span>โหลดข้อมูลใหม่อีกครั้ง (Retry)</span>
+            </button>
+        </div>
+    );
+}
+
+const AvailableSkeleton = () => (
+    <table className="w-full text-left border-separate border-spacing-0">
+        <thead className="sticky top-0 z-10 bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md">
+            <tr>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขล็อต (Lot No.)</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right">จำนวนคงเหลือ<br/>(ON HAND)</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right text-orange-600 dark:text-orange-400">ยอดจอง<br/>(RESERVED)</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right text-emerald-600 dark:text-emerald-400">พร้อมใช้งาน<br/>(AVAILABLE)</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">คลัง/ที่เก็บ</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">วันผลิต/หมดอายุ</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">จัดการ</th>
+            </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30">
+            {Array.from({ length: 5 }).map((_, index) => (
+                <tr key={index} className="animate-pulse">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-2">
+                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-28" />
+                            <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-20" />
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 ml-auto" />
+                    </td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 ml-auto" />
+                    </td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 ml-auto" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-2">
+                            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24" />
+                            <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-16" />
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex flex-col gap-2">
+                            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-28" />
+                            <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-28" />
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-2">
+                            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded-lg w-14 animate-pulse" />
+                            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded-lg w-14 animate-pulse" />
+                        </div>
+                    </td>
+                </tr>
+            ))}
+        </tbody>
+    </table>
+);
+
+const AllLotsSkeleton = () => (
+    <table className="w-full text-left border-separate border-spacing-0">
+        <thead className="sticky top-0 z-10 bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md">
+            <tr>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขล็อต (Lot No.)</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">สถานะ</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right">จำนวนคงคลังรวม</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">วันผลิต/หมดอายุ</th>
+                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">จัดการ</th>
+            </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30">
+            {Array.from({ length: 5 }).map((_, index) => (
+                <tr key={index} className="animate-pulse">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded-full w-14 animate-pulse" />
+                    </td>
+                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16 ml-auto animate-pulse" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-28 animate-pulse" />
+                    </td>
+                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-2 animate-pulse">
+                            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded-lg w-14" />
+                            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded-lg w-14" />
+                        </div>
+                    </td>
+                </tr>
+            ))}
+        </tbody>
+    </table>
+);
 import { GrnInventoryService } from '@procurement/services/grn-inventory.service';
 import type { LotNo } from '@inventory/types/inventory-master.types';
 import { useQuery } from '@tanstack/react-query';
@@ -83,7 +203,13 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
     }, [locationId, locations]);
 
     // --- Tab 1 Data: Available Balances ---
-    const { data: response, isLoading: isLoadingBalances, refetch: refetchBalances } = useQuery({
+    const { 
+        data: response, 
+        isLoading: isLoadingBalances, 
+        isError: isErrorBalances,
+        error: errorBalances,
+        refetch: refetchBalances 
+    } = useQuery({
         queryKey: ['lot-lookup-grn', debouncedSearch, itemId, warehouseId, locationId],
         queryFn: () => GrnInventoryService.getAvailableLots({ 
             q: debouncedSearch, 
@@ -96,11 +222,21 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
     });
 
     // --- Tab 2 Data: All Master Lots ---
-    const { data: itemLotsResponse, isLoading: isLoadingItemLots, refetch: refetchMaster } = useQuery({
+    const { 
+        data: itemLotsResponse, 
+        isLoading: isLoadingItemLots, 
+        isError: isErrorItemLots,
+        error: errorItemLots,
+        refetch: refetchMaster 
+    } = useQuery({
         queryKey: ['item-lots', numericItemId, debouncedSearch],
         queryFn: () => ItemLotService.getList(numericItemId), 
         enabled: isOpen && numericItemId > 0
     });
+
+    const isError = activeTab === 'available' ? isErrorBalances : isErrorItemLots;
+    const currentError = (activeTab === 'available' ? errorBalances : errorItemLots) as Error;
+    const refetchCurrent = activeTab === 'available' ? refetchBalances : refetchMaster;
     
     const masterLots = useMemo(() => {
         const records = (itemLotsResponse || []) as ItemLot[];
@@ -300,184 +436,196 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
 
                     {/* Table Content */}
                     <div className="flex-1 overflow-auto p-0">
-                        {isLoadingData ? (
-                            <div className="flex flex-col items-center justify-center py-20 opacity-60">
-                                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600 mb-4" />
-                                <p className="text-gray-500 font-medium animate-pulse">กำลังโหลดข้อมูล...</p>
-                            </div>
-                        ) : activeTab === 'available' ? (
-                            <table className="w-full text-left border-separate border-spacing-0">
-                                <thead className="sticky top-0 z-10 bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md">
-                                    <tr>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขล็อต (Lot No.)</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right">จำนวนคงเหลือ<br/>(ON HAND)</th>
-                                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right text-orange-600 dark:text-orange-400">ยอดจอง<br/>(RESERVED)</th>
-                                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right text-emerald-600 dark:text-emerald-400">พร้อมใช้งาน<br/>(AVAILABLE)</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">คลัง/ที่เก็บ</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">วันผลิต/หมดอายุ</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">จัดการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
-                                    {availableLots.length > 0 ? (
-                                        availableLots.map((lot: LotNo) => (
-                                            <tr 
-                                                key={`${lot.lot_no_id || lot.id}-${lot.warehouse_id || 'nw'}-${lot.location_id || 'nl'}`} 
-                                                className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors group cursor-pointer"
-                                                onClick={() => handleSelect(lot)}
-                                            >
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-1 transition-transform inline-block w-fit">
-                                                            {lot.code}
-                                                        </span>
-                                                        {lot.name_th && <span className="text-[10px] text-gray-500 mt-0.5">{lot.name_th}</span>}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-right whitespace-nowrap">
-                                                    <span className="font-bold text-gray-900 dark:text-white">
-                                                        {(lot.qty_on_hand ?? lot.balance_qty ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right whitespace-nowrap">
-                                                    <span className="font-bold text-orange-600 dark:text-orange-400">
-                                                        {(lot.qty_reserved ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right whitespace-nowrap">
-                                                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                                                        {(lot.qty_available ?? lot.sale_stock ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex flex-col text-xs">
-                                                        <span className="text-gray-600 dark:text-gray-300 font-medium">
-                                                            {lot.warehouse_name || currentWarehouseName || '-'}
-                                                        </span>
-                                                        <span className="text-gray-400 dark:text-gray-500">
-                                                            {lot.location_name || currentLocationName || '-'}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex flex-col text-[11px]">
-                                                        <span className="text-gray-500">MFG: {lot.mfg_date ? formatDate(lot.mfg_date) : '-'}</span>
-                                                        <span className="text-gray-500">EXP: {lot.expiry_date ? formatDate(lot.expiry_date) : '-'}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-center whitespace-nowrap">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <button 
-                                                            onClick={(e) => handleOpenAdjust(e, lot)}
-                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-[10px] font-bold transition-all shadow-sm"
-                                                        >
-                                                            <Edit2 size={12} /> แก้ไข
-                                                        </button>
-                                                        <button 
-                                                            onClick={(e) => { e.stopPropagation(); handleSelect(lot); }}
-                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all"
-                                                        >
-                                                            เลือก <Check size={14} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    ) : (
+                        <ErrorBoundary
+                            key={activeTab}
+                            FallbackComponent={({ error, resetErrorBoundary }) => (
+                                <TableErrorFallback error={error as Error} resetErrorBoundary={resetErrorBoundary} />
+                            )}
+                            onReset={() => {
+                                refetchCurrent();
+                            }}
+                        >
+                            {isError ? (
+                                <TableErrorFallback 
+                                    error={currentError || new Error('ไม่สามารถเชื่อมต่อข้อมูลคลังสินค้าได้ในขณะนี้')} 
+                                    resetErrorBoundary={() => refetchCurrent()} 
+                                />
+                            ) : isLoadingData ? (
+                                activeTab === 'available' ? <AvailableSkeleton /> : <AllLotsSkeleton />
+                            ) : activeTab === 'available' ? (
+                                <table className="w-full text-left border-separate border-spacing-0">
+                                    <thead className="sticky top-0 z-10 bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md">
                                         <tr>
-                                            <td colSpan={7} className="px-6 py-20 text-center">
-                                                <div className="flex flex-col items-center text-gray-400">
-                                                    <Layers size={48} className="mb-3 opacity-20" />
-                                                    <p className="font-bold">ไม่มีสต็อกพร้อมใช้งาน</p>
-                                                    <p className="text-sm">กรุณาสลับไปดูที่ "รายการล็อตทั้งหมด" เพื่อนำเข้าสต็อก</p>
-                                                </div>
-                                            </td>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขล็อต (Lot No.)</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right">จำนวนคงเหลือ<br/>(ON HAND)</th>
+                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right text-orange-600 dark:text-orange-400">ยอดจอง<br/>(RESERVED)</th>
+                                            <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right text-emerald-600 dark:text-emerald-400">พร้อมใช้งาน<br/>(AVAILABLE)</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">คลัง/ที่เก็บ</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">วันผลิต/หมดอายุ</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">จัดการ</th>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <table className="w-full text-left border-separate border-spacing-0">
-                                <thead className="sticky top-0 z-10 bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md">
-                                    <tr>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขล็อต (Lot No.)</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">สถานะ</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right">จำนวนคงคลังรวม</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">วันผลิต/หมดอายุ</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">จัดการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
-                                    {masterLots.length > 0 ? (
-                                        masterLots.map((lot) => {
-                                            const id = Number(lot.lot_id);
-                                            const lotNo = String(lot.lot_no || '');
-                                            const status = String(lot.status || 'ACTIVE');
-                                            const qtyStock = Number(lot.qty_stock || 0);
-                                            const mfg = lot.mfg_date ? String(lot.mfg_date) : null;
-                                            const exp = lot.expiry_date ? String(lot.expiry_date) : null;
-                                            
-                                            return (
-                                                <tr key={id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
+                                        {availableLots.length > 0 ? (
+                                            availableLots.map((lot: LotNo) => (
+                                                <tr 
+                                                    key={`${lot.lot_no_id || lot.id}-${lot.warehouse_id || 'nw'}-${lot.location_id || 'nl'}`} 
+                                                    className="hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors group cursor-pointer"
+                                                    onClick={() => handleSelect(lot)}
+                                                >
                                                     <td className="px-6 py-4 whitespace-nowrap">
-                                                        <span className="font-bold text-gray-900 dark:text-white">
-                                                            {lotNo}
-                                                        </span>
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-1 transition-transform inline-block w-fit">
+                                                                {lot.code}
+                                                            </span>
+                                                            {lot.name_th && <span className="text-[10px] text-gray-500 mt-0.5">{lot.name_th}</span>}
+                                                        </div>
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                                            status === 'ACTIVE' 
-                                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                                                                : 'bg-gray-100 text-gray-600'
-                                                        }`}>
-                                                            {status}
+                                                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                                                        <span className="font-bold text-gray-900 dark:text-white">
+                                                            {(lot.qty_on_hand ?? lot.balance_qty ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-right whitespace-nowrap">
-                                                        <span className="text-gray-600 dark:text-gray-400 font-medium">
-                                                            {qtyStock.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                                        <span className="font-bold text-orange-600 dark:text-orange-400">
+                                                            {(lot.qty_reserved ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                                                        {mfg ? formatDate(mfg) : '-'} / {exp ? formatDate(exp) : '-'}
+                                                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                                                        <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                                                            {(lot.qty_available ?? lot.sale_stock ?? 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex flex-col text-xs">
+                                                            <span className="text-gray-600 dark:text-gray-300 font-medium">
+                                                                {lot.warehouse_name || currentWarehouseName || '-'}
+                                                            </span>
+                                                            <span className="text-gray-400 dark:text-gray-500">
+                                                                {lot.location_name || currentLocationName || '-'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex flex-col text-[11px]">
+                                                            <span className="text-gray-500">MFG: {lot.mfg_date ? formatDate(lot.mfg_date) : '-'}</span>
+                                                            <span className="text-gray-500">EXP: {lot.expiry_date ? formatDate(lot.expiry_date) : '-'}</span>
+                                                        </div>
                                                     </td>
                                                     <td className="px-6 py-4 text-center whitespace-nowrap">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <button 
-                                                                onClick={() => handleViewStock(lotNo)}
-                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
+                                                                onClick={(e) => handleOpenAdjust(e, lot)}
+                                                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-indigo-200 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg text-[10px] font-bold transition-all shadow-sm"
+                                                            >
+                                                                <Edit2 size={12} /> แก้ไข
+                                                            </button>
+                                                            <button 
+                                                                onClick={(e) => { e.stopPropagation(); handleSelect(lot); }}
+                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all"
                                                             >
                                                                 เลือก <Check size={14} />
                                                             </button>
-                                                            
-                                                            {qtyStock <= 0 && (
-                                                                <button 
-                                                                    onClick={() => handleAddBalance(id)}
-                                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
-                                                                >
-                                                                    <PackagePlus size={14} />
-                                                                    นำเข้า
-                                                                </button>
-                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            );
-                                        })
-                                    ) : (
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={7} className="px-6 py-20 text-center">
+                                                    <div className="flex flex-col items-center text-gray-400">
+                                                        <Layers size={48} className="mb-3 opacity-20" />
+                                                        <p className="font-bold">ไม่มีสต็อกพร้อมใช้งาน</p>
+                                                        <p className="text-sm">กรุณาสลับไปดูที่ "รายการล็อตทั้งหมด" เพื่อนำเข้าสต็อก</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <table className="w-full text-left border-separate border-spacing-0">
+                                    <thead className="sticky top-0 z-10 bg-gray-100/90 dark:bg-gray-800/90 backdrop-blur-md">
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-20 text-center">
-                                                <div className="flex flex-col items-center text-gray-400">
-                                                    <List size={48} className="mb-3 opacity-20" />
-                                                    <p className="font-bold">ไม่พบข้อมูลล็อต</p>
-                                                    <p className="text-sm">กรุณากดปุ่ม "สร้าง Lot ใหม่" หากต้องการเพิ่มล็อตเข้าระบบ</p>
-                                                </div>
-                                            </td>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">เลขล็อต (Lot No.)</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">สถานะ</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right">จำนวนคงคลังรวม</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">วันผลิต/หมดอายุ</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">จัดการ</th>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        )}
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#0b1120]/30 transition-all">
+                                        {masterLots.length > 0 ? (
+                                            masterLots.map((lot) => {
+                                                const id = Number(lot.lot_id);
+                                                const lotNo = String(lot.lot_no || '');
+                                                const status = String(lot.status || 'ACTIVE');
+                                                const qtyStock = Number(lot.qty_stock || 0);
+                                                const mfg = lot.mfg_date ? String(lot.mfg_date) : null;
+                                                const exp = lot.expiry_date ? String(lot.expiry_date) : null;
+                                                
+                                                return (
+                                                    <tr key={id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className="font-bold text-gray-900 dark:text-white">
+                                                                {lotNo}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                status === 'ACTIVE' 
+                                                                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                                                                    : 'bg-gray-100 text-gray-600'
+                                                            }`}>
+                                                                {status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                                                            <span className="text-gray-600 dark:text-gray-400 font-medium">
+                                                                {qtyStock.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                                                            {mfg ? formatDate(mfg) : '-'} / {exp ? formatDate(exp) : '-'}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                <button 
+                                                                    onClick={() => handleViewStock(lotNo)}
+                                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
+                                                                >
+                                                                    เลือก <Check size={14} />
+                                                                </button>
+                                                                
+                                                                {qtyStock <= 0 && (
+                                                                    <button 
+                                                                        onClick={() => handleAddBalance(id)}
+                                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
+                                                                    >
+                                                                        <PackagePlus size={14} />
+                                                                        นำเข้า
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={5} className="px-6 py-20 text-center">
+                                                    <div className="flex flex-col items-center text-gray-400">
+                                                        <List size={48} className="mb-3 opacity-20" />
+                                                        <p className="font-bold">ไม่พบข้อมูลล็อต</p>
+                                                        <p className="text-sm">กรุณากดปุ่ม "สร้าง Lot ใหม่" หากต้องการเพิ่มล็อตเข้าระบบ</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            )}
+                        </ErrorBoundary>
                     </div>
                     
                     {/* Footer Stats */}
