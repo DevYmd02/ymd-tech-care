@@ -52,7 +52,7 @@ export default function MainLayout() {
                     {/* Page Content */}
                     <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
                         <Suspense fallback={<PageLoader />}>
-                            <Outlet />
+                            <Outlet context={{ isSidebarOpen }} />
                         </Suspense>
                     </main>
                 </div>
