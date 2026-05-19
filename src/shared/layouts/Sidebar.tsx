@@ -333,6 +333,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                         <ChevronDown size={14} />
                     </div>
                 </button>
+            </div>
         </div>
     );
 }
