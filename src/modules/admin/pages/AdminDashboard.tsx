@@ -264,7 +264,7 @@ export default function AdminDashboard() {
                             <span>ERP Control Command Center</span>
                         </div>
                         <h1 className="text-3xl font-extrabold tracking-tight">
-                            <span className="bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-blue-400 dark:to-indigo-200 bg-clip-text text-transparent">{getFormattedName()}</span>
+                            <span className="bg-gradient-to-r from-indigo-600 to-blue-600 dark:from-blue-400 dark:to-indigo-200 bg-clip-text text-transparent inline-block py-1">{getFormattedName()}</span>
                         </h1>
                         <p className="text-slate-600 dark:text-slate-400 text-sm max-w-xl">
                             ระบบทำงานปกติ ปราศจากความผิดพลาด ยินดีต้อนรับสู่แดชบอร์ดหลักสำหรับบริหารจัดการโมดูลทั้งหมดขององค์กรคุณในที่เดียว
