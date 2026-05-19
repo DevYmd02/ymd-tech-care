@@ -45,6 +45,11 @@ export default defineConfig(({ mode }) => {
         '@currency': path.resolve(__dirname, './src/modules/master-data/currency'),
         '@company': path.resolve(__dirname, './src/modules/master-data/company'),
         '@sales-master': path.resolve(__dirname, './src/modules/master-data/sales'),
+        
+        /* New Module Aliases */
+        '@Inventory': path.resolve(__dirname, './src/modules/Inventory'),
+        '@admin': path.resolve(__dirname, './src/modules/admin'),
+        '@governance': path.resolve(__dirname, './src/modules/governance'),
       },
     },
     server: {

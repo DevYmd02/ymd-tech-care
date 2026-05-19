@@ -1,7 +1,7 @@
 import React from 'react';
 import { useFormContext } from 'react-hook-form';
 import { FileBox, AlertTriangle } from 'lucide-react';
-import type { AVFormData, AVLineFormData } from '../../../schemas/av.schema';
+import type { AVFormData, AVLineFormData } from '@procurement/schemas/av.schema';
 
 interface AVFormLinesProps {
     lines: AVLineFormData[];

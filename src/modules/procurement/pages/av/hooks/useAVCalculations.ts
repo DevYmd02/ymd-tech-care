@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
-import type { AVFormData, AVLineFormData } from '../../../schemas/av.schema';
+import type { AVFormData, AVLineFormData } from '@procurement/schemas/av.schema';
 
 interface UseAVCalculationsProps {
   lines?: AVLineFormData[];

@@ -70,7 +70,15 @@
       "@company": ["./src/modules/master-data/company"],
       "@company/*": ["./src/modules/master-data/company/*"],
       "@sales-master": ["./src/modules/master-data/sales"],
-      "@sales-master/*": ["./src/modules/master-data/sales/*"]
+      "@sales-master/*": ["./src/modules/master-data/sales/*"],
+      
+      /* New Module Aliases */
+      "@Inventory": ["./src/modules/Inventory"],
+      "@Inventory/*": ["./src/modules/Inventory/*"],
+      "@admin": ["./src/modules/admin"],
+      "@admin/*": ["./src/modules/admin/*"],
+      "@governance": ["./src/modules/governance"],
+      "@governance/*": ["./src/modules/governance/*"]
     }
   },
   "include": ["src"]

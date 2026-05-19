@@ -2,10 +2,10 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search, X, Loader2, FileText, CheckCircle, Clock } from 'lucide-react';
-import { AVService } from '../../../services/av.service';
+import { AVService } from '@procurement/services/av.service';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PRStatusBadge } from '@ui';
-import type { ApprovalHeader } from '../../../types/av-types';
+import type { ApprovalHeader } from '@procurement/types/av-types';
 
 interface Props {
   isOpen: boolean;

@@ -13,10 +13,10 @@ import { RequisitionFormHeader } from '../components/RequisitionFormHeader';
 import { RequisitionFormLines } from '../components/RequisitionFormLines';
 import { useRequisitionForm } from '../hooks/useRequisitionForm';
 import type { RequisitionHeaderFormData, RequisitionLineFormData } from '../schemas/requisition.schemas';
-import { ProductSearchModal, type Product } from '../../shared/components/ProductSearchModal';
-import { WarehouseSearchModal } from '../../shared/components/WarehouseSearchModal';
-import { LocationSearchModal } from '../../shared/components/LocationSearchModal';
-import { LotSearchModal } from '../../shared/components/LotSearchModal';
+import { ProductSearchModal, type Product } from '@Inventory/shared/components/ProductSearchModal';
+import { WarehouseSearchModal } from '@Inventory/shared/components/WarehouseSearchModal';
+import { LocationSearchModal } from '@Inventory/shared/components/LocationSearchModal';
+import { LotSearchModal } from '@Inventory/shared/components/LotSearchModal';
 import type { WarehouseListItem } from '@master-data/inventory/types/warehouse-types';
 import type { Location, LotNo } from '@master-data/inventory/types/inventory-master.types';
 

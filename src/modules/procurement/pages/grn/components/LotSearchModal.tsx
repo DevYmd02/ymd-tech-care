@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Search, Tag, Check, Plus, PackagePlus, Layers, List, Edit2, MapPin } from 'lucide-react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
-import { GrnInventoryService } from '../../../services/grn-inventory.service';
+import { GrnInventoryService } from '@procurement/services/grn-inventory.service';
 import type { LotNo } from '@inventory/types/inventory-master.types';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@hooks/useDebounce';
