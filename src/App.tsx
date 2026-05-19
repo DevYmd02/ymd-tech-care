@@ -213,11 +213,13 @@ function AppContent() {
           {/* Main Layout Routes - Protected */}
           <Route path="/" element={
             <ProtectedRoute>
-              <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
-                <React.Suspense fallback={<GlobalLoading />}>
-                  <MainLayout />
-                </React.Suspense>
-              </ErrorBoundary>
+              <MasterDataProvider>
+                <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
+                  <React.Suspense fallback={<GlobalLoading />}>
+                    <MainLayout />
+                  </React.Suspense>
+                </ErrorBoundary>
+              </MasterDataProvider>
             </ProtectedRoute>
           }>
             {/* Redirect root to admin dashboard */}
@@ -423,9 +425,7 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <MasterDataProvider>
-        <AppContent />
-      </MasterDataProvider>
+      <AppContent />
     </AuthProvider>
   );
 }
