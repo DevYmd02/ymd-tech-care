@@ -187,13 +187,6 @@ function SearchModalInner<T>({
 
                 {/* ==================== DATA TABLE ==================== */}
                 <div className="flex-1 overflow-y-auto p-4 bg-white dark:bg-gray-800 relative">
-                    {isLoading && (
-                        <div className="absolute inset-0 bg-white/60 dark:bg-gray-800/60 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center">
-                            <div className={`animate-spin rounded-full h-10 w-10 border-b-2 ${colorClasses.loader}`}></div>
-                            <span className="mt-2 text-sm text-gray-500 dark:text-gray-400 font-medium">กำลังโหลดข้อมูล...</span>
-                        </div>
-                    )}
-
                     <div className="space-y-1">
                         {/* Table Header */}
                         <div
@@ -209,6 +202,37 @@ function SearchModalInner<T>({
                                 </div>
                             ))}
                         </div>
+
+                        {/* Skeleton Loading Rows */}
+                        {isLoading && (
+                            <div className="space-y-1">
+                                {Array.from({ length: 6 }).map((_, rowIndex) => (
+                                    <div
+                                        key={`skeleton-row-${rowIndex}`}
+                                        className="grid gap-4 items-center px-2 py-4 border-b border-gray-100 dark:border-gray-700 animate-pulse"
+                                        style={{ gridTemplateColumns: gridCols }}
+                                    >
+                                        {columns.map((col, colIndex) => {
+                                            if (col.key === 'action') {
+                                                return (
+                                                    <div key="action" className="flex justify-center">
+                                                        <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded-md w-full max-w-[70px]" />
+                                                    </div>
+                                                );
+                                            }
+                                            return (
+                                                <div
+                                                    key={String(col.key)}
+                                                    className={`h-4 bg-gray-100 dark:bg-gray-800 rounded-md ${
+                                                        colIndex === 0 ? 'w-2/3' : 'w-5/6'
+                                                    }`}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
                         {/* Data Rows */}
                         {!isLoading && filteredData.map((item, index) => (

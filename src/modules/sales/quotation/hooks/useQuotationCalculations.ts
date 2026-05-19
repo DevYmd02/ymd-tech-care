@@ -77,6 +77,7 @@ export function useQuotationCalculations({
     );
 
     useEffect(() => {
+        logger.time('useQuotationCalculations [totals_calculation]');
         const calculatedSubTotal = watchedLineTotals.reduce((sum, val) => sum + val, 0);
         const calculatedDiscount = calculateDiscountAmount(calculatedSubTotal, discount_expression || '0');
 
@@ -112,7 +113,7 @@ export function useQuotationCalculations({
         } else {
             logger.debug('🛡️ [QuotationCalculations] Rounding Guard active. Preserving backend totals.');
         }
-
+        logger.timeEnd('useQuotationCalculations [totals_calculation]');
     }, [watchedLineTotals, discount_expression, tax_code_id, taxCodes, setValue, getValues, isDirty]);
 
     return {

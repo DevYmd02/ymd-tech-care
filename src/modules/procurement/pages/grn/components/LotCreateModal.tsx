@@ -30,6 +30,7 @@ export function LotCreateModal({ isOpen, onClose, onSuccess, itemId, vendorId }:
         }
 
         setIsSubmitting(true);
+        logger.time('LotCreateModal [handleSave]');
         try {
             const formData: LotNoFormData = {
                 code: lotNo.trim(),
@@ -42,6 +43,9 @@ export function LotCreateModal({ isOpen, onClose, onSuccess, itemId, vendorId }:
                 note: note.trim(),
                 isActive: true
             };
+
+            // 🛡️ Log safe form data for debugging before saving
+            logger.payload('LotCreateModal', formData as unknown as Record<string, unknown>);
 
             const response = await LotNoService.create(formData);
             
@@ -58,6 +62,7 @@ export function LotCreateModal({ isOpen, onClose, onSuccess, itemId, vendorId }:
             toast('ระบบขัดข้อง กรุณาลองใหม่อีกครั้ง', 'error');
         } finally {
             setIsSubmitting(false);
+            logger.timeEnd('LotCreateModal [handleSave]');
         }
     };
 

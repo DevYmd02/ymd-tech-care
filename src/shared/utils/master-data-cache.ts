@@ -4,6 +4,8 @@
  * This is populated by the MasterDataProvider.
  */
 
+import { logger } from './common-utils';
+
 export interface BranchRecord {
     branch_id: number;
     branch_name: string;
@@ -84,6 +86,7 @@ const ID_FIELD_MAP: Record<keyof MasterCache, string> = {
 };
 
 const loadFromSession = (): MasterCache => {
+    logger.time('masterDataCache [loadFromSession]');
     const defaultCache: MasterCache = {
         units: [],
         branches: [],
@@ -98,20 +101,24 @@ const loadFromSession = (): MasterCache => {
         const stored = sessionStorage.getItem(CACHE_KEY);
         if (stored) {
             const parsed = JSON.parse(stored);
-            return {
+            const loaded = {
                 ...defaultCache,
                 ...parsed
             };
+            logger.timeEnd('masterDataCache [loadFromSession]');
+            return loaded;
         }
     } catch (e) {
-        console.error('[master-data-cache] Failed to load from session', e);
+        logger.error('[master-data-cache] Failed to load from session', e);
     }
+    logger.timeEnd('masterDataCache [loadFromSession]');
     return defaultCache;
 };
 
 const cache: MasterCache = loadFromSession();
 
 const saveToSession = () => {
+    logger.time('masterDataCache [saveToSession]');
     try {
         const slimCache: Partial<MasterCache> = {};
         (Object.keys(cache) as (keyof MasterCache)[]).forEach(key => {
@@ -122,8 +129,9 @@ const saveToSession = () => {
         });
         sessionStorage.setItem(CACHE_KEY, JSON.stringify(slimCache));
     } catch (e) {
-        console.warn('[master-data-cache] Failed to save to session', e);
+        logger.warn('[master-data-cache] Failed to save to session', e);
     }
+    logger.timeEnd('masterDataCache [saveToSession]');
 };
 
 export const masterDataCache = {
