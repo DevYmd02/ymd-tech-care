@@ -66,7 +66,11 @@ function mapItemFields(raw: RawItemListItem): ItemListItem {
     preferred_vendor_id: raw.preferred_vendor_id ? Number(raw.preferred_vendor_id) : undefined,
 
     // 📝 Dynamic Response Fields for Master Data Lists (Mapping fix)
-    base_uom_name: raw.base_uom_name ? String(raw.base_uom_name) : undefined,
+    base_uom_name: raw.base_uom_name ? String(raw.base_uom_name) : (
+        typeof raw.base_uom === 'object' && raw.base_uom
+            ? String((raw.base_uom as Record<string, unknown>).uom_name || (raw.base_uom as Record<string, unknown>).name || '')
+            : undefined
+    ),
     item_category_name: raw.item_category_name ? String(raw.item_category_name) : raw.category_name ? String(raw.category_name) : undefined,
     item_brand_name: raw.item_brand_name ? String(raw.item_brand_name) : undefined,
     item_type_name: raw.item_type_name ? String(raw.item_type_name) : undefined,
@@ -78,6 +82,11 @@ function mapItemFields(raw: RawItemListItem): ItemListItem {
     item_pattern_name: raw.item_pattern_name ? String(raw.item_pattern_name) : undefined,
     is_batch_control: raw.is_batch_control !== undefined ? Boolean(raw.is_batch_control) : undefined,
     lot_tracking_level: raw.lot_tracking_level ? String(raw.lot_tracking_level) : undefined,
+    base_uom_id: raw.base_uom_id ? Number(raw.base_uom_id) : (
+        typeof raw.base_uom === 'object' && raw.base_uom 
+            ? Number((raw.base_uom as Record<string, unknown>).uom_id || (raw.base_uom as Record<string, unknown>).id || 0) 
+            : undefined
+    ),
   };
 }
 

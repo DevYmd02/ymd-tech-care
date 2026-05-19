@@ -83,26 +83,55 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
         }
     }, [activeUnits, formData.from_uom_id, formData.fromUnit, formData.to_uom_id, formData.toUnit, setValue]);
 
+    // Reset form when the modal is closed
+    useEffect(() => {
+        if (!isOpen) {
+            clearForm();
+        }
+    }, [isOpen, clearForm]);
+
     const handleFindItem = () => {
         setIsItemSearchOpen(true);
     };
 
-    const handleProductSelect = (product: ItemListItem) => {
-        // Find the unit code for the product's base unit (Base UOM)
-        const baseUnit = units.find(u => 
-            u.uom_id === product.uom_id || 
-            u.uom_id === product.uom_id ||
-            u.uom_name === product.uom_name ||
-            u.uom_name === product.uom_name
-        );
-        
-        setValue('item_id', product.item_id || product.id);
-        setValue('itemCode', product.item_code);
-        setValue('itemName', product.item_name);
-        
-        if (baseUnit) {
-            setValue('to_uom_id', baseUnit.uom_id);
-            setValue('toUnit', baseUnit.uom_code);
+    const handleProductSelect = async (product: ItemListItem) => {
+        // Fetch full item detail to guarantee we get the correct base_uom_id (หน่วยนับหลัก)
+        try {
+            const detail = await ItemMasterService.getById(product.item_id || product.id);
+            const targetBaseUomId = detail?.base_uom_id || detail?.uom_id || product.base_uom_id || product.uom_id;
+            const targetBaseUomName = detail?.uom_name || product.base_uom_name || product.uom_name;
+
+            const baseUnit = units.find(u => 
+                (targetBaseUomId && u.uom_id === targetBaseUomId) ||
+                (targetBaseUomName && u.uom_name === targetBaseUomName)
+            );
+            
+            setValue('item_id', product.item_id || product.id);
+            setValue('itemCode', product.item_code);
+            setValue('itemName', product.item_name);
+            
+            if (baseUnit) {
+                setValue('to_uom_id', baseUnit.uom_id);
+                setValue('toUnit', baseUnit.uom_code);
+            }
+        } catch (error) {
+            console.error('Error fetching item details:', error);
+            // Fallback logic
+            const baseUnit = units.find(u => 
+                (product.base_uom_id && u.uom_id === product.base_uom_id) ||
+                (product.base_uom_name && u.uom_name === product.base_uom_name) ||
+                u.uom_id === product.uom_id || 
+                u.uom_name === product.uom_name
+            );
+            
+            setValue('item_id', product.item_id || product.id);
+            setValue('itemCode', product.item_code);
+            setValue('itemName', product.item_name);
+            
+            if (baseUnit) {
+                setValue('to_uom_id', baseUnit.uom_id);
+                setValue('toUnit', baseUnit.uom_code);
+            }
         }
         
         setIsItemSearchOpen(false);
