@@ -7,8 +7,6 @@
 
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-// Main Layout - Lazy Loaded to prevent bundle bloat (admin dashboard code in login page)
-const MainLayout = React.lazy(() => import('@/shared/layouts/MainLayout'));
 import { ErrorBoundary } from 'react-error-boundary';
 import { ErrorFallback } from '@/shared/components/system/ErrorBoundary';
 import { GlobalLoading } from '@/shared/components/system/GlobalLoading';
@@ -25,6 +23,9 @@ import { ToastProvider } from '@ui';
 // ====================================================================================
 // PAGE IMPORTS - Lazy Loaded
 // ====================================================================================
+
+// Main Layout - Lazy Loaded to prevent bundle bloat (admin dashboard code in login page)
+const MainLayout = React.lazy(() => import('@/shared/layouts/MainLayout'));
 
 // Admin Pages
 const AdminDashboard = React.lazy(() => import('@/modules/admin/pages/AdminDashboard'));
@@ -250,89 +251,89 @@ function AppContent() {
             {/* Other Inner Routes ... */}
 
             {/* Roles - Implemented */}
-            <Route path="roles/dashboard" element={<RolesDashboard />} />
+            <Route path={ROUTES.ROLES.DASHBOARD} element={<RolesDashboard />} />
 
             {/* IT Governance - Implemented */}
-            <Route path="it-governance/dashboard" element={<ITGCDashboard />} />
+            <Route path={ROUTES.IT_GOVERNANCE.DASHBOARD} element={<ITGCDashboard />} />
 
             {/* Master Data - Implemented */}
-            <Route path="master-data" element={<MasterDataDashboard />} />
+            <Route path={ROUTES.MASTER_DATA.DASHBOARD} element={<MasterDataDashboard />} />
             {/* <Route path="master-data/vendor" element={<VendorDashboard />} /> */}
-            <Route path="master-data/vendor" element={<VendorList />} />
+            <Route path={ROUTES.MASTER_DATA.VENDOR} element={<VendorList />} />
             {/* <Route path="master-data/vendor/list" element={<VendorList />} /> */}
 
             <Route path={ROUTES.MASTER_DATA.BRANCH} element={<BranchList />} />
             <Route path={ROUTES.MASTER_DATA.EMPLOYEE_SIDE} element={<EmployeeSideList />} />
             <Route path={ROUTES.MASTER_DATA.EMPLOYEE_DEPT} element={<EmployeeDeptList />} />
-            <Route path="master-data/job" element={<JobList />} />
-            <Route path="master-data/employee" element={<EmployeeList />} />
-            <Route path="master-data/employee-group" element={<EmployeeGroupList />} />
-            <Route path="master-data/position" element={<PositionList />} />
-            <Route path="master-data/company" element={<CompanyDashboard />} />
-            <Route path="master-data/company-info" element={<CompanyInfoPage />} />
-            <Route path="master-data/general-settings" element={<PlaceholderPage title="กำหนดตั้งค่าทั่วไป" />} />
-            <Route path="master-data/standard-cost" element={<StandardCostList />} />
-            <Route path="master-data/price-level" element={<PriceLevelList />} />
-            <Route path="master-data/price-list" element={<PriceListList />} />
+            <Route path={ROUTES.MASTER_DATA.JOB} element={<JobList />} />
+            <Route path={ROUTES.MASTER_DATA.EMPLOYEE} element={<EmployeeList />} />
+            <Route path={ROUTES.MASTER_DATA.EMPLOYEE_GROUP} element={<EmployeeGroupList />} />
+            <Route path={ROUTES.MASTER_DATA.POSITION} element={<PositionList />} />
+            <Route path={ROUTES.MASTER_DATA.COMPANY} element={<CompanyDashboard />} />
+            <Route path={ROUTES.MASTER_DATA.COMPANY_INFO} element={<CompanyInfoPage />} />
+            <Route path={ROUTES.MASTER_DATA.GENERAL_SETTINGS} element={<PlaceholderPage title="กำหนดตั้งค่าทั่วไป" />} />
+            <Route path={ROUTES.MASTER_DATA.STANDARD_COST} element={<StandardCostList />} />
+            <Route path={ROUTES.MASTER_DATA.PRICE_LEVEL} element={<PriceLevelList />} />
+            <Route path={ROUTES.MASTER_DATA.PRICE_LIST} element={<PriceListList />} />
             <Route path={ROUTES.MASTER_DATA.IC_OPTION} element={<ICOptionList />} />
             <Route path={ROUTES.MASTER_DATA.IC_DOCUMENT_LINK} element={<ICDocumentLinkList />} />
 
             {/* Sales Master Data */}
-            <Route path="master-data/sales-area" element={<SalesAreaList />} />
-            <Route path="master-data/sales-channel" element={<SalesChannelList />} />
-            <Route path="master-data/sales-target" element={<SalesTargetList />} />
-            <Route path="master-data/vendor-type" element={<VendorTypeList />} />
-            <Route path="master-data/vendor-group" element={<VendorGroupList />} />
-            <Route path="master-data/warehouse" element={<WarehouseList />} />
-            <Route path="master-data/product-category" element={<ProductCategoryList />} />
-            <Route path="master-data/item-type" element={<ItemTypeList />} />
-            <Route path="master-data/uom" element={<UOMList />} />
+            <Route path={ROUTES.MASTER_DATA.SALES_AREA} element={<SalesAreaList />} />
+            <Route path={ROUTES.MASTER_DATA.SALES_CHANNEL} element={<SalesChannelList />} />
+            <Route path={ROUTES.MASTER_DATA.SALES_TARGET} element={<SalesTargetList />} />
+            <Route path={ROUTES.MASTER_DATA.VENDOR_TYPE} element={<VendorTypeList />} />
+            <Route path={ROUTES.MASTER_DATA.VENDOR_GROUP} element={<VendorGroupList />} />
+            <Route path={ROUTES.MASTER_DATA.WAREHOUSE} element={<WarehouseList />} />
+            <Route path={ROUTES.MASTER_DATA.PRODUCT_CATEGORY} element={<ProductCategoryList />} />
+            <Route path={ROUTES.MASTER_DATA.ITEM_TYPE} element={<ItemTypeList />} />
+            <Route path={ROUTES.MASTER_DATA.UOM} element={<UOMList />} />
 
-            <Route path="master-data/item" element={<ItemMasterList />} />
-            <Route path="master-data/uom-conversion" element={<UOMConversionList />} />
-            <Route path="master-data/item-barcode" element={<ItemBarcodeList />} />
+            <Route path={ROUTES.MASTER_DATA.ITEM} element={<ItemMasterList />} />
+            <Route path={ROUTES.MASTER_DATA.UOM_CONVERSION} element={<UOMConversionList />} />
+            <Route path={ROUTES.MASTER_DATA.ITEM_BARCODE} element={<ItemBarcodeList />} />
             {/* New Inventory Master Routes */}
-            <Route path="master-data/item-group" element={<ItemGroupList />} />
-            <Route path="master-data/brand" element={<BrandList />} />
-            <Route path="master-data/pattern" element={<PatternList />} />
-            <Route path="master-data/design" element={<DesignList />} />
-            <Route path="master-data/grade" element={<GradeList />} />
-            <Route path="master-data/model" element={<ModelList />} />
-            <Route path="master-data/size" element={<SizeList />} />
-            <Route path="master-data/color" element={<ColorList />} />
-            <Route path="master-data/location" element={<LocationList />} />
-            <Route path="master-data/shelf" element={<ShelfList />} />
-            <Route path="master-data/lot-no" element={<LotNoList />} />
-            <Route path="master-data/currency/code" element={<CurrencyCodeList />} />
-            <Route path="master-data/currency/type" element={<ExchangeRateTypeList />} />
-            <Route path="master-data/currency/rate" element={<ExchangeRateList />} />
+            <Route path={ROUTES.MASTER_DATA.ITEM_GROUP} element={<ItemGroupList />} />
+            <Route path={ROUTES.MASTER_DATA.BRAND} element={<BrandList />} />
+            <Route path={ROUTES.MASTER_DATA.PATTERN} element={<PatternList />} />
+            <Route path={ROUTES.MASTER_DATA.DESIGN} element={<DesignList />} />
+            <Route path={ROUTES.MASTER_DATA.GRADE} element={<GradeList />} />
+            <Route path={ROUTES.MASTER_DATA.MODEL} element={<ModelList />} />
+            <Route path={ROUTES.MASTER_DATA.SIZE} element={<SizeList />} />
+            <Route path={ROUTES.MASTER_DATA.COLOR} element={<ColorList />} />
+            <Route path={ROUTES.MASTER_DATA.LOCATION} element={<LocationList />} />
+            <Route path={ROUTES.MASTER_DATA.SHELF} element={<ShelfList />} />
+            <Route path={ROUTES.MASTER_DATA.LOT_NO} element={<LotNoList />} />
+            <Route path={ROUTES.MASTER_DATA.CURRENCY_CODE} element={<CurrencyCodeList />} />
+            <Route path={ROUTES.MASTER_DATA.CURRENCY_TYPE} element={<ExchangeRateTypeList />} />
+            <Route path={ROUTES.MASTER_DATA.CURRENCY_RATE} element={<ExchangeRateList />} />
             
             {/* Tax Master Data */}
-            <Route path="master-data/tax/code" element={<TaxCodeList />} />
-            <Route path="master-data/tax/group" element={<TaxGroupList />} />
+            <Route path={ROUTES.MASTER_DATA.TAX_CODE} element={<TaxCodeList />} />
+            <Route path={ROUTES.MASTER_DATA.TAX_GROUP} element={<TaxGroupList />} />
 
             {/* Customer Master Data */}
-            <Route path="master-data/customer" element={<CustomerList />} />
-            <Route path="master-data/customer-business-type" element={<BusinessTypeList />} />
-            <Route path="master-data/customer-type" element={<CustomerTypeList />} />
-            <Route path="master-data/customer-group" element={<CustomerGroupList />} />
-            <Route path="master-data/customer-billing-group" element={<BillingGroupList />} />
+            <Route path={ROUTES.MASTER_DATA.CUSTOMER} element={<CustomerList />} />
+            <Route path={ROUTES.MASTER_DATA.CUSTOMER_BUSINESS_TYPE} element={<BusinessTypeList />} />
+            <Route path={ROUTES.MASTER_DATA.CUSTOMER_TYPE} element={<CustomerTypeList />} />
+            <Route path={ROUTES.MASTER_DATA.CUSTOMER_GROUP} element={<CustomerGroupList />} />
+            <Route path={ROUTES.MASTER_DATA.CUSTOMER_BILLING_GROUP} element={<BillingGroupList />} />
 
             {/* Generic Coming Soon for Work in Progress */}
-            <Route path="/coming-soon" element={<ComingSoon />} />
+            <Route path="coming-soon" element={<ComingSoon />} />
 
             {/* ==================== IMPLEMENTED MODULES ==================== */}
             
             {/* Sales Module */}
-            <Route path="sales/dashboard" element={<SalesDashboard />} />
-            <Route path="sales/inquiry" element={<InquiryListPage />} />
-            <Route path="sales/estimate" element={<EstimateListPage />} />
-            <Route path="sales/quotation" element={<QuotationListPage />} />
-            <Route path="sales/quotation-approval" element={<QuotationApproveListPage />} />
-            <Route path="sales/reservation" element={<ReservationListPage />} />
-            <Route path="sales/order" element={<SalesOrderListPage />} />
-            <Route path="sales/order-approval" element={<SalesOrderApproveListPage />} />
-            <Route path="sales/delivery" element={<DeliveryListPage />} />
+            <Route path={ROUTES.SALES.DASHBOARD} element={<SalesDashboard />} />
+            <Route path={ROUTES.SALES.INQUIRY} element={<InquiryListPage />} />
+            <Route path={ROUTES.SALES.ESTIMATE} element={<EstimateListPage />} />
+            <Route path={ROUTES.SALES.QUOTATION} element={<QuotationListPage />} />
+            <Route path={ROUTES.SALES.QUOTATION_APPROVAL} element={<QuotationApproveListPage />} />
+            <Route path={ROUTES.SALES.RESERVATION} element={<ReservationListPage />} />
+            <Route path={ROUTES.SALES.ORDER} element={<SalesOrderListPage />} />
+            <Route path={ROUTES.SALES.ORDER_APPROVAL} element={<SalesOrderApproveListPage />} />
+            <Route path={ROUTES.SALES.DELIVERY} element={<DeliveryListPage />} />
 
             {/* ==================== INVENTORY MODULE ROUTES ==================== */}
             <Route path="inventory">
@@ -348,11 +349,9 @@ function AppContent() {
             ))}
 
             {/* Inventory Placeholders (excluding implemented routes) */}
-            {placeholderRoutes.inventory
-              .filter(({ path }) => path !== 'inventory/requisition' && path !== 'inventory/dashboard')
-              .map(({ path, title }) => (
-                <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
-              ))}
+            {placeholderRoutes.inventory.map(({ path, title }) => (
+              <Route key={path} path={path} element={<PlaceholderPage title={title} />} />
+            ))}
 
             {/* Roles Placeholders */}
             {placeholderRoutes.roles.map(({ path, title }) => (
