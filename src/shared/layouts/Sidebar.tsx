@@ -178,7 +178,9 @@ export default function Sidebar({ isOpen }: SidebarProps) {
                                 <item.icon size={18} />
                             </div>
                         )}
-                        <span className="truncate flex-1 leading-snug">{displayLabel}</span>
+                        <span className={`flex-1 leading-snug ${depth > 0 ? 'whitespace-normal break-words py-0.5' : 'truncate'}`}>
+                            {displayLabel}
+                        </span>
                         {isComingSoon && (
                             <span className="flex-shrink-0 px-1.5 py-0.5 text-[8px] font-medium bg-gray-100/80 dark:bg-gray-800/80 text-gray-500 rounded border border-gray-200 dark:border-gray-700">
                                 SOON
@@ -190,14 +192,19 @@ export default function Sidebar({ isOpen }: SidebarProps) {
         );
     };
 
-    const isMasterDataInventoryExpanded = expandedMenus.includes('master-data-inventory') && expandedMenus.includes('master-data');
+    // ขยายความกว้างพิเศษเมื่อมีการเปิดเมนูย่อยของข้อมูลหลัก (Master Data) ทั้งหมดที่มีคำอธิบายยาว
+    const isMasterDataExpanded = expandedMenus.includes('master-data') || 
+                                 expandedMenus.includes('master-data-company') || 
+                                 expandedMenus.includes('master-data-partner') || 
+                                 expandedMenus.includes('master-data-inventory') || 
+                                 expandedMenus.includes('master-data-finance');
 
     return (
         <div 
             className={`
                 bg-white dark:bg-[#111827] border-r border-gray-200 dark:border-gray-800 h-screen flex flex-col 
                 transition-all duration-300 ease-in-out group overflow-hidden shadow-sm dark:shadow-2xl z-20 backdrop-blur-xl
-                ${isOpen ? (isMasterDataInventoryExpanded ? 'w-[300px]' : 'w-[280px]') : 'w-0'}
+                ${isOpen ? (isMasterDataExpanded ? 'w-[325px]' : 'w-[290px]') : 'w-0'}
             `}
         >
             {/* ==================== HEADER (Logo & Brand) ==================== */}
