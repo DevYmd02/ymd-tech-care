@@ -37,7 +37,7 @@ export default function MainLayout() {
 
     return (
         <WindowManagerProvider>
-            <div className="flex h-screen overflow-hidden bg-white dark:bg-gray-900 transition-colors duration-200 relative z-0">
+            <div className="flex h-screen overflow-hidden bg-white dark:bg-[#0b0f19] transition-colors duration-200 relative z-0">
                 {/* Sidebar */}
                 <Sidebar isOpen={isSidebarOpen} />
 
@@ -50,7 +50,7 @@ export default function MainLayout() {
                     />
 
                     {/* Page Content */}
-                    <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+                    <main className="flex-1 overflow-auto bg-gray-50 dark:bg-[#0b0f19] transition-colors duration-200">
                         <Suspense fallback={<PageLoader />}>
                             <Outlet context={{ isSidebarOpen }} />
                         </Suspense>
