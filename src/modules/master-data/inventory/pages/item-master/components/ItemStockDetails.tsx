@@ -111,6 +111,7 @@ export const ItemStockDetails: React.FC<ItemStockDetailsProps> = ({
                                 <option value="FIFO">FIFO (เข้าก่อนออกก่อน)</option>
                                 <option value="LIFO">LIFO (เข้าหลังออกก่อน)</option>
                                 <option value="FEFO">FEFO (หมดอายุก่อนออกก่อน)</option>
+                                <option value="MANUAL">MANUAL (กำหนดเอง)</option>
                             </select>
                         </div>
 
