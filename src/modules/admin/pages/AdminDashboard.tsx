@@ -6,7 +6,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import {
     TrendingUp,
     Users,
@@ -69,8 +68,47 @@ const chartData = {
 
 export default function AdminDashboard() {
     const { user } = useAuth();
-    const context = useOutletContext<{ isSidebarOpen: boolean }>() || { isSidebarOpen: true };
-    const isSidebarOpen = context?.isSidebarOpen ?? true;
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+    useEffect(() => {
+        // ฟังก์ชันตรวจสอบความกว้างของแถบ Sidebar ใน DOM จริง
+        const checkSidebarState = () => {
+            const sidebar = document.querySelector('.bg-white.dark\\:bg-gray-800.border-r') || 
+                            document.querySelector('.transition-all.duration-300.ease-in-out.group.overflow-hidden');
+            if (sidebar) {
+                const rect = sidebar.getBoundingClientRect();
+                // ถ้า sidebar มีความกว้างมากกว่า 50px ถือว่าเปิดอยู่
+                setIsSidebarOpen(rect.width > 50);
+            }
+        };
+
+        // ตรวจสอบทันทีที่หน้าโหลด
+        checkSidebarState();
+
+        // สังเกตการณ์การเปลี่ยนแปลงของคลาส/ความกว้าง (DOM MutationObserver)
+        const observer = new MutationObserver(() => {
+            checkSidebarState();
+        });
+
+        // สังเกตความเปลี่ยนแปลงใน body ทั้งหมดแบบ real-time
+        observer.observe(document.body, { 
+            attributes: true, 
+            childList: true, 
+            subtree: true, 
+            attributeFilter: ['class', 'style'] 
+        });
+
+        window.addEventListener('resize', checkSidebarState);
+
+        // ทำการตรวจจับความกว้างเป็นระยะในช่วงเวลาทรานซิชันเปิด/ปิด
+        const transitionTimer = setInterval(checkSidebarState, 100);
+
+        return () => {
+            observer.disconnect();
+            window.removeEventListener('resize', checkSidebarState);
+            clearInterval(transitionTimer);
+        };
+    }, []);
 
     // ฟังก์ชันจัดการชื่อผู้ใช้ให้เป็นสากลและอบอุ่น (Corporate Friendly)
     const getFormattedName = () => {
