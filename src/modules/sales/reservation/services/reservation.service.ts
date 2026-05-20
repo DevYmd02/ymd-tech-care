@@ -104,6 +104,37 @@ const cleanRefNo = (val: unknown): string => {
     return s;
 };
 
+const toISODateString = (dateVal: unknown): string | null => {
+    if (!dateVal) return null;
+    const s = String(dateVal).trim();
+    if (!s || s === 'null' || s === 'undefined' || s === '-') return null;
+    
+    if (s.includes('T')) return new Date(s).toISOString();
+    
+    const parts = s.split('-');
+    if (parts.length === 3) {
+        const year = Number(parts[0]);
+        const month = Number(parts[1]) - 1;
+        const day = Number(parts[2]);
+        if (!isNaN(year) && !isNaN(month) && !isNaN(day)) {
+            return new Date(year, month, day).toISOString();
+        }
+    }
+    return new Date(s).toISOString();
+};
+
+const safeNumber = (val: unknown): number => {
+    if (val === undefined || val === null || val === '') return 0;
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+};
+
+const safeNumberOrNull = (val: unknown): number | null => {
+    if (val === undefined || val === null || val === '') return null;
+    const num = Number(val);
+    return isNaN(num) ? null : num;
+};
+
 export const ReservationService = {
     getList: async (params: ReservationListParams = {}) => {
         logger.debug('Fetching reservations with params:', params);
@@ -214,15 +245,19 @@ export const ReservationService = {
                 if (!r.sq_no && sqId) {
                     try {
                         const sqRes = await api.get<unknown>(`/sale-quotation/${sqId}`);
-                        const sqStr = JSON.stringify(sqRes);
-                        const match = sqStr.match(/SQ-?\d{4,}-\d{4,}/i) || sqStr.match(/"sq_no":"(.*?)"/i) || sqStr.match(/"sqNo":"(.*?)"/i) || sqStr.match(/"code":"(.*?)"/i);
-                        if (match) {
-                            r.sq_no = match[1] || match[0];
-                        } else {
+                        if (sqRes) {
                             const d = ((sqRes as Record<string, unknown>)?.data || (sqRes as Record<string, unknown>)?.rawData || sqRes) as Record<string, unknown>;
-                            r.sq_no = cleanRefNo(d.sq_no || d.sqNo || d.sale_quotation_no || d.sq_number || d.code || d.no);
+                            const foundSqNo = cleanRefNo(d.sq_no || d.sqNo || d.sale_quotation_no || d.sq_number || d.code || d.no);
+                            if (foundSqNo) {
+                                r.sq_no = foundSqNo;
+                            } else {
+                                const discovered = findSqNoAndId(d);
+                                if (discovered.sq_no) r.sq_no = discovered.sq_no;
+                            }
                         }
-                    } catch { /* ignore */ }
+                    } catch (err) {
+                        logger.debug('Failed to fetch quotation details for SQ ID:', sqId, err);
+                    }
                 }
 
                 // If AQ ID exists and either AQ number or SQ number is missing, fetch the AQ to resolve both
@@ -270,18 +305,9 @@ export const ReservationService = {
                                 }
                             }
                         }
-                    } catch { /* ignore */ }
-                }
-
-                // Fallback to nesting/string match as a last resort
-                if (!r.sq_no) {
-                    const fallbackMatch = JSON.stringify(rRaw).match(/SQ-?\d{4,}-\d{4,}/i);
-                    if (fallbackMatch) r.sq_no = fallbackMatch[0];
-                }
-                
-                if (!r.aq_no) {
-                    const aqFallback = JSON.stringify(rRaw).match(/AQ-?\d{4,}-\d{4,}/i);
-                    if (aqFallback) r.aq_no = aqFallback[0];
+                    } catch (err) {
+                        logger.debug('Failed to fetch and resolve AQ/SQ details:', err);
+                    }
                 }
 
                 // Sync values back to raw data to ensure UI form reads them correctly
@@ -514,48 +540,46 @@ export const ReservationService = {
         
         // Root Level Mapping
         const cleaned: Record<string, unknown> = {
-            reservation_date: raw.reservation_date ? new Date(raw.reservation_date as string).toISOString() : null,
-            sq_id: raw.sq_id ? Number(raw.sq_id) : null,
-            aq_id: raw.aq_id ? Number(raw.aq_id) : null,
-            customer_id: raw.customer_id ? Number(raw.customer_id) : null,
-            branch_id: raw.branch_id ? Number(raw.branch_id) : null,
+            reservation_date: toISODateString(raw.reservation_date),
+            sq_id: safeNumberOrNull(raw.sq_id),
+            aq_id: safeNumberOrNull(raw.aq_id),
+            customer_id: safeNumberOrNull(raw.customer_id),
+            branch_id: safeNumberOrNull(raw.branch_id),
             status: raw.status || 'DRAFT',
-            ship_days: Number(raw.ship_days || 0),
+            ship_days: safeNumber(raw.ship_days),
             remarks: raw.remarks || '',
-            payment_term_days: Number(raw.payment_term_days || 0),
+            payment_term_days: safeNumber(raw.payment_term_days),
             onhold: raw.onhold || 'N',
-            emp_sale_id: raw.emp_sale_id ? Number(raw.emp_sale_id) : null,
-            sale_area_id: raw.sale_area_id ? Number(raw.sale_area_id) : null,
-            emp_dept_id: raw.emp_dept_id ? Number(raw.emp_dept_id) : null,
-            project_id: raw.job_id ? Number(raw.job_id) : (raw.project_id ? Number(raw.project_id) : null),
+            emp_sale_id: safeNumberOrNull(raw.emp_sale_id),
+            sale_area_id: safeNumberOrNull(raw.sale_area_id),
+            emp_dept_id: safeNumberOrNull(raw.emp_dept_id),
+            project_id: raw.job_id ? safeNumberOrNull(raw.job_id) : safeNumberOrNull(raw.project_id),
             status_remark: raw.status_remark || '',
             base_currency_code: raw.base_currency_code || raw.currency_code || 'THB',
             quote_currency_code: raw.quote_currency_code || raw.currency_code || 'THB',
-            exchange_rate: Number(raw.exchange_rate || 1),
-            exchange_rate_date: raw.exchange_rate_date 
-                ? new Date(raw.exchange_rate_date as string).toISOString() 
-                : (raw.reservation_date ? new Date(raw.reservation_date as string).toISOString() : null),
-            tax_code_id: raw.tax_code_id ? Number(raw.tax_code_id) : null,
+            exchange_rate: safeNumber(raw.exchange_rate || 1),
+            exchange_rate_date: toISODateString(raw.exchange_rate_date) || toISODateString(raw.reservation_date),
+            tax_code_id: safeNumberOrNull(raw.tax_code_id),
             discount_expression: (raw.discount_input as string) || '0',
-            version: raw.version !== undefined && raw.version !== null ? Number(raw.version) : null,
+            version: raw.version !== undefined && raw.version !== null ? safeNumberOrNull(raw.version) : null,
         };
 
         // Lines Mapping: Frontend 'lines' -> Backend 'saleReservationLines'
         const rawLines = (raw.lines || []) as Record<string, unknown>[];
         cleaned.saleReservationLines = rawLines.map((line: Record<string, unknown>) => {
             const l: Record<string, unknown> = {
-                item_id: line.item_id ? Number(line.item_id) : null,
-                warehouse_id: line.warehouse_id ? Number(line.warehouse_id) : null,
-                location_id: line.location_id ? Number(line.location_id) : null,
-                lot_id: line.lot_id ? Number(line.lot_id) : null,
+                item_id: safeNumberOrNull(line.item_id),
+                warehouse_id: safeNumberOrNull(line.warehouse_id),
+                location_id: safeNumberOrNull(line.location_id),
+                lot_id: safeNumberOrNull(line.lot_id),
                 note: line.note || '',
-                qty: Number(line.qty_reserved || 0),
-                uom_id: line.uom_id ? Number(line.uom_id) : null,
-                unit_price: Number(line.unit_price || 0),
+                qty: safeNumber(line.qty_reserved),
+                uom_id: safeNumberOrNull(line.uom_id),
+                unit_price: safeNumber(line.unit_price),
                 discount_expression: line.line_discount_input || '0',
                 discount_rate: 0, 
-                discount_amount: Number(line.line_discount || 0),
-                net_amount: Number(line.line_total || 0),
+                discount_amount: safeNumber(line.line_discount),
+                net_amount: safeNumber(line.line_total),
             };
 
             // Only send reservation_line_id if it exists AND we are in update mode
@@ -566,10 +590,13 @@ export const ReservationService = {
             return l;
         });
 
-        // Remove null fields to keep payload clean
-        Object.keys(cleaned).forEach(key => {
-            if (cleaned[key] === null) delete cleaned[key];
-        });
+        // Remove null fields only when CREATING to keep payload clean.
+        // On UPDATE, we must allow null values so the backend can clear those fields in the database.
+        if (!isUpdate) {
+            Object.keys(cleaned).forEach(key => {
+                if (cleaned[key] === null) delete cleaned[key];
+            });
+        }
 
         return cleaned;
     },
@@ -640,6 +667,11 @@ export const ReservationService = {
             const currentData = await ReservationService.getById(id);
             if (!currentData) {
                 throw new Error('ไม่พบข้อมูลใบสั่งจองสำหรับการยืนยัน');
+            }
+
+            // ป้องกันการยืนยันซ้ำ หรือยืนยันเอกสารที่ยกเลิก/หมดอายุไปแล้ว
+            if (currentData.status !== 'DRAFT') {
+                throw new Error(`ไม่สามารถยืนยันเอกสารได้เนื่องจากเอกสารอยู่ในสถานะ ${currentData.status}`);
             }
 
             // 2. รวมข้อมูลเดิมเข้ากับสถานะใหม่แล้วสั่งอัปเดตผ่าน Service เดิมที่จัดการ Sanitization ไว้แล้ว
