@@ -16,7 +16,7 @@ import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 import { formatNumber } from '@/shared/utils';
 import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
 import { useConfirmation } from '@hooks/useConfirmation';
-import { AOHistoryModal } from '@sales/shared/components/AOHistoryModal';
+import { GenericApprovalHistoryModal } from '@sales/shared/components/GenericApprovalHistoryModal';
 
 // ====================================================================================
 // CONSTANTS
@@ -445,11 +445,12 @@ export default function SalesOrderListPage() {
             </PageListLayout>
 
             {/* Approval History Modal */}
-            <AOHistoryModal
+            <GenericApprovalHistoryModal
                 isOpen={isHistoryModalOpen}
                 onClose={() => setIsHistoryModalOpen(false)}
-                soId={historySoId}
-                soNo={historySoNo}
+                documentId={historySoId}
+                documentNo={historySoNo}
+                documentType="SO"
             />
 
             {/* Sales Order Form Modal */}

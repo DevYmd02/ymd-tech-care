@@ -44,7 +44,8 @@ export const useQuotationForm = (isOpen: boolean, onClose: () => void, id?: stri
     });
 
     // 1. Master Data Fetching
-    const masterData = useQuotationMasterData(isOpen);
+    const watchedCustomerId = useWatch({ control, name: 'customer_id' });
+    const masterData = useQuotationMasterData(isOpen, Number(watchedCustomerId || 0));
 
     // 2. Hydration & Initial Loading
     useQuotationHydration({
@@ -136,6 +137,7 @@ export const useQuotationForm = (isOpen: boolean, onClose: () => void, id?: stri
         branches: masterData.branches,
         currencies: masterData.currencies,
         customers: masterData.customers,
+        selectedCustomer: masterData.selectedCustomer,
         taxCodes: masterData.taxCodes,
         departments: masterData.departments,
         projects: masterData.projects,

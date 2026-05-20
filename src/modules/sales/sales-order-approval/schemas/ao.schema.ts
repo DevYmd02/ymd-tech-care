@@ -4,20 +4,21 @@
  */
 
 import { z } from 'zod';
+import { zIdSchema } from '../../shared/utils/zod-shared';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Line Schema
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const AOLineSchema = z.object({
-  so_line_id: z.union([z.string(), z.number()]),
-  item_id: z.union([z.string(), z.number()]).default(''),
+  so_line_id: zIdSchema,
+  item_id: zIdSchema.default(''),
   item_code: z.string().default(''),
   item_name: z.string().default(''),
 
   // Original SO values (readonly display)
   qty_ordered: z.coerce.number().default(0),
-  uom_id: z.union([z.string(), z.number()]).default(''),
+  uom_id: zIdSchema.default(''),
   uom_name: z.string().default(''),
   unit_price: z.coerce.number().default(0),
   discount_expression: z.string().optional().default('0'),
@@ -28,11 +29,11 @@ export const AOLineSchema = z.object({
   price_level_priority: z.coerce.number().optional().nullable(),
 
   // Inventory info (Read-only reference)
-  warehouse_id: z.union([z.string(), z.number()]).optional().default(''),
+  warehouse_id: zIdSchema.optional().default(''),
   warehouse_name: z.string().optional().default(''),
-  location_id: z.union([z.string(), z.number()]).optional().default(''),
+  location_id: zIdSchema.optional().default(''),
   location_name: z.string().optional().default(''),
-  lot_id: z.union([z.string(), z.number()]).optional().default(''),
+  lot_id: zIdSchema.optional().default(''),
   lot_no: z.string().optional().default(''),
 
   // Approval interaction
@@ -47,17 +48,17 @@ export const AOLineSchema = z.object({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const AOFormSchema = z.object({
-  ao_id: z.coerce.number().optional(),
+  ao_id: zIdSchema.optional(),
   ao_no: z.string().optional().default(''),
   ao_date: z.string().optional().default(''),
 
   // SO Reference (readonly)
-  so_id: z.union([z.string(), z.number()]),
+  so_id: zIdSchema,
   so_no: z.string().default(''),
   so_date: z.string().default(''),
 
   // Customer (readonly display)
-  customer_id: z.union([z.string(), z.number()]).optional().default(''),
+  customer_id: zIdSchema.optional().default(''),
   customer_name: z.string().default(''),
   customer_code: z.string().default(''),
 
@@ -66,7 +67,7 @@ export const AOFormSchema = z.object({
   reject_reason: z.string().optional().default(''),
 
   // Approval identity
-  approval_emp_id: z.union([z.string(), z.number()]).optional(),
+  approval_emp_id: zIdSchema.optional(),
   approval_emp_name: z.string().optional().default(''),
 
   // Currency (readonly clone from SO)
@@ -82,7 +83,7 @@ export const AOFormSchema = z.object({
   sub_total: z.coerce.number().default(0),
   base_total_amount: z.coerce.number().default(0),
   quote_total_amount: z.coerce.number().default(0),
-  tax_code_id: z.union([z.string(), z.number()]).nullable().optional(),
+  tax_code_id: zIdSchema.nullable().optional(),
   tax_code: z.string().optional().default(''), // For display
   tax_rate: z.coerce.number().default(0),
   base_tax_amount: z.coerce.number().default(0),
@@ -93,23 +94,23 @@ export const AOFormSchema = z.object({
   quote_discount_amount: z.coerce.number().default(0),
 
   // Other SO readonly fields
-  branch_id: z.union([z.string(), z.number()]).optional().default(''),
+  branch_id: zIdSchema.optional().default(''),
   branch_name: z.string().optional().default(''),
-  emp_sale_id: z.union([z.string(), z.number()]).optional().default(''),
+  emp_sale_id: zIdSchema.optional().default(''),
   emp_sale_name: z.string().optional().default(''),
 
   payment_term_days: z.coerce.number().default(0),
   remarks: z.string().optional().default(''),
 
-  reservation_id: z.union([z.string(), z.number()]).optional().default(''),
+  reservation_id: zIdSchema.optional().default(''),
   reservation_no: z.string().optional().default(''),
   ship_days: z.coerce.number().optional().default(0),
   ship_date: z.string().optional().default(''),
-  emp_dept_id: z.union([z.string(), z.number()]).optional().default(''),
+  emp_dept_id: zIdSchema.optional().default(''),
   emp_dept_name: z.string().optional().default(''),
-  emp_area_id: z.union([z.string(), z.number()]).optional().default(''),
+  emp_area_id: zIdSchema.optional().default(''),
   emp_area_name: z.string().optional().default(''),
-  job_id: z.union([z.string(), z.number()]).optional().default(''),
+  job_id: zIdSchema.optional().default(''),
   job_name: z.string().optional().default(''),
   onhold: z.enum(['Y', 'N']).default('N'),
 

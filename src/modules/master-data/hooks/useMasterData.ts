@@ -35,16 +35,24 @@ export function useBranches(enabled = true) {
 }
 
 /**
- * Hook to fetch all units (UOMs)
+ * Hook to fetch all Units of Measure (UOMs)
+ * Locked limit = 1000 and static queryKey to prevent unnecessary cache misses (fixes LOW 2)
  */
-export function useUnits(enabled = true, limit = 1000) {
+export function useUoms(enabled = true) {
     return useQuery<ListResponse<UOMListItem>>({
-        queryKey: ['master-units', limit],
-        queryFn: () => UOMService.getAll({ limit }),
+        queryKey: ['master-uoms'],
+        queryFn: () => UOMService.getAll({ limit: 1000 }),
         enabled,
         staleTime: MASTER_DATA_STALE_TIME,
         gcTime: MASTER_DATA_GC_TIME,
     });
+}
+
+/**
+ * Hook to fetch all units (Deprecated - please transition to useUoms in new code)
+ */
+export function useUnits(enabled = true, _limit = 1000) {
+    return useUoms(enabled);
 }
 
 /**

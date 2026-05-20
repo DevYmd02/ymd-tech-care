@@ -1,4 +1,4 @@
-import { FileText, User, Calendar, Search } from 'lucide-react';
+import { FileText, User, Calendar, Search, ShoppingCart } from 'lucide-react';
 import { useFormContext, Controller } from 'react-hook-form';
 import { MulticurrencyWrapper } from '@components/forms/MulticurrencyWrapper';
 import type { AOFormData } from '../schemas/ao.schema';
@@ -37,7 +37,6 @@ export function AOHeader({ currencies = [], readOnly = false, onSearchSO }: AOHe
   const taxCode = watch('tax_code');
 
   const reservationNo = watch('reservation_no');
-  const reservationId = watch('reservation_id');
   const shipDays = watch('ship_days');
   const shipDate = watch('ship_date');
   const empDeptName = watch('emp_dept_name');
@@ -114,13 +113,16 @@ export function AOHeader({ currencies = [], readOnly = false, onSearchSO }: AOHe
 
         <div className="space-y-1">
           <label className={labelClass}>อ้างอิงใบจอง</label>
-          <input
-            type="text"
-            value={reservationNo || (reservationId && reservationId !== '0' ? String(reservationId) : '-')}
-            readOnly
-            className={`${inputClass} italic`}
-            placeholder="RS-xxxx"
-          />
+          <div className="relative flex-1 group">
+            <input
+              type="text"
+              value={reservationNo || ''}
+              readOnly
+              className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-not-allowed group-hover:border-indigo-400 transition-colors`}
+              placeholder="RS-xxxx (ถ้ามี)"
+            />
+            <ShoppingCart size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          </div>
         </div>
 
         <div className="space-y-1">

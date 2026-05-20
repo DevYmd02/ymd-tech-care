@@ -192,6 +192,7 @@ export interface AQLineFormData {
   price_source?: number;
   price_source_name: string;
   price_level_priority?: number;
+  [key: string]: unknown;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

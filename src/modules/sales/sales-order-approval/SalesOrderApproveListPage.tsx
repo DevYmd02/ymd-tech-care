@@ -9,7 +9,7 @@ import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { SOStatusBadge } from '../shared/components/SOStatusBadge';
 import { AOFormModal } from './components/AOFormModal';
-import { AOHistoryModal } from '../shared/components/AOHistoryModal';
+import { GenericApprovalHistoryModal } from '../shared/components/GenericApprovalHistoryModal';
 import { useAOListData } from './hooks/useAOListData';
 import type { AOListItem, SOForApproval } from './types/sales-order-approval.types';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
@@ -404,15 +404,16 @@ export default function SalesOrderApproveListPage() {
         }}
       />
 
-      <AOHistoryModal 
+      <GenericApprovalHistoryModal 
         isOpen={isHistoryOpen}
         onClose={() => {
           setIsHistoryOpen(false);
           setHistorySoId(undefined);
           setHistorySoNo('');
         }}
-        soId={historySoId}
-        soNo={historySoNo}
+        documentId={historySoId}
+        documentNo={historySoNo}
+        documentType="SO"
       />
 
     </>

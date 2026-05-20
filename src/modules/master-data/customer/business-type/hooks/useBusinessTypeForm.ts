@@ -57,11 +57,15 @@ export function useBusinessTypeForm({ id, onSuccess, onClose, isOpen }: UseBusin
 
   // [VALIDATION] Real-time duplicate check
   useEffect(() => {
+    let active = true;
+
     const checkDuplicateRealTime = async () => {
       if (!debouncedCode || isEdit) return;
       
       try {
         const existing = await BusinessTypeService.getList({ search: debouncedCode });
+        if (!active) return;
+
         const isDuplicate = existing.data.some(
           item => item.business_type_code.toLowerCase() === debouncedCode.toLowerCase()
         );
@@ -72,11 +76,17 @@ export function useBusinessTypeForm({ id, onSuccess, onClose, isOpen }: UseBusin
           setError(null);
         }
       } catch (err) {
-        logger.error('Real-time validation error:', err);
+        if (active) {
+          logger.error('Real-time validation error:', err);
+        }
       }
     };
 
     checkDuplicateRealTime();
+
+    return () => {
+      active = false;
+    };
   }, [debouncedCode, isEdit]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

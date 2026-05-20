@@ -56,11 +56,15 @@ export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCusto
 
   // [VALIDATION] Real-time duplicate check
   useEffect(() => {
+    let active = true;
+
     const checkDuplicateRealTime = async () => {
       if (!debouncedCode || isEdit) return; // Skip for edit mode to avoid self-collision (or add logic to check against original)
       
       try {
         const existing = await CustomerTypeService.getList({ search: debouncedCode });
+        if (!active) return;
+
         const isDuplicate = existing.data.some(
           item => item.customer_type_code.toLowerCase() === debouncedCode.toLowerCase()
         );
@@ -71,11 +75,17 @@ export function useCustomerTypeForm({ id, onSuccess, onClose, isOpen }: UseCusto
           setError(null);
         }
       } catch (err) {
-        logger.error('Real-time validation error:', err);
+        if (active) {
+          logger.error('Real-time validation error:', err);
+        }
       }
     };
 
     checkDuplicateRealTime();
+
+    return () => {
+      active = false;
+    };
   }, [debouncedCode, isEdit]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

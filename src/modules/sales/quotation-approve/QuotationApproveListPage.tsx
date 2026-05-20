@@ -10,7 +10,7 @@ import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { createColumnHelper } from '@tanstack/react-table';
 import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
 import { AQFormModal } from './components/AQFormModal';
-import { AQHistoryModal } from '@sales/shared/components/AQHistoryModal';
+import { GenericApprovalHistoryModal } from '@sales/shared/components/GenericApprovalHistoryModal';
 import { useAQListData } from './hooks/useAQListData';
 import type { AQListItem, SQForApproval } from './types/quotation-approve.types';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
@@ -434,15 +434,16 @@ export default function QuotationApproveListPage() {
       />
 
       {/* History Modal */}
-      <AQHistoryModal 
+      <GenericApprovalHistoryModal 
         isOpen={isHistoryOpen}
         onClose={() => {
           setIsHistoryOpen(false);
           setHistorySqId(undefined);
           setHistorySqNo('');
         }}
-        sqId={historySqId}
-        sqNo={historySqNo}
+        documentId={historySqId}
+        documentNo={historySqNo}
+        documentType="SQ"
       />
 
     </>

@@ -164,20 +164,64 @@ export const SalesOrderService = {
                 const uniqueItemIds = Array.from(new Set(rawLines.map(l => normalizeId(l['item_id'] || ((l['item'] || {}) as Record<string, unknown>)['id'])).filter(Boolean))) as string[];
                 const uniqueLotIds = Array.from(new Set(rawLines.map(l => l['lot_id']).filter(id => id && (typeof id === 'string' || typeof id === 'number')))) as (string|number)[];
 
-                // 🎯 [Performance] Step 2: Fetch Item and Lot details in parallel (Unique IDs only)
+                // 🎯 [Performance] Step 2: Fetch Item and Lot details in parallel (Batch Fetching)
                 const [itemMasterResults, lotResults] = await Promise.all([
-                    Promise.all(uniqueItemIds.map(async (itemId) => {
+                    (async () => {
+                        if (uniqueItemIds.length === 0) return [];
                         try {
-                            const res = await api.get<unknown>(`/item-master/${itemId}`, config);
-                            return { itemId, data: ((res as Record<string, unknown>)?.data || res) as Record<string, unknown> };
-                        } catch { return { itemId, data: null }; }
-                    })),
-                    Promise.all(uniqueLotIds.map(async (lotId) => {
+                            // Fetch all items in a single request batch using the ids parameter
+                            const res = await api.get<unknown>('/item-master', {
+                                ...config,
+                                params: { ...config?.params, ids: uniqueItemIds, limit: uniqueItemIds.length }
+                            });
+                            
+                            const rawItems = Array.isArray(res) 
+                                ? res 
+                                : ((res as Record<string, unknown>)?.data || (res as Record<string, unknown>)?.items || []) as Record<string, unknown>[];
+                            
+                            return rawItems.map((item) => {
+                                const id = String(item.id || item.item_id || '');
+                                return { itemId: id, data: item as Record<string, unknown> };
+                            });
+                        } catch (err) {
+                            logger.error('Failed to batch fetch items in sales order details:', err);
+                            // Fallback to individual fetches in case of batch failure
+                            return Promise.all(uniqueItemIds.map(async (itemId) => {
+                                try {
+                                    const res = await api.get<unknown>(`/item-master/${itemId}`, config);
+                                    return { itemId, data: ((res as Record<string, unknown>)?.data || res) as Record<string, unknown> };
+                                } catch { return { itemId, data: null }; }
+                            }));
+                        }
+                    })(),
+                    (async () => {
+                        if (uniqueLotIds.length === 0) return [];
                         try {
-                            const res = await api.get<unknown>(`/item-lot/${lotId}`, config);
-                            return { lotId, data: ((res as Record<string, unknown>)?.data || res) as Record<string, unknown> };
-                        } catch { return { lotId, data: null }; }
-                    }))
+                            // Fetch all lots in a single request batch using the ids parameter
+                            const res = await api.get<unknown>('/item-lot', {
+                                ...config,
+                                params: { ...config?.params, ids: uniqueLotIds, limit: uniqueLotIds.length }
+                            });
+                            
+                            const rawLots = Array.isArray(res) 
+                                ? res 
+                                : ((res as Record<string, unknown>)?.data || (res as Record<string, unknown>)?.items || []) as Record<string, unknown>[];
+                            
+                            return rawLots.map((lot) => {
+                                const id = String(lot.id || lot.lot_id || '');
+                                return { lotId: id, data: lot as Record<string, unknown> };
+                            });
+                        } catch (err) {
+                            logger.error('Failed to batch fetch lots in sales order details:', err);
+                            // Fallback to individual fetches in case of batch failure
+                            return Promise.all(uniqueLotIds.map(async (lotId) => {
+                                try {
+                                    const res = await api.get<unknown>(`/item-lot/${lotId}`, config);
+                                    return { lotId, data: ((res as Record<string, unknown>)?.data || res) as Record<string, unknown> };
+                                } catch { return { lotId, data: null }; }
+                            }));
+                        }
+                    })()
                 ]);
 
                 // Create lookups for O(1) access
@@ -286,7 +330,7 @@ export const SalesOrderService = {
                     r['isMulticurrency'] = true;
                 }
 
-                // 🎯 [Performance] Step 4: Final Metadata Hydration (Branch, Employee, Dept)
+                // 🎯 [Performance] Step 4: Final Metadata Hydration (Branch, Employee, Dept, Reservation)
                 // Use parallel fetching for any metadata missing from the cache
                 await Promise.all([
                     (async () => {
@@ -301,6 +345,17 @@ export const SalesOrderService = {
                                     if (branchData) r['branch_name'] = String(branchData['branch_name'] || branchData['name'] || branchData['name_th'] || '');
                                 } catch { /* ignore */ }
                             }
+                        }
+                    })(),
+                    (async () => {
+                        if (rawResId && !r['reservation_no']) {
+                            try {
+                                const resRes = await api.get<unknown>(`/sale-reservation/${rawResId}`, config);
+                                const resData = (resRes as Record<string, unknown>)?.data || resRes as Record<string, unknown>;
+                                const resDataObj = resData as Record<string, unknown>;
+                                const reservationObj = (resDataObj['sale_reservation'] || resDataObj['reservation_header'] || resDataObj['reservation'] || resDataObj) as Record<string, unknown>;
+                                if (reservationObj) r['reservation_no'] = String(reservationObj['reservation_no'] || reservationObj['reservationNo'] || reservationObj['code'] || reservationObj['no'] || '');
+                            } catch { /* ignore */ }
                         }
                     })(),
                     (async () => {

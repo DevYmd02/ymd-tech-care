@@ -10,6 +10,7 @@ import type { BranchListItem } from '@master-data/types/master-data-types';
 
 interface DeliveryHeaderFormProps {
     branches: BranchListItem[];
+    isViewOnly?: boolean;
     onSearchSalesOrder: () => void;
     onSearchEmployee: () => void;
     onSearchAddress: () => void;
@@ -27,7 +28,7 @@ const SHIP_METHOD_OPTIONS = [
 
 const labelClass = 'block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5';
 const inputClass =
-    'w-full h-9 px-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all placeholder-slate-400 dark:placeholder-slate-600';
+    'w-full h-9 px-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all placeholder-slate-400 dark:placeholder-slate-600 disabled:bg-slate-50 dark:disabled:bg-gray-800/60 disabled:text-slate-500 dark:disabled:text-slate-400 disabled:cursor-not-allowed';
 const inputReadonlyClass =
     'w-full h-9 px-3 bg-slate-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-slate-600 dark:text-slate-300 cursor-default select-none truncate flex items-center';
 const searchBtnClass =
@@ -36,6 +37,7 @@ const errorClass = 'text-xs text-red-500 mt-1';
 
 export function DeliveryHeaderForm({
     branches,
+    isViewOnly = false,
     onSearchSalesOrder,
     onSearchEmployee,
     onSearchAddress,
@@ -80,8 +82,13 @@ export function DeliveryHeaderForm({
                         <input
                             type="date"
                             {...register('delivery_date')}
-                            onClick={(e) => e.currentTarget.showPicker()}
-                            className={inputClass + ' pl-9 cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer'}
+                            disabled={isViewOnly}
+                            onClick={(e) => !isViewOnly && e.currentTarget.showPicker()}
+                            className={`${inputClass} pl-9 ${
+                                isViewOnly
+                                    ? 'cursor-not-allowed [&::-webkit-calendar-picker-indicator]:pointer-events-none'
+                                    : 'cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer'
+                            }`}
                         />
                     </div>
                     {errors.delivery_date && <p className={errorClass}>{errors.delivery_date.message}</p>}
@@ -95,8 +102,13 @@ export function DeliveryHeaderForm({
                         <input
                             type="date"
                             {...register('docu_date')}
-                            onClick={(e) => e.currentTarget.showPicker()}
-                            className={inputClass + ' pl-9 cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer'}
+                            disabled={isViewOnly}
+                            onClick={(e) => !isViewOnly && e.currentTarget.showPicker()}
+                            className={`${inputClass} pl-9 ${
+                                isViewOnly
+                                    ? 'cursor-not-allowed [&::-webkit-calendar-picker-indicator]:pointer-events-none'
+                                    : 'cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:cursor-pointer'
+                            }`}
                         />
                     </div>
                     {errors.docu_date && <p className={errorClass}>{errors.docu_date.message}</p>}
@@ -111,21 +123,27 @@ export function DeliveryHeaderForm({
                     </label>
                     <div className="relative">
                         <div
-                            className={inputReadonlyClass + ' cursor-pointer hover:border-amber-400 pr-10 transition-all'}
-                            onClick={onSearchSalesOrder}
+                            className={`${inputReadonlyClass} ${
+                                isViewOnly
+                                    ? 'cursor-not-allowed text-slate-500 dark:text-slate-400'
+                                    : 'cursor-pointer hover:border-amber-400 pr-10'
+                            } transition-all`}
+                            onClick={() => !isViewOnly && onSearchSalesOrder()}
                         >
                             {watchedSoNo || (
                                 <span className="text-slate-400 italic">คลิกเพื่อเลือกใบสั่งขาย</span>
                             )}
                         </div>
-                        <button
-                            type="button"
-                            onClick={onSearchSalesOrder}
-                            className={searchBtnClass}
-                            title="ค้นหาใบสั่งขาย"
-                        >
-                            <Search size={15} className="dark:text-white" />
-                        </button>
+                        {!isViewOnly && (
+                            <button
+                                type="button"
+                                onClick={onSearchSalesOrder}
+                                className={searchBtnClass}
+                                title="ค้นหาใบสั่งขาย"
+                            >
+                                <Search size={15} className="dark:text-white" />
+                            </button>
+                        )}
                     </div>
                     {errors.so_id && <p className={errorClass}>{errors.so_id.message}</p>}
                 </div>
@@ -143,7 +161,11 @@ export function DeliveryHeaderForm({
                     <label className={labelClass}>
                         สาขา <span className="text-red-500">*</span>
                     </label>
-                    <select {...register('branch_id')} className={inputClass}>
+                    <select
+                        {...register('branch_id')}
+                        disabled={isViewOnly}
+                        className={inputClass}
+                    >
                         <option value="">-- เลือกสาขา --</option>
                         {branches.map((b) => (
                             <option
@@ -160,7 +182,8 @@ export function DeliveryHeaderForm({
                     <label className={labelClass}>คลังต้นทาง (ถ้ามี)</label>
                     <input
                         {...register('warehouse_id')}
-                        placeholder="ระบุรหัสคลังสินค้า"
+                        disabled={isViewOnly}
+                        placeholder={isViewOnly ? '' : 'ระบุรหัสคลังสินค้า'}
                         className={inputClass}
                     />
                 </div>
@@ -172,7 +195,11 @@ export function DeliveryHeaderForm({
                     <label className={labelClass}>วิธีจัดส่ง</label>
                     <div className="relative flex items-center">
                         <Truck size={14} className="absolute left-3 text-amber-600 dark:text-white pointer-events-none" />
-                        <select {...register('ship_method')} className={inputClass + ' pl-9'}>
+                        <select
+                            {...register('ship_method')}
+                            disabled={isViewOnly}
+                            className={inputClass + ' pl-9'}
+                        >
                             {SHIP_METHOD_OPTIONS.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
@@ -183,7 +210,8 @@ export function DeliveryHeaderForm({
                     <label className={labelClass}>บริษัทขนส่ง</label>
                     <input
                         {...register('carrier')}
-                        placeholder="ชื่อบริษัทขนส่ง"
+                        disabled={isViewOnly}
+                        placeholder={isViewOnly ? '' : 'ชื่อบริษัทขนส่ง'}
                         className={inputClass}
                     />
                 </div>
@@ -193,7 +221,8 @@ export function DeliveryHeaderForm({
                         <Hash size={14} className="absolute left-3 text-amber-600 dark:text-white pointer-events-none" />
                         <input
                             {...register('tracking_no')}
-                            placeholder="Tracking number"
+                            disabled={isViewOnly}
+                            placeholder={isViewOnly ? '' : 'Tracking number'}
                             className={inputClass + ' pl-9'}
                         />
                     </div>
@@ -210,20 +239,27 @@ export function DeliveryHeaderForm({
                             {...register('ship_to_address')}
                             rows={4}
                             readOnly
-                            onClick={onSearchAddress}
-                            placeholder="คลิกเพื่อเลือกที่อยู่จัดส่ง..."
+                            disabled={isViewOnly}
+                            onClick={() => !isViewOnly && onSearchAddress()}
+                            placeholder={isViewOnly ? '' : 'คลิกเพื่อเลือกที่อยู่จัดส่ง...'}
                             className={
-                                'w-full px-3 py-2.5 pl-9 bg-slate-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all placeholder-slate-400 dark:placeholder-slate-600 resize-none h-[108px] cursor-pointer hover:border-amber-400'
+                                `w-full px-3 py-2.5 pl-9 border rounded-lg text-sm transition-all resize-none h-[108px] ${
+                                    isViewOnly
+                                        ? 'bg-slate-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-slate-500 dark:text-slate-400 cursor-not-allowed'
+                                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 placeholder-slate-400 dark:placeholder-slate-600 cursor-pointer hover:border-amber-400'
+                                }`
                             }
                         />
-                        <button
-                            type="button"
-                            onClick={onSearchAddress}
-                            className="absolute right-2 top-2 h-8 w-8 flex items-center justify-center text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors bg-white/50 dark:bg-gray-900/50 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm"
-                            title="เลือกที่อยู่จาก Master Data"
-                        >
-                            <Search size={14} className="dark:text-white" />
-                        </button>
+                        {!isViewOnly && (
+                            <button
+                                type="button"
+                                onClick={onSearchAddress}
+                                className="absolute right-2 top-2 h-8 w-8 flex items-center justify-center text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors bg-white/50 dark:bg-gray-900/50 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm"
+                                title="เลือกที่อยู่จาก Master Data"
+                            >
+                                <Search size={14} className="dark:text-white" />
+                            </button>
+                        )}
                     </div>
                 </div>
                 <div className="space-y-3">
@@ -231,28 +267,35 @@ export function DeliveryHeaderForm({
                         <label className={labelClass}>พนักงานจัดส่ง</label>
                         <div className="relative">
                             <div
-                                className={inputReadonlyClass + ' cursor-pointer hover:border-amber-400 pr-10 transition-all'}
-                                onClick={onSearchEmployee}
+                                className={`${inputReadonlyClass} ${
+                                    isViewOnly
+                                        ? 'cursor-not-allowed text-slate-500 dark:text-slate-400'
+                                        : 'cursor-pointer hover:border-amber-400 pr-10'
+                                } transition-all`}
+                                onClick={() => !isViewOnly && onSearchEmployee()}
                             >
                                 {watchedEmpName || (
                                     <span className="text-slate-400 italic">คลิกเพื่อเลือกพนักงาน</span>
                                 )}
                             </div>
-                            <button
-                                type="button"
-                                onClick={onSearchEmployee}
-                                className={searchBtnClass}
-                                title="ค้นหาพนักงาน"
-                            >
-                                <Search size={15} className="dark:text-white" />
-                            </button>
+                            {!isViewOnly && (
+                                <button
+                                    type="button"
+                                    onClick={onSearchEmployee}
+                                    className={searchBtnClass}
+                                    title="ค้นหาพนักงาน"
+                                >
+                                    <Search size={15} className="dark:text-white" />
+                                </button>
+                            )}
                         </div>
                     </div>
                     <div>
                         <label className={labelClass}>หมายเหตุ</label>
                         <input
                             {...register('remarks')}
-                            placeholder="หมายเหตุเพิ่มเติม"
+                            disabled={isViewOnly}
+                            placeholder={isViewOnly ? '' : 'หมายเหตุเพิ่มเติม'}
                             className={inputClass}
                         />
                         {/* Hidden fields to ensure they are registered in the form */}

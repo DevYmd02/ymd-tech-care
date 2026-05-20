@@ -1,9 +1,7 @@
 import api from '@core/api/api';
 import { logger } from '@utils';
+import { extractArrayFromResponse } from '@utils/clientFilterUtils';
 import type { ReservationFormData } from '../types/reservation.types';
-import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
-import type { ItemLot } from '@/modules/master-data/inventory/types/item-lot-types';
-import type { ListResponse, DataListResponse } from '@/shared/types/api.types';
 
 export interface ReservationListParams {
     reservation_no?: string;
@@ -99,6 +97,13 @@ export interface AvailableApproval {
     [key: string]: unknown; // Capture extra fields from API
 }
 
+const cleanRefNo = (val: unknown): string => {
+    if (val === undefined || val === null) return '';
+    const s = String(val).trim();
+    if (s === 'null' || s === 'undefined' || s === '' || s === '-') return '';
+    return s;
+};
+
 export const ReservationService = {
     getList: async (params: ReservationListParams = {}) => {
         logger.debug('Fetching reservations with params:', params);
@@ -127,8 +132,83 @@ export const ReservationService = {
             
             if (response) {
                 // 🕵️ Structured Discovery: Find Reference Numbers
-                const r = response as Record<string, unknown>;
-                const sqId = (r.sq_id || r.sale_quotation_id || r.quotation_id || r.sq_header_id) as string | number | undefined;
+                let rRaw = response as Record<string, unknown>;
+                if (rRaw['data'] && typeof rRaw['data'] === 'object' && !Array.isArray(rRaw['data'])) {
+                    rRaw = rRaw['data'] as Record<string, unknown>;
+                }
+                const r = (rRaw['sale_reservation'] || rRaw['reservation_header'] || rRaw['reservation'] || rRaw['header'] || rRaw) as Record<string, unknown>;
+
+                // Fully typed deep recovery helper functions to avoid any types
+                const findSqNoAndId = (obj: unknown): { sq_no?: string; sq_id?: string } => {
+                    if (!obj || typeof obj !== 'object') return {};
+                    const record = obj as Record<string, unknown>;
+                    
+                    const sqNo = cleanRefNo(record.sq_no || record.sale_quotation_no || record.quotation_no || record.ref_sq_no || record.sqNo);
+                    const sqId = record.sq_id || record.sale_quotation_id || record.quotation_id || record.sqNoId;
+                    
+                    if (sqNo) {
+                        return { sq_no: sqNo, sq_id: sqId ? String(sqId) : undefined };
+                    }
+                    
+                    const nestedKeys = ['sq_header', 'sq', 'sale_quotation', 'quotation', 'sale_quotation_header', 'aq', 'sale_quotation_approval', 'approval', 'aq_header'];
+                    for (const key of nestedKeys) {
+                        if (record[key] && typeof record[key] === 'object') {
+                            const res = findSqNoAndId(record[key]);
+                            if (res.sq_no) {
+                                return {
+                                    sq_no: res.sq_no,
+                                    sq_id: sqId ? String(sqId) : res.sq_id
+                                };
+                            }
+                        }
+                    }
+                    
+                    return {};
+                };
+
+                const findAqNoAndId = (obj: unknown): { aq_no?: string; aq_id?: string } => {
+                    if (!obj || typeof obj !== 'object') return {};
+                    const record = obj as Record<string, unknown>;
+                    
+                    const aqNo = cleanRefNo(record.aq_no || record.sale_quotation_approval_no || record.quotation_approval_no || record.ref_aq_no || record.aqNo);
+                    const aqId = record.aq_id || record.sale_quotation_approval_id || record.approval_id || record.aqNoId;
+                    
+                    if (aqNo) {
+                        return { aq_no: aqNo, aq_id: aqId ? String(aqId) : undefined };
+                    }
+                    
+                    const nestedKeys = ['aq', 'sale_quotation_approval', 'approval', 'aq_header'];
+                    for (const key of nestedKeys) {
+                        if (record[key] && typeof record[key] === 'object') {
+                            const res = findAqNoAndId(record[key]);
+                            if (res.aq_no) {
+                                return {
+                                    aq_no: res.aq_no,
+                                    aq_id: aqId ? String(aqId) : res.aq_id
+                                };
+                            }
+                        }
+                    }
+                    
+                    return {};
+                };
+
+                // Discover nested SQ and AQ info recursively
+                const sqDiscovered = findSqNoAndId(r) || findSqNoAndId(rRaw);
+                const aqDiscovered = findAqNoAndId(r) || findAqNoAndId(rRaw);
+
+                if (sqDiscovered.sq_no) r.sq_no = sqDiscovered.sq_no;
+                if (sqDiscovered.sq_id && !r.sq_id) r.sq_id = sqDiscovered.sq_id;
+                if (aqDiscovered.aq_no) r.aq_no = aqDiscovered.aq_no;
+                if (aqDiscovered.aq_id && !r.aq_id) r.aq_id = aqDiscovered.aq_id;
+
+                // Clean existing SQ/AQ reference numbers first to handle parsed "null" or "undefined" strings
+                r.sq_no = cleanRefNo(r.sq_no || rRaw.sq_no);
+                r.aq_no = cleanRefNo(r.aq_no || rRaw.aq_no);
+                rRaw.sq_no = r.sq_no;
+                rRaw.aq_no = r.aq_no;
+
+                const sqId = (r.sq_id || r.sale_quotation_id || r.quotation_id || r.sq_header_id || rRaw.sq_id) as string | number | undefined;
                 
                 // If SQ ID exists but number is missing, fetch it
                 if (!r.sq_no && sqId) {
@@ -137,102 +217,128 @@ export const ReservationService = {
                         const sqStr = JSON.stringify(sqRes);
                         const match = sqStr.match(/SQ-?\d{4,}-\d{4,}/i) || sqStr.match(/"sq_no":"(.*?)"/i) || sqStr.match(/"sqNo":"(.*?)"/i) || sqStr.match(/"code":"(.*?)"/i);
                         if (match) {
-                            response.sq_no = match[1] || match[0];
+                            r.sq_no = match[1] || match[0];
                         } else {
                             const d = ((sqRes as Record<string, unknown>)?.data || (sqRes as Record<string, unknown>)?.rawData || sqRes) as Record<string, unknown>;
-                            response.sq_no = String(d.sq_no || d.sqNo || d.sale_quotation_no || d.sq_number || d.code || d.no || '');
-                        }
-
-                        // Super Fallback: If still no sq_no, try fetching from the list
-                        if (!response.sq_no) {
-                            const sqsRes = await api.get<unknown>('/sale-quotation', { params: { limit: 1000 } });
-                            const sqsData = ((sqsRes as Record<string, unknown>)?.data || (sqsRes as Record<string, unknown>)?.items || sqsRes || []) as Record<string, unknown>[];
-                            const matchInList = sqsData.find(s => String(s.sq_id || s.id) === String(sqId));
-                            if (matchInList) response.sq_no = String(matchInList.sq_no || matchInList.code || matchInList.no || '');
+                            r.sq_no = cleanRefNo(d.sq_no || d.sqNo || d.sale_quotation_no || d.sq_number || d.code || d.no);
                         }
                     } catch { /* ignore */ }
                 }
 
-                // If AQ ID exists but number is missing, fetch it
-                const aqId = (r.aq_id || r.aq_header_id || r.approval_id || r.sale_quotation_approval_id) as string | number | undefined;
-                if (!r.aq_no && aqId) {
+                // If AQ ID exists and either AQ number or SQ number is missing, fetch the AQ to resolve both
+                const aqId = (r.aq_id || r.aq_header_id || r.approval_id || r.sale_quotation_approval_id || rRaw.aq_id) as string | number | undefined;
+                if ((!r.aq_no || !r.sq_no) && aqId) {
                     try {
                         // 1. Try Available Approvals (Fastest)
                         const aqs = await ReservationService.getAvailableApprovals();
-                        const match = aqs.find((a) => String(a.aq_id) === String(aqId));
-                        if (match) response.aq_no = match.aq_no;
-                        else {
-                            // 2. Try searching in general AQ list (Avoids 404 because list endpoint usually exists)
-                            const aqsRes = await api.get<unknown>('/sale-quotation-approval', { params: { limit: 1000 } });
-                            const aqsData = ((aqsRes as Record<string, unknown>)?.data || (aqsRes as Record<string, unknown>)?.items || aqsRes || []) as Record<string, unknown>[];
-                            const matchInList = aqsData.find(a => String(a.aq_id || a.id || a.sale_quotation_approval_id) === String(aqId));
+                        const match = aqs.find((a) => String(a.aq_id) === String(aqId) || (sqId && String(a.sq_id) === String(sqId)));
+                        if (match) {
+                            if (!r.aq_no) {
+                                const matchAq = findAqNoAndId(match);
+                                if (matchAq.aq_no) r.aq_no = matchAq.aq_no;
+                            }
+                            if (!r.sq_no) {
+                                const matchSq = findSqNoAndId(match);
+                                if (matchSq.sq_no) r.sq_no = matchSq.sq_no;
+                            }
+                            if (!r.sq_id && match.sq_id) {
+                                r.sq_id = String(match.sq_id);
+                            }
+                        } else {
+                            // 2. Try the general approval list (since direct ID fetch is not supported and returns 404)
+                            const listRes = await api.get<unknown>('/sale-quotation-approval', { params: { limit: 1000, page: 1 }, skipToast: true });
+                            const items = extractArrayFromResponse<Record<string, unknown>>(listRes as object);
                             
-                            if (matchInList) {
-                                response.aq_no = String(matchInList.aq_no || matchInList.sale_quotation_approval_no || matchInList.code || matchInList.no || '');
-                            } else {
-                                // 3. Last resort: Direct fetch (might 404 if ID endpoint not supported)
-                                try {
-                                    const aqRes = await api.get<unknown>(`/sale-quotation-approval/${aqId}`);
-                                    const aqStr = JSON.stringify(aqRes);
-                                    const aqMatch = aqStr.match(/AQ-?\d{4,}-\d{4,}/i) || aqStr.match(/"aq_no":"(.*?)"/i) || aqStr.match(/"aqNo":"(.*?)"/i);
-                                    if (aqMatch) response.aq_no = aqMatch[1] || aqMatch[0];
-                                } catch { /* ignore 404 */ }
+                            const listMatch = items.find((item) => {
+                                const itemAqId = findAqNoAndId(item).aq_id || item.aq_id || item.id || item.sale_quotation_approval_id;
+                                const itemSqId = findSqNoAndId(item).sq_id || item.sq_id;
+                                return String(itemAqId) === String(aqId) || (sqId && String(itemSqId) === String(sqId));
+                            });
+                            
+                            if (listMatch) {
+                                if (!r.aq_no) {
+                                    const matchAq = findAqNoAndId(listMatch);
+                                    if (matchAq.aq_no) r.aq_no = matchAq.aq_no;
+                                }
+                                if (!r.sq_no) {
+                                    const matchSq = findSqNoAndId(listMatch);
+                                    if (matchSq.sq_no) r.sq_no = matchSq.sq_no;
+                                }
+                                if (!r.sq_id) {
+                                    const matchSq = findSqNoAndId(listMatch);
+                                    if (matchSq.sq_id) r.sq_id = matchSq.sq_id;
+                                }
                             }
                         }
                     } catch { /* ignore */ }
                 }
 
-                if (!response.sq_no || response.sq_no === 'undefined' || response.sq_no === 'null') {
-                    const sqObj = (r.sq || r.sale_quotation || r.quotation || r.header || {}) as Record<string, unknown>;
-                    const fullStr = JSON.stringify(response);
-                    const fallbackMatch = fullStr.match(/SQ-?\d{4,}-\d{4,}/i);
-                    const resolvedSq = r.sq_no || r.sqNo || sqObj.sq_no || sqObj.sqNo || sqObj.code || sqObj.no || r.sale_quotation_no || (fallbackMatch ? fallbackMatch[0] : '');
-                    response.sq_no = resolvedSq ? String(resolvedSq) : '';
+                // Fallback to nesting/string match as a last resort
+                if (!r.sq_no) {
+                    const fallbackMatch = JSON.stringify(rRaw).match(/SQ-?\d{4,}-\d{4,}/i);
+                    if (fallbackMatch) r.sq_no = fallbackMatch[0];
                 }
                 
-                if (!response.aq_no || response.aq_no === 'undefined' || response.aq_no === 'null') {
-                    const aqObj = (r.aq || r.aq_header || r.sale_quotation_approval || r.quotation_approval || {}) as Record<string, unknown>;
-                    const aqStr = JSON.stringify(response);
-                    const aqFallback = aqStr.match(/AQ-?\d{4,}-\d{4,}/i);
-                    const resolvedAq = r.aq_no || r.aqNo || aqObj.aq_no || aqObj.aqNo || aqObj.code || aqObj.no || (aqFallback ? aqFallback[0] : '');
-                    response.aq_no = resolvedAq ? String(resolvedAq) : '';
+                if (!r.aq_no) {
+                    const aqFallback = JSON.stringify(rRaw).match(/AQ-?\d{4,}-\d{4,}/i);
+                    if (aqFallback) r.aq_no = aqFallback[0];
                 }
+
+                // Sync values back to raw data to ensure UI form reads them correctly
+                rRaw.sq_no = r.sq_no;
+                rRaw.aq_no = r.aq_no;
                 
                 // 📅 Date Formatting
-                if (response.reservation_date) response.reservation_date = String(response.reservation_date).split('T')[0];
-                if (response.exchange_rate_date) response.exchange_rate_date = String(response.exchange_rate_date).split('T')[0];
+                if (r.reservation_date) r.reservation_date = String(r.reservation_date).split('T')[0];
+                if (r.exchange_rate_date) r.exchange_rate_date = String(r.exchange_rate_date).split('T')[0];
 
                 // 💰 Multicurrency Logic
-                const qcc = response.quote_currency_code || response.currency_code || 'THB';
-                const bcc = response.base_currency_code || 'THB';
-                response.currency_code = qcc;
-                response.base_currency_code = bcc;
-                response.quote_currency_code = qcc;
+                const qcc = r.quote_currency_code || r.currency_code || 'THB';
+                const bcc = r.base_currency_code || 'THB';
+                r.currency_code = qcc;
+                r.base_currency_code = bcc;
+                r.quote_currency_code = qcc;
                 
-                const explicitFlag = response.is_multicurrency;
+                const explicitFlag = r.is_multicurrency;
                 const isExplicitlyFalse = explicitFlag === 'N' || explicitFlag === false;
                 
-                response.isMulticurrency = (qcc !== bcc && qcc !== 'THB') || 
+                r.isMulticurrency = (qcc !== bcc && qcc !== 'THB') || 
                                            explicitFlag === 'Y' || 
                                            explicitFlag === true || 
                                            (!isExplicitlyFalse && (explicitFlag === undefined || explicitFlag === null || explicitFlag === ''));
 
-                if (response.project_id) response.job_id = String(response.project_id);
+                if (r.project_id) r.job_id = String(r.project_id);
 
                 // 💵 Summary Mapping
-                response.sub_total = Number(response.sub_total || response.base_sub_total || 0);
-                response.discount_amount = Number(response.discount_amount || response.base_discount_amount || 0);
-                response.discount_input = String(response.discount_expression || response.discount_input || (response.discount_amount ? String(response.discount_amount) : ''));
-                response.vat_amount = Number(response.vat_amount || response.base_vat_amount || 0);
-                response.total_amount = Number(response.total_amount || response.base_total_amount || 0);
+                r.sub_total = Number(r.sub_total || r.base_sub_total || 0);
+                r.discount_amount = Number(r.discount_amount || r.base_discount_amount || 0);
+                r.discount_input = String(r.discount_expression || r.discount_input || (r.discount_amount ? String(r.discount_amount) : ''));
+                r.vat_amount = Number(r.vat_amount || r.base_vat_amount || 0);
+                r.total_amount = Number(r.total_amount || r.base_total_amount || 0);
 
                 const idFields = ['sq_id', 'aq_id', 'customer_id', 'branch_id', 'emp_dept_id', 'emp_sale_id', 'sale_area_id', 'tax_code_id'];
                 idFields.forEach(f => {
-                    if (response[f]) response[f] = String(response[f]);
+                    if (r[f]) r[f] = String(r[f]);
                 });
+
+                // Copy critical fields from r to rRaw if r !== rRaw
+                if (r !== rRaw) {
+                    const criticalFields = [
+                        'reservation_no', 'reservation_date', 'sq_id', 'sq_no', 'aq_id', 'aq_no',
+                        'customer_id', 'branch_id', 'payment_term_days', 'ship_days',
+                        'emp_dept_id', 'tax_code_id', 'emp_sale_id', 'sale_area_id', 'job_id',
+                        'remarks', 'status', 'onhold', 'status_remark', 'sub_total', 'discount_amount',
+                        'discount_input', 'vat_amount', 'total_amount', 'isMulticurrency',
+                        'base_currency_code', 'quote_currency_code', 'currency_code', 'exchange_rate',
+                        'exchange_rate_date'
+                    ];
+                    criticalFields.forEach(field => {
+                        if (r[field] !== undefined) rRaw[field] = r[field];
+                    });
+                }
                 
                 // 🛠️ Line Mapping with Batch Enrichment (Fixes N+1 Waterfall)
-                const rawLines = (response.saleReservationLines || response.lines || []) as Record<string, unknown>[];
+                const rawLines = (r.saleReservationLines || r.lines || rRaw.saleReservationLines || rRaw.lines || []) as Record<string, unknown>[];
                 if (Array.isArray(rawLines) && rawLines.length > 0) {
                     // 1. Collect unique IDs for batch fetching
                     const uniqueItemIds = [...new Set(rawLines
@@ -259,41 +365,70 @@ export const ReservationService = {
                             const map: Record<string, { code: string; name: string }> = {};
                             if (uniqueItemIds.length === 0) return map;
                             try {
-                                // Fetch a batch of items (using a large limit to cover the set)
-                                // In a real production API, we would use /item-master?ids=...
-                                const itemsRes = await api.get<ListResponse<ItemListItem> | DataListResponse<ItemListItem> | ItemListItem[]>('/item-master', { params: { limit: 1000 } });
-                                const itemsData = Array.isArray(itemsRes) 
+                                // Fetch only the required item IDs in a single batch
+                                const itemsRes = await api.get<unknown>('/item-master', { params: { ids: uniqueItemIds, limit: uniqueItemIds.length } });
+                                const itemsData = (Array.isArray(itemsRes) 
                                     ? itemsRes 
-                                    : ('data' in itemsRes ? itemsRes.data : itemsRes.items) || [];
+                                    : ((itemsRes as Record<string, unknown>)?.data || (itemsRes as Record<string, unknown>)?.items || [])) as Record<string, unknown>[];
                                 itemsData.forEach(item => {
                                     const id = String(item.item_id || item.id || '');
                                     if (id) map[id] = { 
-                                        code: String(item.item_code), 
-                                        name: String(item.item_name) 
+                                        code: String(item.item_code || item.code || ''), 
+                                        name: String(item.item_name || item.name || '') 
                                     };
                                 });
-                            } catch (err) { logger.error('Batch Item fetch failed:', err); }
+                            } catch (err) {
+                                logger.error('Batch Item fetch failed, trying fallback list lookup:', err);
+                                // Defensive Fallback to a limit lookup if the batch ids parameter has an issue
+                                try {
+                                    const itemsRes = await api.get<unknown>('/item-master', { params: { limit: 200 } });
+                                    const itemsData = (Array.isArray(itemsRes) 
+                                        ? itemsRes 
+                                        : ((itemsRes as Record<string, unknown>)?.data || (itemsRes as Record<string, unknown>)?.items || [])) as Record<string, unknown>[];
+                                    itemsData.forEach(item => {
+                                        const id = String(item.item_id || item.id || '');
+                                        if (id) map[id] = { 
+                                            code: String(item.item_code || item.code || ''), 
+                                            name: String(item.item_name || item.name || '') 
+                                        };
+                                    });
+                                } catch { /* ignore */ }
+                            }
                             return map;
                         })(),
                         (async () => {
                             const map: Record<string, string> = {};
                             if (uniqueLotIds.length === 0) return map;
                             try {
-                                const lotsRes = await api.get<ListResponse<ItemLot> | DataListResponse<ItemLot> | ItemLot[]>('/item-lot', { params: { limit: 1000 } });
-                                const lotsData = Array.isArray(lotsRes) 
+                                // Fetch only the required lot IDs in a single batch
+                                const lotsRes = await api.get<unknown>('/item-lot', { params: { ids: uniqueLotIds, limit: uniqueLotIds.length } });
+                                const lotsData = (Array.isArray(lotsRes) 
                                     ? lotsRes 
-                                    : ('data' in lotsRes ? lotsRes.data : lotsRes.items) || [];
+                                    : ((lotsRes as Record<string, unknown>)?.data || (lotsRes as Record<string, unknown>)?.items || [])) as Record<string, unknown>[];
                                 lotsData.forEach(lot => {
-                                    const id = String(lot.lot_id);
-                                    if (id) map[id] = String(lot.lot_no);
+                                    const id = String(lot.lot_id || lot.id || '');
+                                    if (id) map[id] = String(lot.lot_no || lot.code || '');
                                 });
-                            } catch (err) { logger.error('Batch Lot fetch failed:', err); }
+                            } catch (err) {
+                                logger.error('Batch Lot fetch failed, trying fallback list lookup:', err);
+                                // Defensive Fallback
+                                try {
+                                    const lotsRes = await api.get<unknown>('/item-lot', { params: { limit: 200 } });
+                                    const lotsData = (Array.isArray(lotsRes) 
+                                        ? lotsRes 
+                                        : ((lotsRes as Record<string, unknown>)?.data || (lotsRes as Record<string, unknown>)?.items || [])) as Record<string, unknown>[];
+                                    lotsData.forEach(lot => {
+                                        const id = String(lot.lot_id || lot.id || '');
+                                        if (id) map[id] = String(lot.lot_no || lot.code || '');
+                                    });
+                                } catch { /* ignore */ }
+                            }
                             return map;
                         })()
                     ]);
 
                     // 3. Map lines with enriched data from maps
-                    response.lines = rawLines.map((l: Record<string, unknown>) => {
+                    rRaw.lines = rawLines.map((l: Record<string, unknown>) => {
                         const itemObj = (l.item || l.item_master || l.master_item || l.product || {}) as Record<string, unknown>;
                         const itemId = String(l.item_id || itemObj.item_id || itemObj.id || '');
                         
@@ -326,7 +461,7 @@ export const ReservationService = {
                             item_code: itemCode,
                             item_name: itemName,
                             qty_reserved: Number(l.qty || l.qty_reserved || 0),
-                            uom_id: String(l.uom_id || l.uom_id || ''),
+                            uom_id: String(l.uom_id || ''),
                             warehouse_id: String(l.warehouse_id || ''),
                             location_id: String(l.location_id || ''),
                             lot_no: lotNo,
@@ -342,11 +477,12 @@ export const ReservationService = {
                         };
                     });
                 } else {
-                    response.lines = [];
+                    rRaw.lines = [];
                 }
+                return rRaw as unknown as ReservationFormData;
             }
 
-            return response as unknown as ReservationFormData;
+            return null;
         } catch (error) {
             logger.error('Failed to fetch reservation detail:', error);
             return null;
@@ -401,6 +537,7 @@ export const ReservationService = {
                 : (raw.reservation_date ? new Date(raw.reservation_date as string).toISOString() : null),
             tax_code_id: raw.tax_code_id ? Number(raw.tax_code_id) : null,
             discount_expression: (raw.discount_input as string) || '0',
+            version: raw.version !== undefined && raw.version !== null ? Number(raw.version) : null,
         };
 
         // Lines Mapping: Frontend 'lines' -> Backend 'saleReservationLines'

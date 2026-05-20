@@ -20,7 +20,7 @@ import { CustomerService } from '@customer/customer-master/services/customer.ser
 import { ConfirmationModal } from '@system/ConfirmationModal';
 import { SQStatusBadge } from '@sales/shared/components/SQStatusBadge';
 import { SQActionsCell } from './components/SQActionsCell';
-import { AQHistoryModal } from '@sales/shared/components/AQHistoryModal';
+import { GenericApprovalHistoryModal } from '@sales/shared/components/GenericApprovalHistoryModal';
 import { SalesMobileCard } from '@sales/shared/components/SalesMobileCard';
 import { useToast } from '@ui/feedback/Toast';
 import { formatNumber } from '@/shared/utils';
@@ -460,15 +460,16 @@ export default function QuotationListPage() {
             />
 
             {/* Approval History Modal */}
-            <AQHistoryModal 
+            <GenericApprovalHistoryModal 
                 isOpen={isHistoryOpen}
                 onClose={() => {
                     setIsHistoryOpen(false);
                     setHistorySqId(undefined);
                     setHistorySqNo('');
                 }}
-                sqId={historySqId}
-                sqNo={historySqNo}
+                documentId={historySqId}
+                documentNo={historySqNo}
+                documentType="SQ"
             />
         </PageListLayout>
     );

@@ -119,15 +119,18 @@ export function ReservationHeaderForm({
                 <div className="space-y-1">
                     <label className={labelClass}>อ้างอิงใบเสนอราคา (SQ)</label>
                     <div className="flex gap-2">
+                        <div className="relative flex-1 group">
+                            <input 
+                                {...register('sq_no')}
+                                readOnly
+                                disabled={isLocked}
+                                onClick={() => !isLocked && (onSearchSQ ? onSearchSQ() : onFetchQuotation?.('SQ'))}
+                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-pointer group-hover:border-purple-400 transition-colors`} 
+                                placeholder="SQxxxx-xxx"
+                            />
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        </div>
                         <input type="hidden" {...register('sq_id')} />
-                        <input 
-                            {...register('sq_no')}
-                            readOnly
-                            disabled={isLocked}
-                            onClick={() => !isLocked && (onSearchSQ ? onSearchSQ() : onFetchQuotation?.('SQ'))}
-                            className={`${inputClass} cursor-pointer hover:border-purple-400 transition-colors`} 
-                            placeholder="SQxxxx-xxx"
-                        />
                         <button 
                             type="button" 
                             disabled={isLocked} 
@@ -143,21 +146,23 @@ export function ReservationHeaderForm({
                 <div className="space-y-1">
                     <label className={labelClass}>อ้างอิงใบเสนอราคาอนุมัติ (AQ)</label>
                     <div className="flex gap-2">
+                        <div className="relative flex-1 group">
+                            <input 
+                                {...register('aq_no')}
+                                readOnly
+                                disabled={isLocked}
+                                onClick={() => !isLocked && (onSearchAQ ? onSearchAQ() : onFetchQuotation?.('AQ'))}
+                                className={`${inputClass} pl-9 bg-gray-50/50 italic cursor-pointer group-hover:border-purple-400 transition-colors`} 
+                                placeholder="AQxxxx-xxx"
+                            />
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        </div>
                         <input type="hidden" {...register('aq_id')} />
-                        <input 
-                            {...register('aq_no')}
-                            readOnly
-                            disabled={isLocked}
-                            onClick={() => !isLocked && (onSearchAQ ? onSearchAQ() : onFetchQuotation?.('AQ'))}
-                            className={`${inputClass} cursor-pointer hover:border-purple-400 transition-colors`} 
-                            placeholder="AQxxxx-xxx"
-                        />
                         <button 
                             type="button" 
                             disabled={isLocked} 
                             onClick={() => onSearchAQ ? onSearchAQ() : onFetchQuotation?.('AQ')}
                             className="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center shrink-0 w-9 h-9"
-
                             title="ค้นหาข้อมูลจากใบอนุมัติ"
                         >
                             <Search size={18} />
