@@ -120,6 +120,13 @@ export const AOService = {
   },
 
   getSOById: async (id: string | number) => {
+    try {
+        const hydratedData = await SalesOrderService.getById(String(id));
+        if (hydratedData) {
+            return hydratedData as unknown as Record<string, unknown>;
+        }
+    } catch { /* Fallback to raw API call */ }
+    
     const res = await api.get<unknown>(ENDPOINTS.soDetail(id));
     return res as Record<string, unknown>;
   },

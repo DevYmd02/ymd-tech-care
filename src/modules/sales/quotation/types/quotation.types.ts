@@ -158,6 +158,7 @@ export interface QuotationHeader {
     base_total_amount?: number;
     currency: string;
     status: string;
+    remarks?: string;
     expiry_date: string;
     workflow_status: string;
     sq_status?: string;

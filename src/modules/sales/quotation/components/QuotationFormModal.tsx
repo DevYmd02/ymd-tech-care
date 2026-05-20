@@ -42,6 +42,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
         branches,
         currencies,
         customers,
+        selectedCustomer,
         taxCodes,
         departments,
         projects,
@@ -199,6 +200,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                                     branches={branches}
                                     currencies={currencies}
                                     customers={customers}
+                                    selectedCustomer={selectedCustomer}
                                     taxCodes={taxCodes}
                                     departments={departments}
                                     projects={projects}

@@ -59,7 +59,7 @@ const VENDOR_CACHE_TTL = 5 * 60 * 1000;
 
 let cachedAVStatusMap: Map<number, { status: string; av_no?: string }> | null = null;
 let lastAVStatusFetchTime = 0;
-const AV_STATUS_CACHE_TTL = 30 * 1000; 
+const AV_STATUS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes (Optimized for 100 concurrent users)
 
 async function buildAVStatusMap(config?: CustomAxiosConfig): Promise<Map<number, { status: string; av_no?: string }>> {
   const now = Date.now();

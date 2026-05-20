@@ -31,6 +31,7 @@ export const ReservationLineSchema = z.object({
  */
 export const ReservationFormSchema = z.object({
     reservation_id: z.coerce.string().optional().nullable(),
+    version: z.coerce.number().optional().nullable(),
     reservation_no: z.string().optional(),
     reservation_date: z.string().min(1, 'กรุณาระบุวันที่จอง'),
     lead_id: z.string().or(z.literal('')).nullable().optional().transform(v => v === '' ? null : v),

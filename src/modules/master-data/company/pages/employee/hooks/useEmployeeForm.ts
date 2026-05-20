@@ -189,16 +189,21 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
     const debouncedCode = useDebounce(codeValue, 500);
 
     useEffect(() => {
+        let active = true;
+
         const checkDuplicate = async () => {
             const trimmedCode = debouncedCode?.trim();
             if (!trimmedCode || isEdit) {
-                if (!isEdit) clearErrors('employee_code');
+                if (!isEdit && active) clearErrors('employee_code');
                 return;
             }
             
             try {
                 // ค้นหาพนักงานที่มีรหัสตรงกัน
                 const res = await OrgEmployeeService.getList({ search: trimmedCode });
+                
+                if (!active) return; // Prevent state updates if the hook instance has changed or unmounted
+                
                 const items = Array.isArray(res) ? res : (res?.items || []);
                 
                 // ตรวจสอบความถูกต้องโดยการ trim ทั้งคู่
@@ -216,11 +221,17 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
                     }
                 }
             } catch (error) {
-                logger.error('Error checking duplicate employee code:', error);
+                if (active) {
+                    logger.error('Error checking duplicate employee code:', error);
+                }
             }
         };
 
         void checkDuplicate();
+
+        return () => {
+            active = false; // Flag as inactive when component unmounts or input changes
+        };
     }, [debouncedCode, isEdit, setError, clearErrors]);
 
     // Fetch data for edit

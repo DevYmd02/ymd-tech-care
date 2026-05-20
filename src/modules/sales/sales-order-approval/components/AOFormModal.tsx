@@ -11,7 +11,7 @@ import { useAOForm } from '../hooks/useAOForm';
 import { AOHeader } from './AOHeader';
 import { AOFormLines } from './AOFormLines';
 import { AOFormSummary } from './AOFormSummary';
-import { AOHistoryModal } from '../../shared/components/AOHistoryModal';
+import { GenericApprovalHistoryModal } from '../../shared/components/GenericApprovalHistoryModal';
 import { usePriceLevelName } from '@sales-master/pages/price-level-name/hooks/usePriceLevelName';
 import type { AOListItem, SOForApproval } from '../types/sales-order-approval.types';
 import type { AOLineFormData } from '../schemas/ao.schema';
@@ -271,11 +271,12 @@ export const AOFormModal: React.FC<Props> = ({
         variant="danger"
       />
 
-      <AOHistoryModal
+      <GenericApprovalHistoryModal
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
-        soId={activeId as string}
-        soNo={watch('so_no')}
+        documentId={activeId}
+        documentNo={watch('so_no')}
+        documentType="SO"
       />
       <SOSearchModal
         isOpen={isSOSearchOpen}

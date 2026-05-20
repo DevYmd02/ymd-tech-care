@@ -24,13 +24,13 @@ interface DeliveryLineTableProps {
 }
 
 const cellInputClass =
-    'w-full h-9 px-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500/50 transition-all';
+    'w-full h-9 px-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500/50 transition-all disabled:bg-slate-50 dark:disabled:bg-slate-800/40 disabled:text-slate-500 dark:disabled:text-slate-400 disabled:border-slate-100 dark:disabled:border-slate-800/50 disabled:cursor-not-allowed';
 
 const cellSelectClass =
-    'w-full h-9 px-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer';
+    'w-full h-9 px-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer disabled:bg-slate-50 dark:disabled:bg-slate-800/40 disabled:text-slate-500 dark:disabled:text-slate-400 disabled:border-slate-100 dark:disabled:border-slate-800/50 disabled:cursor-not-allowed';
 
 const cellNumberClass =
-    'w-full h-9 px-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded text-sm text-right text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500/50 transition-all';
+    'w-full h-9 px-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded text-sm text-right text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500/50 transition-all disabled:bg-slate-50 dark:disabled:bg-slate-800/40 disabled:text-slate-500 dark:disabled:text-slate-400 disabled:border-slate-100 dark:disabled:border-slate-800/50 disabled:cursor-not-allowed';
 
 const thClass =
     'px-3 py-3 text-left text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap';
@@ -200,24 +200,30 @@ export function DeliveryLineTable({
                                                 </option>
                                             ))}
                                         </select>
-                                        <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
-                                            <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
-                                                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                                            </svg>
-                                        </div>
+                                        {!isViewOnly && (
+                                            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                                                <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
+                                                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                                </svg>
+                                            </div>
+                                        )}
                                     </div>
                                 </td>
 
                                 {/* คลังสินค้า */}
                                 <td className={`${tdClass} border-b border-slate-100 dark:border-slate-800`}>
                                     <div
-                                        className={`${cellInputClass} flex items-center justify-between cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 truncate`}
+                                        className={`${
+                                            isViewOnly
+                                                ? 'w-full h-9 px-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/50 rounded text-sm text-slate-500 dark:text-slate-400 cursor-not-allowed flex items-center truncate'
+                                                : `${cellInputClass} flex items-center justify-between cursor-pointer hover:border-slate-300 dark:hover:border-slate-600`
+                                        }`}
                                         onClick={() => !isViewOnly && onSearchWarehouse(index)}
                                     >
                                         <span
                                             className={
                                                 line.warehouse_id
-                                                    ? 'text-slate-700 dark:text-slate-200'
+                                                    ? isViewOnly ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-200'
                                                     : 'text-slate-400 dark:text-slate-500 italic'
                                             }
                                         >
@@ -230,20 +236,24 @@ export function DeliveryLineTable({
                                                 return wh ? (wh.warehouse_name || wh.warehouse_code || String(line.warehouse_id)) : String(line.warehouse_id);
                                             })()}
                                         </span>
-                                        <Search size={12} className="text-slate-400 dark:text-slate-500" />
+                                        {!isViewOnly && <Search size={12} className="text-slate-400 dark:text-slate-500" />}
                                     </div>
                                 </td>
 
                                 {/* ที่เก็บ */}
                                 <td className={`${tdClass} border-b border-slate-100 dark:border-slate-800`}>
                                     <div
-                                        className={`${cellInputClass} flex items-center justify-between cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 truncate`}
+                                        className={`${
+                                            isViewOnly
+                                                ? 'w-full h-9 px-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/50 rounded text-sm text-slate-500 dark:text-slate-400 cursor-not-allowed flex items-center truncate'
+                                                : `${cellInputClass} flex items-center justify-between cursor-pointer hover:border-slate-300 dark:hover:border-slate-600`
+                                        }`}
                                         onClick={() => !isViewOnly && onSearchLocation(index)}
                                     >
                                         <span
                                             className={
                                                 line.location_id
-                                                    ? 'text-slate-700 dark:text-slate-200'
+                                                    ? isViewOnly ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-200'
                                                     : 'text-slate-400 dark:text-slate-500 italic'
                                             }
                                         >
@@ -256,20 +266,24 @@ export function DeliveryLineTable({
                                                 return loc ? (loc.name_th || loc.code || String(line.location_id)) : String(line.location_id);
                                             })()}
                                         </span>
-                                        <Search size={12} className="text-slate-400 dark:text-slate-500" />
+                                        {!isViewOnly && <Search size={12} className="text-slate-400 dark:text-slate-500" />}
                                     </div>
                                 </td>
 
                                 {/* LOT NUMBER */}
                                 <td className={`${tdClass} border-b border-slate-100 dark:border-slate-800`}>
                                     <div 
-                                        className={`${cellInputClass} flex items-center justify-between cursor-pointer hover:border-slate-300 dark:hover:border-slate-600 truncate`}
+                                        className={`${
+                                            isViewOnly
+                                                ? 'w-full h-9 px-3 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/50 rounded text-sm text-slate-500 dark:text-slate-400 cursor-not-allowed flex items-center truncate'
+                                                : `${cellInputClass} flex items-center justify-between cursor-pointer hover:border-slate-300 dark:hover:border-slate-600`
+                                        }`}
                                         onClick={() => !isViewOnly && onSearchLot(index)}
                                     >
-                                        <span className={line.lot_no ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500 italic'}>
+                                        <span className={line.lot_no ? (isViewOnly ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-200') : 'text-slate-400 dark:text-slate-500 italic'}>
                                             {line.lot_no || 'Lot No.'}
                                         </span>
-                                        <Search size={12} className="text-slate-400 dark:text-slate-500" />
+                                        {!isViewOnly && <Search size={12} className="text-slate-400 dark:text-slate-500" />}
                                     </div>
                                 </td>
 

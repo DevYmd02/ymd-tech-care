@@ -91,5 +91,8 @@ export const getQuotationDefaultValues = (): QuotationFormValues => ({
     emp_sale_id: 0,
     emp_dept_id: 0,
     project_id: 0,
+    remarks: '',
+    sq_status: '',
+    status_remark: '',
     lines: [],
 });

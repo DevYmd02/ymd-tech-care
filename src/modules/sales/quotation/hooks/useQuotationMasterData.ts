@@ -7,10 +7,12 @@ import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
 import type { Currency } from '@master-data/types/master-data-types';
 import type { TaxCode } from '@master-data/tax/types/tax-types';
 
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
+
 const MASTER_STALE = 1000 * 60 * 30; // 30 mins
 const REF_STALE = 1000 * 60 * 10;    // 10 mins
 
-export function useQuotationMasterData(isOpen: boolean) {
+export function useQuotationMasterData(isOpen: boolean, selectedCustomerId?: number) {
     const { data: branches = [] } = useQuery({
         queryKey: ['master-branches'],
         queryFn: MasterDataService.getBranches,
@@ -32,6 +34,13 @@ export function useQuotationMasterData(isOpen: boolean) {
         staleTime: REF_STALE,
     });
     const customers = customerResponse?.data || [];
+
+    const { data: selectedCustomer = null } = useQuery<CustomerMaster | null>({
+        queryKey: ['master-customer-detail', selectedCustomerId],
+        queryFn: () => selectedCustomerId && selectedCustomerId > 0 ? CustomerService.getById(selectedCustomerId) : null,
+        enabled: isOpen && !!selectedCustomerId && selectedCustomerId > 0,
+        staleTime: REF_STALE,
+    });
 
     const { data: taxCodes = [] } = useQuery<TaxCode[]>({
         queryKey: ['master-tax-codes'],
@@ -95,6 +104,7 @@ export function useQuotationMasterData(isOpen: boolean) {
         branches,
         currencies,
         customers,
+        selectedCustomer,
         taxCodes,
         departments,
         projects,

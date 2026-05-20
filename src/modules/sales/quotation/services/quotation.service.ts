@@ -102,6 +102,7 @@ export class QuotationService {
                     emp_dept_id: item.emp_dept_id ? Number(item.emp_dept_id) : null,
                     emp_dept_name: (typeof masterDataCache.getDepartmentName(item.emp_dept_id as number | string) === 'string' ? masterDataCache.getDepartmentName(item.emp_dept_id as number | string) : '') as string,
                     project_id: item.project_id ? Number(item.project_id) : null,
+                    remarks: String(item.remarks || item.remark || item.note || ''),
                     
                     // 💰 Summary Fields (Critical for Initial Data/Data-Reuse)
                     sub_total: Number(item.quote_sub_total || item.base_sub_total || item.sub_total || item.total_sub_total || 0),

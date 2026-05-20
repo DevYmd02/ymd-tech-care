@@ -2,6 +2,7 @@ import { POService } from './po.service';
 import { POAService } from './poa.service';
 import { AVService } from './av.service';
 import { GRNService } from './grn.service';
+import api from '@/core/api/api';
 import { logger } from '@/shared/utils';
 import type { 
     POListItem, 
@@ -71,6 +72,25 @@ export interface DashboardData {
 export const ProcurementDashboardService = {
     getDashboardData: async (): Promise<DashboardData> => {
         logger.info('[ProcurementDashboardService] Fetching Dashboard Data');
+
+        try {
+            logger.info('[ProcurementDashboardService] Attempting to fetch pre-computed dashboard data from backend');
+            const backendData = await api.get<DashboardData>('/procurement/dashboard/summary', { skipToast: true } as any);
+            
+            if (
+                backendData &&
+                typeof backendData === 'object' &&
+                'kpi' in backendData &&
+                'summary' in backendData &&
+                'charts' in backendData
+            ) {
+                logger.info('[ProcurementDashboardService] Successfully fetched dashboard data from backend');
+                return backendData;
+            }
+            logger.warn('[ProcurementDashboardService] Backend returned invalid dashboard structure, falling back to client aggregation');
+        } catch (err) {
+            logger.warn('[ProcurementDashboardService] Failed to fetch optimized backend dashboard, falling back to client aggregation', err);
+        }
 
         try {
             // 1. Fetch data in parallel

@@ -18,7 +18,7 @@ import { AQHeader } from './AQHeader';
 import { AQFormLines } from './AQFormLines';
 import { AQFormSummary } from './AQFormSummary';
 import { AQSQSearchModal } from './AQSQSearchModal';
-import { AQHistoryModal } from '@sales/shared/components/AQHistoryModal';
+import { GenericApprovalHistoryModal } from '@sales/shared/components/GenericApprovalHistoryModal';
 import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
 import type { AQListItem, SQForApproval } from '../types/quotation-approve.types';
 
@@ -296,11 +296,12 @@ export const AQFormModal: React.FC<Props> = ({
         }}
       />
       {/* ── AQ History Modal ────────────────────────────────────────── */}
-      <AQHistoryModal
+      <GenericApprovalHistoryModal
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
-        sqId={activeId as number}
-        sqNo={watch('sq_no')}
+        documentId={activeId}
+        documentNo={watch('sq_no')}
+        documentType="SQ"
       />
     </>
   );

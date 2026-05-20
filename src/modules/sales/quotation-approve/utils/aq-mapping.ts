@@ -59,7 +59,9 @@ export const isPlaceholder = (val: unknown): boolean => {
 /**
  * Discovery helper for lines — More aggressive detection
  */
-export const findLines = (source: Record<string, unknown>): unknown[] => {
+export const findLines = (source: unknown): unknown[] => {
+  if (!source || typeof source !== 'object') return [];
+  const src = source as Record<string, unknown>;
   const priority = [
     'saleQuotationLines', 
     'sale_quotation_lines', 
@@ -72,21 +74,21 @@ export const findLines = (source: Record<string, unknown>): unknown[] => {
   ];
 
   for (const p of priority) {
-    if (Array.isArray(source[p]) && (source[p] as unknown[]).length > 0) {
-      return source[p] as unknown[];
+    if (Array.isArray(src[p]) && (src[p] as unknown[]).length > 0) {
+      return src[p] as unknown[];
     }
   }
   
-  const lineKey = Object.keys(source).find(k => 
+  const lineKey = Object.keys(src).find(k => 
     (k.toLowerCase().includes('line') || k.toLowerCase().includes('item')) && 
-    Array.isArray(source[k]) && 
-    (source[k] as unknown[]).length > 0
+    Array.isArray(src[k]) && 
+    (src[k] as unknown[]).length > 0
   );
   
-  if (lineKey) return source[lineKey] as unknown[];
+  if (lineKey) return src[lineKey] as unknown[];
 
-  const firstArray = Object.keys(source).find(k => Array.isArray(source[k]) && (source[k] as unknown[]).length > 0);
-  return firstArray ? (source[firstArray] as unknown[]) : [];
+  const firstArray = Object.keys(src).find(k => Array.isArray(src[k]) && (src[k] as unknown[]).length > 0);
+  return firstArray ? (src[firstArray] as unknown[]) : [];
 };
 
 /**

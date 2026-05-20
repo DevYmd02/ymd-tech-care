@@ -260,6 +260,7 @@ export function DeliveryFormModal({
                                     <div className="p-6">
                                         <DeliveryHeaderForm
                                             branches={branches}
+                                            isViewOnly={isViewOnly}
                                             onSearchSalesOrder={() => setIsSalesOrderSearchOpen(true)}
                                             onSearchEmployee={() => setIsEmployeeSearchOpen(true)}
                                             onSearchAddress={() => setIsAddressSearchOpen(true)}

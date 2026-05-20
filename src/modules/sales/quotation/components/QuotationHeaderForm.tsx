@@ -19,6 +19,7 @@ interface QuotationHeaderFormProps {
     branches: BranchListItem[];
     currencies: Currency[];
     customers: CustomerMaster[];
+    selectedCustomer?: CustomerMaster | null;
     taxCodes: TaxCode[];
     departments: DepartmentListItem[];
     projects: Project[];
@@ -45,6 +46,7 @@ export function QuotationHeaderForm({
     branches, 
     currencies, 
     customers, 
+    selectedCustomer,
     taxCodes,
     departments,
     projects,
@@ -70,12 +72,14 @@ export function QuotationHeaderForm({
 
     // Find selected customer name for display (Direct numeric comparison preferred)
     const currentCustomerId = Number(formData.customer_id || 0);
-    const selectedCustomer = currentCustomerId > 0 
-        ? customers.find(c => Number(c.customer_id || c.id) === currentCustomerId)
-        : undefined;
+    
+    // 🎯 Resolve selected customer: First try from the single query, then fallback to preloaded master list
+    const selectedCustomerObj = (selectedCustomer && Number(selectedCustomer.customer_id || selectedCustomer.id) === currentCustomerId)
+        ? selectedCustomer
+        : (currentCustomerId > 0 ? customers.find(c => Number(c.customer_id || c.id) === currentCustomerId) : undefined);
 
-    const customerDisplay = selectedCustomer 
-        ? `${selectedCustomer.customer_code || selectedCustomer.code || ''} - ${selectedCustomer.customer_name_th || selectedCustomer.customer_name || selectedCustomer.name_th || ''}` 
+    const customerDisplay = selectedCustomerObj 
+        ? `${selectedCustomerObj.customer_code || selectedCustomerObj.code || ''} - ${selectedCustomerObj.customer_name_th || selectedCustomerObj.customer_name || selectedCustomerObj.name_th || ''}` 
         : '';
 
     return (
