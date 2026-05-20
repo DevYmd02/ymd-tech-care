@@ -135,6 +135,98 @@ const safeNumberOrNull = (val: unknown): number | null => {
     return isNaN(num) ? null : num;
 };
 
+interface DocRefConfig {
+    noFields: string[];
+    idFields: string[];
+    nestedKeys: string[];
+}
+
+const SQ_CONFIG: DocRefConfig = {
+    noFields: [
+        'sq_no', 'sale_quotation_no', 'quotation_no',
+        'ref_sq_no', 'sqNo'
+    ],
+    idFields: [
+        'sq_id', 'sale_quotation_id',
+        'quotation_id', 'sqNoId'
+    ],
+    nestedKeys: [
+        'sq_header', 'sq', 'sale_quotation',
+        'quotation', 'sale_quotation_header',
+        'aq', 'sale_quotation_approval',
+        'approval', 'aq_header'
+    ]
+};
+
+const AQ_CONFIG: DocRefConfig = {
+    noFields: [
+        'aq_no', 'sale_quotation_approval_no',
+        'quotation_approval_no', 'ref_aq_no', 'aqNo'
+    ],
+    idFields: [
+        'aq_id', 'sale_quotation_approval_id',
+        'approval_id', 'aqNoId'
+    ],
+    nestedKeys: [
+        'aq', 'sale_quotation_approval',
+        'approval', 'aq_header'
+    ]
+};
+
+const findDocRef = (
+    obj: unknown,
+    config: DocRefConfig
+): { no?: string; id?: string } => {
+    if (!obj || typeof obj !== 'object') return {};
+    const record = obj as Record<string, unknown>;
+
+    const no = cleanRefNo(
+        config.noFields
+            .map(f => record[f])
+            .find(v => v !== undefined && v !== null && v !== '')
+    );
+
+    const id = config.idFields
+        .map(f => record[f])
+        .find(v => v !== undefined && v !== null);
+
+    if (no) {
+        return { no, id: id ? String(id) : undefined };
+    }
+
+    for (const key of config.nestedKeys) {
+        if (record[key] && typeof record[key] === 'object') {
+            const res = findDocRef(record[key], config);
+            if (res.no) {
+                return {
+                    no: res.no,
+                    id: id ? String(id) : res.id
+                };
+            }
+        }
+    }
+
+    return {};
+};
+
+const handleMutationError = (
+    action: string,
+    error: unknown,
+    payload?: unknown
+): never => {
+    const err = error as {
+        response?: { data?: unknown; status?: number };
+        message: string;
+    };
+    logger.error(`Failed to ${action}:`, {
+        message: err.message,
+        details: err.response?.data,
+        status: err.response?.status,
+        ...(payload ? { payload } : {})
+    });
+    throw error;
+};
+
 export const ReservationService = {
     getList: async (params: ReservationListParams = {}) => {
         logger.debug('Fetching reservations with params:', params);
@@ -169,69 +261,14 @@ export const ReservationService = {
                 }
                 const r = (rRaw['sale_reservation'] || rRaw['reservation_header'] || rRaw['reservation'] || rRaw['header'] || rRaw) as Record<string, unknown>;
 
-                // Fully typed deep recovery helper functions to avoid any types
-                const findSqNoAndId = (obj: unknown): { sq_no?: string; sq_id?: string } => {
-                    if (!obj || typeof obj !== 'object') return {};
-                    const record = obj as Record<string, unknown>;
-                    
-                    const sqNo = cleanRefNo(record.sq_no || record.sale_quotation_no || record.quotation_no || record.ref_sq_no || record.sqNo);
-                    const sqId = record.sq_id || record.sale_quotation_id || record.quotation_id || record.sqNoId;
-                    
-                    if (sqNo) {
-                        return { sq_no: sqNo, sq_id: sqId ? String(sqId) : undefined };
-                    }
-                    
-                    const nestedKeys = ['sq_header', 'sq', 'sale_quotation', 'quotation', 'sale_quotation_header', 'aq', 'sale_quotation_approval', 'approval', 'aq_header'];
-                    for (const key of nestedKeys) {
-                        if (record[key] && typeof record[key] === 'object') {
-                            const res = findSqNoAndId(record[key]);
-                            if (res.sq_no) {
-                                return {
-                                    sq_no: res.sq_no,
-                                    sq_id: sqId ? String(sqId) : res.sq_id
-                                };
-                            }
-                        }
-                    }
-                    
-                    return {};
-                };
-
-                const findAqNoAndId = (obj: unknown): { aq_no?: string; aq_id?: string } => {
-                    if (!obj || typeof obj !== 'object') return {};
-                    const record = obj as Record<string, unknown>;
-                    
-                    const aqNo = cleanRefNo(record.aq_no || record.sale_quotation_approval_no || record.quotation_approval_no || record.ref_aq_no || record.aqNo);
-                    const aqId = record.aq_id || record.sale_quotation_approval_id || record.approval_id || record.aqNoId;
-                    
-                    if (aqNo) {
-                        return { aq_no: aqNo, aq_id: aqId ? String(aqId) : undefined };
-                    }
-                    
-                    const nestedKeys = ['aq', 'sale_quotation_approval', 'approval', 'aq_header'];
-                    for (const key of nestedKeys) {
-                        if (record[key] && typeof record[key] === 'object') {
-                            const res = findAqNoAndId(record[key]);
-                            if (res.aq_no) {
-                                return {
-                                    aq_no: res.aq_no,
-                                    aq_id: aqId ? String(aqId) : res.aq_id
-                                };
-                            }
-                        }
-                    }
-                    
-                    return {};
-                };
-
                 // Discover nested SQ and AQ info recursively
-                const sqDiscovered = findSqNoAndId(r) || findSqNoAndId(rRaw);
-                const aqDiscovered = findAqNoAndId(r) || findAqNoAndId(rRaw);
+                const sqDiscovered = findDocRef(r, SQ_CONFIG) || findDocRef(rRaw, SQ_CONFIG);
+                const aqDiscovered = findDocRef(r, AQ_CONFIG) || findDocRef(rRaw, AQ_CONFIG);
 
-                if (sqDiscovered.sq_no) r.sq_no = sqDiscovered.sq_no;
-                if (sqDiscovered.sq_id && !r.sq_id) r.sq_id = sqDiscovered.sq_id;
-                if (aqDiscovered.aq_no) r.aq_no = aqDiscovered.aq_no;
-                if (aqDiscovered.aq_id && !r.aq_id) r.aq_id = aqDiscovered.aq_id;
+                if (sqDiscovered.no) r.sq_no = sqDiscovered.no;
+                if (sqDiscovered.id && !r.sq_id) r.sq_id = sqDiscovered.id;
+                if (aqDiscovered.no) r.aq_no = aqDiscovered.no;
+                if (aqDiscovered.id && !r.aq_id) r.aq_id = aqDiscovered.id;
 
                 // Clean existing SQ/AQ reference numbers first to handle parsed "null" or "undefined" strings
                 r.sq_no = cleanRefNo(r.sq_no || rRaw.sq_no);
@@ -251,8 +288,8 @@ export const ReservationService = {
                             if (foundSqNo) {
                                 r.sq_no = foundSqNo;
                             } else {
-                                const discovered = findSqNoAndId(d);
-                                if (discovered.sq_no) r.sq_no = discovered.sq_no;
+                                const discovered = findDocRef(d, SQ_CONFIG);
+                                if (discovered.no) r.sq_no = discovered.no;
                             }
                         }
                     } catch (err) {
@@ -269,12 +306,12 @@ export const ReservationService = {
                         const match = aqs.find((a) => String(a.aq_id) === String(aqId) || (sqId && String(a.sq_id) === String(sqId)));
                         if (match) {
                             if (!r.aq_no) {
-                                const matchAq = findAqNoAndId(match);
-                                if (matchAq.aq_no) r.aq_no = matchAq.aq_no;
+                                const matchAq = findDocRef(match, AQ_CONFIG);
+                                if (matchAq.no) r.aq_no = matchAq.no;
                             }
                             if (!r.sq_no) {
-                                const matchSq = findSqNoAndId(match);
-                                if (matchSq.sq_no) r.sq_no = matchSq.sq_no;
+                                const matchSq = findDocRef(match, SQ_CONFIG);
+                                if (matchSq.no) r.sq_no = matchSq.no;
                             }
                             if (!r.sq_id && match.sq_id) {
                                 r.sq_id = String(match.sq_id);
@@ -285,23 +322,23 @@ export const ReservationService = {
                             const items = extractArrayFromResponse<Record<string, unknown>>(listRes as object);
                             
                             const listMatch = items.find((item) => {
-                                const itemAqId = findAqNoAndId(item).aq_id || item.aq_id || item.id || item.sale_quotation_approval_id;
-                                const itemSqId = findSqNoAndId(item).sq_id || item.sq_id;
+                                const itemAqId = findDocRef(item, AQ_CONFIG).id || item.aq_id || item.id || item.sale_quotation_approval_id;
+                                const itemSqId = findDocRef(item, SQ_CONFIG).id || item.sq_id;
                                 return String(itemAqId) === String(aqId) || (sqId && String(itemSqId) === String(sqId));
                             });
                             
                             if (listMatch) {
                                 if (!r.aq_no) {
-                                    const matchAq = findAqNoAndId(listMatch);
-                                    if (matchAq.aq_no) r.aq_no = matchAq.aq_no;
+                                    const matchAq = findDocRef(listMatch, AQ_CONFIG);
+                                    if (matchAq.no) r.aq_no = matchAq.no;
                                 }
                                 if (!r.sq_no) {
-                                    const matchSq = findSqNoAndId(listMatch);
-                                    if (matchSq.sq_no) r.sq_no = matchSq.sq_no;
+                                    const matchSq = findDocRef(listMatch, SQ_CONFIG);
+                                    if (matchSq.no) r.sq_no = matchSq.no;
                                 }
                                 if (!r.sq_id) {
-                                    const matchSq = findSqNoAndId(listMatch);
-                                    if (matchSq.sq_id) r.sq_id = matchSq.sq_id;
+                                    const matchSq = findDocRef(listMatch, SQ_CONFIG);
+                                    if (matchSq.id) r.sq_id = matchSq.id;
                                 }
                             }
                         }
@@ -336,11 +373,11 @@ export const ReservationService = {
                 if (r.project_id) r.job_id = String(r.project_id);
 
                 // 💵 Summary Mapping
-                r.sub_total = Number(r.sub_total || r.base_sub_total || 0);
-                r.discount_amount = Number(r.discount_amount || r.base_discount_amount || 0);
+                r.sub_total = safeNumber(r.sub_total || r.base_sub_total || 0);
+                r.discount_amount = safeNumber(r.discount_amount || r.base_discount_amount || 0);
                 r.discount_input = String(r.discount_expression || r.discount_input || (r.discount_amount ? String(r.discount_amount) : ''));
-                r.vat_amount = Number(r.vat_amount || r.base_vat_amount || 0);
-                r.total_amount = Number(r.total_amount || r.base_total_amount || 0);
+                r.vat_amount = safeNumber(r.vat_amount || r.base_vat_amount || 0);
+                r.total_amount = safeNumber(r.total_amount || r.base_total_amount || 0);
 
                 const idFields = ['sq_id', 'aq_id', 'customer_id', 'branch_id', 'emp_dept_id', 'emp_sale_id', 'sale_area_id', 'tax_code_id'];
                 idFields.forEach(f => {
@@ -610,16 +647,8 @@ export const ReservationService = {
         try {
             const response = await api.post('/sale-reservation', payload);
             return { success: true, data: response };
-        } catch (error: unknown) {
-            const err = error as { response?: { data?: unknown; status?: number }; message: string };
-            const errorBody = err.response?.data;
-            logger.error('Failed to create reservation:', {
-                message: err.message,
-                details: errorBody,
-                status: err.response?.status,
-                payload
-            });
-            throw error;
+        } catch (error) {
+            handleMutationError('create reservation', error, payload);
         }
     },
 
@@ -632,16 +661,8 @@ export const ReservationService = {
         try {
             const response = await api.patch(`/sale-reservation/${id}`, payload);
             return { success: true, data: response };
-        } catch (error: unknown) {
-            const err = error as { response?: { data?: unknown; status?: number }; message: string };
-            const errorBody = err.response?.data;
-            logger.error('Failed to update reservation:', {
-                message: err.message,
-                details: errorBody,
-                status: err.response?.status,
-                payload
-            });
-            throw error;
+        } catch (error) {
+            handleMutationError(`update reservation ${id}`, error, payload);
         }
     },
 
