@@ -16,6 +16,7 @@ export const ReservationLineSchema = z.object({
     unit_price: z.coerce.number().min(0, 'ราคาต่อหน่วยต้องไม่ติดลบ'),
     lot_id: z.coerce.number().optional().nullable(),
     lot_no: z.string().optional().nullable(),
+    lot_available_qty: z.coerce.number().optional().nullable(),
     line_discount_input: z.string().optional().nullable(),
     line_discount: z.coerce.number().default(0),
     line_total: z.coerce.number().min(0, 'ยอดรวมรายการต้องไม่ติดลบ').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป').default(0),

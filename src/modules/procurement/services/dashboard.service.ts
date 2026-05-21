@@ -75,7 +75,7 @@ export const ProcurementDashboardService = {
 
         try {
             logger.info('[ProcurementDashboardService] Attempting to fetch pre-computed dashboard data from backend');
-            const backendData = await api.get<DashboardData>('/procurement/dashboard/summary', { skipToast: true } as any);
+            const backendData = await api.get<DashboardData>('/procurement/dashboard/summary', { skipToast: true });
             
             if (
                 backendData &&
