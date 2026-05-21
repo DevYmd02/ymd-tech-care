@@ -12,7 +12,17 @@ import {
     calculateNetTotal, 
     calculateLineTotal 
 } from '@sales/shared/utils/sales-calculations';
+import { 
+    validateLineStock, 
+    DEFAULT_IC_OPTIONS,
+    type ICOption
+} from '@sales/shared/utils/stock-validation';
+import { ICOptionService } from '@/modules/master-data/sales/pages/ic-option/services/ic-option.service';
+import { ICOptionListService } from '@/modules/master-data/sales/pages/ic-option/services/ic-option-list.service';
+import { SystemDocumentService } from '@/modules/master-data/sales/pages/ic-option/services/system-document.service';
 import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
+import { useConfirmation } from '@hooks/useConfirmation';
+import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
 
 import type { Currency } from '@master-data/types/master-data-types';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
@@ -125,6 +135,7 @@ async function recoverReservationPriceSources(
 
 export const useReservationForm = (isOpen: boolean, id?: string, initialData?: Partial<ReservationFormValues>, onClose?: () => void, readOnly: boolean = false) => {
     const { toast } = useToast();
+    const { confirm } = useConfirmation();
     const isEdit = !!id;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -160,6 +171,69 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     });
 
     const formData = useWatch({ control }) as ReservationFormValues;
+
+    const [branchIcOptions, setBranchIcOptions] = useState<ICOption>(DEFAULT_IC_OPTIONS);
+
+    // Fetch IC Options when Branch ID changes
+    const selectedBranchId = formData.branch_id;
+    useEffect(() => {
+        if (!selectedBranchId) {
+            setBranchIcOptions(DEFAULT_IC_OPTIONS);
+            return;
+        }
+
+        const fetchBranchICOptions = async () => {
+            try {
+                // 1. Get all IC options and find the one for the selected branch
+                const allOptions = await ICOptionService.getICOptions();
+                const branchOption = allOptions.find((opt) => String(opt.branch_id) === String(selectedBranchId));
+                
+                if (branchOption && branchOption.ic_option_id) {
+                    // 2. Fetch the document option list for this branch's IC Option ID
+                    const listItems = await ICOptionListService.getByICOptionId(branchOption.ic_option_id);
+                    console.log('--- DEBUG IC OPTIONS LIST ITEMS ---', listItems);
+                    
+                    const systemDocs = await SystemDocumentService.getAll();
+                    const rsvDoc = systemDocs.find((doc) => doc.system_document_code === SYSTEM_DOCUMENT_CODES.SALES_RESERVATION);
+                    
+                    // 3. Find the option specifically configured for the Sales Reservation document by ID
+                    const rsvOption = rsvDoc 
+                        ? listItems.find((item) => Number(item.system_document_id) === Number(rsvDoc.system_document_id))
+                        : undefined;
+                    
+                    if (rsvOption) {
+                        // 4. Map the configuration, falling back to global DEFAULT_IC_OPTIONS for '0' (Default) values
+                        const negativeStockCheck = rsvOption.negative_stock_check === 0 
+                            ? DEFAULT_IC_OPTIONS.negative_stock_check 
+                            : rsvOption.negative_stock_check;
+
+                        const negativeStockMode = rsvOption.negative_stock_mode === 0
+                            ? DEFAULT_IC_OPTIONS.negative_stock_mode
+                            : rsvOption.negative_stock_mode;
+
+                        const qtyValidationFlag = rsvOption.quantity_validation_flag === 0
+                            ? DEFAULT_IC_OPTIONS.quantity_validation_flag
+                            : rsvOption.quantity_validation_flag;
+
+                        setBranchIcOptions({
+                            negative_stock_check: negativeStockCheck,
+                            negative_stock_mode: negativeStockMode,
+                            quantity_validation_flag: qtyValidationFlag
+                        });
+                        return;
+                    }
+                }
+                
+                // Fallback to default if no specific configuration is found
+                setBranchIcOptions(DEFAULT_IC_OPTIONS);
+            } catch (error) {
+                logger.error('Failed to load IC Options for branch:', error);
+                setBranchIcOptions(DEFAULT_IC_OPTIONS);
+            }
+        };
+
+        fetchBranchICOptions();
+    }, [selectedBranchId]);
 
     // Initialization Guard
     const lastInitializedId = useRef<string | null | 'new'>(null);
@@ -421,7 +495,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         setIsProductSearchOpen(false);
     }, [activeLineIndex, getValues, setValue, uoms]);
 
-    const handleSelectLot = useCallback((lot: LotNo) => {
+    const handleSelectLot = useCallback(async (lot: LotNo) => {
         if (activeLotLineIndex !== null) {
             const currentLines = getValues('lines') || [];
             if (!currentLines[activeLotLineIndex]) return;
@@ -429,9 +503,49 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             const newLines = [...currentLines];
             const line = { ...newLines[activeLotLineIndex] };
             
+            const qtyReserved = Number(line.qty_reserved || 0);
+            const lotAvailableQty = lot.qty_available ?? lot.sale_stock ?? 0;
+            const lotWarehouseId = lot.warehouse_id || line.warehouse_id;
+            const lotLocationId = lot.location_id || line.location_id;
+
+            const stockValidation = validateLineStock(
+                qtyReserved,
+                lotAvailableQty,
+                lotWarehouseId,
+                lotLocationId,
+                branchIcOptions
+            );
+
+            if (!stockValidation.isValid || stockValidation.type === 'warning') {
+                if (stockValidation.code === 'NEGATIVE_STOCK_NOT_ALLOWED') {
+                    // Hard error dialog (block selection completely)
+                    await confirm({
+                        title: 'สต็อกไม่เพียงพอ (ห้ามติดลบ)',
+                        description: `ยอดจอง (${qtyReserved} ชิ้น) เกินกว่าจำนวนพร้อมใช้งานในล็อต (${lotAvailableQty} ชิ้น)\nไม่สามารถเลือกล็อตนี้ได้เนื่องจากนโยบายห้ามสต็อกติดลบ`,
+                        confirmText: 'ตกลง',
+                        hideCancel: true,
+                        variant: 'danger',
+                        width: 'max-w-lg'
+                    });
+                    return;
+                } else if (stockValidation.code === 'NEGATIVE_STOCK_ALLOWED' || stockValidation.code === 'INSUFFICIENT_STOCK_WARNING') {
+                    // Soft warning dialog (allow selection with user confirmation)
+                    const isConfirmed = await confirm({
+                        title: 'ยืนยันการเลือกล็อตสินค้า',
+                        description: `ยอดจอง (${qtyReserved} ชิ้น) เกินกว่าจำนวนพร้อมใช้งานในล็อต (${lotAvailableQty} ชิ้น)\nคุณต้องการยืนยันที่จะเลือกล็อตนี้ใช่หรือไม่?`,
+                        confirmText: 'ยืนยันเลือก',
+                        cancelText: 'ยกเลิก',
+                        variant: 'warning',
+                        width: 'max-w-lg'
+                    });
+                    
+                    if (!isConfirmed) return;
+                }
+            }
+
             line.lot_id = lot.lot_no_id ? Number(lot.lot_no_id) : (lot.id ? Number(lot.id) : null);
             line.lot_no = lot.code || '';
-            line.lot_available_qty = lot.qty_available ?? lot.sale_stock ?? 0;
+            line.lot_available_qty = lotAvailableQty;
 
             // 💡 Ensure Warehouse/Location match the selected LOT
             // This is critical when selecting from "Show All Stock"
@@ -446,7 +560,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
             setIsLotSearchOpen(false);
         }
-    }, [activeLotLineIndex, getValues, setValue]);
+    }, [activeLotLineIndex, getValues, setValue, confirm, branchIcOptions]);
 
     const handleSelectWarehouse = useCallback((warehouse: WarehouseListItem) => {
         if (activeWarehouseLineIndex !== null) {
@@ -906,6 +1020,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         warehouses,
         locations,
         priceLevelNames,
+        branchIcOptions,
         // Search Modals State
         isCustomerSearchOpen,
         setIsCustomerSearchOpen,

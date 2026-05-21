@@ -16,6 +16,7 @@ interface ConfirmationModalProps {
     hideCancel?: boolean;
     icon?: React.ElementType;
     isLoading?: boolean;
+    width?: string;
 }
 
 export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
@@ -29,7 +30,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     variant = 'info',
     hideCancel = false,
     icon,
-    isLoading = false
+    isLoading = false,
+    width = 'max-w-sm'
 }) => {
     if (!isOpen) return null;
 
@@ -69,7 +71,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             {/* Backdrop click to close - Disabled when loading */}
             <div className={`absolute inset-0 ${isLoading ? 'pointer-events-none' : ''}`} onClick={onClose} />
 
-            <div className="relative bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className={`relative bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 w-full ${width} overflow-hidden animate-in zoom-in-95 duration-200`}>
                 <div className="p-6 text-center">
                     {/* Icon */}
                     <div className={`w-12 h-12 ${config.bgClass} ${config.textClass} rounded-full flex items-center justify-center mx-auto mb-4`}>

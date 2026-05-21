@@ -13,6 +13,7 @@ import { AQSearchModal } from './search-modals/AQSearchModal';
 import { WarehouseSearchModal } from '@sales/shared/components/search-modals/WarehouseSearchModal';
 import { LocationSearchModal } from '@sales/shared/components/search-modals/LocationSearchModal';
 import { ConfirmationModal } from '@system/ConfirmationModal';
+import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
 
 import { useReservationForm } from '../hooks/useReservationForm';
 import { ReservationService } from '../services/reservation.service';
@@ -21,7 +22,7 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@utils';
 import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
-import { validateLineStock, DEFAULT_IC_OPTIONS } from '@sales/shared/utils/stock-validation';
+import { OptionService } from '@sales/shared/services/option.service';
 
 interface ReservationFormModalProps {
     isOpen: boolean;
@@ -65,6 +66,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         warehouses,
         locations,
         priceLevelNames,
+        branchIcOptions,
         // Search Modals State
         isCustomerSearchOpen,
         setIsCustomerSearchOpen,
@@ -119,22 +121,42 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
     const selectedTaxCode = taxCodes.find(t => String(t.tax_code_id) === String(formData.tax_code_id));
     const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
 
-    const onFormSubmit = (data: ReservationFormData) => {
-        // Validate stock logic before allowing submit
-        const hasErrors = data.lines.some(line => {
-            if (!line.item_id) return false;
-            // TODO: In the future, fetch actual ICOptions from context/API instead of DEFAULT_IC_OPTIONS
-            const res = validateLineStock(line.qty_reserved, line.lot_available_qty || 0, line.warehouse_id, line.location_id, DEFAULT_IC_OPTIONS);
-            return res.type === 'error';
-        });
+    const onFormSubmit = async (data: ReservationFormData) => {
+        setIsSubmitting(true);
+        try {
+            // Validate stock logic via Backend API before allowing submit
+            const validationPromises = data.lines.map(async (line) => {
+                if (!line.item_id) return { isValid: true, message: '' };
+                
+                return await OptionService.validate({
+                    system_document_code: SYSTEM_DOCUMENT_CODES.SALES_RESERVATION,
+                    context: {
+                        system_document_code: SYSTEM_DOCUMENT_CODES.SALES_RESERVATION,
+                        item_id: line.item_id,
+                        warehouse_id: line.warehouse_id,
+                        location_id: line.location_id,
+                        uom_id: line.uom_id,
+                        qty: line.qty_reserved,
+                    }
+                });
+            });
 
-        if (hasErrors) {
-            toast('มีรายการสินค้าที่ไม่ผ่านเงื่อนไขสต็อก (เช่น จำนวนจองเกินสต็อกคงเหลือ) กรุณาตรวจสอบ', 'error');
-            return;
+            const results = await Promise.all(validationPromises);
+            const errors = results.filter(res => !res.isValid && res.type === 'error');
+
+            if (errors.length > 0) {
+                toast(`มีรายการสินค้าที่ไม่ผ่านเงื่อนไขสต็อก: ${errors[0].message || 'กรุณาตรวจสอบจำนวนจองและคลังสินค้า'}`, 'error');
+                return;
+            }
+
+            setPendingData(data);
+            setIsConfirmOpen(true);
+        } catch (error) {
+            toast('เกิดข้อผิดพลาดในการตรวจสอบเงื่อนไขสต็อก', 'error');
+            logger.error('API Validation Error:', error);
+        } finally {
+            setIsSubmitting(false);
         }
-
-        setPendingData(data);
-        setIsConfirmOpen(true);
     };
 
     const handleConfirmSave = async () => {
@@ -262,6 +284,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                     warehouses={warehouses}
                                     locations={locations}
                                     priceLevelNames={priceLevelNames}
+                                    icOptions={branchIcOptions}
                                     onAddLine={handleAddLine} 
                                     onRemoveLine={handleRemoveLine}
                                     onLineChange={handleLineChange}
