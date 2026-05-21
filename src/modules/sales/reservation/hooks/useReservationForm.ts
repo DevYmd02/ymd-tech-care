@@ -431,6 +431,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             
             line.lot_id = lot.lot_no_id ? Number(lot.lot_no_id) : (lot.id ? Number(lot.id) : null);
             line.lot_no = lot.code || '';
+            line.lot_available_qty = lot.qty_available ?? lot.sale_stock ?? 0;
 
             // 💡 Ensure Warehouse/Location match the selected LOT
             // This is critical when selecting from "Show All Stock"

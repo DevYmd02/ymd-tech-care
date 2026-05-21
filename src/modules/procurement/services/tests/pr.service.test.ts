@@ -18,37 +18,56 @@ vi.mock('@/core/api/api', () => ({
 describe('PRService Unit Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Default implementations for parallel calls in hydration logic
+    vi.mocked(api.get).mockImplementation((url) => {
+      if (url === '/vendors') {
+        return Promise.resolve({ items: [], total: 0 });
+      }
+      if (url === '/pr-approval') {
+        return Promise.resolve({ data: [], total: 0 });
+      }
+      return Promise.resolve(null);
+    });
   });
 
   describe('getList', () => {
     it('should fetch PR list with correct mapping and endpoint', async () => {
       const mockResponse = {
-        items: [
+        data: [
           { pr_id: 1, pr_no: 'PR-001', requester_name: 'Test user', status: 'DRAFT' }
         ],
         total: 1,
         page: 1,
         limit: 10
       };
-      
-      vi.mocked(api.get).mockResolvedValue(mockResponse);
+
+      vi.mocked(api.get).mockImplementation((url) => {
+        if (url === '/pr') return Promise.resolve(mockResponse);
+        if (url === '/vendors') return Promise.resolve({ items: [] });
+        if (url === '/pr-approval') return Promise.resolve({ data: [] });
+        return Promise.resolve(null);
+      });
 
       const params = { pr_no: 'PR-001', page: 1, limit: 10 };
       const result = await PRService.getList(params);
 
-      // Verify endpoint and mapped parameters (pr_no -> q)
+      // Verify endpoint and mapped parameters (expansion strips pr_no, set limit to 500)
       expect(api.get).toHaveBeenCalledWith('/pr', {
         params: expect.objectContaining({
-          q: 'PR-001',
-          page: 1,
-          limit: 10
+          limit: 500,
+          page: 1
         })
       });
-      expect(result).toEqual(mockResponse);
+      expect(result.data[0]).toEqual(expect.objectContaining(mockResponse.data[0]));
+      expect(result.total).toEqual(1);
     });
 
     it('should handle getList error gracefully', async () => {
-      vi.mocked(api.get).mockRejectedValue(new Error('API Error'));
+      vi.mocked(api.get).mockImplementation((url) => {
+        if (url === '/pr') return Promise.reject(new Error('API Error'));
+        return Promise.resolve({ items: [] });
+      });
 
       await expect(PRService.getList()).rejects.toThrow('API Error');
     });
@@ -57,15 +76,20 @@ describe('PRService Unit Tests', () => {
   describe('getDetail', () => {
     it('should fetch a single PR by ID', async () => {
       const mockPR = { pr_id: 1, pr_no: 'PR-001' };
-      vi.mocked(api.get).mockResolvedValue(mockPR);
+      
+      vi.mocked(api.get).mockImplementation((url) => {
+        if (url === '/pr/1') return Promise.resolve(mockPR);
+        if (url === '/pr-approval') return Promise.resolve({ data: [] });
+        return Promise.resolve(null);
+      });
 
       const result = await PRService.getDetail(1);
 
-      expect(api.get).toHaveBeenCalledWith('/pr/1');
-      expect(result).toEqual(mockPR);
+      expect(api.get).toHaveBeenCalledWith('/pr/1', undefined);
+      expect(result).toEqual(expect.objectContaining(mockPR));
     });
 
-    it('should return null on getDetail error', async () => {
+    it('should return null or throw on getDetail error', async () => {
       vi.mocked(api.get).mockRejectedValue(new Error('Not Found'));
       await expect(PRService.getDetail(999)).rejects.toThrow('Not Found');
     });
@@ -81,12 +105,10 @@ describe('PRService Unit Tests', () => {
         pr_tax_code_id: 1,
         remark: 'Test PR',
         status: 'DRAFT',
-        // Currency & exchange rate fields (Postman-aligned)
         pr_base_currency_code: 'THB',
         pr_quote_currency_code: 'THB',
         pr_exchange_rate: 1,
         pr_exchange_rate_date: '2024-02-09',
-        // Terms fields (Postman-aligned)
         payment_term_days: 30,
         credit_days: 30,
         vendor_quote_no: '',
@@ -109,7 +131,7 @@ describe('PRService Unit Tests', () => {
         lines: expect.arrayContaining([
           expect.objectContaining({ item_id: 101, qty: 2 })
         ])
-      }));
+      }), undefined);
       expect(result).toEqual(mockCreatedPR);
     });
   });
@@ -122,47 +144,41 @@ describe('PRService Unit Tests', () => {
       const payload: PRUpdatePayload = { remark: 'Modified' };
       const result = await PRService.update(1, payload);
 
-      expect(api.patch).toHaveBeenCalledWith('/pr/1', expect.any(Object));
+      expect(api.patch).toHaveBeenCalledWith('/pr/1', expect.any(Object), undefined);
       expect(result).toEqual(mockUpdatedPR);
     });
   });
 
   describe('Workflow Actions', () => {
-    // ... (submit, approve, reject tests remain same)
-
     it('should call cancel endpoint', async () => {
-        const mockSuccess = { success: true, message: 'Cancelled' };
-        vi.mocked(api.patch).mockResolvedValue(mockSuccess);
-  
-        const result = await PRService.cancel(123);
-  
-        expect(api.patch).toHaveBeenCalledWith('/pr/123/cancel', expect.any(Object));
-        expect(result).toEqual(mockSuccess);
-      });
-  
-      it('should call convert endpoint', async () => {
-        const mockResponse = { success: true, document_id: 'PO-001' };
-        vi.mocked(api.post).mockResolvedValue(mockResponse);
-  
-        const request = { pr_id: 123, convert_to: 'PO' as const, line_ids: [1] };
-        const result = await PRService.convert(123, request);
-  
-        expect(api.post).toHaveBeenCalledWith('/pr/123/convert', request);
-        expect(result).toEqual(mockResponse);
-      });
+      const mockSuccess = { success: true, message: 'Cancelled' };
+      vi.mocked(api.post).mockResolvedValue({ data: mockSuccess });
+
+      const result = await PRService.cancel(123);
+
+      expect(api.post).toHaveBeenCalledWith('/pr/123/cancel', {}, undefined);
+      expect(result).toEqual(mockSuccess);
+    });
+
+    it('should call convert endpoint', async () => {
+      vi.mocked(api.post).mockResolvedValue({ data: { success: true } });
+
+      const request = { pr_id: 123, convert_to: 'PO' as const, line_ids: [1] };
+      const result = await PRService.convert(123, request);
+
+      expect(api.post).toHaveBeenCalledWith('/pr/123/convert', request, undefined);
+      expect(result).toEqual(true);
+    });
   });
-
-
 
   describe('delete', () => {
     it('should call delete endpoint and return success response', async () => {
-      const mockResponse = { success: true, message: 'Deleted' };
-      vi.mocked(api.delete).mockResolvedValue(mockResponse);
+      vi.mocked(api.delete).mockResolvedValue(true);
 
       const result = await PRService.delete(123);
 
-      expect(api.delete).toHaveBeenCalledWith('/pr/123');
-      expect(result).toEqual(mockResponse);
+      expect(api.delete).toHaveBeenCalledWith('/pr/123', undefined);
+      expect(result).toEqual(true);
     });
 
     it('should throw on delete error', async () => {

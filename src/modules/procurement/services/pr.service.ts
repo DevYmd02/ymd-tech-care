@@ -135,15 +135,16 @@ export const PRService = {
   clearAVCache: clearPRServiceAVCache,
   getList: async (params?: PRListParams, config?: CustomAxiosConfig): Promise<PRListResponse> => {
     const SUPPORTED_FIELDS = ['branch_id', 'requester_user_id']; 
+    const safeParams = params || {};
     const { apiParams, needsClientFilter } = prepareHybridParams(
-        params as Record<string, string | number | boolean | undefined | null>, 
+        safeParams as Record<string, string | number | boolean | undefined | null>, 
         SUPPORTED_FIELDS
     );
     const response = await api.get<PRListResponse>(ENDPOINTS.list, { ...config, params: apiParams });
     const allItems = extractArrayFromResponse<PRHeader>(response);
     
     if (needsClientFilter || USE_MOCK) {
-        const filterParams: Record<string, string | number | boolean | undefined | null> = { ...params };
+        const filterParams: Record<string, string | number | boolean | undefined | null> = { ...safeParams };
         let hydratedItems = [...allItems];
         try {
             const now = Date.now();

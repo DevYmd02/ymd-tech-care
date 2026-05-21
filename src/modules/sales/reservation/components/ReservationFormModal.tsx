@@ -20,8 +20,8 @@ import type { ReservationFormData } from '../types/reservation.types';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { logger } from '@utils';
 import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
-
 import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
+import { validateLineStock, DEFAULT_IC_OPTIONS } from '@sales/shared/utils/stock-validation';
 
 interface ReservationFormModalProps {
     isOpen: boolean;
@@ -120,6 +120,19 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
     const taxRate = selectedTaxCode ? (Number(selectedTaxCode.tax_rate) || 0) : 0;
 
     const onFormSubmit = (data: ReservationFormData) => {
+        // Validate stock logic before allowing submit
+        const hasErrors = data.lines.some(line => {
+            if (!line.item_id) return false;
+            // TODO: In the future, fetch actual ICOptions from context/API instead of DEFAULT_IC_OPTIONS
+            const res = validateLineStock(line.qty_reserved, line.lot_available_qty || 0, line.warehouse_id, line.location_id, DEFAULT_IC_OPTIONS);
+            return res.type === 'error';
+        });
+
+        if (hasErrors) {
+            toast('มีรายการสินค้าที่ไม่ผ่านเงื่อนไขสต็อก (เช่น จำนวนจองเกินสต็อกคงเหลือ) กรุณาตรวจสอบ', 'error');
+            return;
+        }
+
         setPendingData(data);
         setIsConfirmOpen(true);
     };

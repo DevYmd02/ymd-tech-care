@@ -8,6 +8,7 @@ import type { UOMListItem, WarehouseListItem } from '@master-data/types/master-d
 import type { Location } from '@inventory/types/inventory-master.types';
 import { formatNumber } from '@/shared/utils';
 import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
+import { validateLineStock, DEFAULT_IC_OPTIONS } from '@sales/shared/utils/stock-validation';
 
 interface ReservationLineTableProps {
     lines: ReservationLineData[];
@@ -127,6 +128,11 @@ export function ReservationLineTable({
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                         {lines.length > 0 && lines.map((line, index) => {
+                            // 🔍 Evaluate Stock Validation (if item is selected)
+                            const stockValidation = line.item_id 
+                                ? validateLineStock(Number(line.qty_reserved || 0), Number(line.lot_available_qty || 0), line.warehouse_id, line.location_id, DEFAULT_IC_OPTIONS)
+                                : { isValid: true };
+
                             return (
                                 <tr key={index} className="hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors group">
                                     <td className="px-2 py-2 text-center text-purple-400 dark:text-purple-500/70 font-bold sticky left-0 bg-white dark:bg-gray-900 group-hover:bg-gray-50 dark:group-hover:bg-gray-800 z-10 transition-colors after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-[1px] after:bg-gray-100 dark:after:bg-gray-800/40">
@@ -187,28 +193,36 @@ export function ReservationLineTable({
                                      </td>
                                     
                                     <td className="px-2 py-2">
-                                        <input 
-                                            type="text" 
-                                            value={line.qty_reserved || ''} 
-                                            disabled={isLocked}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                // 🎯 Allow up to 3 decimal places for QTY
-                                                if (val === '' || /^\d*\.?\d{0,3}$/.test(val)) {
-                                                    onLineChange(index, 'qty_reserved', val);
-                                                }
-                                            }}
-                                            onFocus={(e) => e.target.select()}
-                                            onBlur={(e) => {
-                                                const val = e.target.value;
-                                                if (val !== '' && !isNaN(Number(val))) {
-                                                    onLineChange(index, 'qty_reserved', Number(val).toFixed(3));
-                                                }
-                                            }}
-                                            placeholder="0"
-                                            maxLength={12}
-                                            className={`${compactInputClass} text-right font-bold text-purple-600 dark:text-white bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700 ${getFieldErrorClass(index, 'qty_reserved')}`}
-                                        />
+                                        <div className="flex flex-col items-end gap-1 relative">
+                                            <input 
+                                                type="text" 
+                                                value={line.qty_reserved || ''} 
+                                                disabled={isLocked}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    // 🎯 Allow up to 3 decimal places for QTY
+                                                    if (val === '' || /^\d*\.?\d{0,3}$/.test(val)) {
+                                                        onLineChange(index, 'qty_reserved', val);
+                                                    }
+                                                }}
+                                                onFocus={(e) => e.target.select()}
+                                                onBlur={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val !== '' && !isNaN(Number(val))) {
+                                                        onLineChange(index, 'qty_reserved', Number(val).toFixed(3));
+                                                    }
+                                                }}
+                                                placeholder="0"
+                                                maxLength={12}
+                                                className={`${compactInputClass} text-right font-bold text-purple-600 dark:text-white bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700 ${getFieldErrorClass(index, 'qty_reserved')} ${stockValidation.type === 'error' ? '!border-red-500 !ring-1 !ring-red-500' : ''}`}
+                                            />
+                                            {stockValidation.message && (
+                                                <div className={`absolute top-full right-0 mt-1 z-20 whitespace-nowrap text-[10px] font-bold px-2 py-0.5 rounded shadow-sm ${stockValidation.type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-yellow-50 text-yellow-600 border border-yellow-200'} flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200`}>
+                                                    <AlertCircle size={10} />
+                                                    {stockValidation.message}
+                                                </div>
+                                            )}
+                                        </div>
                                     </td>
 
                                     <td className="px-2 py-2">
