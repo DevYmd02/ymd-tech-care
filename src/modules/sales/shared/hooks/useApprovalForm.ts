@@ -102,7 +102,7 @@ export interface UseApprovalFormProps<TForm extends FieldValues, TPayload = unkn
   schema: z.ZodTypeAny;
   initialValues: TForm;
   
-  fetchDetail: (id: string | number) => Promise<unknown>;
+  fetchDetail: (id: string | number, approvalItem?: GenericApprovalItem | null) => Promise<unknown>;
   fetchApprovalById?: (id: number) => Promise<unknown>;
   createApproval: (payload: TPayload) => Promise<unknown>;
   updateDocumentStatus?: (id: string | number, status: string) => Promise<unknown>;
@@ -239,7 +239,7 @@ export const useApprovalForm = <TForm extends FieldValues, TPayload = unknown>({
     setIsSubmitting(true);
     try {
       logger.info(`[useApprovalForm - ${documentType}] Fetching detail for ID: ${id}...`);
-      let raw = await fetchDetail(id);
+      let raw = await fetchDetail(id, approvalItemArg);
 
       // FALLBACK 1: Use provided item raw/obj
       if ((!raw || Object.keys(raw as object).length < 5) && approvalItemArg) {
@@ -248,6 +248,7 @@ export const useApprovalForm = <TForm extends FieldValues, TPayload = unknown>({
       }
 
       const doc = normalizeFn(raw);
+
       if (!doc) {
         toast(toastMessages.loadError, 'error');
         return;
@@ -256,20 +257,22 @@ export const useApprovalForm = <TForm extends FieldValues, TPayload = unknown>({
       setActiveId(id);
       prevDocIdRef.current = id;
 
-      // Try fetching approval details if present
+      // Try fetching approval details if present (only for historical approved/rejected items)
       let approvalDetails: Record<string, unknown> | null = null;
-      const approvalId = approvalItemArg?.aq_id || approvalItemArg?.ao_id || approvalItemArg?.so_approval_id || approvalItemArg?.id;
-      if (approvalId && fetchApprovalById) {
-        try {
-          const res = await fetchApprovalById(Number(approvalId));
-          approvalDetails = res as Record<string, unknown>;
-        } catch (e) {
-          logger.warn(`[useApprovalForm - ${documentType}] Could not fetch approval detail:`, e);
+      const isHistory = approvalItemArg ? (approvalItemArg.status !== 'PENDING') : false;
+      const isNew = !isHistory;
+
+      if (isHistory && fetchApprovalById) {
+        const approvalId = approvalItemArg?.aq_id || approvalItemArg?.ao_id || approvalItemArg?.so_approval_id;
+        if (approvalId && Number(approvalId) !== 0) {
+          try {
+            const res = await fetchApprovalById(Number(approvalId));
+            approvalDetails = res as Record<string, unknown>;
+          } catch (err) {
+            logger.warn(`[useApprovalForm - ${documentType}] Could not fetch approval detail:`, err);
+          }
         }
       }
-
-      const isHistory = !!approvalId;
-      const isNew = !isHistory;
 
       const discoveredApprovalLines = approvalDetails ? findLinesFn(approvalDetails) : [];
       const discoveredDocLines = doc.lines || [];

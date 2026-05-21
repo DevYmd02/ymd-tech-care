@@ -449,4 +449,3 @@ export function ReservationLineTable({
         </section>
     );
 }
-
