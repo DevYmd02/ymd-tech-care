@@ -175,7 +175,6 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
     schema: AQFormSchema,
     initialValues,
     fetchDetail: AQService.getSQById,
-    fetchApprovalById: AQService.getApprovalById,
     createApproval: AQService.createApproval,
     normalizeFn: normalizeSQ,
     findLinesFn: findLines,

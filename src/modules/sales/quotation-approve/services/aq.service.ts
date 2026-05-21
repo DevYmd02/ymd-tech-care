@@ -3,6 +3,7 @@ import type { ApproveQuotationPayload, AQListItem } from '../types/quotation-app
 import { QuotationService } from '@sales/quotation/services/quotation.service';
 import type { QuotationFormValues } from '@sales/quotation/schemas/quotation-schemas';
 import { extractArrayFromResponse } from '@utils/clientFilterUtils';
+import type { GenericApprovalItem } from '../../shared/hooks/useApprovalForm';
 
 // API Endpoint constants
 const ENDPOINTS = {
@@ -104,9 +105,48 @@ export const AQService = {
 
   /**
    * ดึงรายละเอียด SQ รายตัว
+   * ⚠️ IMPORTANT: Returns RAW API response (not mapped via QuotationService.getById)
+   * because normalizeSQ needs the original field names (quote_total_amount, quote_tax_amount, etc.)
+   * that mapDTOToQuotationForm would otherwise rename/drop.
    */
-  getSQById: async (sqId: string | number): Promise<unknown> => {
-    return await QuotationService.getById(sqId);
+  getSQById: async (sqId: string | number, approvalItemArg?: GenericApprovalItem | null): Promise<unknown> => {
+    try {
+      const raw = await api.get<unknown>(`/sale-quotation/${sqId}`);
+      // If valid object with data, return it
+      if (raw && Object.keys(raw as object).length > 2) {
+        return raw;
+      }
+    } catch {
+      // Ignore and fallback
+    }
+
+    // FALLBACK: If the detail API returns empty/404 (common for approved/historical SQs),
+    // fetch the SQ via the list API which might include the lines.
+    try {
+      const item = approvalItemArg as {
+        sq_no?: string;
+        ref_no?: string;
+        sale_quotation_no?: string;
+      } | null;
+      const sqNo = item?.sq_no || item?.ref_no || item?.sale_quotation_no || undefined;
+      const listRes = await QuotationService.getList({ 
+        limit: 10, 
+        q: sqNo || String(sqId),
+        sq_no: sqNo
+      });
+      const found = listRes.data.find(item => 
+        String(item.sq_id) === String(sqId) || 
+        String(item.id) === String(sqId) ||
+        (sqNo && item.sq_no === sqNo)
+      );
+      if (found && found.rawData) {
+        return found.rawData;
+      }
+    } catch {
+      // Ignore
+    }
+
+    return null;
   },
 
   /**

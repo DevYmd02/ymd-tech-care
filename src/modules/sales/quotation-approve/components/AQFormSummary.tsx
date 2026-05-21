@@ -19,7 +19,7 @@ export function AQFormSummary() {
   const quoteTotal = watch('quote_total_amount') || 0;
   const quoteTax = watch('quote_tax_amount') || 0;
   const taxRate = watch('tax_rate') || 0;
-  const discountAmount = watch('quote_discount_amount') || 0;
+  const discountAmount = watch('quote_discount_amount') || watch('base_discount_amount') || 0;
   const discountExpr = watch('discount_expression') || '0';
 
 

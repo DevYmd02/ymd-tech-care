@@ -172,6 +172,26 @@ export function normalizeSQ(raw: unknown): SQForApproval | null {
   const finalQCurrencyCode = String(obj.quote_currency_code || obj.id_currency_code || obj.currency_code || obj.currency || 'THB');
   const finalRate = Number(obj.exchange_rate || obj.rate || 1);
 
+  // Robust amount resolution: raw API uses quote_total_amount/quote_tax_amount, 
+  // but QuotationFormData maps them to total_amount/vat_amount
+  const resolvedSubTotal = Number(obj.quote_sub_total || obj.base_sub_total || obj.sub_total || 0);
+  const resolvedTotalAmount = Number(obj.quote_total_amount || obj.base_total_amount || obj.total_amount || 0);
+  const resolvedBaseTotalAmount = Number(obj.base_total_amount || obj.total_amount || 0);
+  const resolvedQuoteTotalAmount = Number(obj.quote_total_amount || obj.total_amount || 0);
+  const resolvedVatAmount = Number(obj.quote_tax_amount || obj.base_tax_amount || obj.vat_amount || 0);
+  const resolvedBaseTaxAmount = Number(obj.base_tax_amount || obj.vat_amount || 0);
+  const resolvedQuoteTaxAmount = Number(obj.quote_tax_amount || obj.vat_amount || 0);
+  const resolvedDiscountAmount = Number(obj.quote_discount_amount || obj.base_discount_amount || obj.discount_amount || 0);
+
+  // Tax rate: try direct field, then derive from amounts
+  let resolvedTaxRate = Number(obj.tax_rate ?? tax.tax_rate ?? 0);
+  if (!resolvedTaxRate && resolvedVatAmount > 0 && resolvedSubTotal > 0) {
+    const subAfterDisc = resolvedSubTotal - resolvedDiscountAmount;
+    if (subAfterDisc > 0) {
+      resolvedTaxRate = resolvedVatAmount / subAfterDisc;
+    }
+  }
+
   return {
     sq_id: sqId,
     sq_no: String(obj.sq_no || obj.sale_quotation_no || obj.code || obj.no || ''),
@@ -187,17 +207,17 @@ export function normalizeSQ(raw: unknown): SQForApproval | null {
     exchange_rate: finalRate,
     isMulticurrency: Boolean(
       (obj.is_multicurrency === true) || (finalBCurrencyCode !== 'THB') || (finalQCurrencyCode !== 'THB') ||
-      (Math.abs(Number(obj.quote_total_amount || 0) - Number(obj.base_total_amount || 0)) > 0.01)
+      (Math.abs(resolvedQuoteTotalAmount - resolvedBaseTotalAmount) > 0.01)
     ),
     exchange_rate_date: String(obj.exchange_rate_date || obj.sq_date || obj.date || '').split('T')[0],
-    total_amount: Number(obj.total_amount || obj.quote_total_amount || 0),
-    base_total_amount: Number(obj.base_total_amount || 0),
-    quote_total_amount: Number(obj.quote_total_amount || 0),
-    vat_amount: Number(obj.vat_amount || 0),
-    base_tax_amount: Number(obj.base_tax_amount || 0),
-    quote_tax_amount: Number(obj.quote_tax_amount || 0),
+    total_amount: resolvedTotalAmount,
+    base_total_amount: resolvedBaseTotalAmount,
+    quote_total_amount: resolvedQuoteTotalAmount,
+    vat_amount: resolvedVatAmount,
+    base_tax_amount: resolvedBaseTaxAmount,
+    quote_tax_amount: resolvedQuoteTaxAmount,
     tax_code_id: (obj.tax_code_id || tax.id) ? Number(obj.tax_code_id || tax.id) : undefined,
-    tax_rate: Number(obj.tax_rate ?? tax.tax_rate ?? 0),
+    tax_rate: resolvedTaxRate,
     tax_code: String(obj.tax_code || tax.tax_code || '').replace(/^-$/, ''),
     remarks: String(obj.remarks || ''),
     valid_until: String(obj.valid_until || '').split('T')[0],
@@ -212,12 +232,12 @@ export function normalizeSQ(raw: unknown): SQForApproval | null {
     sale_area_name: String(obj.sale_area_name || area.name || '').replace('-', ''),
     emp_sale_id: Number(obj.emp_sale_id || (obj.emp_sale as Record<string, unknown>)?.employee_id || 0),
     emp_sale_name: String(obj.emp_sale_name || (obj.emp_sale as Record<string, unknown>)?.employee_fullname || ''),
-    discount_expression: String(obj.discount_expression || '0'),
-    discount_amount: Number(obj.discount_amount || 0),
+    discount_expression: String(obj.discount_expression || obj.discount_input || '0'),
+    discount_amount: resolvedDiscountAmount,
     approval_emp_id: Number(obj.approval_emp_id || 0),
     approval_emp_name: String(obj.approval_emp_name || ''),
     lines,
-    sub_total: Number(obj.sub_total || lines.reduce((s, l) => s + (l.net_amount || 0), 0) || 0),
+    sub_total: Number(resolvedSubTotal || lines.reduce((s, l) => s + (l.net_amount || 0), 0) || 0),
   };
 }
 
