@@ -55,11 +55,22 @@ export const validateLineStock = (
   locationId: number | string | null | undefined, 
   options: ICOption = DEFAULT_IC_OPTIONS
 ): StockValidationResult => {
+  const ctx = { qty, available_qty: availableQty };
   
-  // 1. Negative Stock Rule
-  if (qty > availableQty) {
+  // UX Improvement: Check if required scope (Warehouse/Location) is missing first
+  const isWarehouseReq = options.negative_stock_mode === STOCK_MODE.WAREHOUSE_REQUIRED;
+  const isLocationReq = options.negative_stock_mode === STOCK_MODE.WAREHOUSE_LOCATION_REQUIRED;
+  const isMissingScope = (isWarehouseReq && !warehouseId) || (isLocationReq && (!warehouseId || !locationId));
+
+  // =====================================================
+  // 1. NEGATIVE STOCK RULE
+  // =====================================================
+  
+  // UX Improvement: If we are missing required scope, we skip negative stock check temporarily
+  // to avoid yelling at the user before they've had a chance to select a warehouse/lot.
+  if (!isMissingScope) {
       // check === 1: ห้ามติดลบ -> error
-      if (options.negative_stock_check === NEGATIVE_STOCK.BLOCK) {
+      if (options.negative_stock_check === NEGATIVE_STOCK.BLOCK && ctx.qty > ctx.available_qty) {
           return { 
             isValid: false, 
             type: 'error', 
@@ -68,7 +79,7 @@ export const validateLineStock = (
           };
       }
       // check === 2: อนุญาตติดลบ -> warning
-      if (options.negative_stock_check === NEGATIVE_STOCK.ALLOW) {
+      if (options.negative_stock_check === NEGATIVE_STOCK.ALLOW && ctx.qty > ctx.available_qty) {
           return { 
             isValid: true, 
             type: 'warning', 
@@ -77,7 +88,7 @@ export const validateLineStock = (
           };
       }
       // check === 3: เตือนก่อนใช้ -> warning
-      if (options.negative_stock_check === NEGATIVE_STOCK.WARN) {
+      if (options.negative_stock_check === NEGATIVE_STOCK.WARN && ctx.qty > ctx.available_qty) {
           return { 
             isValid: true, 
             type: 'warning', 

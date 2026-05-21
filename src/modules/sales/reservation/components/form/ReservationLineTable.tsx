@@ -8,7 +8,7 @@ import type { UOMListItem, WarehouseListItem } from '@master-data/types/master-d
 import type { Location } from '@inventory/types/inventory-master.types';
 import { formatNumber } from '@/shared/utils';
 import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
-import { validateLineStock, DEFAULT_IC_OPTIONS } from '@sales/shared/utils/stock-validation';
+import { validateLineStock, DEFAULT_IC_OPTIONS, type ICOption } from '@sales/shared/utils/stock-validation';
 
 interface ReservationLineTableProps {
     lines: ReservationLineData[];
@@ -25,6 +25,7 @@ interface ReservationLineTableProps {
     priceLevelNames?: import('@sales-master/pages/price-level-name/types/price-level-name.types').PriceLevelName[];
     readOnly?: boolean;
     currencySymbol?: string;
+    icOptions?: ICOption;
 }
 
 export function ReservationLineTable({ 
@@ -41,7 +42,8 @@ export function ReservationLineTable({
     locations = [],
     priceLevelNames = [],
     readOnly = false,
-    currencySymbol = 'บาท'
+    currencySymbol = 'บาท',
+    icOptions
 }: ReservationLineTableProps) {
     const { formState: { errors } } = useFormContext<ReservationFormValues>();
     const { toast } = useToast();
@@ -128,10 +130,34 @@ export function ReservationLineTable({
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                         {lines.length > 0 && lines.map((line, index) => {
+                            const hasLotSelected = !!line.lot_no;
                             // 🔍 Evaluate Stock Validation (if item is selected)
                             const stockValidation = line.item_id 
-                                ? validateLineStock(Number(line.qty_reserved || 0), Number(line.lot_available_qty || 0), line.warehouse_id, line.location_id, DEFAULT_IC_OPTIONS)
+                                ? validateLineStock(
+                                    Number(line.qty_reserved || 0), 
+                                    hasLotSelected ? Number(line.lot_available_qty || 0) : Infinity, 
+                                    line.warehouse_id, 
+                                    line.location_id, 
+                                    icOptions || DEFAULT_IC_OPTIONS
+                                  )
                                 : { isValid: true };
+
+                            const isQtyError = !!(stockValidation.message && [
+                                'INVALID_QTY',
+                                'NEGATIVE_STOCK_ALLOWED',
+                                'INSUFFICIENT_STOCK_WARNING'
+                            ].includes(stockValidation.code || ''));
+
+                            const isWarehouseError = !!(stockValidation.message && (
+                                stockValidation.code === 'WAREHOUSE_REQUIRED' ||
+                                (stockValidation.code === 'WAREHOUSE_LOCATION_REQUIRED' && !line.warehouse_id)
+                            ));
+
+                            const isLocationError = !!(stockValidation.message && (
+                                stockValidation.code === 'WAREHOUSE_LOCATION_REQUIRED' &&
+                                line.warehouse_id &&
+                                !line.location_id
+                            ));
 
                             return (
                                 <tr key={index} className="hover:bg-purple-50/50 dark:hover:bg-purple-900/10 transition-colors group">
@@ -169,26 +195,38 @@ export function ReservationLineTable({
                                     </td>
                                     
                                      <td className="px-2 py-2">
-                                         <div className="flex gap-1 items-center">
+                                         <div className="flex flex-col gap-1">
                                              <input 
                                                  value={warehouses.find(w => String(w.warehouse_id) === String(line.warehouse_id))?.warehouse_name || ''}
                                                  readOnly
                                                  onClick={!isLocked ? () => onSearchWarehouse?.(index) : undefined}
-                                                 className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-purple-400 focus:border-purple-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors ${getFieldErrorClass(index, 'warehouse_id')}`}
+                                                 className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-purple-400 focus:border-purple-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors ${getFieldErrorClass(index, 'warehouse_id')} ${isWarehouseError ? '!border-red-500 !ring-1 !ring-red-500' : ''}`}
                                                  placeholder="เลือกคลัง..."
                                              />
+                                             {isWarehouseError && (
+                                                 <div className="mt-1 w-full text-[10px] font-bold px-2 py-0.5 rounded shadow-sm bg-red-50 text-red-600 border border-red-200 flex items-center gap-1 animate-in fade-in duration-200">
+                                                     <AlertCircle size={10} className="shrink-0" />
+                                                     <span className="truncate">กรุณาระบุคลังสินค้า</span>
+                                                 </div>
+                                             )}
                                          </div>
                                      </td>
 
                                      <td className="px-2 py-2">
-                                         <div className="flex gap-1 items-center">
+                                         <div className="flex flex-col gap-1">
                                              <input 
                                                  value={locations.find(l => String(l.location_id) === String(line.location_id))?.name_th || locations.find(l => String(l.location_id) === String(line.location_id))?.code || ''}
                                                  readOnly
                                                  onClick={!isLocked ? () => onSearchLocation?.(index) : undefined}
-                                                 className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-orange-400 focus:border-orange-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors ${getFieldErrorClass(index, 'location_id')}`}
+                                                 className={`${compactInputClass} ${!isLocked ? 'cursor-pointer hover:border-orange-400 focus:border-orange-500' : 'cursor-not-allowed bg-gray-50/50'} text-gray-700 dark:text-white/80 border-gray-200 dark:border-gray-700 transition-colors ${getFieldErrorClass(index, 'location_id')} ${isLocationError ? '!border-red-500 !ring-1 !ring-red-500' : ''}`}
                                                  placeholder="เลือกที่เก็บ..."
                                              />
+                                             {isLocationError && (
+                                                 <div className="mt-1 w-full text-[10px] font-bold px-2 py-0.5 rounded shadow-sm bg-red-50 text-red-600 border border-red-200 flex items-center gap-1 animate-in fade-in duration-200">
+                                                     <AlertCircle size={10} className="shrink-0" />
+                                                     <span className="truncate">กรุณาระบุที่เก็บ</span>
+                                                 </div>
+                                             )}
                                          </div>
                                      </td>
                                     
@@ -214,12 +252,21 @@ export function ReservationLineTable({
                                                 }}
                                                 placeholder="0"
                                                 maxLength={12}
-                                                className={`${compactInputClass} text-right font-bold text-purple-600 dark:text-white bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700 ${getFieldErrorClass(index, 'qty_reserved')} ${stockValidation.type === 'error' ? '!border-red-500 !ring-1 !ring-red-500' : ''}`}
+                                                className={`${compactInputClass} text-right font-bold text-purple-600 dark:text-white bg-white dark:bg-gray-800 border-purple-100 dark:border-gray-700 ${getFieldErrorClass(index, 'qty_reserved')} ${isQtyError && stockValidation.type === 'error' ? '!border-red-500 !ring-1 !ring-red-500' : ''}`}
                                             />
-                                            {stockValidation.message && (
-                                                <div className={`absolute top-full right-0 mt-1 z-20 whitespace-nowrap text-[10px] font-bold px-2 py-0.5 rounded shadow-sm ${stockValidation.type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-yellow-50 text-yellow-600 border border-yellow-200'} flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200`}>
-                                                    <AlertCircle size={10} />
-                                                    {stockValidation.message}
+                                            {isQtyError && stockValidation.message && (
+                                                <div className={`mt-1 w-max max-w-[150px] ml-auto justify-end text-[10px] font-bold px-2 py-1 rounded shadow-sm ${stockValidation.type === 'error' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-yellow-50 text-yellow-600 border border-yellow-200'} flex items-start gap-1 animate-in fade-in duration-200`}>
+                                                    <AlertCircle size={10} className="shrink-0 mt-0.5" />
+                                                    <div className="flex flex-col items-end leading-tight text-right">
+                                                        {stockValidation.message.includes(' (') ? (
+                                                            <>
+                                                                <span>{stockValidation.message.split(' (')[0]}</span>
+                                                                <span className="whitespace-nowrap">({stockValidation.message.split(' (')[1]}</span>
+                                                            </>
+                                                        ) : (
+                                                            <span className="whitespace-normal break-words">{stockValidation.message}</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

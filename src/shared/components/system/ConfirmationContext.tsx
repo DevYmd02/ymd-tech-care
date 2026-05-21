@@ -13,6 +13,7 @@ interface ConfirmationOptions {
     hideCancel?: boolean;
     icon?: React.ElementType;
     onConfirm?: () => Promise<void>;
+    width?: string;
 }
 
 export interface ConfirmationContextType {
@@ -86,6 +87,7 @@ export const ConfirmationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 hideCancel={options.hideCancel}
                 icon={options.icon}
                 isLoading={isLoading}
+                width={options.width}
             />
         </ConfirmationContext.Provider>
     );
