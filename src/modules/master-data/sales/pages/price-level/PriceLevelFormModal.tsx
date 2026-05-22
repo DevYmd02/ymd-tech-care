@@ -9,7 +9,7 @@ import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout, UOMPickerModal } from '@ui';
 import type { Path } from 'react-hook-form';
 import { UOMConversionService } from '@/modules/master-data/inventory/services/uom-conversion.service';
-import type { UOMConversionListItem } from '@/modules/master-data/types/master-data-types';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { usePriceLevelForm } from './hooks/usePriceLevelForm';
 import type { PriceLevelFormData } from './types/price-level.types';
 import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
@@ -37,7 +37,7 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
 
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
     const [isUomPickerOpen, setIsUomPickerOpen] = useState(false);
-    const [conversions, setConversions] = useState<UOMConversionListItem[]>([]);
+    const [conversions, setConversions] = useState<UOMPickerItem[]>([]);
     const [levelNameMap, setLevelNameMap] = useState<Map<number, string>>(new Map());
 
     const itemId = watch('itemId');
@@ -70,8 +70,25 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
 
         const fetchConversions = async () => {
             try {
-                const response = await UOMConversionService.getByItemId(Number(itemId));
-                setConversions(response.items || []);
+                const [convRes, itemRes] = await Promise.all([
+                    UOMConversionService.getByItemId(Number(itemId)).catch(() => ({ items: [] })),
+                    ItemMasterService.getById(Number(itemId)).catch(() => null)
+                ]);
+                const convs = convRes?.items || [];
+                const barcodes = itemRes?.barcodes || [];
+
+                const mapped = convs.map(c => {
+                    const match = barcodes.find(b => Number(b.item_uom_id) === Number(c.conversion_id));
+                    return {
+                        conversion_id: Number(c.conversion_id),
+                        from_unit_id: Number(c.from_unit_id),
+                        from_unit_name: c.from_unit_name || '',
+                        from_unit_name_en: c.from_unit_name_en || '',
+                        conversion_factor: Number(c.conversion_factor),
+                        barcode: match?.barcode || ''
+                    };
+                });
+                setConversions(mapped);
             } catch (error) {
                 logger.error('Failed to fetch UOM conversions:', error);
             }
@@ -90,12 +107,28 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
 
         if (id) {
             try {
-                const response = await UOMConversionService.getByItemId(Number(id));
-                const convs = response.items || [];
-                setConversions(convs);
+                const [convRes, itemRes] = await Promise.all([
+                    UOMConversionService.getByItemId(Number(id)).catch(() => ({ items: [] })),
+                    ItemMasterService.getById(Number(id)).catch(() => null)
+                ]);
+                const convs = convRes?.items || [];
+                const barcodes = itemRes?.barcodes || [];
+
+                const mapped = convs.map(c => {
+                    const match = barcodes.find(b => Number(b.item_uom_id) === Number(c.conversion_id));
+                    return {
+                        conversion_id: Number(c.conversion_id),
+                        from_unit_id: Number(c.from_unit_id),
+                        from_unit_name: c.from_unit_name || '',
+                        from_unit_name_en: c.from_unit_name_en || '',
+                        conversion_factor: Number(c.conversion_factor),
+                        barcode: match?.barcode || ''
+                    };
+                });
+                setConversions(mapped);
 
                 const baseUomId = product.base_uom_id || product.uom_id;
-                const defaultConv = convs.find(c => Number(c.from_unit_id) === Number(baseUomId)) || convs[0];
+                const defaultConv = mapped.find(c => Number(c.from_unit_id) === Number(baseUomId)) || mapped[0];
                 if (defaultConv) {
                     setValue('itemUomId', defaultConv.conversion_id);
                 } else {
@@ -287,7 +320,7 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
                 isOpen={isUomPickerOpen}
                 onClose={() => setIsUomPickerOpen(false)}
                 onSelect={handleSelectUom}
-                items={conversions as UOMPickerItem[]}
+                items={conversions}
                 selectedFromUnitId={(() => {
                     const match = conversions.find((c) => String(c.conversion_id) === String(itemUomId));
                     return match ? Number(match.from_unit_id) : undefined;

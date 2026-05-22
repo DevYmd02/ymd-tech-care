@@ -5,11 +5,13 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PriceLevelService } from '../services/price-level.service';
-import type { PriceLevel } from '../types/price-level.types';
+import type { PriceLevel, ApiPriceLevel } from '../types/price-level.types';
 import { useTableFilters } from '@/shared/hooks/useTableFilters';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
+import { UOMConversionService } from '@/modules/master-data/inventory/services/uom-conversion.service';
 import type { ItemListItem, UOMListItem } from '@/modules/master-data/inventory/types/product-types';
+import type { UOMConversionListItem } from '@/modules/master-data/types/master-data-types';
 import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
 import { logger } from '@/shared/utils';
 
@@ -42,7 +44,6 @@ export function usePriceLevel(isActive: boolean = true) {
                 ItemMasterService.getAll({ limit: 1000 }), // Get enough items for mapping
                 UOMService.getAll(),
                 PriceLevelNameService.getList().catch(() => []), // Fallback to empty array if 404
-
             ]);
 
             // Build level name map: level_no -> name
@@ -54,16 +55,66 @@ export function usePriceLevel(isActive: boolean = true) {
             const itemMap = new Map<number, ItemListItem>((itemsResponse.items || []).map((item: ItemListItem) => [Number(item.item_id), item]));
             const unitMap = new Map<number, UOMListItem>((unitsResponse.items || []).map((unit: UOMListItem) => [Number(unit.uom_id), unit]));
 
+            // Fetch conversions for all unique items in parallel
+            const uniqueItemIds = Array.from(
+                new Set(
+                    priceLevels
+                        .map((pl: PriceLevel) => Number(pl.item_id))
+                        .filter(id => !isNaN(id) && id > 0)
+                )
+            );
+
+            const conversionsResponses = await Promise.all(
+                uniqueItemIds.map(itemId => 
+                    UOMConversionService.getByItemId(itemId).catch(() => ({ items: [] }))
+                )
+            );
+
+            // Build conversion map: conversion_id -> UOMConversionListItem
+            const conversionMap = new Map<number, UOMConversionListItem>();
+            conversionsResponses.forEach(res => {
+                const items = res?.items || [];
+                items.forEach((c) => {
+                    if (c && c.conversion_id) {
+                        conversionMap.set(Number(c.conversion_id), c);
+                    }
+                });
+            });
+
             const mappedData = priceLevels.map((pl: PriceLevel) => {
+                const rawPl = pl as unknown as ApiPriceLevel;
                 const item = itemMap.get(Number(pl.item_id));
-                const unit = unitMap.get(Number(pl.item_uom_id || pl.uom_id));
+                
+                const targetUomId = Number(
+                    pl.item_uom_id || 
+                    rawPl.itemUomId || 
+                    pl.uom_id || 
+                    rawPl.uomId || 
+                    0
+                );
+                const unit = unitMap.get(targetUomId);
+                const conversion = conversionMap.get(targetUomId);
+                
+                const resolvedUomName = 
+                    conversion?.from_unit_name ||
+                    pl.item_uom?.from_uom?.uom_name ||
+                    rawPl.item_uom?.from_uom?.uom_name ||
+                    rawPl.item_uom?.fromUom?.uom_name ||
+                    rawPl.item_uom?.fromUom?.uomName ||
+                    rawPl.itemUom?.from_uom?.uom_name ||
+                    rawPl.itemUom?.fromUom?.uom_name ||
+                    rawPl.itemUom?.fromUom?.uomName ||
+                    unit?.uom_name ||
+                    pl.uom_name ||
+                    rawPl.uom_name ||
+                    '-';
                 
                 return {
                     ...pl,
                     item_code: item?.item_code || pl.item_code || '-',
                     item_name: item?.item_name || pl.item_name || '-',
                     item_name_en: item?.item_name_en || pl.item_name_en || '',
-                    uom_name: pl.item_uom?.from_uom?.uom_name || unit?.uom_name || pl.uom_name || '-',
+                    uom_name: resolvedUomName,
                 };
             });
 
