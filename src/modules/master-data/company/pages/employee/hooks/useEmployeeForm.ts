@@ -128,6 +128,10 @@ function translateError(msg: unknown): string {
     
     const translateSingle = (str: string): string => {
         const lowerStr = str.toLowerCase();
+        // Intercept duplicate or internal database constraint/server errors
+        if (lowerStr.includes('internal server error') || lowerStr.includes('duplicate') || lowerStr.includes('unique') || lowerStr.includes('ซ้ำ')) {
+            return 'รหัสพนักงานซ้ำในระบบ';
+        }
         // Intercept selection type/constraint errors and return localized select messages directly
         if (lowerStr.includes('conforming to the specified constraints') || lowerStr.includes('must be a number')) {
             if (lowerStr.includes('position')) {
@@ -486,7 +490,13 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
                         ? [backendMsg] 
                         : [];
 
+                let isDuplicate = false;
                 errorList.forEach((msg) => {
+                    const lowerMsg = msg.toLowerCase();
+                    if (lowerMsg.includes('internal server error') || lowerMsg.includes('duplicate') || lowerMsg.includes('ซ้ำ') || lowerMsg.includes('unique')) {
+                        isDuplicate = true;
+                    }
+
                     Object.keys(FIELD_MAP).forEach((fieldKey) => {
                         const regex = new RegExp(`\\b${fieldKey}\\b`, 'i');
                         if (regex.test(msg)) {
@@ -507,6 +517,16 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
                         }
                     });
                 });
+
+                if (isDuplicate) {
+                    setError('employee_code' as Path<EmployeeFormData>, {
+                        type: 'backend',
+                        message: 'รหัสพนักงานซ้ำในระบบ'
+                    });
+                    if (!firstErrorKey) {
+                        firstErrorKey = 'employee_code';
+                    }
+                }
 
                 // Smooth scroll and focus to the first backend validation failure field
                 if (firstErrorKey) {

@@ -19,7 +19,7 @@ import { type TableFilters } from '@/shared/hooks/useTableFilters';
 export const employeeGroupSchema = z.object({
     employeeGroupCode: z.string().min(1, 'กรุณากรอกรหัสกลุ่มพนักงาน').max(20, 'รหัสกลุ่มพนักงานต้องไม่เกิน 20 ตัวอักษร'),
     employeeGroupName: z.string().min(1, 'กรุณากรอกชื่อกลุ่มพนักงาน').max(100, 'ชื่อกลุ่มพนักงานต้องไม่เกิน 100 ตัวอักษร'),
-    employeeGroupNameEn: z.string().max(100, 'ชื่อกลุ่มพนักงาน (English) ต้องไม่เกิน 100 ตัวอักษร'),
+    employeeGroupNameEn: z.string().trim().min(1, 'กรุณากรอกชื่อกลุ่มพนักงาน (ภาษาอังกฤษ)').max(100, 'ชื่อกลุ่มพนักงาน (ภาษาอังกฤษ) ต้องไม่เกิน 100 ตัวอักษร'),
     isActive: z.boolean(),
 });
 

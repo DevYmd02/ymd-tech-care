@@ -113,7 +113,7 @@ export const PositionFormModal = ({ isOpen, onClose, onSuccess, editId }: Positi
                         {/* Position Name (English) */}
                         <div>
                             <label className={styles.label}>
-                                ชื่อตำแหน่ง (ภาษาอังกฤษ)
+                                ชื่อตำแหน่ง (ภาษาอังกฤษ) <span className="text-red-500">*</span>
                             </label>
                             <input
                                 {...register('positionNameEn')}
@@ -121,7 +121,11 @@ export const PositionFormModal = ({ isOpen, onClose, onSuccess, editId }: Positi
                                 placeholder="Enter position name in English"
                                 className={`${styles.input} ${errors.positionNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
                             />
-                            <p className="text-gray-400 text-xs mt-1">varchar(100) - ชื่อตำแหน่ง (Eng)</p>
+                            {errors.positionNameEn ? (
+                                <p className="text-red-500 text-xs mt-1">{errors.positionNameEn.message}</p>
+                            ) : (
+                                <p className="text-gray-400 text-xs mt-1">varchar(100) - ชื่อตำแหน่ง (Eng)</p>
+                            )}
                         </div>
 
                         {/* Status - Checkbox */}
