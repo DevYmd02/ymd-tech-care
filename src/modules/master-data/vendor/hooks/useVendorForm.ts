@@ -31,7 +31,7 @@ interface UseVendorFormProps {
     initialData?: VendorMaster | null;
     onSuccess?: () => void;
     predictedVendorId?: string;
-    toast: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
+    toast: (message: string | React.ReactNode, type?: 'success' | 'error' | 'warning' | 'info') => void;
     readOnly?: boolean;
 }
 
@@ -483,7 +483,7 @@ export function useVendorForm({
                         errorMessages.map((msg: string, i: number) => React.createElement('li', { key: i }, msg))
                     )
                 );
-                toast(React.createElement(ErrorToastUI) as unknown as string, 'error');
+                toast(React.createElement(ErrorToastUI), 'error');
             } else {
                 toast('กรุณาตรวจสอบข้อมูลที่ระบุให้ครบถ้วน', 'error');
             }

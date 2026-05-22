@@ -102,6 +102,44 @@ export const UOMConversionService = {
     }
   },
 
+  getByItemId: async (itemId: number): Promise<ListResponse<UOMConversionListItem>> => {
+    if (USE_MOCK) {
+       const filtered = mockUOMConversions.filter(c => c.item_id === itemId);
+       return {
+           items: filtered,
+           total: filtered.length,
+           page: 1,
+           limit: 100
+       };
+    }
+    try {
+      const response = await api.get<RawUOMConversion[] | { items?: RawUOMConversion[] }>(`/item-uom/item/${itemId}`);
+      const rawItems = Array.isArray(response) 
+        ? response 
+        : (response && 'items' in response && Array.isArray(response.items) ? response.items : []);
+      
+      const items: UOMConversionListItem[] = rawItems.map((item: RawUOMConversion) => ({
+          id: item.item_uom_id,
+          conversion_id: item.item_uom_id,
+          item_id: item.item_id,
+          item_code: item.item?.item_code || '',
+          item_name: item.item?.item_name || '',
+          from_unit_id: item.from_uom_id,
+          from_unit_name: item.from_uom?.uom_name || item.from_uom?.uom_code || '',
+          to_unit_id: item.to_uom_id,
+          to_unit_name: item.to_uom?.uom_name || item.to_uom?.uom_code || '',
+          conversion_factor: Number(item.factor || 0),
+          is_purchase_unit: !!item.is_purchase_uom,
+          is_active: !!item.is_active,
+          created_at: item.created_at || ''
+      }));
+      return { items, total: items.length, page: 1, limit: items.length };
+    } catch (error) {
+      logger.error('[UOMConversionService] getByItemId error:', error);
+      return { items: [], total: 0 };
+    }
+  },
+
   create: async (data: UOMConversionCreateRequest): Promise<SuccessResponse> => {
     if (USE_MOCK) return { success: true };
     try {

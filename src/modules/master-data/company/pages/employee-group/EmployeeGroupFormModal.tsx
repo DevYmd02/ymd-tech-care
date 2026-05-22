@@ -102,7 +102,7 @@ export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: E
                 {/* Group Name (English) */}
                 <div>
                     <label className={styles.label}>
-                        ชื่อกลุ่มพนักงาน (ภาษาอังกฤษ)
+                        ชื่อกลุ่มพนักงาน (ภาษาอังกฤษ) <span className="text-red-500">*</span>
                     </label>
                     <input
                         {...register('employeeGroupNameEn')}
@@ -110,6 +110,9 @@ export const EmployeeGroupFormModal = ({ isOpen, onClose, onSuccess, editId }: E
                         placeholder="Enter employee group name in English"
                         className={`${styles.input} ${errors.employeeGroupNameEn ? 'border-red-500 focus:ring-red-200' : ''}`}
                     />
+                    {errors.employeeGroupNameEn && (
+                        <p className="text-red-500 text-xs mt-1">{errors.employeeGroupNameEn.message}</p>
+                    )}
                 </div>
 
                 {/* Status - Pattern: Styled Checkbox */}

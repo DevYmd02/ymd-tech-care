@@ -7,6 +7,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { ScanBarcode, Edit2, Trash2 } from 'lucide-react';
 import { ItemBarcodeFormModal } from './ItemBarcodeFormModal';
 import { ItemBarcodeService } from '@/modules/master-data/inventory/services/item-barcode.service';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
+import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
 import type { ItemBarcodeListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
@@ -73,8 +75,41 @@ export default function ItemBarcodeList() {
     const { data: response, isLoading, refetch } = useQuery({
         queryKey: ['item-barcodes', filters],
         queryFn: async () => {
-            const result = await ItemBarcodeService.getAll();
+            const [result, itemsRes, uomsRes] = await Promise.all([
+                ItemBarcodeService.getAll(),
+                ItemMasterService.getAll({ limit: 10000 }),
+                UOMService.getAll({ limit: 10000 })
+            ]);
             let items = result.items || [];
+            const allItems = itemsRes.items || [];
+            const allUoms = uomsRes.items || [];
+
+            // Map item_id to item
+            const itemMap = new Map<number, typeof allItems[0]>();
+            allItems.forEach(i => {
+                if (i.item_id) {
+                    itemMap.set(i.item_id, i);
+                }
+            });
+
+            // Map uom_id to uom
+            const uomMap = new Map<number, typeof allUoms[0]>();
+            allUoms.forEach(u => {
+                if (u.uom_id) {
+                    uomMap.set(u.uom_id, u);
+                }
+            });
+
+            items = items.map(item => {
+                const mappedItem = item.item_id ? itemMap.get(item.item_id) : undefined;
+                const mappedUom = item.uom_id ? uomMap.get(item.uom_id) : undefined;
+                return {
+                    ...item,
+                    item_code: item.item_code || mappedItem?.item_code || '',
+                    item_name: item.item_name || mappedItem?.item_name || '',
+                    uom_name: item.uom_name || mappedUom?.uom_name || '',
+                };
+            });
             
             // Client-side filtering
             if (filters.status !== 'ALL') {

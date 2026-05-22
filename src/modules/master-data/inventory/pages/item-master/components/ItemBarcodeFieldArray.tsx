@@ -32,6 +32,24 @@ export const ItemBarcodeFieldArray: React.FC<Props> = ({
         name: 'barcodes',
     }) || [];
 
+    // Subscribe to unit fields to filter the barcode dropdown
+    const baseUomId = useWatch({ control, name: 'base_uom_id' });
+    const saleUomId = useWatch({ control, name: 'sale_uom_id' });
+    const purchaseUomId = useWatch({ control, name: 'purchase_uom_id' });
+    const uomConversions = useWatch({ control, name: 'uom_conversions' }) || [];
+
+    // Calculate allowed unit IDs
+    const allowedUnitIds = new Set<number>();
+    if (baseUomId) allowedUnitIds.add(Number(baseUomId));
+    if (saleUomId) allowedUnitIds.add(Number(saleUomId));
+    if (purchaseUomId) allowedUnitIds.add(Number(purchaseUomId));
+    uomConversions.forEach(c => {
+        if (c.from_uom_id) allowedUnitIds.add(Number(c.from_uom_id));
+        if (c.to_uom_id) allowedUnitIds.add(Number(c.to_uom_id));
+    });
+
+    const filteredUnits = units.filter(u => allowedUnitIds.has(Number(u.uom_id)));
+
     return (
         <div className="mt-6 bg-white dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-all">
             {/* Header Section */}
@@ -92,9 +110,9 @@ export const ItemBarcodeFieldArray: React.FC<Props> = ({
                                                         errors.barcodes?.[index]?.uom_id ? 'border-red-500 ring-red-500/20' : 'border-gray-300 dark:border-gray-600 group-hover:border-purple-400/50'
                                                     } rounded-lg px-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none transition-all shadow-sm`}
                                                 >
-                                                    <option value="">-- เลือกหน่วยนับ --</option>
-                                                    {units.map(u => (
-                                                        <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.uom_name} ({u.uom_code || u.uom_code})</option>
+                                                    <option value="0">-- เลือกหน่วยนับ --</option>
+                                                    {filteredUnits.map(u => (
+                                                        <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.uom_code}</option>
                                                     ))}
                                                 </select>
                                                 {errors.barcodes?.[index]?.uom_id && (

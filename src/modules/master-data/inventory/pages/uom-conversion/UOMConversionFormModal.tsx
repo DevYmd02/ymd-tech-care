@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { RefreshCcw, Search, Save, RotateCcw } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
 import { useQuery } from '@tanstack/react-query';
@@ -15,9 +15,20 @@ interface Props {
     onClose: () => void;
     editId?: number | null;
     onSuccess?: () => void;
+    initialItemId?: number;
+    initialItemCode?: string;
+    initialItemName?: string;
 }
 
-export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
+export function UOMConversionFormModal({ 
+    isOpen, 
+    onClose, 
+    editId, 
+    onSuccess,
+    initialItemId,
+    initialItemCode,
+    initialItemName
+}: Props) {
     const [isItemSearchOpen, setIsItemSearchOpen] = useState(false);
 
     // Fetch details for edit mode
@@ -27,6 +38,12 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
         enabled: !!editId && isOpen,
     });
 
+    const preFill = useMemo(() => {
+        return initialItemId 
+            ? { item_id: initialItemId, itemCode: initialItemCode, itemName: initialItemName } 
+            : undefined;
+    }, [initialItemId, initialItemCode, initialItemName]);
+
     const {
         formData,
         errors,
@@ -35,10 +52,15 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
         handleSave,
         setValue,
         clearForm,
-    } = useUOMConversionForm(editId || null, existingData, () => {
-        if (onSuccess) onSuccess();
-        onClose();
-    });
+    } = useUOMConversionForm(
+        editId || null, 
+        existingData, 
+        () => {
+            if (onSuccess) onSuccess();
+            onClose();
+        },
+        preFill
+    );
 
     // Fetch Units from API
     const { data: unitsResponse } = useQuery({
@@ -50,8 +72,8 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
         enabled: isOpen,
     });
 
-    const units = unitsResponse || [];
-    const activeUnits = units.filter(u => u.is_active);
+    const units = useMemo(() => unitsResponse || [], [unitsResponse]);
+    const activeUnits = useMemo(() => units.filter(u => u.is_active), [units]);
 
     // Fetch Item details if missing (for edit mode)
     const itemIdToFetch = formData.item_id;
@@ -180,17 +202,19 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
                             <input
                                 type="text"
                                 {...register('itemCode')}
-                                className={`${styles.input} pr-12 focus:ring-purple-500 ${errors.itemCode ? 'border-red-500' : ''}`}
+                                className={`${styles.input} ${initialItemId ? 'bg-gray-100 dark:bg-gray-700/50 text-gray-500 cursor-not-allowed border-gray-200 dark:border-gray-700' : 'pr-12 focus:ring-purple-500'} ${errors.itemCode ? 'border-red-500' : ''}`}
                                 placeholder="ระบุรหัสสินค้า"
                                 readOnly
                             />
-                            <button
-                                onClick={handleFindItem}
-                                title="ค้นหาสินค้า"
-                                className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-all flex items-center justify-center"
-                            >
-                                <Search size={16} />
-                            </button>
+                            {!initialItemId && (
+                                <button
+                                    onClick={handleFindItem}
+                                    title="ค้นหาสินค้า"
+                                    className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-all flex items-center justify-center"
+                                >
+                                    <Search size={16} />
+                                </button>
+                            )}
                         </div>
                         {errors.itemCode && <p className="text-red-500 text-xs mt-1">{errors.itemCode.message}</p>}
                     </div>
@@ -289,20 +313,26 @@ export function UOMConversionFormModal({ isOpen, onClose, editId, onSuccess }: P
                         </div>
                     </div>
 
-                    {/* Logic Helper Preview */}
-                    {(formData.fromUnit || formData.toUnit) && (
-                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 rounded-lg">
-                            <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                                <span className="font-bold underline decoration-blue-400">สรุปหลักการ:</span>
-                                <span>1 {formData.fromUnit || '...'} = </span>
-                                <span className="font-mono font-bold text-lg">{(formData.conversionFactor || 0).toFixed(6)}</span>
-                                <span> {formData.toUnit || '...'}</span>
+                    {/* Logic Helper Preview (Always render box to prevent layout jumping) */}
+                    <div className="p-3 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30 rounded-lg min-h-[84px] flex flex-col justify-center transition-all duration-300">
+                        {(formData.fromUnit || formData.toUnit) ? (
+                            <div className="animate-in fade-in duration-300">
+                                <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                                    <span className="font-bold underline decoration-blue-400">สรุปหลักการ:</span>
+                                    <span>1 {formData.fromUnit || '...'} = </span>
+                                    <span className="font-mono font-bold text-lg">{(formData.conversionFactor || 0).toFixed(6)}</span>
+                                    <span> {formData.toUnit || '...'}</span>
+                                </p>
+                                <p className="text-[11px] text-blue-500 dark:text-blue-400 mt-1 italic">
+                                    * หมายถึง 1 {formData.fromUnit || 'หน่วยต้นทาง'} จะมีค่าเท่ากับ {formData.conversionFactor} {formData.toUnit || 'หน่วยหลัก'}
+                                </p>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-400 dark:text-gray-500 italic text-center animate-in fade-in">
+                                กรุณาเลือกหน่วยต้นทางและหน่วยปลายทางเพื่อดูสรุปการแปลงหน่วย
                             </p>
-                            <p className="text-[11px] text-blue-500 dark:text-blue-400 mt-1 italic">
-                                * หมายถึง 1 {formData.fromUnit || 'หน่วยต้นทาง'} จะมีค่าเท่ากับ {formData.conversionFactor} {formData.toUnit || 'หน่วยหลัก'}
-                            </p>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
         </DialogFormLayout>

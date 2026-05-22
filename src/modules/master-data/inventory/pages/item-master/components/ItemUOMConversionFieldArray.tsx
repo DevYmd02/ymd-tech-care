@@ -1,0 +1,230 @@
+import { useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue, type UseFormGetValues } from 'react-hook-form';
+import { Plus, Trash2, RefreshCcw, CheckCircle2, AlertCircle } from 'lucide-react';
+import type { ItemFormData } from '../hooks/useItemForm';
+import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
+
+interface Props {
+    control: Control<ItemFormData>;
+    register: UseFormRegister<ItemFormData>;
+    setValue: UseFormSetValue<ItemFormData>;
+    getValues: UseFormGetValues<ItemFormData>;
+    errors: FieldErrors<ItemFormData>;
+    units: UOMListItem[];
+    editId?: number | null;
+}
+
+export const ItemUOMConversionFieldArray: React.FC<Props> = ({
+    control,
+    register,
+    getValues,
+    errors,
+    units = [],
+}) => {
+    const { fields, append, remove } = useFieldArray({
+        control,
+        name: 'uom_conversions',
+    });
+
+    const watchedConversions = useWatch({
+        control,
+        name: 'uom_conversions',
+    }) || [];
+
+    const baseUomId = useWatch({ control, name: 'base_uom_id' });
+
+    const handleAddRow = () => {
+        const baseUomIdVal = getValues('base_uom_id') || 0;
+        append({
+            from_uom_id: 0,
+            to_uom_id: Number(baseUomIdVal),
+            conversion_factor: 1,
+            is_purchase_unit: false,
+            is_active: true,
+        });
+    };
+
+    return (
+        <div className="mt-6 bg-white dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden transition-all">
+            {/* Header Section */}
+            <div className="px-4 py-3 bg-blue-50/50 dark:bg-blue-900/10 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <RefreshCcw size={18} className="text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">จัดการแปลงหน่วยนับ (UOM Conversion)</h3>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400">กำหนดอัตราส่วนการแปลงหน่วยนับเทียบกับหน่วยหลัก</p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onClick={handleAddRow}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                >
+                    <Plus size={14} /> เพิ่มการแปลงหน่วย
+                </button>
+            </div>
+
+            {/* List Body */}
+            <div className="p-0 overflow-x-auto">
+                <table className="w-full border-collapse">
+                    <thead>
+                        <tr className="bg-gray-50/50 dark:bg-gray-800/80 border-b border-gray-100 dark:border-gray-700">
+                            <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/4">หน่วยต้นทาง (From)</th>
+                            <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/4">หน่วยปลายทาง (To)</th>
+                            <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">อัตราแปลง (Factor)</th>
+                            <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">ซื้อ (Purchase)</th>
+                            <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">สถานะ (Active)</th>
+                            <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">ลบ</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                        {fields.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="px-4 py-10 text-center">
+                                    <div className="flex flex-col items-center gap-2 opacity-40">
+                                        <RefreshCcw size={40} className="text-gray-400" />
+                                        <p className="text-sm font-medium text-gray-500">ยังไม่มีการตั้งค่าการแปลงหน่วย</p>
+                                        <p className="text-xs text-gray-400">คลิกที่ปุ่มด้านบนเพื่อเพิ่มรายการใหม่</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : (
+                            fields.map((field, index) => {
+                                const factor = watchedConversions[index]?.conversion_factor;
+                                const fromUnitId = watchedConversions[index]?.from_uom_id;
+                                const toUnitId = watchedConversions[index]?.to_uom_id;
+                                
+                                const fromUnitName = units.find(u => u.uom_id === Number(fromUnitId))?.uom_name || '...';
+                                const toUnitName = units.find(u => u.uom_id === Number(toUnitId))?.uom_name || '...';
+
+                                return (
+                                    <tr key={field.id} className="group hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                                        {/* From Unit */}
+                                        <td className="px-4 py-3">
+                                            <div className="relative">
+                                                <select
+                                                    {...register(`uom_conversions.${index}.from_uom_id`)}
+                                                    className={`w-full h-9 bg-white dark:bg-gray-800 border ${
+                                                        errors.uom_conversions?.[index]?.from_uom_id ? 'border-red-500 ring-red-500/20' : 'border-gray-300 dark:border-gray-600 group-hover:border-blue-400/50'
+                                                    } rounded-lg px-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all shadow-sm`}
+                                                >
+                                                    <option value="0">-- เลือกหน่วย --</option>
+                                                    {units.map(u => (
+                                                        <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.uom_code}</option>
+                                                    ))}
+                                                </select>
+                                                {errors.uom_conversions?.[index]?.from_uom_id && (
+                                                    <div className="absolute -top-6 left-0 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[10px] shadow-sm animate-in fade-in slide-in-from-bottom-1">
+                                                        {errors.uom_conversions[index]?.from_uom_id?.message}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
+
+                                        {/* To Unit */}
+                                        <td className="px-4 py-3">
+                                            <div className="relative">
+                                                <select
+                                                    {...register(`uom_conversions.${index}.to_uom_id`)}
+                                                    value={baseUomId || watchedConversions[index]?.to_uom_id || ''}
+                                                    className="w-full h-9 bg-gray-50 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-600 rounded-lg px-3 text-sm text-gray-900 dark:text-white outline-none pointer-events-none cursor-not-allowed opacity-80"
+                                                    tabIndex={-1}
+                                                >
+                                                    <option value="0">-- เลือกหน่วย --</option>
+                                                    {units.map(u => (
+                                                        <option key={u.uom_id} value={u.uom_id}>{u.uom_name || u.uom_code}</option>
+                                                    ))}
+                                                </select>
+                                                {errors.uom_conversions?.[index]?.to_uom_id && (
+                                                    <div className="absolute -top-6 left-0 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 px-2 py-0.5 rounded text-[10px] shadow-sm animate-in fade-in slide-in-from-bottom-1">
+                                                        {errors.uom_conversions[index]?.to_uom_id?.message}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
+
+                                        {/* Conversion Factor */}
+                                        <td className="px-4 py-3">
+                                            <div className="relative flex flex-col gap-1">
+                                                <div className="relative">
+                                                    <input
+                                                        type="number"
+                                                        step="0.000001"
+                                                        {...register(`uom_conversions.${index}.conversion_factor`, { valueAsNumber: true })}
+                                                        placeholder="1.0"
+                                                        className={`w-full h-9 bg-white dark:bg-gray-800 border font-mono ${
+                                                            errors.uom_conversions?.[index]?.conversion_factor ? 'border-red-500 ring-red-500/20' : 'border-gray-300 dark:border-gray-600 group-hover:border-blue-400/50'
+                                                        } rounded-lg px-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all shadow-sm`}
+                                                    />
+                                                    {errors.uom_conversions?.[index]?.conversion_factor && (
+                                                        <AlertCircle size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500" />
+                                                    )}
+                                                </div>
+                                                
+                                                {/* Mini Logic Preview */}
+                                                {Boolean(fromUnitId && toUnitId) && (
+                                                    <span className="text-[10px] text-blue-500 whitespace-nowrap overflow-hidden text-ellipsis w-32" title={`1 ${fromUnitName} = ${factor} ${toUnitName}`}>
+                                                        1 {fromUnitName} = {Number(factor || 0).toFixed(2)} {toUnitName}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
+
+                                        {/* Purchase Unit Checkbox */}
+                                        <td className="px-4 py-3 text-center">
+                                            <label className="relative inline-flex items-center cursor-pointer justify-center">
+                                                <input 
+                                                    type="checkbox" 
+                                                    {...register(`uom_conversions.${index}.is_purchase_unit`)}
+                                                    className="sr-only peer" 
+                                                />
+                                                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-500"></div>
+                                            </label>
+                                        </td>
+
+                                        {/* Active Checkbox */}
+                                        <td className="px-4 py-3 text-center">
+                                            <label className="relative inline-flex items-center cursor-pointer justify-center">
+                                                <input 
+                                                    type="checkbox" 
+                                                    {...register(`uom_conversions.${index}.is_active`)}
+                                                    className="sr-only peer" 
+                                                />
+                                                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-green-500"></div>
+                                            </label>
+                                        </td>
+
+                                        {/* Remove Button */}
+                                        <td className="px-4 py-3 text-center">
+                                            <button
+                                                type="button"
+                                                onClick={() => remove(index)}
+                                                className="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                                                title="ลบรายการ"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
+                    </tbody>
+                    {fields.length > 0 && (
+                        <tfoot>
+                            <tr className="bg-gray-50/30 dark:bg-gray-800/30">
+                                <td colSpan={6} className="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
+                                    <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
+                                        <CheckCircle2 size={10} className="text-blue-500" />
+                                        พบทั้งหมด {fields.length} รายการ
+                                    </div>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    )}
+                </table>
+            </div>
+        </div>
+    );
+};

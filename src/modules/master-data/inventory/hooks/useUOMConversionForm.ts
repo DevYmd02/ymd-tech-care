@@ -24,7 +24,12 @@ export const uomConversionSchema = z.object({
 
 export type UOMConversionFormValues = z.infer<typeof uomConversionSchema>;
 
-export function useUOMConversionForm(editId: number | null, initialData?: UOMConversionListItem | null, onSuccess?: () => void) {
+export function useUOMConversionForm(
+    editId: number | null, 
+    initialData?: UOMConversionListItem | null, 
+    onSuccess?: () => void,
+    preFill?: { item_id?: number; itemCode?: string; itemName?: string }
+) {
     const { confirm } = useConfirmation();
     const queryClient = useQueryClient();
 
@@ -61,10 +66,17 @@ export function useUOMConversionForm(editId: number | null, initialData?: UOMCon
                 isPurchaseUnit: data.is_purchase_unit ?? false,
                 isActive: data.is_active ?? true,
             });
+        } else if (preFill) {
+            reset({
+                ...initialUOMConversionFormData as UOMConversionFormValues,
+                item_id: preFill.item_id || 0,
+                itemCode: preFill.itemCode || '',
+                itemName: preFill.itemName || '',
+            });
         } else if (!editId) {
             reset(initialUOMConversionFormData as UOMConversionFormValues);
         }
-    }, [initialData, reset, editId]);
+    }, [initialData, reset, editId, preFill]);
 
     const saveMutation = useMutation({
         mutationFn: async (data: UOMConversionFormValues) => {
