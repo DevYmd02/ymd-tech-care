@@ -85,6 +85,28 @@ export interface ApiPriceLevel {
             uom_nameeng?: string;
             uom_name_en?: string;
         } | null;
+        fromUom?: {
+            uom_name?: string;
+            uomName?: string;
+            uom_code?: string;
+            uom_nameeng?: string;
+            uom_name_en?: string;
+        } | null;
+    } | null;
+    itemUom?: {
+        from_uom?: {
+            uom_name?: string;
+            uom_code?: string;
+            uom_nameeng?: string;
+            uom_name_en?: string;
+        } | null;
+        fromUom?: {
+            uom_name?: string;
+            uomName?: string;
+            uom_code?: string;
+            uom_nameeng?: string;
+            uom_name_en?: string;
+        } | null;
     } | null;
 }
 
