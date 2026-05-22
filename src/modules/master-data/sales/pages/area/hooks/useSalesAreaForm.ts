@@ -5,9 +5,8 @@ import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { SaleAreaService } from '../services/area.service';
 import type { SaleAreaFormData } from '../types/area.types';
-import { extractErrorMessage } from '@/core/api/api';
+import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { useDebounce } from '@/shared/hooks/useDebounce';
-import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils';
 
 export const areaSchema = z.object({
@@ -33,7 +32,7 @@ interface UseSalesAreaFormProps {
 
 export function useSalesAreaForm({ isOpen, onClose, editId, onSuccess }: UseSalesAreaFormProps) {
     const queryClient = useQueryClient();
-    const { confirm } = useConfirmation();
+    const { toast } = useToast();
 
     const {
         register,
@@ -128,31 +127,45 @@ export function useSalesAreaForm({ isOpen, onClose, editId, onSuccess }: UseSale
         onSuccess: (res) => {
             if (res.success) {
                 queryClient.invalidateQueries({ queryKey: ['sales-areas'] });
+                toast('บันทึกสำเร็จ', 'success');
                 if (onSuccess) onSuccess();
                 onClose();
             } else {
                 throw new Error(res.message || 'บันทึกไม่สำเร็จ');
             }
         },
-        onError: async (error: Error) => {
+        onError: (error: Error) => {
             logger.error('Failed to save sales area:', error);
-            const msg = extractErrorMessage(error);
+            const msg = error.message || 'บันทึกไม่สำเร็จ';
             
-            // Handle duplicate code error
-            if (msg.includes('รหัส') || msg.toLowerCase().includes('duplicate') || msg.includes('ซ้ำ')) {
+            const lowerMsg = msg.toLowerCase();
+            const isDuplicate = lowerMsg.includes('internal server error') || 
+                                lowerMsg.includes('status code 500') ||
+                                lowerMsg.includes('duplicate') || 
+                                lowerMsg.includes('ซ้ำ') || 
+                                lowerMsg.includes('unique');
+            
+            if (isDuplicate) {
                 setError('saleAreaCode', { 
                     type: 'manual',
-                    message: msg 
+                    message: 'รหัสเขตการขายซ้ำในระบบ' 
                 });
+                toast('รหัสเขตการขายซ้ำในระบบ', 'error');
+            } else {
+                let thaiMsg = msg;
+                if (lowerMsg.includes('network error') || lowerMsg.includes('connect')) {
+                    thaiMsg = 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ต';
+                } else if (lowerMsg.includes('status code 400') || lowerMsg.includes('bad request')) {
+                    thaiMsg = 'คำขอไม่ถูกต้อง (400)';
+                } else if (lowerMsg.includes('status code 403') || lowerMsg.includes('forbidden')) {
+                    thaiMsg = 'คุณไม่มีสิทธิ์ดำเนินการนี้ (403)';
+                } else if (lowerMsg.includes('status code 404') || lowerMsg.includes('not found')) {
+                    thaiMsg = 'ไม่พบข้อมูลที่ต้องการ (404)';
+                } else if (lowerMsg.includes('status code 500')) {
+                    thaiMsg = 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์ (500)';
+                }
+                toast(thaiMsg, 'error');
             }
-            
-            await confirm({
-                title: 'ไม่สามารถบันทึกได้',
-                description: msg,
-                confirmText: 'ตกลง',
-                variant: 'danger',
-                hideCancel: true
-            });
         }
     });
 

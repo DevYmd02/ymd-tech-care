@@ -3,7 +3,7 @@
  * @description Service for managing Sales Channel Master Data
  */
 
-import api from '@/core/api/api';
+import api, { extractErrorMessage } from '@/core/api/api';
 import type { 
   SalesChannelMaster, 
   SalesChannelFormData 
@@ -24,10 +24,10 @@ export const SalesChannelService = {
         channel_nameeng: data.channelNameEn,
         is_active: data.isActive
       };
-      const response = await api.post<SalesChannelMaster>('/employee-sale-channel', payload);
+      const response = await api.post<SalesChannelMaster>('/employee-sale-channel', payload, { skipToast: true });
       return { success: true, data: response };
     } catch (error) {
-      return { success: false, message: (error as Error).message || 'บันทึกไม่สำเร็จ' };
+      return { success: false, message: extractErrorMessage(error) || 'บันทึกไม่สำเร็จ' };
     }
   },
 
@@ -39,10 +39,10 @@ export const SalesChannelService = {
       if (data.channelNameEn !== undefined) payload.channel_nameeng = data.channelNameEn;
       if (data.isActive !== undefined) payload.is_active = data.isActive;
 
-      const response = await api.put<SalesChannelMaster>(`/employee-sale-channel/${id}`, payload);
+      const response = await api.put<SalesChannelMaster>(`/employee-sale-channel/${id}`, payload, { skipToast: true });
       return { success: true, data: response };
     } catch (error) {
-      return { success: false, message: (error as Error).message || 'บันทึกไม่สำเร็จ' };
+      return { success: false, message: extractErrorMessage(error) || 'บันทึกไม่สำเร็จ' };
     }
   },
 

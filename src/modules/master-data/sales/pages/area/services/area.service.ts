@@ -3,7 +3,7 @@
  * @description Service for managing Sales Area Master Data
  */
 
-import api from '@/core/api/api';
+import api, { extractErrorMessage } from '@/core/api/api';
 import type { AxiosRequestConfig } from 'axios';
 import type { 
   SaleAreaMaster, 
@@ -35,10 +35,10 @@ export const SaleAreaService = {
         sale_area_nameeng: data.saleAreaNameEng,
         is_active: data.isActive
       };
-      const response = await api.post<SaleAreaMaster>('/employee-sale-area', payload);
+      const response = await api.post<SaleAreaMaster>('/employee-sale-area', payload, { skipToast: true });
       return { success: true, data: response };
     } catch (error) {
-      return { success: false, message: (error as Error).message || 'สร้างไม่สำเร็จ' };
+      return { success: false, message: extractErrorMessage(error) || 'สร้างไม่สำเร็จ' };
     }
   },
 
@@ -54,10 +54,10 @@ export const SaleAreaService = {
       if (data.saleAreaNameEng !== undefined) payload.sale_area_nameeng = data.saleAreaNameEng;
       if (data.isActive !== undefined) payload.is_active = data.isActive;
 
-      const response = await api.put<SaleAreaMaster>(`/employee-sale-area/${id}`, payload);
+      const response = await api.put<SaleAreaMaster>(`/employee-sale-area/${id}`, payload, { skipToast: true });
       return { success: true, data: response };
     } catch (error) {
-      return { success: false, message: (error as Error).message || 'บันทึกไม่สำเร็จ' };
+      return { success: false, message: extractErrorMessage(error) || 'บันทึกไม่สำเร็จ' };
     }
   },
 
