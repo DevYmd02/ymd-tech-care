@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { QuotationFormSchema, type QuotationFormValues, getQuotationDefaultValues } from '@sales/quotation/schemas/quotation-schemas';
@@ -45,6 +45,7 @@ export const useQuotationForm = (isOpen: boolean, onClose: () => void, id?: stri
 
     // 1. Master Data Fetching
     const watchedCustomerId = useWatch({ control, name: 'customer_id' });
+    const watchedBranchId = useWatch({ control, name: 'branch_id' });
     const masterData = useQuotationMasterData(isOpen, Number(watchedCustomerId || 0));
 
     // 2. Hydration & Initial Loading
@@ -75,6 +76,36 @@ export const useQuotationForm = (isOpen: boolean, onClose: () => void, id?: stri
         tax_code_id: Number(tax_code_id),
         uoms: masterData.uoms,
     });
+
+    const { handleLinePriceSync } = actions;
+    const lastCustomerAndBranchRef = useRef<{ 
+        customerId: string | number | undefined; 
+        branchId: string | number | undefined; 
+    }>({
+        customerId: undefined,
+        branchId: undefined
+    });
+
+    // 4.5. Dynamic Price Recalculation on Customer or Branch change
+    useEffect(() => {
+        if (isDirty && watchedCustomerId && watchedBranchId) {
+            const hasChanged = 
+                lastCustomerAndBranchRef.current.customerId !== watchedCustomerId ||
+                lastCustomerAndBranchRef.current.branchId !== watchedBranchId;
+                
+            if (hasChanged) {
+                lastCustomerAndBranchRef.current = {
+                    customerId: watchedCustomerId,
+                    branchId: watchedBranchId
+                };
+                
+                const lines = getValues('lines') || [];
+                lines.forEach((_, index) => {
+                    handleLinePriceSync(index);
+                });
+            }
+        }
+    }, [watchedCustomerId, watchedBranchId, isDirty, handleLinePriceSync, getValues]);
 
     // 5. Watch for UI (formData)
     const watchedSummary = useWatch({
