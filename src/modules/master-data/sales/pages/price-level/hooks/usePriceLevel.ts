@@ -56,14 +56,14 @@ export function usePriceLevel(isActive: boolean = true) {
 
             const mappedData = priceLevels.map((pl: PriceLevel) => {
                 const item = itemMap.get(Number(pl.item_id));
-                const unit = unitMap.get(Number(pl.uom_id));
+                const unit = unitMap.get(Number(pl.item_uom_id || pl.uom_id));
                 
                 return {
                     ...pl,
                     item_code: item?.item_code || pl.item_code || '-',
                     item_name: item?.item_name || pl.item_name || '-',
                     item_name_en: item?.item_name_en || pl.item_name_en || '',
-                    uom_name: unit?.uom_name || pl.uom_name || '-',
+                    uom_name: pl.item_uom?.from_uom?.uom_name || unit?.uom_name || pl.uom_name || '-',
                 };
             });
 

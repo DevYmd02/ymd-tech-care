@@ -23,7 +23,8 @@ const nullableNumber = z.preprocess((val) => {
 
 const priceLevelSchema = z.object({
   itemId: z.union([z.string(), z.number()]).refine(val => val !== '', 'กรุณาเลือกสินค้า'),
-  uomId: z.union([z.string(), z.number()]).refine(val => val !== '', 'กรุณาเลือกหน่วยนับ'),
+  itemUomId: z.union([z.string(), z.number()]).refine(val => val !== '', 'กรุณาเลือกหน่วยนับ'),
+  uomId: z.union([z.string(), z.number()]).optional(),
   itemFromQty: nullableNumber,
   itemToQty: nullableNumber,
   itemPrice1: nullableNumber,
@@ -45,6 +46,7 @@ const priceLevelSchema = z.object({
 
 const initialValues: PriceLevelFormData = {
   itemId: '',
+  itemUomId: '',
   uomId: '',
   itemFromQty: null,
   itemToQty: null,
@@ -112,7 +114,7 @@ export function usePriceLevelForm(editId: string | number | null, onSuccess?: ()
           };
 
           const itemId = rawData.item_id || rawData.itemId;
-          const uomId = rawData.uom_id || rawData.uomId;
+          const itemUomId = rawData.item_uom_id || rawData.itemUomId || rawData.uom_id || rawData.uomId;
 
           if (itemId && (!itemInfo.item_code || !itemInfo.item_name)) {
             try {
@@ -131,7 +133,8 @@ export function usePriceLevelForm(editId: string | number | null, onSuccess?: ()
 
           reset({
             itemId: itemId ?? '',
-            uomId: uomId ?? '',
+            itemUomId: itemUomId ?? '',
+            uomId: (itemUomId || rawData.uom_id || rawData.uomId) ?? '',
             itemFromQty: num(rawData.item_from_qty ?? rawData.itemFromQty),
             itemToQty: num(rawData.item_to_qty ?? rawData.itemToQty),
             itemPrice1: rawData.item_price1 !== null && rawData.item_price1 !== undefined ? num(rawData.item_price1) : null,
@@ -148,7 +151,7 @@ export function usePriceLevelForm(editId: string | number | null, onSuccess?: ()
             itemName: itemInfo.item_name,
             itemNameEn: itemInfo.item_name_en,
             itemCode: itemInfo.item_code,
-            uomName: rawData.uom_name || '',
+            uomName: rawData.item_uom?.from_uom?.uom_name || rawData.uom_name || '',
           });
         } catch (error: unknown) {
           logger.error('Failed to fetch price level detail:', error);

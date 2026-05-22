@@ -13,7 +13,8 @@ export interface PriceLevel extends BaseMasterData {
     multi_price_item_id?: number; 
     id?: number; 
     item_id: number;
-    uom_id: number;
+    uom_id?: number;
+    item_uom_id?: number;
     item_from_qty: number | null;
     item_to_qty: number | null;
     item_price1: number | null;
@@ -34,6 +35,16 @@ export interface PriceLevel extends BaseMasterData {
     uom_name?: string;
     uom_name_en?: string;
     item_code?: string;
+    item_uom?: {
+        item_uom_id: number;
+        from_uom?: {
+            uom_name?: string;
+            uom_code?: string;
+            uom_nameeng?: string;
+            uom_name_en?: string;
+        } | null;
+        factor?: string | number;
+    } | null;
 }
 
 /**
@@ -46,6 +57,8 @@ export interface ApiPriceLevel {
     itemId?: number | string;
     uom_id?: number | string;
     uomId?: number | string;
+    item_uom_id?: number | string;
+    itemUomId?: number | string;
     item_from_qty?: number | string;
     itemFromQty?: number | string;
     item_to_qty?: number | string;
@@ -65,6 +78,14 @@ export interface ApiPriceLevel {
     item_name_en?: string;
     item_code?: string;
     uom_name?: string;
+    item_uom?: {
+        from_uom?: {
+            uom_name?: string;
+            uom_code?: string;
+            uom_nameeng?: string;
+            uom_name_en?: string;
+        } | null;
+    } | null;
 }
 
 // ====================================================================================
@@ -73,7 +94,8 @@ export interface ApiPriceLevel {
 
 export interface PriceLevelFormData {
     itemId: number | string;
-    uomId: number | string;
+    itemUomId: number | string;
+    uomId?: number | string;
     itemFromQty: number | null;
     itemToQty: number | null;
     itemPrice1: number | null;

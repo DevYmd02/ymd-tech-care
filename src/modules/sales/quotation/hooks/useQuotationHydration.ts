@@ -53,7 +53,8 @@ export function useQuotationHydration({
                     itemId: line.item_id,
                     qty: line.qty,
                     customerId,
-                    branchId
+                    branchId,
+                    uomId: Number(line.uom_id)
                 });
 
                 if (result) {

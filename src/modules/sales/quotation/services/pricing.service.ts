@@ -6,12 +6,15 @@
 
 import api from '@core/api/api';
 import { logger } from '@utils';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 
 export interface PricingCalculateParams {
     itemId: string | number;
     qty: number;
     customerId: string | number;
     branchId: string | number;
+    uomId?: string | number;      // global UOM ID
+    itemUomId?: string | number;  // unit conversion ID (optional direct override)
 }
 
 export interface PricingCalculateResponse {
@@ -34,17 +37,37 @@ export const PricingService = {
         }
 
         try {
+            let finalUomId: string | number | undefined = params.itemUomId;
+
+            if (!finalUomId && params.uomId) {
+                try {
+                    const uomConversionsResponse = await UOMConversionService.getByItemId(Number(params.itemId));
+                    const convs = uomConversionsResponse?.items || [];
+                    const matchedConv = convs.find(c => Number(c.from_unit_id) === Number(params.uomId));
+                    if (matchedConv) {
+                        finalUomId = matchedConv.conversion_id;
+                    } else {
+                        // Fallback to global uomId if no conversion found
+                        finalUomId = params.uomId;
+                    }
+                } catch (err) {
+                    logger.warn('[PricingService] Error looking up UOM conversions:', err);
+                    finalUomId = params.uomId;
+                }
+            }
+
             const response = await api.get<PricingCalculateResponse>('/pricing-engine/calculate', {
                 params: {
                     itemId: params.itemId,
                     qty: params.qty,
                     customerId: params.customerId,
                     branchId: params.branchId,
+                    uomId: finalUomId,
                 },
                 signal
             });
 
-            logger.info(`[PricingService] ✅ Calculated Price: ${response.unitPrice} from ${response.sourceName}`);
+            logger.info(`[PricingService] ✅ Calculated Price: ${response.unitPrice} from ${response.sourceName} (uomId passed: ${finalUomId})`);
             return response;
 
         } catch (err) {

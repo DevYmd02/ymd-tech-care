@@ -197,7 +197,8 @@ async function recoverAOPriceSources(
                 itemId: String(line.item_id),
                 qty: Number(line.qty_ordered || 0),
                 customerId,
-                branchId
+                branchId,
+                uomId: Number(line.uom_id)
             }));
 
             if (result) {
