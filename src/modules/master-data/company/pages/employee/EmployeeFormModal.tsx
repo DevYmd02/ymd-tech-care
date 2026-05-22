@@ -266,10 +266,11 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                     <div>
                                         <label className={styles.label}>คำนำหน้า (ไทย) <span className="text-red-500">*</span></label>
-                                        <select {...register('employee_title_th')} className={styles.input}>
+                                        <select {...register('employee_title_th')} className={`${styles.input} ${errors.employee_title_th ? 'border-red-500' : ''}`}>
                                             <option value="">-- เลือกคำนำหน้า --</option>
                                             {THAI_TITLE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
                                         </select>
+                                        {errors.employee_title_th && <p className="text-red-500 text-xs mt-1">{errors.employee_title_th.message}</p>}
                                     </div>
                                     <div>
                                         <label className={styles.label}>คำนำหน้า (Eng)</label>
@@ -283,11 +284,13 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                     <div>
                                         <label className={styles.label}>ชื่อ (ไทย) <span className="text-red-500">*</span></label>
-                                        <input {...register('employee_firstname_th')} type="text" className={styles.input} />
+                                        <input {...register('employee_firstname_th')} type="text" className={`${styles.input} ${errors.employee_firstname_th ? 'border-red-500' : ''}`} />
+                                        {errors.employee_firstname_th && <p className="text-red-500 text-xs mt-1">{errors.employee_firstname_th.message}</p>}
                                     </div>
                                     <div>
                                         <label className={styles.label}>นามสกุล (ไทย) <span className="text-red-500">*</span></label>
-                                        <input {...register('employee_lastname_th')} type="text" className={styles.input} />
+                                        <input {...register('employee_lastname_th')} type="text" className={`${styles.input} ${errors.employee_lastname_th ? 'border-red-500' : ''}`} />
+                                        {errors.employee_lastname_th && <p className="text-red-500 text-xs mt-1">{errors.employee_lastname_th.message}</p>}
                                     </div>
                                 </div>
 
@@ -305,11 +308,13 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <label className={styles.label}>โทรศัพท์ <span className="text-red-500">*</span></label>
-                                        <input {...register('phone')} type="text" className={styles.input} />
+                                        <input {...register('phone')} type="text" className={`${styles.input} ${errors.phone ? 'border-red-500' : ''}`} />
+                                        {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
                                     </div>
                                     <div>
-                                        <label className={styles.label}>E-Mail</label>
-                                        <input {...register('email')} type="email" className={styles.input} />
+                                        <label className={styles.label}>E-Mail <span className="text-red-500">*</span></label>
+                                        <input {...register('email')} type="email" className={`${styles.input} ${errors.email ? 'border-red-500' : ''}`} />
+                                        {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
                                     </div>
                                 </div>
                             </section>
@@ -347,28 +352,33 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                                 </div>
                                             </div>
                                             <div className="mb-4">
-                                                <label className={styles.label}>รายละเอียดที่อยู่</label>
-                                                <textarea {...register(`addresses.${index}.address`)} rows={2} className={styles.input} placeholder="บ้านเลขที่, หมู่, ซอย, ถนน..." />
+                                                <label className={styles.label}>รายละเอียดที่อยู่ <span className="text-red-500">*</span></label>
+                                                <textarea {...register(`addresses.${index}.address`)} rows={2} className={`${styles.input} ${errors.addresses?.[index]?.address ? 'border-red-500' : ''}`} placeholder="บ้านเลขที่, หมู่, ซอย, ถนน..." />
+                                                {errors.addresses?.[index]?.address && <p className="text-red-500 text-xs mt-1">{errors.addresses[index].address.message}</p>}
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                                                 <div>
                                                     <label className={styles.label}>เขต/อำเภอ <span className="text-red-500">*</span></label>
-                                                    <input {...register(`addresses.${index}.district`)} type="text" className={styles.input} />
+                                                    <input {...register(`addresses.${index}.district`)} type="text" className={`${styles.input} ${errors.addresses?.[index]?.district ? 'border-red-500' : ''}`} />
+                                                    {errors.addresses?.[index]?.district && <p className="text-red-500 text-xs mt-1">{errors.addresses[index].district.message}</p>}
                                                 </div>
                                                 <div>
                                                     <label className={styles.label}>จังหวัด <span className="text-red-500">*</span></label>
-                                                    <input {...register(`addresses.${index}.province`)} type="text" className={styles.input} />
+                                                    <input {...register(`addresses.${index}.province`)} type="text" className={`${styles.input} ${errors.addresses?.[index]?.province ? 'border-red-500' : ''}`} />
+                                                    {errors.addresses?.[index]?.province && <p className="text-red-500 text-xs mt-1">{errors.addresses[index].province.message}</p>}
                                                 </div>
                                             </div>
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div>
                                                     <label className={styles.label}>รหัสไปรษณีย์ <span className="text-red-500">*</span></label>
-                                                    <input {...register(`addresses.${index}.postal_code`)} type="text" className={styles.input} />
+                                                    <input {...register(`addresses.${index}.postal_code`)} type="text" className={`${styles.input} ${errors.addresses?.[index]?.postal_code ? 'border-red-500' : ''}`} />
+                                                    {errors.addresses?.[index]?.postal_code && <p className="text-red-500 text-xs mt-1">{errors.addresses[index].postal_code.message}</p>}
                                                 </div>
                                                 <div>
                                                     <label className={styles.label}>ประเทศ <span className="text-red-500">*</span></label>
-                                                    <input {...register(`addresses.${index}.country`)} type="text" className={styles.input} />
+                                                    <input {...register(`addresses.${index}.country`)} type="text" className={`${styles.input} ${errors.addresses?.[index]?.country ? 'border-red-500' : ''}`} />
+                                                    {errors.addresses?.[index]?.country && <p className="text-red-500 text-xs mt-1">{errors.addresses[index].country.message}</p>}
                                                 </div>
                                             </div>
                                         </div>
@@ -382,17 +392,19 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                     <div>
                                         <label className={styles.label}>แผนก <span className="text-red-500">*</span></label>
-                                        <select {...register('emp_dept_id', { setValueAs: (v: string) => v === "" ? null : Number(v) })} className={styles.input}>
+                                        <select {...register('emp_dept_id', { setValueAs: (v: string) => v === "" ? null : Number(v) })} className={`${styles.input} ${errors.emp_dept_id ? 'border-red-500' : ''}`}>
                                             <option value="">-- เลือกแผนก --</option>
                                             {departments.map((dept: EmployeeDeptMaster) => <option key={dept.emp_dept_id || dept.id} value={dept.emp_dept_id || dept.id}>{dept.emp_dept_code || dept.dept_code} - {dept.emp_dept_name || dept.dept_name}</option>)}
                                         </select>
+                                        {errors.emp_dept_id && <p className="text-red-500 text-xs mt-1">{errors.emp_dept_id.message}</p>}
                                     </div>
                                     <div>
                                         <label className={styles.label}>ตำแหน่ง <span className="text-red-500">*</span></label>
-                                        <select {...register('position_id', { setValueAs: (v: string) => v === "" ? null : Number(v) })} className={styles.input}>
+                                        <select {...register('position_id', { setValueAs: (v: string) => v === "" ? null : Number(v) })} className={`${styles.input} ${errors.position_id ? 'border-red-500' : ''}`}>
                                             <option value="">-- เลือกตำแหน่ง --</option>
                                             {positions.map((pos: PositionMaster) => <option key={pos.position_id} value={pos.position_id}>{pos.position_code} - {pos.position_name}</option>)}
                                         </select>
+                                        {errors.position_id && <p className="text-red-500 text-xs mt-1">{errors.position_id.message}</p>}
                                     </div>
                                 </div>
 
@@ -422,14 +434,15 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                 <SectionHeader icon={<CalendarDays className="w-4 h-4" />} title="วันที่และสถานะ" />
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div>
-                                        <label className={styles.label}>วันที่เริ่มงาน</label>
+                                        <label className={styles.label}>วันที่เริ่มงาน <span className="text-red-500">*</span></label>
                                         <Controller
                                             control={control}
                                             name="employee_startdate"
                                             render={({ field }) => (
-                                                <CustomDateInput value={field.value || ''} onChange={field.onChange} className={styles.input} />
+                                                <CustomDateInput value={field.value || ''} onChange={field.onChange} className={`${styles.input} ${errors.employee_startdate ? 'border-red-500' : ''}`} />
                                             )}
                                         />
+                                        {errors.employee_startdate && <p className="text-red-500 text-xs mt-1">{errors.employee_startdate.message}</p>}
                                     </div>
                                     <div>
                                         <label className={styles.label}>วันที่ลาออก</label>

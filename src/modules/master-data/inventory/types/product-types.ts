@@ -4,6 +4,7 @@
  */
 
 import type { BaseMasterData } from '@/shared/types/common-master.types';
+import type { ItemUOMConversion } from './uom-conversion-types';
 
 // ====================================================================================
 // PRODUCT CATEGORY - กำหนดรหัสหมวดสินค้า
@@ -557,6 +558,7 @@ export interface ItemMaster extends BaseMasterData {
     item_category_id?: number;
     item_category_code?: string;
     barcodes?: ItemBarcode[];
+    uom_conversions?: ItemUOMConversion[];
 }
 
 export interface ItemMasterFormData {
@@ -612,6 +614,7 @@ export interface ItemMasterFormData {
     is_buddy?: boolean;
     is_on_hold?: boolean;
     barcodes?: Partial<ItemBarcode>[];
+    uom_conversions?: Partial<ItemUOMConversion>[];
 }
 
 export interface ItemListItem {
@@ -710,6 +713,7 @@ export interface ItemBarcode {
     barcode: string;
     uom_id?: number;
     uom_name?: string;
+    item_uom_id?: number;
     is_primary: boolean;
     is_active: boolean;
     created_at: string;
@@ -745,6 +749,8 @@ export interface ItemBarcodeCreateRequest {
     uom_id?: number | null;
     is_default?: boolean;
     is_active?: boolean;
+    item_uom_id?: number | null;
+    is_primary?: boolean;
 }
 
 export interface ItemBarcodeUpdateRequest extends Partial<ItemBarcodeCreateRequest> {

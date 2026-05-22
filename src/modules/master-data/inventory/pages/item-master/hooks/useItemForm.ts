@@ -9,6 +9,7 @@ import { logger } from '@/shared/utils';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
+import { UOMConversionService } from '@/modules/master-data/inventory/services/uom-conversion.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import type { ItemMaster, ItemMasterFormData } from '@/modules/master-data/types/master-data-types';
 import { extractErrorMessage } from '@/core/api/api';
@@ -64,8 +65,15 @@ export const itemMasterSchema = z.object({
         uom_id: z.coerce.number().min(1, 'กรุณาเลือกหน่วยนับ'),
         barcode: z.string().min(1, 'กรุณากรอกบาร์โค้ด'),
         is_primary: z.boolean().default(false),
-        // is_purchase: z.boolean().default(true),
         // is_sales: z.boolean().default(true),
+    })).default([]),
+    uom_conversions: z.array(z.object({
+        conversion_id: z.number().optional(),
+        from_uom_id: z.coerce.number().min(1, 'กรุณาเลือกหน่วยต้นทาง'),
+        to_uom_id: z.coerce.number().min(1, 'กรุณาเลือกหน่วยปลายทาง'),
+        conversion_factor: z.coerce.number().min(0.000001, 'อัตราแปลงต้องมากกว่า 0'),
+        is_purchase_unit: z.boolean().default(false),
+        is_active: z.boolean().default(true),
     })).default([]),
     is_active: z.boolean().default(true),
     
@@ -132,6 +140,7 @@ const initialFormData: ItemFormData = {
     is_on_hold: false,
     costing_method: 'FIFO',
     barcodes: [],
+    uom_conversions: [],
 };
 
 import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
@@ -216,7 +225,35 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
     // Fetch data if editing
     const { data: existingItem, isLoading } = useQuery<ItemMaster | null>({
         queryKey: ['item-detail', editId],
-        queryFn: () => ItemMasterService.getById(editId!),
+        queryFn: async () => {
+            const item = await ItemMasterService.getById(editId!);
+            if (!item) return null;
+            
+            // Fetch UOM conversions for this item
+            try {
+                const uomData = await UOMConversionService.getByItemId(editId!);
+                item.uom_conversions = uomData.items.map(c => ({
+                    conversion_id: c.conversion_id,
+                    item_id: c.item_id,
+                    item_code: c.item_code,
+                    item_name: c.item_name,
+                    from_unit_id: c.from_unit_id,
+                    from_unit_name: c.from_unit_name,
+                    to_unit_id: c.to_unit_id,
+                    to_unit_name: c.to_unit_name,
+                    conversion_factor: c.conversion_factor,
+                    is_purchase_unit: c.is_purchase_unit,
+                    is_active: c.is_active,
+                    created_at: c.created_at || '',
+                    updated_at: ''
+                }));
+            } catch (err) {
+                logger.error('Failed to fetch UOM conversions', err);
+                item.uom_conversions = [];
+            }
+            
+            return item;
+        },
         enabled: !!editId,
     });
 
@@ -277,6 +314,14 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
                     // is_purchase: b.is_purchase ?? true,
                     // is_sales: b.is_sales ?? true
                 })),
+                uom_conversions: (item.uom_conversions || []).map((c) => ({
+                    conversion_id: c.conversion_id,
+                    from_uom_id: c.from_unit_id || 0,
+                    to_uom_id: c.to_unit_id || 0,
+                    conversion_factor: c.conversion_factor || 1,
+                    is_purchase_unit: c.is_purchase_unit ?? false,
+                    is_active: c.is_active ?? true,
+                })),
             });
         }
     }, [existingItem, reset]);
@@ -291,25 +336,77 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
                 barcodes: (data.barcodes || []).map((b) => ({
                     item_barcode_id: b.barcode_id,
                     barcode: b.barcode,
-                    uom_id: b.uom_id,
+                    item_uom_id: Number(b.uom_id),
                     is_primary: b.is_primary,
-                    // is_purchase: b.is_purchase,
-                    // is_sales: b.is_sales
                 }))
             };
 
+            // Omit uom_conversions from payload because backend DTO has a whitelist validator 
+            // that rejects it ("property uom_conversions should not exist").
+            // We will save them individually using UOMConversionService instead.
+            if ('uom_conversions' in payload) {
+                delete (payload as any).uom_conversions;
+            }
+
             // If updating, handle "deleted" barcodes by ensuring they are NOT in the barcodes array
-            // If the backend handles relation sync, omitting removed barcodes will suffice.
-            // If the backend developer told you to send them with a specific property (like is_active), 
-            // we should re-verify that property name. For now, removing it to fix the 400 error.
             if (editId && existingItem?.barcodes) {
                 // If the backend doesn't allow is_active, we simply DON'T include them in the barcodes array.
-                // Most Sync Relations will delete anything that isn't sent.
             }
 
             const itemResponse = editId 
                 ? await ItemMasterService.update(editId, payload)
                 : await ItemMasterService.create(payload);
+
+            const itemId = editId || (typeof itemResponse === 'number' ? itemResponse : null);
+            if (!itemId) {
+                throw new Error('บันทึกสินค้าหลักไม่สำเร็จ');
+            }
+
+            // Sync UOM Conversions individually via UOMConversionService
+            const finalConversionIds = new Set(
+                (data.uom_conversions || [])
+                    .map(c => c.conversion_id)
+                    .filter(Boolean)
+            );
+
+            // Find deleted conversions
+            const originalConversions = existingItem?.uom_conversions || [];
+            const deletedConversions = originalConversions.filter(
+                c => c.conversion_id && !finalConversionIds.has(c.conversion_id)
+            );
+
+            // 1. Delete removed ones
+            for (const c of deletedConversions) {
+                if (c.conversion_id) {
+                    await UOMConversionService.delete(c.conversion_id);
+                }
+            }
+
+            // 2. Create/Update active ones
+            for (const c of data.uom_conversions || []) {
+                const convPayload = {
+                    item_id: itemId,
+                    from_uom_id: Number(c.from_uom_id),
+                    to_uom_id: Number(c.to_uom_id),
+                    factor: Number(c.conversion_factor),
+                    is_purchase_uom: Boolean(c.is_purchase_unit),
+                    is_active: Boolean(c.is_active),
+                };
+
+                if (c.conversion_id) {
+                    // Update existing
+                    await UOMConversionService.update(c.conversion_id, {
+                        item_uom_id: c.conversion_id,
+                        ...convPayload
+                    });
+                } else {
+                    // Create new
+                    await UOMConversionService.create({
+                        item_uom_id: 0,
+                        ...convPayload
+                    });
+                }
+            }
 
             return !!itemResponse;
         },

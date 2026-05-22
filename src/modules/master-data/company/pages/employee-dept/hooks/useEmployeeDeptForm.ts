@@ -93,14 +93,31 @@ export function useEmployeeDeptForm(editId: string | number | null, isOpen: bool
         enabled: isOpen,
     });
 
-    const sides = useMemo(() => sidesData?.items || [], [sidesData]);
-
     // Fetch data for edit
     const { data: initialData, isLoading: isLoadingInitial } = useQuery({
         queryKey: ['employee-dept', editId],
         queryFn: () => (editId ? EmployeeDeptService.get(editId) : null),
         enabled: isOpen && isEdit && !!editId,
     });
+
+    const sides = useMemo(() => {
+        const items = sidesData?.items || [];
+        return items.filter(item => {
+            const isActive = 
+                item.is_active === true || 
+                String(item.is_active) === 'true' || 
+                String(item.is_active) === '1' || 
+                String(item.is_active) === 'Y' || 
+                String(item.is_active) === 'ACTIVE';
+            
+            // ในกรณีแก้ไขข้อมูล ให้แสดงฝ่ายที่เคยเลือกไว้ด้วย แม้ว่าจะมีสถานะเป็น 'ไม่ใช้งาน'
+            const isSelected = !!editId && (
+                String(item.emp_side_id || item.side_id || item.id) === String(initialData?.emp_side_id || initialData?.side_id)
+            );
+            
+            return isActive || isSelected;
+        });
+    }, [sidesData, editId, initialData]);
 
     // Hydrate form when data is fetched
     useEffect(() => {

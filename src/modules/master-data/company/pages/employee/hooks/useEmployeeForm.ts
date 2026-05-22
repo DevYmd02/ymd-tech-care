@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { useForm, useFieldArray, type SubmitHandler, type Resolver, useWatch, type FieldErrors } from 'react-hook-form';
+import { useForm, useFieldArray, type SubmitHandler, type Resolver, useWatch, type FieldErrors, type Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -48,13 +48,13 @@ export const employeeSchema = z.object({
     })),
 
     // ข้อมูลองค์กร
-    emp_dept_id:      z.number().nullable(),
-    position_id:      z.number().nullable(),
+    emp_dept_id:      z.number({ message: 'กรุณาเลือกแผนก' }),
+    position_id:      z.number({ message: 'กรุณาเลือกตำแหน่ง' }),
     employee_head_id: z.number().nullable(),
     emp_type:         z.string().or(z.literal('')),
 
     // วันที่สำคัญ
-    employee_startdate:   z.string().nullable().or(z.literal('')),
+    employee_startdate:   z.string().min(1, 'กรุณาเลือกวันที่เริ่มงาน'),
     employee_resigndate:  z.string().nullable().or(z.literal('')),
     employee_status:      z.number().default(1),
 
@@ -109,6 +109,75 @@ export const initialEmployeeData: EmployeeFormData = {
 };
 
 import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
+
+const FIELD_MAP: Record<string, string> = {
+    email: 'อีเมล',
+    phone: 'เบอร์โทรศัพท์',
+    username: 'ชื่อผู้ใช้งาน',
+    password: 'รหัสผ่าน',
+    employee_code: 'รหัสพนักงาน',
+    branch_id: 'สาขา',
+    emp_dept_id: 'แผนก',
+    position_id: 'ตำแหน่ง',
+    employee_startdate: 'วันที่เริ่มงาน',
+    tax_id: 'เลขประจำตัวผู้เสียภาษี',
+};
+
+function translateError(msg: unknown): string {
+    if (!msg) return 'ข้อมูลไม่ถูกต้อง';
+    
+    const translateSingle = (str: string): string => {
+        const lowerStr = str.toLowerCase();
+        // Intercept selection type/constraint errors and return localized select messages directly
+        if (lowerStr.includes('conforming to the specified constraints') || lowerStr.includes('must be a number')) {
+            if (lowerStr.includes('position')) {
+                return 'กรุณาเลือกตำแหน่ง';
+            }
+            if (lowerStr.includes('dept') || lowerStr.includes('department')) {
+                return 'กรุณาเลือกแผนก';
+            }
+            if (lowerStr.includes('branch')) {
+                return 'กรุณาเลือกสาขา';
+            }
+            if (lowerStr.includes('head')) {
+                return 'กรุณาเลือกผู้บังคับบัญชา';
+            }
+        }
+
+        let res = str;
+        // Translate phrases
+        res = res.replace(/must be shorter than or equal to (\d+) characters/gi, 'ต้องมีขนาดไม่เกิน $1 ตัวอักษร');
+        res = res.replace(/must be longer than or equal to (\d+) characters/gi, 'ต้องมีขนาดอย่างน้อย $1 ตัวอักษร');
+        res = res.replace(/must be an email/gi, 'รูปแบบอีเมลไม่ถูกต้อง');
+        res = res.replace(/should not be empty/gi, 'กรุณาระบุข้อมูล');
+        res = res.replace(/must be a number/gi, 'ต้องเป็นตัวเลข');
+        res = res.replace(/must be a string/gi, 'ต้องเป็นข้อความ');
+        
+        // Translate fields
+        Object.entries(FIELD_MAP).forEach(([eng, thai]) => {
+            const regex = new RegExp(`\\b${eng}\\b`, 'gi');
+            res = res.replace(regex, thai);
+        });
+        
+        return res;
+    };
+
+    if (Array.isArray(msg)) {
+        return msg.map(item => translateSingle(String(item))).join(', ');
+    }
+    
+    if (typeof msg === 'string') {
+        if (msg.includes(',') || msg.includes('.')) {
+            const parts = msg.split(/[.,]/).map(p => p.trim()).filter(Boolean);
+            if (parts.length > 1) {
+                return parts.map(translateSingle).join(', ');
+            }
+        }
+        return translateSingle(msg);
+    }
+    
+    return translateSingle(String(msg));
+}
 
 export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose: () => void, onSuccess?: () => void, readOnly: boolean = false) {
     const queryClient = useQueryClient();
@@ -283,10 +352,10 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
                 remark:                (raw['remark'] as string) || '',
                 tax_id:                (raw['tax_id'] as string) || '',
                 emp_type:              ((raw['emp_type'] as string) || 'G').trim(),
-                position_id:           (raw['position_id'] as number) || (raw['pos_id'] as number) || null,
-                emp_dept_id:           (raw['emp_dept_id'] as number) || (raw['department_id'] as number) || (raw['dept_id'] as number) || null,
+                position_id:           raw['position_id'] ? Number(raw['position_id']) : raw['pos_id'] ? Number(raw['pos_id']) : null,
+                emp_dept_id:           raw['emp_dept_id'] ? Number(raw['emp_dept_id']) : raw['department_id'] ? Number(raw['department_id']) : raw['dept_id'] ? Number(raw['dept_id']) : null,
                 is_active:             raw['is_active'] !== undefined ? Boolean(raw['is_active']) : true,
-                employee_head_id:      (raw['employee_head_id'] as number) || null,
+                employee_head_id:      raw['employee_head_id'] ? Number(raw['employee_head_id']) : null,
                 addresses:             ((raw['addresses'] as EmployeeAddress[]) || (raw['employee_addresses'] as EmployeeAddress[]) || (raw['employeeAddresses'] as EmployeeAddress[]) || []).map((addr) => ({
                     address_type:   addr.address_type || 'CONTACT',
                     address:        addr.address || '',
@@ -345,10 +414,11 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
 
             const payload = {
                 ...restData,
-                // Ensure IDs are null instead of 0 or empty string
-                employee_head_id: data.employee_head_id || null,
-                emp_dept_id: data.emp_dept_id || null,
-                position_id: data.position_id || null,
+                // Ensure IDs are coerced to native numbers or null
+                employee_head_id: data.employee_head_id ? Number(data.employee_head_id) : null,
+                emp_dept_id: data.emp_dept_id ? Number(data.emp_dept_id) : null,
+                position_id: data.position_id ? Number(data.position_id) : null,
+                email: data.email && data.email.trim() ? data.email.trim() : undefined,
                 
                 employee_startdate: data.employee_startdate ? new Date(data.employee_startdate).toISOString() : null,
                 employee_resigndate: data.employee_resigndate ? new Date(data.employee_resigndate).toISOString() : null,
@@ -369,9 +439,9 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
             console.log('🚀 PAYLOAD TO SEND:', JSON.stringify(payload, null, 2));
 
             if (isEdit && editId) {
-                return OrgEmployeeService.update(editId, payload);
+                return api.patch<EmployeeMaster & { success?: boolean; data?: EmployeeMaster; message?: string }>(`/employees/${editId}`, payload, { skipToast: true });
             }
-            return OrgEmployeeService.create(payload);
+            return api.post<EmployeeMaster & { success?: boolean; data?: EmployeeMaster; message?: string }>('/employees', payload, { skipToast: true });
         },
         onSuccess: (res) => {
             console.log('📥 RESPONSE FROM SERVER:', res);
@@ -399,11 +469,56 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
                 throw new Error(res.message || 'บันทึกไม่สำเร็จ');
             }
         },
-        onError: (error: AxiosError<{ message?: string }>) => {
+        onError: (error: AxiosError<{ message?: unknown }>) => {
             logger.error('Error saving employee:', error);
             if (error.response?.data) {
-                logger.error('Backend validation errors:', error.response.data);
-                toast(`เกิดข้อผิดพลาด: ${error.response.data.message || 'ข้อมูลไม่ถูกต้อง'}`, 'error');
+                const backendMsg = error.response.data.message;
+                logger.error('Backend validation errors:', backendMsg);
+                
+                // Show the translated toast
+                toast(`เกิดข้อผิดพลาด: ${translateError(backendMsg || 'ข้อมูลไม่ถูกต้อง')}`, 'error');
+
+                // Parse backend error messages and map them back to RHF fields to trigger red borders and auto-scroll
+                let firstErrorKey: string | null = null;
+                const errorList: string[] = Array.isArray(backendMsg) 
+                    ? backendMsg.map(String)
+                    : typeof backendMsg === 'string' 
+                        ? [backendMsg] 
+                        : [];
+
+                errorList.forEach((msg) => {
+                    Object.keys(FIELD_MAP).forEach((fieldKey) => {
+                        const regex = new RegExp(`\\b${fieldKey}\\b`, 'i');
+                        if (regex.test(msg)) {
+                            if (fieldKey === 'username' || fieldKey === 'password') {
+                                accountForm.setError(fieldKey as Path<UserAccountFormData>, {
+                                    type: 'backend',
+                                    message: translateError(msg)
+                                });
+                            } else {
+                                setError(fieldKey as Path<EmployeeFormData>, {
+                                    type: 'backend',
+                                    message: translateError(msg)
+                                });
+                            }
+                            if (!firstErrorKey) {
+                                firstErrorKey = fieldKey;
+                            }
+                        }
+                    });
+                });
+
+                // Smooth scroll and focus to the first backend validation failure field
+                if (firstErrorKey) {
+                    setTimeout(() => {
+                        const errorElement = document.getElementsByName(firstErrorKey!)[0] || 
+                                           document.querySelector(`[name="${firstErrorKey!}"]`);
+                        if (errorElement) {
+                            errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            if ('focus' in errorElement) (errorElement as HTMLElement).focus();
+                        }
+                    }, 100);
+                }
             } else {
                 toast('บันทึกไม่สำเร็จ', 'error');
             }
@@ -471,7 +586,12 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
                 if (error && typeof error === 'object') {
                     const errObj = error as Record<string, unknown>;
                     if (typeof errObj.message === 'string') {
-                        messages.push(errObj.message);
+                        let msg = errObj.message;
+                        const lowerMsg = msg.toLowerCase();
+                        if (lowerMsg.includes('invalid input') || lowerMsg.includes('expected number') || lowerMsg.includes('received string') || lowerMsg.includes('expected string') || lowerMsg.includes('received null')) {
+                            msg = 'กรุณาระบุข้อมูลให้ถูกต้อง';
+                        }
+                        messages.push(msg);
                     } else {
                         messages = messages.concat(extractMessages(errObj));
                     }

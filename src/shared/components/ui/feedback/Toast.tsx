@@ -31,7 +31,7 @@ export const ToastContext = createContext<ToastContextType | undefined>(undefine
  */
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const toast = useCallback((msg: string | React.ReactNode, t: ToastType = 'error') => {
-    const message = typeof msg === 'string' ? msg : 'การดำเนินการเสร็จสิ้น';
+    const message = (typeof msg === 'string' || React.isValidElement(msg)) ? msg : 'การดำเนินการเสร็จสิ้น';
 
     switch (t) {
       case 'success':

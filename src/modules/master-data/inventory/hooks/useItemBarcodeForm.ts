@@ -134,7 +134,9 @@ export function useItemBarcodeForm(
                 item_id: data.item_id,
                 barcode: data.barcode,
                 uom_id: data.uom_id ? Number(data.uom_id) : null,
-                is_default: data.is_primary,
+                item_uom_id: data.uom_id ? Number(data.uom_id) : null,
+                is_primary: data.is_primary,
+                is_active: data.is_active,
             };
             return editId 
                 ? ItemBarcodeService.update(editId, payload)

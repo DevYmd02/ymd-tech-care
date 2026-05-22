@@ -161,7 +161,8 @@ function mapItemDetailFields(raw: RawItemDetail): ItemMaster {
           return {
             item_barcode_id: Number(b.item_barcode_id || b.barcode_id || b.id || 0),
             barcode: String(b.barcode || b.item_barcode_code || ''),
-            uom_id: b.uom_id ? Number(b.uom_id) : (b.uom_id ? Number(b.uom_id) : undefined),
+            uom_id: b.item_uom_id ? Number(b.item_uom_id) : (b.uom_id ? Number(b.uom_id) : undefined),
+            item_uom_id: b.item_uom_id ? Number(b.item_uom_id) : (b.uom_id ? Number(b.uom_id) : undefined),
             uom_name: b.uom_name ? String(b.uom_name) : '',
             is_primary: Boolean(b.is_primary || b.is_default || false),
             is_active: Boolean(b.is_active ?? true),
@@ -171,6 +172,24 @@ function mapItemDetailFields(raw: RawItemDetail): ItemMaster {
             created_at: String(b.created_at || new Date().toISOString()),
             updated_at: String(b.updated_at || new Date().toISOString())
           };
+    }),
+    uom_conversions: (Array.isArray(raw.uom_conversions) ? raw.uom_conversions : (Array.isArray(raw.uomConversions) ? raw.uomConversions : [])).map((itm: unknown) => {
+        const c = itm as Record<string, unknown>;
+        return {
+            conversion_id: Number(c.conversion_id || c.id || 0),
+            item_id: Number(raw.item_id || 0),
+            item_code: String(raw.item_code || ''),
+            item_name: String(raw.item_name || ''),
+            from_unit_id: Number(c.from_unit_id || c.from_uom_id || 0),
+            from_unit_name: String(c.from_unit_name || c.from_uom_name || ''),
+            to_unit_id: Number(c.to_unit_id || c.to_uom_id || 0),
+            to_unit_name: String(c.to_unit_name || c.to_uom_name || ''),
+            conversion_factor: Number(c.conversion_factor || c.factor || 1),
+            is_purchase_unit: Boolean(c.is_purchase_unit ?? false),
+            is_active: Boolean(c.is_active ?? true),
+            created_at: String(c.created_at || new Date().toISOString()),
+            updated_at: String(c.updated_at || new Date().toISOString())
+        } as import('@/modules/master-data/inventory/types/uom-conversion-types').ItemUOMConversion;
     })
   };
 }
@@ -280,7 +299,8 @@ export const ItemMasterService = {
         item_size_id: data.item_size_id ? Number(data.item_size_id) : null,
         item_color_id: data.item_color_id ? Number(data.item_color_id) : null,
         item_grade_id: data.item_grade_id ? Number(data.item_grade_id) : null,
-        barcodes: data.barcodes || []
+        barcodes: data.barcodes || [],
+        uom_conversions: data.uom_conversions || []
       };
       const response = await api.post<SuccessResponse & { item_id?: number }>('/item-master', payload, config);
       // Backend returns item_id, but SuccessResponse expects id. Support both.
@@ -330,7 +350,8 @@ export const ItemMasterService = {
         item_color_id: data.item_color_id ? Number(data.item_color_id) : undefined,
         item_grade_id: data.item_grade_id ? Number(data.item_grade_id) : undefined,
         is_active: data.is_active !== undefined ? Boolean(data.is_active) : undefined,
-        barcodes: data.barcodes || undefined
+        barcodes: data.barcodes || undefined,
+        uom_conversions: data.uom_conversions || undefined
       };
 
       await api.patch<SuccessResponse>(`/item-master/${id}`, payload, config);
