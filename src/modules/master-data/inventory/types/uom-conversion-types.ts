@@ -40,8 +40,10 @@ export interface UOMConversionListItem {
     item_name: string;
     from_unit_id: number;
     from_unit_name: string;
+    from_unit_name_en?: string;
     to_unit_id: number;
     to_unit_name: string;
+    to_unit_name_en?: string;
     conversion_factor: number;
     is_purchase_unit: boolean;
     is_active: boolean;

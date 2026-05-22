@@ -6,16 +6,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useDebounce } from '@/shared/hooks/useDebounce';
 import { ItemBarcodeService } from '../services/item-barcode.service';
 import { UOMService } from '../services/uom.service';
+import { UOMConversionService } from '../services/uom-conversion.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { logger } from '@/shared/utils';
 import type { ItemBarcodeListItem, ItemBarcode } from '../types/product-types';
+import type { UOMPickerItem } from '@ui';
 
 export const itemBarcodeSchema = z.object({
     item_id: z.coerce.number().min(1, 'กรุณาเลือกสินค้า'),
     item_code: z.string().optional(),
     item_name: z.string().optional(),
     barcode: z.string().min(1, 'กรุณากรอกรหัสบาร์โค้ด').max(50, 'บาร์โค้ดต้องไม่เกิน 50 ตัวอักษร'),
-    uom_id: z.string().min(1, 'กรุณาเลือกหน่วย'),
+    item_uom_id: z.string().min(1, 'กรุณาเลือกหน่วย'),
     is_primary: z.boolean().default(false),
     is_active: z.boolean().default(true),
 });
@@ -27,7 +29,7 @@ const initialFormData: ItemBarcodeFormData = {
     item_code: '',
     item_name: '',
     barcode: '',
-    uom_id: '',
+    item_uom_id: '',
     is_primary: false,
     is_active: true,
 };
@@ -100,6 +102,31 @@ export function useItemBarcodeForm(
 
     const units = useMemo(() => unitData || [], [unitData]);
 
+    // Fetch UOM Conversions ของ item ที่เลือก เพื่อใช้ใน UOMPickerModal
+    const itemId = formData.item_id;
+    const { data: conversionData, isLoading: isLoadingConversions } = useQuery({
+        queryKey: ['item-conversions-barcode', itemId],
+        queryFn: () => UOMConversionService.getByItemId(itemId),
+        enabled: !!itemId && itemId > 0,
+        staleTime: 2 * 60 * 1000,
+    });
+
+    // Map conversions + units → UOMPickerItem[] (รวมบาร์โค้ดปัจจุบันที่ผูกกับหน่วย)
+    const uomPickerItems = useMemo((): UOMPickerItem[] => {
+        const conversions = conversionData?.items || [];
+        return conversions.map(conv => {
+            const uomInfo = units.find(u => u.uom_id === Number(conv.from_unit_id));
+            return {
+                conversion_id: conv.conversion_id,
+                from_unit_id: conv.from_unit_id,
+                from_unit_name: conv.from_unit_name || uomInfo?.uom_name || String(conv.from_unit_id),
+                from_unit_name_en: uomInfo?.uom_name_en || uomInfo?.uom_code || undefined,
+                conversion_factor: conv.conversion_factor,
+                barcode: undefined, // standalone modal ไม่มี context ของ barcode ปัจจุบัน
+            };
+        });
+    }, [conversionData, units]);
+
     // Hydrate form when data is provided
     useEffect(() => {
         if (initialData) {
@@ -108,9 +135,9 @@ export function useItemBarcodeForm(
                 item_code: initialData.item_code || '',
                 item_name: initialData.item_name || '',
                 barcode: initialData.barcode || '',
-                uom_id: String(
+                item_uom_id: String(
+                    ('item_uom_id' in initialData ? initialData.item_uom_id : undefined) ?? 
                     ('uom_id' in initialData ? initialData.uom_id : undefined) ?? 
-                    ('uom_id' in initialData ? (initialData as ItemBarcodeListItem).uom_id : undefined) ?? 
                     ''
                 ),
                 is_primary: initialData.is_primary ?? false,
@@ -133,8 +160,7 @@ export function useItemBarcodeForm(
             const payload = {
                 item_id: data.item_id,
                 barcode: data.barcode,
-                uom_id: data.uom_id ? Number(data.uom_id) : null,
-                item_uom_id: data.uom_id ? Number(data.uom_id) : null,
+                item_uom_id: data.item_uom_id ? Number(data.item_uom_id) : null,
                 is_primary: data.is_primary,
                 is_active: data.is_active,
             };
@@ -183,6 +209,8 @@ export function useItemBarcodeForm(
         formData,
         errors,
         units,
+        uomPickerItems,
+        isLoadingConversions,
         isSaving: saveMutation.isPending,
         handleSave: rhfHandleSubmit(handleSave),
         setValue,

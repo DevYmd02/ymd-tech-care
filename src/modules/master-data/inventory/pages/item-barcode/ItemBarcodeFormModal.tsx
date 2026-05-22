@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { ScanBarcode, Search, Save, RotateCcw, X } from 'lucide-react';
+import { ScanBarcode, Search, Save, RotateCcw, X, ChevronDown } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@ui';
+import { DialogFormLayout, UOMPickerModal } from '@ui';
 import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
 import { useItemBarcodeForm } from '@/modules/master-data/inventory/hooks/useItemBarcodeForm';
 import { ItemBarcodeService } from '@/modules/master-data/inventory/services/item-barcode.service';
 import { useQuery } from '@tanstack/react-query';
-import type { ItemListItem, UOMListItem } from '@/modules/master-data/types/master-data-types';
+import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 
 interface Props {
     isOpen: boolean;
@@ -28,6 +28,7 @@ export function ItemBarcodeFormModal({
     initialItemName
 }: Props) {
     const [isItemSearchOpen, setIsItemSearchOpen] = useState(false);
+    const [isUOMPickerOpen, setIsUOMPickerOpen] = useState(false);
 
     // Fetch edit data if editId is provided
     const { data: editData, isLoading: isLoadingEdit } = useQuery({
@@ -40,7 +41,8 @@ export function ItemBarcodeFormModal({
         register,
         formData,
         errors,
-        units,
+        uomPickerItems,
+        isLoadingConversions,
         isSaving,
         handleSave,
         setValue,
@@ -53,6 +55,11 @@ export function ItemBarcodeFormModal({
             onClose();
         },
         initialItemId ? { item_id: initialItemId, item_code: initialItemCode, item_name: initialItemName } : undefined
+    );
+
+    // หา UOMPickerItem ที่เลือกอยู่ปัจจุบัน (สำหรับแสดงชื่อในปุ่ม)
+    const selectedUOMItem = uomPickerItems.find(
+        item => item.from_unit_id === Number(formData.item_uom_id)
     );
 
     const handleProductSelect = (product: ItemListItem) => {
@@ -173,17 +180,36 @@ export function ItemBarcodeFormModal({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className={styles.label}>บาร์โค้ดผูกหน่วย <span className="text-red-500">*</span></label>
-                            <select 
-                                {...register('uom_id')}
-                                className={`${styles.inputSelect} ${errors.uom_id ? 'border-red-500 focus:ring-red-500' : ''}`}
+                            
+                            {/* UOM Picker Trigger Button */}
+                            <button
+                                type="button"
+                                onClick={() => setIsUOMPickerOpen(true)}
+                                disabled={!formData.item_id || formData.item_id === 0}
+                                className={`w-full h-10 bg-white dark:bg-gray-800 border ${
+                                    errors.item_uom_id
+                                        ? 'border-red-500 ring-1 ring-red-500/30'
+                                        : 'border-gray-300 dark:border-gray-600 hover:border-purple-500 dark:hover:border-purple-500'
+                                } rounded-lg px-3 text-sm text-left flex items-center justify-between gap-2 transition-all focus:outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
-                                <option value="">-- เลือกหน่วย --</option>
-                                {units.map((u: UOMListItem) => (
-                                    <option key={u.uom_id} value={String(u.uom_id)}>{u.uom_name} ({u.uom_code})</option>
-                                ))}
-                            </select>
-                            {errors.uom_id && (
-                                <span className="text-red-500 text-xs mt-1 block">{errors.uom_id.message}</span>
+                                <span className={selectedUOMItem ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-400'}>
+                                    {isLoadingConversions
+                                        ? 'กำลังโหลด...'
+                                        : selectedUOMItem
+                                            ? selectedUOMItem.from_unit_name
+                                            : formData.item_id && formData.item_id > 0
+                                                ? '-- เลือกหน่วย --'
+                                                : 'เลือกสินค้าก่อน'
+                                    }
+                                </span>
+                                <ChevronDown size={15} className="flex-shrink-0 text-gray-400" />
+                            </button>
+
+                            {/* Hidden input สำหรับ RHF */}
+                            <input type="hidden" {...register('item_uom_id')} />
+
+                            {errors.item_uom_id && (
+                                <span className="text-red-500 text-xs mt-1 block">{errors.item_uom_id.message}</span>
                             )}
                         </div>
                         
@@ -215,6 +241,24 @@ export function ItemBarcodeFormModal({
                 isOpen={isItemSearchOpen}
                 onClose={() => setIsItemSearchOpen(false)}
                 onSelect={handleProductSelect}
+            />
+
+            {/* UOM Picker Modal */}
+            <UOMPickerModal
+                isOpen={isUOMPickerOpen}
+                onClose={() => setIsUOMPickerOpen(false)}
+                items={uomPickerItems}
+                isLoading={isLoadingConversions}
+                selectedFromUnitId={Number(formData.item_uom_id) || undefined}
+                onSelect={(pickerItem) => {
+                    setValue('item_uom_id', String(pickerItem.from_unit_id));
+                    if (pickerItem.barcode) {
+                        setValue('barcode', pickerItem.barcode);
+                    }
+                    setIsUOMPickerOpen(false);
+                }}
+                title="เลือกหน่วยนับสำหรับบาร์โค้ด"
+                zIndex={70}
             />
         </>
     );
