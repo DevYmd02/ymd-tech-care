@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Package, ScanBarcode, RefreshCcw } from 'lucide-react';
-import { DialogFormLayout, TabPanel } from '@ui';
+import { DialogFormLayout, TabPanel, type UOMPickerItem } from '@ui';
 import { useItemForm } from './hooks/useItemForm';
 import { ItemGeneralInfo } from './components/ItemGeneralInfo';
 import { ItemAttributes } from './components/ItemAttributes';
@@ -55,6 +55,27 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
         uom,
         taxCodes
     } = useMasterData(isOpen);
+
+    // Build UOMPickerItem[] จาก formData.uom_conversions (ไม่ต้อง fetch ใหม่)
+    // Join กับ uom list เพื่อดึงชื่อภาษาไทย/อังกฤษ
+    // Join กับ formData.barcodes เพื่อแสดงบาร์โค้ดที่ผูกกับหน่วยนั้น
+    const uomPickerItems = useMemo((): UOMPickerItem[] => {
+        return (formData.uom_conversions || []).map(conv => {
+            const uomInfo = uom.find(u => u.uom_id === Number(conv.from_uom_id));
+            // หาบาร์โค้ดที่ผูกกับหน่วยนั้น (item_uom_id ใน form = from_unit_id หลัง hydration)
+            const existingBarcode = (formData.barcodes || []).find(
+                b => Number(b.item_uom_id) === Number(conv.from_uom_id)
+            );
+            return {
+                conversion_id: conv.conversion_id ?? 0,
+                from_unit_id: Number(conv.from_uom_id),
+                from_unit_name: uomInfo?.uom_name || String(conv.from_uom_id),
+                from_unit_name_en: uomInfo?.uom_name_en || uomInfo?.uom_code || undefined,
+                conversion_factor: Number(conv.conversion_factor || 1),
+                barcode: existingBarcode?.barcode || undefined,
+            };
+        });
+    }, [formData.uom_conversions, formData.barcodes, uom]);
 
     // Handle strict form reset on close to prevent data bleed
     // This implements the "Vendor Rule" for API-Readiness
@@ -191,7 +212,7 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                             setValue={setValue}
                             getValues={getValues}
                             errors={errors}
-                            units={uom}
+                            uomConversions={uomPickerItems}
                             editId={editId}
                         />
                     </div>

@@ -44,7 +44,7 @@ export const PriceListService = {
         remarks: item.remark || "",
         item_id: Number(item.itemId),
         item_brand_id: Number(item.itemBrandId || 0),
-        uom_id: Number(item.uomId),
+        item_uom_id: Number(item.itemUomId),
         unit_price: Number(item.unitPrice),
         line_discount_rate: String(item.lineDiscount).replace('%', '') || "0"
       }))

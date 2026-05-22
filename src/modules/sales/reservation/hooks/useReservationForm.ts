@@ -98,7 +98,8 @@ async function recoverReservationPriceSources(
                 itemId: line.item_id,
                 qty: line.qty_reserved,
                 customerId,
-                branchId
+                branchId,
+                uomId: Number(line.uom_id)
             }));
 
             if (result) {

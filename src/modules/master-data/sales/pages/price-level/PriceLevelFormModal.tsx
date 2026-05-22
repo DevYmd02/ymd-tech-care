@@ -4,18 +4,19 @@
  */
 
 import { useState, useEffect } from 'react';
-import { DollarSign, Save, X, Search } from 'lucide-react';
+import { DollarSign, Save, X, Search, ChevronDown } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout } from '@ui';
+import { DialogFormLayout, UOMPickerModal } from '@ui';
 import type { Path } from 'react-hook-form';
-import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
-import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
+import { UOMConversionService } from '@/modules/master-data/inventory/services/uom-conversion.service';
+import type { UOMConversionListItem } from '@/modules/master-data/types/master-data-types';
 import { usePriceLevelForm } from './hooks/usePriceLevelForm';
 import type { PriceLevelFormData } from './types/price-level.types';
 import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
 import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
 import { PriceLevelNameService } from '@sales-master/pages/price-level-name/services/price-level-name.service';
 import { logger } from '@/shared/utils';
+import type { UOMPickerItem } from '@/shared/components/ui/feedback/UOMPickerModal';
 
 interface Props {
     isOpen: boolean;
@@ -31,21 +32,22 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
         errors,
         isSubmitting,
         setValue,
+        watch,
     } = usePriceLevelForm(editId ?? null, onSuccess, isOpen);
 
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
-    const [units, setUnits] = useState<UOMListItem[]>([]);
+    const [isUomPickerOpen, setIsUomPickerOpen] = useState(false);
+    const [conversions, setConversions] = useState<UOMConversionListItem[]>([]);
     const [levelNameMap, setLevelNameMap] = useState<Map<number, string>>(new Map());
 
-    // Fetch units and level names
+    const itemId = watch('itemId');
+    const itemUomId = watch('itemUomId');
+
+    // Fetch level names
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [unitRes, levelNames] = await Promise.all([
-                    UOMService.getAll(),
-                    PriceLevelNameService.getList().catch(() => []), // Fallback
-                ]);
-                setUnits(unitRes.items || []);
+                const levelNames = await PriceLevelNameService.getList().catch(() => []); // Fallback
                 const nameMap = new Map<number, string>(
                     (Array.isArray(levelNames) ? levelNames : []).map(ln => [Number(ln.level_no), ln.name])
                 );
@@ -59,15 +61,55 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
         }
     }, [isOpen]);
 
-    const handleSelectProduct = (product: ItemListItem) => {
-        setValue('itemId', product.item_id || product.id);
+    // Fetch UOM conversions for selected product
+    useEffect(() => {
+        if (!isOpen || !itemId) {
+            setConversions([]);
+            return;
+        }
+
+        const fetchConversions = async () => {
+            try {
+                const response = await UOMConversionService.getByItemId(Number(itemId));
+                setConversions(response.items || []);
+            } catch (error) {
+                logger.error('Failed to fetch UOM conversions:', error);
+            }
+        };
+
+        fetchConversions();
+    }, [itemId, isOpen]);
+
+    const handleSelectProduct = async (product: ItemListItem) => {
+        const id = product.item_id || product.id;
+        setValue('itemId', id);
         setValue('itemCode', product.item_code);
         setValue('itemName', product.item_name);
         setValue('itemNameEn', product.item_name_en || ''); 
-        if (product.uom_id) {
-            setValue('uomId', product.uom_id);
-        }
         setIsProductSearchOpen(false);
+
+        if (id) {
+            try {
+                const response = await UOMConversionService.getByItemId(Number(id));
+                const convs = response.items || [];
+                setConversions(convs);
+
+                const baseUomId = product.base_uom_id || product.uom_id;
+                const defaultConv = convs.find(c => Number(c.from_unit_id) === Number(baseUomId)) || convs[0];
+                if (defaultConv) {
+                    setValue('itemUomId', defaultConv.conversion_id);
+                } else {
+                    setValue('itemUomId', '');
+                }
+            } catch (error) {
+                logger.error('Failed to fetch conversions on product select:', error);
+            }
+        }
+    };
+
+    const handleSelectUom = (item: UOMPickerItem) => {
+        setValue('itemUomId', item.conversion_id, { shouldValidate: true });
+        setIsUomPickerOpen(false);
     };
 
     // ==================== RENDERING ====================
@@ -161,13 +203,24 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
                         <div className="space-y-4">
                             <div>
                                 <label className={styles.label}>หน่วยนับ <span className="text-red-500">*</span></label>
-                                <select {...register('uomId')} className={styles.input}>
-                                    <option value="">เลือกหน่วยนับ</option>
-                                    {units.map(unit => (
-                                        <option key={unit.uom_id} value={unit.uom_id}>{unit.uom_name}</option>
-                                    ))}
-                                </select>
-                                {errors.uomId && <p className="text-red-500 text-xs mt-1">{errors.uomId.message}</p>}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsUomPickerOpen(true)}
+                                    disabled={!itemId}
+                                    className="w-full h-[42px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-blue-600 dark:hover:border-blue-500 rounded-lg px-3.5 text-sm text-left flex items-center justify-between gap-1 transition-all focus:outline-none focus:ring-1 focus:ring-blue-600/30 focus:border-blue-600 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                >
+                                    <span className={itemUomId ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-400'}>
+                                        {(() => {
+                                            const selectedConv = conversions.find(c => String(c.conversion_id) === String(itemUomId));
+                                            if (selectedConv) {
+                                                return `${selectedConv.from_unit_name}${selectedConv.from_unit_name_en ? ` (${selectedConv.from_unit_name_en})` : ''} (อัตราส่วน: ${selectedConv.conversion_factor})`;
+                                            }
+                                            return '-- เลือกหน่วย --';
+                                        })()}
+                                    </span>
+                                    <ChevronDown size={18} className="flex-shrink-0 text-gray-400" />
+                                </button>
+                                {errors.itemUomId && <p className="text-red-500 text-xs mt-1">{errors.itemUomId.message}</p>}
                             </div>
 
                             <div>
@@ -228,6 +281,18 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
                 isOpen={isProductSearchOpen}
                 onClose={() => setIsProductSearchOpen(false)}
                 onSelect={handleSelectProduct}
+            />
+
+            <UOMPickerModal
+                isOpen={isUomPickerOpen}
+                onClose={() => setIsUomPickerOpen(false)}
+                onSelect={handleSelectUom}
+                items={conversions as UOMPickerItem[]}
+                selectedFromUnitId={(() => {
+                    const match = conversions.find((c) => String(c.conversion_id) === String(itemUomId));
+                    return match ? Number(match.from_unit_id) : undefined;
+                })()}
+                title="เลือกหน่วยนับสินค้า - Select Unit of Measure"
             />
         </>
     );

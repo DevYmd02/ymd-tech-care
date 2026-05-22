@@ -4,9 +4,10 @@
  */
 
 import { useState } from 'react';
-import { Layers, Save, X, Plus, Trash2, Search, Minus } from 'lucide-react';
+import { Layers, Save, X, Plus, Trash2, Search, Minus, ChevronDown } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
-import { DialogFormLayout, CustomDateInput } from '@ui';
+import { DialogFormLayout, CustomDateInput, UOMPickerModal } from '@ui';
+import type { UOMPickerItem } from '@/shared/components/ui/feedback/UOMPickerModal';
 import { Controller } from 'react-hook-form';
 import { usePriceListForm } from '@master-data/sales/pages/price-list/hooks/usePriceListForm';
 import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
@@ -18,7 +19,8 @@ import { useQuery } from '@tanstack/react-query';
 import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
 import type { ItemListItem } from '@/modules/master-data/inventory/types/product-types';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
-import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
+import { ItemMasterService } from '@inventory/services/item-master.service';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import { logger } from '@/shared/utils';
 
 interface Props {
@@ -47,6 +49,8 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
     const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
     const [isPermitEmpSearchOpen, setIsPermitEmpSearchOpen] = useState(false);
     const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
+    const [isUomPickerOpen, setIsUomPickerOpen] = useState(false);
+    const [activeUomRowIndex, setActiveUomRowIndex] = useState<number | null>(null);
 
     // Fetch Departments for selection
     const { data: deptsData } = useQuery({
@@ -59,75 +63,85 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
         queryFn: () => BranchService.getList({ page: 1, limit: 1000 }),
     });
 
-    const { data: unitsData } = useQuery({
-        queryKey: ['uoms-lookup'],
-        queryFn: () => UOMService.getAll({ page: 1, limit: 1000 }),
-    });
-
     const handleAddProduct = () => {
         append({
             itemId: '',
             itemCode: '',
             itemName: '',
-            uomId: null,
+            itemUomId: null,
             uomName: '-',
             unitPrice: 0,
             lineDiscount: 0,
             lineDiscountAmnt: 0,
             unitPriceNet: 0,
-            remark: ''
+            remark: '',
+            uomConversions: []
         });
     };
 
-    const handleSelectProduct = (product: ItemListItem) => {
-        // Smart UOM Mapping: Try ID match first, fallback to Name match if ID is missing (0/null)
-        let targetUomId = product.uom_id ? String(product.uom_id) : (product.uom_id ? String(product.uom_id) : '');
-        const targetUomName = product.uom_name || product.uom_name || '';
-        const targetPrice = Number(product.standard_cost || 0);
-
+    const handleSelectProduct = async (product: ItemListItem) => {
         // Debug diagnostic
         logger.debug('🔍 Product Selection Diagnostic', { product });
         
-        // If ID is shaky, try matching by name against the loaded unitsData
-        if (!targetUomId || targetUomId === '0' || targetUomId === 'undefined') {
-            const matchedUnit = unitsData?.items.find(u => 
-                (u.uom_name && u.uom_name === targetUomName) || 
-                (u.uom_name && u.uom_name === targetUomName)
-            );
-            if (matchedUnit) {
-                logger.info('✅ Smart Match found UOM by Name:', matchedUnit);
-                targetUomId = String(matchedUnit.uom_id || matchedUnit.uom_id);
-            } else {
-                logger.warn('⚠️ No UOM match found for name:', targetUomName);
-            }
-        }
-        // Smart Match Log
-        logger.debug('Final targetUomId:', targetUomId);
-
-        if (activeRowIndex !== null) {
-            handleItemChange(activeRowIndex, 'itemId', String(product.item_id || product.id));
-            handleItemChange(activeRowIndex, 'itemCode', product.item_code);
-            handleItemChange(activeRowIndex, 'itemName', product.item_name);
-            handleItemChange(activeRowIndex, 'uomId', targetUomId);
-            handleItemChange(activeRowIndex, 'uomName', targetUomName || '-');
-            handleItemChange(activeRowIndex, 'unitPrice', targetPrice);
-            const bId = (product as { item_brand_id?: number | string; brand_id?: number | string }).item_brand_id || (product as { brand_id?: number | string }).brand_id || 0;
-            handleItemChange(activeRowIndex, 'itemBrandId', bId);
-        } else {
-            const bId = (product as { item_brand_id?: number | string; brand_id?: number | string }).item_brand_id || (product as { brand_id?: number | string }).brand_id || 0;
-            append({
-                itemId: String(product.item_id || product.id),
-                itemCode: product.item_code,
-                itemName: product.item_name,
-                uomId: targetUomId,
-                uomName: targetUomName || '-',
-                unitPrice: targetPrice,
-                lineDiscount: 0,
-                lineDiscountAmnt: 0,
-                unitPriceNet: targetPrice,
-                remark: '',
-                itemBrandId: bId
+        try {
+            // Fetch detailed item and its defined UOM conversions
+            const itemId = product.item_id || product.id;
+            const [itemDetail, uomConversionsResponse] = await Promise.all([
+                ItemMasterService.getById(Number(itemId)),
+                UOMConversionService.getByItemId(Number(itemId))
+            ]);
+            const conversions = uomConversionsResponse?.items || [];
+            
+            const mappedConversions = conversions.map(conv => {
+                const barcodeObj = itemDetail?.barcodes?.find(b => Number(b.item_uom_id) === Number(conv.conversion_id));
+                return {
+                    conversion_id: conv.conversion_id,
+                    from_unit_id: conv.from_unit_id,
+                    from_unit_name: conv.from_unit_name,
+                    from_unit_name_en: conv.from_unit_name_en || '',
+                    conversion_factor: conv.conversion_factor,
+                    barcode: barcodeObj?.barcode || '',
+                };
             });
+
+            // Find UOM conversion corresponding to base UOM of the product with robust fallbacks
+            const baseUomId = itemDetail?.base_uom_id || itemDetail?.uom_id || product.base_uom_id || product.uom_id;
+            const defaultConv = 
+                conversions.find(c => Number(c.from_unit_id) === Number(baseUomId)) ||
+                conversions.find(c => Number(c.conversion_factor) === 1) ||
+                conversions[0];
+            const targetItemUomId = defaultConv ? String(defaultConv.conversion_id) : '';
+            const targetUomName = defaultConv ? defaultConv.from_unit_name : (product.uom_name || '-');
+            const targetPrice = Number(product.standard_cost || 0);
+            const bId = (product as { item_brand_id?: number | string; brand_id?: number | string }).item_brand_id || (product as { brand_id?: number | string }).brand_id || 0;
+
+            if (activeRowIndex !== null) {
+                handleItemChange(activeRowIndex, 'itemId', String(product.item_id || product.id));
+                handleItemChange(activeRowIndex, 'itemCode', product.item_code);
+                handleItemChange(activeRowIndex, 'itemName', product.item_name);
+                handleItemChange(activeRowIndex, 'itemUomId', targetItemUomId);
+                handleItemChange(activeRowIndex, 'uomName', targetUomName);
+                handleItemChange(activeRowIndex, 'unitPrice', targetPrice);
+                handleItemChange(activeRowIndex, 'itemBrandId', bId);
+                handleItemChange(activeRowIndex, 'uomConversions', mappedConversions);
+            } else {
+                append({
+                    itemId: String(product.item_id || product.id),
+                    itemCode: product.item_code,
+                    itemName: product.item_name,
+                    itemUomId: targetItemUomId,
+                    uomName: targetUomName,
+                    unitPrice: targetPrice,
+                    lineDiscount: 0,
+                    lineDiscountAmnt: 0,
+                    unitPriceNet: targetPrice,
+                    remark: '',
+                    itemBrandId: bId,
+                    uomConversions: mappedConversions
+                });
+            }
+        } catch (error) {
+            logger.error('Failed to select product and load UOM conversions:', error);
         }
         setIsProductSearchOpen(false);
     };
@@ -144,6 +158,14 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
         setValue('permitEmpId', String(empId || ''));
         setValue('permitEmpName', `${employee.employee_firstname_th} ${employee.employee_lastname_th}`);
         setIsPermitEmpSearchOpen(false);
+    };
+
+    const handleSelectUom = (item: UOMPickerItem) => {
+        if (activeUomRowIndex !== null) {
+            handleItemChange(activeUomRowIndex, 'itemUomId', String(item.conversion_id));
+            handleItemChange(activeUomRowIndex, 'uomName', item.from_unit_name);
+        }
+        setIsUomPickerOpen(false);
     };
 
     // ==================== RENDERING ====================
@@ -482,36 +504,21 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                                 </td>
                                                 <td className="p-2">
                                                     <div className="flex flex-col gap-1 min-w-[100px]">
-                                                        <select
-                                                            {...register(`items.${index}.uomId`)}
-                                                            value={watch(`items.${index}.uomId`) || ''}
-                                                            onChange={(e) => {
-                                                                const val = e.target.value;
-                                                                const unit = unitsData?.items.find(u => String(u.uom_id) === val);
-                                                                handleItemChange(index, 'uomId', val);
-                                                                handleItemChange(index, 'uomName', unit?.uom_name || '-');
+                                                        {/* UOM Picker Trigger Button */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setActiveUomRowIndex(index);
+                                                                setIsUomPickerOpen(true);
                                                             }}
-                                                            className={`${styles.input} text-xs py-1 h-8 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 transition-all ${errors.items?.[index]?.uomId ? 'border-red-500 ring-2 ring-red-500/20 bg-red-50 dark:bg-red-900/20' : ''}`}
+                                                            disabled={!watch(`items.${index}.itemId`)}
+                                                            className="w-full h-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-blue-600 dark:hover:border-blue-500 rounded-lg px-2.5 text-xs text-left flex items-center justify-between gap-1 transition-all focus:outline-none focus:ring-1 focus:ring-blue-600/30 focus:border-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
-                                                            <option value="" className="text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800">-- เลือกหน่วย --</option>
-                                                            {unitsData?.items.map(unit => (
-                                                                <option 
-                                                                    key={unit.uom_id} 
-                                                                    value={String(unit.uom_id)}
-                                                                    className="text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800"
-                                                                >
-                                                                    {unit.uom_code} - {unit.uom_name}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                        {errors.items?.[index]?.uomId && (
-                                                            <div className="flex items-center gap-1 mt-1 whitespace-nowrap">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
-                                                                <span className="text-[10px] text-red-600 dark:text-red-400 font-bold tracking-tight">
-                                                                    {errors.items[index]?.uomId?.message}
-                                                                </span>
-                                                            </div>
-                                                        )}
+                                                            <span className={watch(`items.${index}.itemUomId`) ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-400'}>
+                                                                {watch(`items.${index}.uomName`) || '-- เลือกหน่วย --'}
+                                                            </span>
+                                                            <ChevronDown size={14} className="flex-shrink-0 text-gray-400" />
+                                                        </button>
                                                     </div>
                                                 </td>
                                                 <td className="p-1 text-center">
@@ -588,6 +595,21 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                 onClose={() => setIsPermitEmpSearchOpen(false)}
                 onSelect={handleSelectPermitEmp}
                 title="ค้นหาผู้อนุมัติ - Find Approver"
+            />
+
+            {/* UOM Picker Sub-Modal */}
+            <UOMPickerModal
+                isOpen={isUomPickerOpen}
+                onClose={() => setIsUomPickerOpen(false)}
+                onSelect={handleSelectUom}
+                items={activeUomRowIndex !== null ? (watch(`items.${activeUomRowIndex}.uomConversions`) || []) as UOMPickerItem[] : []}
+                selectedFromUnitId={activeUomRowIndex !== null ? (() => {
+                    const currentUomId = watch(`items.${activeUomRowIndex}.itemUomId`);
+                    const convs = (watch(`items.${activeUomRowIndex}.uomConversions`) || []) as UOMPickerItem[];
+                    const match = convs.find((c) => String(c.conversion_id) === String(currentUomId));
+                    return match ? Number(match.from_unit_id) : undefined;
+                })() : undefined}
+                title="เลือกหน่วยนับสินค้า - Select Unit of Measure"
             />
         </>
     );

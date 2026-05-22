@@ -31,7 +31,7 @@ export const PriceLevelService = {
   _sanitizePayload: (data: PriceLevelFormData) => {
     return {
       item_id: Number(data.itemId),
-      uom_id: Number(data.uomId),
+      item_uom_id: Number(data.itemUomId),
       item_from_qty: data.itemFromQty !== null && data.itemFromQty !== undefined ? Number(data.itemFromQty) : null,
       item_to_qty: data.itemToQty !== null && data.itemToQty !== undefined ? Number(data.itemToQty) : null,
       item_price1: data.itemPrice1 !== null && data.itemPrice1 !== undefined ? Number(data.itemPrice1) : null,

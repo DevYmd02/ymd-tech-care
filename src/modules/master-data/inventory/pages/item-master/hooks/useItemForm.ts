@@ -62,7 +62,7 @@ export const itemMasterSchema = z.object({
     barcode_default: z.string().optional().default(''),
     barcodes: z.array(z.object({
         barcode_id: z.number().optional(),
-        uom_id: z.coerce.number().min(1, 'กรุณาเลือกหน่วยนับ'),
+        item_uom_id: z.coerce.number().min(1, 'กรุณาเลือกหน่วยนับ'),
         barcode: z.string().min(1, 'กรุณากรอกบาร์โค้ด'),
         is_primary: z.boolean().default(false),
         // is_sales: z.boolean().default(true),
@@ -306,14 +306,17 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
                 is_expiry_control: item.is_expiry_control || false,
                 is_serial_control: item.is_serial_control || false,
                 costing_method: item.costing_method || 'FIFO',
-                barcodes: (item.barcodes || []).map((b) => ({
-                    barcode_id: b.item_barcode_id,
-                    uom_id: b.uom_id || 0,
-                    barcode: b.barcode,
-                    is_primary: b.is_primary ?? false,
-                    // is_purchase: b.is_purchase ?? true,
-                    // is_sales: b.is_sales ?? true
-                })),
+                barcodes: (item.barcodes || []).map((b) => {
+                    const conversion = (item.uom_conversions || []).find(
+                        (c) => c.conversion_id === b.item_uom_id
+                    );
+                    return {
+                        barcode_id: b.item_barcode_id,
+                        item_uom_id: conversion ? conversion.from_unit_id : (b.item_uom_id || b.uom_id || 0),
+                        barcode: b.barcode,
+                        is_primary: b.is_primary ?? false,
+                    };
+                }),
                 uom_conversions: (item.uom_conversions || []).map((c) => ({
                     conversion_id: c.conversion_id,
                     from_uom_id: c.from_unit_id || 0,
@@ -333,19 +336,29 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
             // Prepare payload with nested barcodes
             const payload: ItemMasterFormData = {
                 ...data,
-                barcodes: (data.barcodes || []).map((b) => ({
-                    item_barcode_id: b.barcode_id,
-                    barcode: b.barcode,
-                    item_uom_id: Number(b.uom_id),
-                    is_primary: b.is_primary,
-                }))
+                barcodes: (data.barcodes || []).map((b) => {
+                    const existingConv = (existingItem?.uom_conversions || []).find(
+                        (c) => Number(c.from_unit_id) === Number(b.item_uom_id)
+                    );
+                    const formConv = (data.uom_conversions || []).find(
+                        (c) => Number(c.from_uom_id) === Number(b.item_uom_id)
+                    );
+                    const finalItemUomId = existingConv?.conversion_id || formConv?.conversion_id || Number(b.item_uom_id);
+
+                    return {
+                        item_barcode_id: b.barcode_id,
+                        barcode: b.barcode,
+                        item_uom_id: Number(finalItemUomId),
+                        is_primary: b.is_primary,
+                    };
+                })
             };
 
             // Omit uom_conversions from payload because backend DTO has a whitelist validator 
             // that rejects it ("property uom_conversions should not exist").
             // We will save them individually using UOMConversionService instead.
             if ('uom_conversions' in payload) {
-                delete (payload as any).uom_conversions;
+                delete payload.uom_conversions;
             }
 
             // If updating, handle "deleted" barcodes by ensuring they are NOT in the barcodes array

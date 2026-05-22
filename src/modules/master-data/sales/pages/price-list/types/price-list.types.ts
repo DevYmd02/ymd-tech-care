@@ -45,7 +45,16 @@ export interface PriceListItemLine {
     price_list_item_id: string; // uuid
     price_list_id: string; // uuid
     item_id: string; // uuid
-    uom_id: string | null; // uuid
+    item_uom_id: number | null; // changed from uom_id
+    item_uom?: {
+        item_uom_id: number;
+        from_uom?: {
+            uom_id?: number | string;
+            uom_code?: string;
+            uom_name?: string;
+            uom_name_en?: string;
+        } | null;
+    } | null;
     unit_price: number; // numeric(18,2)
     editflag: string | null; // char(1)
     line_discount: number; // numeric(18,2)
@@ -75,7 +84,7 @@ export interface PriceListMaster extends PriceListHeader {
 export interface PriceListItemFormData {
     priceListItemId?: string;
     itemId: string;
-    uomId: string | null;
+    itemUomId: string | null; // changed from uomId
     unitPrice: number;
     lineDiscount: string | number;
     lineDiscountAmnt: number;
@@ -87,6 +96,12 @@ export interface PriceListItemFormData {
     itemCode?: string;
     itemName?: string;
     uomName?: string;
+    uomConversions?: {
+        conversion_id: number;
+        from_unit_id: number;
+        from_unit_name: string;
+        conversion_factor: number;
+    }[];
 }
 
 export interface PriceListFormData {

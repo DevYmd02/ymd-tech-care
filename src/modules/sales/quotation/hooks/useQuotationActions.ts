@@ -62,7 +62,8 @@ export function useQuotationActions({
                 itemId: line.item_id,
                 qty: Number(line.qty),
                 branchId: Number(branch_id),
-                customerId: Number(customer_id)
+                customerId: Number(customer_id),
+                uomId: Number(line.uom_id)
             });
 
             if (resolvedPrice) {

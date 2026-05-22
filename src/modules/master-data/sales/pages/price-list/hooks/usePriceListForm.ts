@@ -14,7 +14,7 @@ import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import { EmployeeService } from '@master-data/employee/services/employee.service';
 import { ItemMasterService } from '@inventory/services/item-master.service';
-import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 import type { FieldErrors } from 'react-hook-form';
 import { logger } from '@/shared/utils';
@@ -22,7 +22,7 @@ import { logger } from '@/shared/utils';
 const priceListItemSchema = z.object({
     priceListItemId: z.string().optional(),
     itemId: z.string().min(1, 'กรุณาเลือกสินค้า'),
-    uomId: z.string().nullable().refine(val => val !== null && val !== '', 'กรุณาเลือกหน่วยนับ'),
+    itemUomId: z.string().nullable().refine(val => val !== null && val !== '', 'กรุณาเลือกหน่วยนับ'),
     unitPrice: z.coerce.number().min(0, 'ราคาต้องไม่ติดลบ'),
     lineDiscount: z.union([z.coerce.number(), z.string()]),
     lineDiscountAmnt: z.coerce.number(),
@@ -32,6 +32,14 @@ const priceListItemSchema = z.object({
     itemCode: z.string().optional(),
     itemName: z.string().optional(),
     uomName: z.string().optional(),
+    uomConversions: z.array(z.object({
+        conversion_id: z.number(),
+        from_unit_id: z.number(),
+        from_unit_name: z.string(),
+        from_unit_name_en: z.string().optional().nullable(),
+        conversion_factor: z.number(),
+        barcode: z.string().optional().nullable(),
+    })).optional(),
 });
 
 const priceListSchema = z.object({
@@ -60,14 +68,14 @@ const priceListSchema = z.object({
     // Check for duplicate Item + UOM pairs
     const seen = new Set<string>();
     data.items.forEach((item, index) => {
-        if (!item.itemId || !item.uomId) return;
+        if (!item.itemId || !item.itemUomId) return;
         
-        const pairKey = `${item.itemId}-${item.uomId}`;
+        const pairKey = `${item.itemId}-${item.itemUomId}`;
         if (seen.has(pairKey)) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: 'หน่วยนับซ้ำกันกับสินค้า',
-                path: ['items', index, 'uomId'],
+                path: ['items', index, 'itemUomId'],
             });
         }
         seen.add(pairKey);
@@ -169,18 +177,38 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
                     const rawLines = data.priceListItemLines || data.price_list_lines || data.items || [];
                     const hydratedItems = await Promise.all(rawLines.map(async (line) => {
                         const itmId = Number(line.item_id || 0);
-                        const uomId = Number(line.uom_id || 0);
+                        const itemUomId = Number(line.item_uom_id || 0);
                         
-                        // Fetch item and unit details in parallel for each row
-                        const [itemDetail, unitDetail] = await Promise.all([
-                            itmId ? ItemMasterService.getById(itmId) : Promise.resolve(null),
-                            uomId ? UOMService.get(uomId) : Promise.resolve(null)
-                        ]);
+                        // Fetch item details and conversions
+                        const [itemDetail, uomConversionsResponse] = itmId 
+                            ? await Promise.all([
+                                ItemMasterService.getById(itmId),
+                                UOMConversionService.getByItemId(itmId)
+                            ])
+                            : [null, null];
+                        const conversions = uomConversionsResponse?.items || [];
+                        
+                        // Map local conversions list for this row
+                        const mappedConversions = conversions.map(conv => {
+                            const barcodeObj = itemDetail?.barcodes?.find(b => Number(b.item_uom_id) === Number(conv.conversion_id));
+                            return {
+                                conversion_id: conv.conversion_id,
+                                from_unit_id: conv.from_unit_id,
+                                from_unit_name: conv.from_unit_name,
+                                from_unit_name_en: conv.from_unit_name_en || '',
+                                conversion_factor: conv.conversion_factor,
+                                barcode: barcodeObj?.barcode || '',
+                            };
+                        });
+
+                        // Find current conversion in item's list to get name
+                        const currentConv = conversions.find(c => Number(c.conversion_id) === Number(itemUomId));
+                        const resolvedUomName = currentConv?.from_unit_name || line.item_uom?.from_uom?.uom_name || line.uom_name || '-';
 
                         return {
                             priceListItemId: String(line.price_list_item_id || ''),
                             itemId: String(itmId),
-                            uomId: String(uomId),
+                            itemUomId: itemUomId ? String(itemUomId) : '',
                             unitPrice: Number(line.unit_price || 0),
                             lineDiscount: line.line_discount_rate || Number(line.line_discount || 0),
                             lineDiscountAmnt: Number(line.line_discount_amount || line.line_discount_amnt || 0),
@@ -188,7 +216,8 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
                             remark: line.remarks || line.remark || '',
                             itemCode: itemDetail?.item_code || line.item_code || '',
                             itemName: itemDetail?.item_name || line.item_name || '',
-                            uomName: unitDetail?.uom_name || unitDetail?.uom_name || line.uom_name || '-'
+                            uomName: resolvedUomName,
+                            uomConversions: mappedConversions,
                         };
                     }));
 
