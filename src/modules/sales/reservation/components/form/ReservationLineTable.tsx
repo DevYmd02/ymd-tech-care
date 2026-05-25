@@ -331,6 +331,7 @@ export function ReservationLineTable({
                                         >
                                             <span className="truncate">
                                                 {uoms.find(u => String(u.uom_id || u.id) === String(line.uom_id))?.uom_name || 
+                                                 String(line.uom_name || '') || 
                                                  (line.uom_id ? `[ID: ${line.uom_id}]` : '-- หน่วย --')}
                                             </span>
                                             {!isLocked && !!line.item_id && <span className="text-gray-400 dark:text-gray-500 text-[10px] ml-1 shrink-0">▼</span>}

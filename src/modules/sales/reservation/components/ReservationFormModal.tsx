@@ -132,11 +132,11 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                     system_document_code: SYSTEM_DOCUMENT_CODES.SALES_RESERVATION,
                     context: {
                         system_document_code: SYSTEM_DOCUMENT_CODES.SALES_RESERVATION,
-                        item_id: line.item_id,
-                        warehouse_id: line.warehouse_id,
-                        location_id: line.location_id,
-                        uom_id: line.uom_id,
-                        qty: line.qty_reserved,
+                        item_id: Number(line.item_id),
+                        warehouse_id: line.warehouse_id ? Number(line.warehouse_id) : null,
+                        location_id: line.location_id ? Number(line.location_id) : null,
+                        item_uom_id: Number(line.item_uom_id || line.uom_id || 0),
+                        qty: Number(line.qty_reserved),
                     }
                 });
             });
@@ -244,10 +244,37 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                             id="reservation-form" 
                             onSubmit={handleSubmit(onFormSubmit, (errors) => {
                             logger.debug('Validation Errors:', errors);
-                            const errorFields = Object.keys(errors)
-                                .map(key => FIELD_LABELS[key] || key)
-                                .join(', ');
-                            toast(`กรุณาตรวจสอบข้อมูล: ${errorFields}`, 'error');
+                            const msgs: string[] = [];
+                            
+                            // Root level errors
+                            const errorsRecord = errors as Record<string, unknown>;
+                            Object.keys(errors).forEach((key) => {
+                                if (key !== 'lines') {
+                                    const fieldError = errorsRecord[key] as Record<string, unknown>;
+                                    msgs.push(`${FIELD_LABELS[key] || key}: ${fieldError?.message || 'ข้อมูลไม่ถูกต้อง'}`);
+                                }
+                            });
+
+                            // Line level errors
+                            if (errors.lines && Array.isArray(errors.lines)) {
+                                errors.lines.forEach((lineError, idx) => {
+                                    if (lineError) {
+                                        const lineErrorRecord = lineError as Record<string, unknown>;
+                                        Object.keys(lineError).forEach((field) => {
+                                            const fieldLabel = FIELD_LABELS[field] || field;
+                                            const fieldErrorObj = lineErrorRecord[field] as Record<string, unknown>;
+                                            const msg = fieldErrorObj?.message || 'ข้อมูลไม่ถูกต้อง';
+                                            msgs.push(`รายการที่ ${idx + 1} (${fieldLabel}): ${msg}`);
+                                        });
+                                    }
+                                });
+                            }
+
+                            const finalMsg = msgs.length > 0 ? msgs.join('\n') : 'กรุณาตรวจสอบข้อมูลในฟอร์ม';
+                            toast(
+                                <div className="whitespace-pre-line text-sm text-left font-medium">{finalMsg}</div>, 
+                                'error'
+                            );
                         })} 
                         className="max-w-[1400px] mx-auto space-y-6"
                     >

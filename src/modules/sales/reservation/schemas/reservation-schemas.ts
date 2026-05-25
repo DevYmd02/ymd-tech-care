@@ -22,9 +22,9 @@ export const ReservationLineSchema = z.object({
     line_total: z.coerce.number().min(0, 'ยอดรวมรายการต้องไม่ติดลบ').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป').default(0),
     tax_code_id: z.coerce.number().optional().nullable(),
     note: z.string().optional().nullable(),
-    price_source: z.coerce.number().optional().nullable(),
+    price_source: z.preprocess((val) => (typeof val === 'number' && isNaN(val) ? null : val), z.union([z.number(), z.string(), z.null()]).optional()),
     price_source_name: z.string().optional().nullable(),
-    price_level_priority: z.coerce.number().optional().nullable(),
+    price_level_priority: z.preprocess((val) => (typeof val === 'number' && isNaN(val) ? null : val), z.union([z.number(), z.string(), z.null()]).optional()),
     item_uom_id: z.coerce.number().optional().nullable(),
 }).passthrough();
 

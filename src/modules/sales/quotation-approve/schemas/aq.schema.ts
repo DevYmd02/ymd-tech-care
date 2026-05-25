@@ -19,14 +19,15 @@ export const AQLineSchema = z.object({
   // Original SQ values (readonly display)
   qty: z.coerce.number().default(0),
   uom_id: zIdSchema.default(0),
+  item_uom_id: zIdSchema.optional(),
   uom_name: z.string().default(''),
   unit_price: z.coerce.number().default(0),
   discount_expression: z.string().optional().default('0'),
   discount_amount: z.coerce.number().default(0),
   net_amount: z.coerce.number().default(0),
-  price_source: z.coerce.number().optional(),
+  price_source: z.preprocess((val) => (typeof val === 'number' && isNaN(val) ? null : val), z.union([z.number(), z.string(), z.null()]).optional()),
   price_source_name: z.string().optional().default(''),
-  price_level_priority: z.coerce.number().optional(),
+  price_level_priority: z.preprocess((val) => (typeof val === 'number' && isNaN(val) ? null : val), z.union([z.number(), z.string(), z.null()]).optional()),
 
   // Approval interaction
   is_approved: z.boolean().default(false),

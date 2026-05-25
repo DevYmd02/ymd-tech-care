@@ -19,14 +19,15 @@ export const AOLineSchema = z.object({
   // Original SO values (readonly display)
   qty_ordered: z.coerce.number().default(0),
   uom_id: zIdSchema.default(''),
+  item_uom_id: zIdSchema.optional(),
   uom_name: z.string().default(''),
   unit_price: z.coerce.number().default(0),
   discount_expression: z.string().optional().default('0'),
   discount_amount: z.coerce.number().default(0),
   net_amount: z.coerce.number().default(0),
-  price_source: z.coerce.number().optional().nullable(),
+  price_source: z.preprocess((val) => (typeof val === 'number' && isNaN(val) ? null : val), z.union([z.number(), z.string(), z.null()]).optional()),
   price_source_name: z.string().optional().nullable(),
-  price_level_priority: z.coerce.number().optional().nullable(),
+  price_level_priority: z.preprocess((val) => (typeof val === 'number' && isNaN(val) ? null : val), z.union([z.number(), z.string(), z.null()]).optional()),
 
   // Inventory info (Read-only reference)
   warehouse_id: zIdSchema.optional().default(''),
