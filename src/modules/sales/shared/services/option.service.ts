@@ -9,6 +9,7 @@ export interface OptionValidationPayload {
         warehouse_id?: number | string | null;
         location_id?: number | string | null;
         uom_id?: number | string | null;
+        item_uom_id?: number | string | null;
         qty?: number | string;
     };
 }
@@ -28,7 +29,7 @@ export const OptionService = {
         try {
             // Note: Depending on Axios setup, the prefix might already be '/api', 
             // so '/option/validate' will map to 'http://.../api/option/validate'
-            const response = await api.post<OptionValidationResponse | unknown>('/option/validate', payload);
+            const response = await api.post<OptionValidationResponse | unknown>('/option/validate', payload, { skipToast: true });
             
             // Handle successful 200 response that might contain validation details
             if (response && typeof response === 'object') {

@@ -95,7 +95,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         sq_line_id: Number(l.sq_line_id),
         item_id: Number(l.item_id),
         qty: Number(l.qty),
-        uom_id: Number(l.uom_id),
+        uom_id: Number(l.item_uom_id || l.uom_id),
         approved_qty: Number(l.approved_qty || 0),
         unit_price: Number(l.unit_price),
         discount_expression: l.discount_expression || '0',
@@ -103,7 +103,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
       })),
     };
   }, []);
-
+ 
   const buildRejectPayload = useCallback((data: AQFormData, activeId: string | number, user: UserProfile | null, reason: string) => {
     const approval_emp_id = user?.employee_id || user?.id || 1;
     return {
@@ -121,7 +121,7 @@ export const useAQForm = ({ sqId, isOpen, onClose, onSuccess, approvalItem }: Us
         sq_line_id: Number(l.sq_line_id),
         item_id: Number(l.item_id),
         qty: Number(l.qty),
-        uom_id: Number(l.uom_id),
+        uom_id: Number(l.item_uom_id || l.uom_id),
         approved_qty: 0,
         unit_price: Number(l.unit_price),
         remarks: reason,

@@ -254,23 +254,18 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                 try {
                     const data = await ReservationService.getById(id);
                     if (data) {
-                        reset({
-                            ...getReservationDefaultValues(),
-                            ...data,
-                            reservation_id: data.reservation_id || id,
-                        });
-                        // 🎯 Dynamically resolve conversion IDs to global UOM IDs on load
+                        // 🎯 Dynamically resolve conversion IDs to global UOM IDs on load (PRE-HYDRATION)
                         if (data.lines && data.lines.length > 0) {
                             const allItemIds = [...new Set(data.lines.map(l => Number(l.item_id)).filter(id => id > 0))];
                             if (allItemIds.length > 0) {
-                                Promise.all(allItemIds.map(itemId => 
-                                    UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
-                                )).then(convsList => {
+                                try {
+                                    const convsList = await Promise.all(allItemIds.map(itemId => 
+                                        UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                                    ));
                                     const conversionMap = new Map<number, import('@/modules/master-data/types/master-data-types').UOMConversionListItem[]>();
                                     convsList.forEach(c => { if (c) conversionMap.set(c.itemId, c.items); });
 
-                                    const currentLines = getValues('lines') || [];
-                                    const updatedLines = currentLines.map(line => {
+                                    data.lines = data.lines.map(line => {
                                         const itemId = Number(line.item_id);
                                         const convs = conversionMap.get(itemId) || [];
                                         const currentUomVal = Number(line.uom_id);
@@ -284,10 +279,17 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                                         }
                                         return line;
                                     });
-                                    setValue('lines', updatedLines, { shouldDirty: false });
-                                }).catch(() => {});
+                                } catch (err) {
+                                    logger.error('Failed to pre-hydrate UOMs:', err);
+                                }
                             }
                         }
+
+                        reset({
+                            ...getReservationDefaultValues(),
+                            ...data,
+                            reservation_id: data.reservation_id || id,
+                        });
                         // 🕵️ Trigger Smart Recovery for missing sources in Edit mode
                         if (data.customer_id && data.branch_id) {
                             void recoverReservationPriceSources(
@@ -793,14 +795,21 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                 }
             }
 
-            // 3. Populate Header Fields
-            if (detail.customer_id) setValue('customer_id', String(detail.customer_id), { shouldDirty: true });
-            if (detail.branch_id) setValue('branch_id', String(detail.branch_id), { shouldDirty: true });
-            
             // 5. Multicurrency & Currency Sync (Aggressive Discovery)
             const d = detail as unknown as DiscoveryLine;
             const ad = aqDetail as unknown as DiscoveryAQLine;
             const rd = ((detail as unknown) as Record<string, unknown>).rawData as Record<string, unknown> || {}; 
+
+            // 3. Populate Header Fields
+            const resolvedCustomerId = detail.customer_id || aqDetail?.customer_id || rd.customer_id || d.customer_id;
+            if (resolvedCustomerId) {
+                setValue('customer_id', String(resolvedCustomerId), { shouldValidate: true, shouldDirty: true });
+            }
+            
+            const resolvedBranchId = detail.branch_id || aqDetail?.branch_id || rd.branch_id || d.branch_id;
+            if (resolvedBranchId) {
+                setValue('branch_id', String(resolvedBranchId), { shouldValidate: true, shouldDirty: true });
+            } 
 
             // Set SQ/AQ Numbers and IDs
             if (type === 'SQ') {

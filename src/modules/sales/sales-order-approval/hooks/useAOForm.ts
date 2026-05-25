@@ -328,7 +328,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
         so_line_id: Number(l.so_line_id || 0),
         item_id: Number(l.item_id || 0),
         qty: Number(l.qty_ordered || 0),
-        uom_id: Number(l.uom_id || 0),
+        uom_id: Number(l.item_uom_id || l.uom_id || 0),
         approved_qty: Number(l.approved_qty || 0),
         remarks: l.remarks || '',
         unit_price: Number(l.unit_price || 0),
@@ -336,7 +336,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
       })),
     };
   }, []);
-
+ 
   const buildRejectPayload = useCallback((data: AOFormData, activeId: string | number, user: UserProfile | null, reason: string) => {
     return {
       so_id: Number(activeId || 0),
@@ -362,7 +362,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
         so_line_id: Number(l.so_line_id || 0),
         item_id: Number(l.item_id || 0),
         qty: Number(l.qty_ordered || 0),
-        uom_id: Number(l.uom_id || 0),
+        uom_id: Number(l.item_uom_id || l.uom_id || 0),
         approved_qty: 0,
         remarks: reason,
         unit_price: Number(l.unit_price || 0),
