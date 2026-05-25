@@ -95,7 +95,7 @@ export const PriceListService = {
   approve: async (id: string): Promise<{ success: boolean; message?: string }> => {
     try {
       // Use the standard update endpoint to change only the approve_status
-      await api.patch(`/price-list/${id}`, { approve_status: 'APPROVED' });
+      await api.patch(`/price-list/${id}/approve`);
       return { success: true };
     } catch (error) {
       return { success: false, message: (error as Error).message || 'อนุมัติไม่สำเร็จ' };

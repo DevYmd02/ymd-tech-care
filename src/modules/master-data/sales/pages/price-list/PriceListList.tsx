@@ -119,11 +119,11 @@ export default function PriceListList() {
             cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleDateString('th-TH') : '-',
         },
         {
-            accessorKey: 'approve_status',
+            accessorKey: 'status', // changed from approve_status to match API's "status": "APPROVED" field
             header: 'สถานะอนุมัติ',
             size: 110,
-            cell: ({ getValue }) => {
-                const status = getValue() as string || 'WAITING';
+            cell: ({ row }) => {
+                const status = row.original.status || row.original.approve_status || 'WAITING';
                 return (
                     <StatusBadge 
                         status={status === 'APPROVED' ? 'อนุมัติแล้ว' : 'รออนุมัติ'} 
@@ -142,40 +142,43 @@ export default function PriceListList() {
             id: 'actions',
             header: () => <div className="text-center w-full">จัดการ</div>,
             size: 180,
-            cell: ({ row }) => (
-                <div className="flex items-center justify-center gap-2">
-                    {/* ปุ่มอนุมัติ - โชว์เฉพาะตอนรออนุมัติ */}
-                    {row.original.approve_status !== 'APPROVED' && (
+            cell: ({ row }) => {
+                const isApproved = row.original.status === 'APPROVED' || row.original.approve_status === 'APPROVED';
+                return (
+                    <div className="flex items-center justify-center gap-2">
+                        {/* ปุ่มอนุมัติ - โชว์เฉพาะตอนรออนุมัติ */}
+                        {!isApproved && (
+                            <button 
+                                onClick={() => handleApprove(String(row.original.price_list_header_id || row.original.price_list_id || ''))}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800/50"
+                                title="อนุมัติรายการ"
+                            >
+                                <CheckCircle size={16} />
+                                <span className="text-xs font-bold whitespace-nowrap">อนุมัติ</span>
+                            </button>
+                        )}
+                        
                         <button 
-                            onClick={() => handleApprove(String(row.original.price_list_header_id || row.original.price_list_id || ''))}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg transition-colors border border-emerald-200 dark:border-emerald-800/50"
-                            title="อนุมัติรายการ"
+                            onClick={() => {
+                                const actualId = row.original.price_list_header_id || row.original.price_list_id;
+                                logger.debug('📑 Editing Price List Row (ID Found):', actualId);
+                                handleEdit(String(actualId || ''));
+                            }}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                            title="แก้ไข"
                         >
-                            <CheckCircle size={16} />
-                            <span className="text-xs font-bold whitespace-nowrap">อนุมัติ</span>
+                            <Edit2 size={18} />
                         </button>
-                    )}
-                    
-                    <button 
-                        onClick={() => {
-                            const actualId = row.original.price_list_header_id || row.original.price_list_id;
-                            logger.debug('📑 Editing Price List Row (ID Found):', actualId);
-                            handleEdit(String(actualId || ''));
-                        }}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                        title="แก้ไข"
-                    >
-                        <Edit2 size={18} />
-                    </button>
-                    <button 
-                        onClick={() => handleDelete(String(row.original.price_list_header_id || row.original.price_list_id || ''))}
-                        className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                        title="ลบ"
-                    >
-                        <Trash2 size={18} />
-                    </button>
-                </div>
-            ),
+                        <button 
+                            onClick={() => handleDelete(String(row.original.price_list_header_id || row.original.price_list_id || ''))}
+                            className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                            title="ลบ"
+                        >
+                            <Trash2 size={18} />
+                        </button>
+                    </div>
+                );
+            },
         },
     ], [filters.page, filters.limit, handleEdit, handleDelete, handleApprove]);
 
