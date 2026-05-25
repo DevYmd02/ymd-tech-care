@@ -1,11 +1,15 @@
+import { useState, useMemo } from 'react';
 import { Plus, Trash2, ShoppingBag, Search, AlertCircle } from 'lucide-react';
 import { useFormContext, useFieldArray, useWatch } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import type { SalesOrderLineValues, SalesOrderFormValues } from '../schemas/sales-order.schemas';
 import type { UOMListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@inventory/types/inventory-master.types';
 import { formatNumber } from '@/shared/utils';
 import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
 import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/price-level-name.types';
+import { UOMPickerModal, type UOMPickerItem } from '@/shared/components/ui/feedback/UOMPickerModal';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 
 interface SalesOrderLineTableProps {
     onAddLine: () => void;
@@ -37,6 +41,7 @@ interface SalesOrderLineRowProps {
     priceLevelNames?: PriceLevelName[];
     getFieldClass: (index: number, fieldName: keyof SalesOrderLineValues, baseClass: string) => string;
     hasLineFieldError: (index: number, fieldName: keyof SalesOrderLineValues) => boolean;
+    onOpenUomPicker?: (index: number) => void;
 }
 
 // Aesthetic classes matching Reservation but themed Indigo
@@ -63,7 +68,8 @@ const SalesOrderLineRow = ({
     locations,
     priceLevelNames = [],
     getFieldClass,
-    hasLineFieldError
+    hasLineFieldError,
+    onOpenUomPicker
 }: SalesOrderLineRowProps) => {
     const { control } = useFormContext<SalesOrderFormValues>();
     const line = useWatch({
@@ -156,22 +162,19 @@ const SalesOrderLineRow = ({
                 />
             </td>
 
-            {/* UOM */}
             <td className="px-2 py-2">
-                <select
-                    value={line.uom_id || ''}
-                    disabled={isLocked}
-                    onChange={(e) => onLineChange(index, 'uom_id', e.target.value)}
-                    className={`${getFieldClass(index, 'uom_id', compactInputClass)} text-center bg-white dark:bg-gray-800 dark:text-white/80 border-gray-200 dark:border-gray-700`}
-                    style={{ colorScheme: 'dark' }}
+                <button
+                    type="button"
+                    disabled={isLocked || !line.item_id}
+                    onClick={() => onOpenUomPicker?.(index)}
+                    className={`${getFieldClass(index, 'uom_id', compactInputClass)} text-left flex items-center justify-between font-medium disabled:bg-gray-50 dark:disabled:bg-gray-800/50 disabled:opacity-60 disabled:cursor-not-allowed`}
                 >
-                    <option value="">-- หน่วย --</option>
-                    {uoms.map((u: UOMListItem) => (
-                        <option key={String(u.id || u.uom_id)} value={String(u.id || u.uom_id)}>
-                            {u.uom_name || u.uom_name}
-                        </option>
-                    ))}
-                </select>
+                    <span className="truncate">
+                        {uoms.find((u: UOMListItem) => String(u.id || u.uom_id) === String(line.uom_id))?.uom_name || 
+                         (line.uom_id ? `[ID: ${line.uom_id}]` : '-- หน่วย --')}
+                    </span>
+                    {!isLocked && !!line.item_id && <span className="text-gray-450 dark:text-gray-550 text-[10px] ml-1 shrink-0">▼</span>}
+                </button>
             </td>
 
             {/* Lot No */}
@@ -314,6 +317,43 @@ export function SalesOrderLineTable({
     
     const isLocked = readOnly;
 
+    // --- UOM Picker States ---
+    const [activeUomRowIndex, setActiveUomRowIndex] = useState<number | null>(null);
+    const lines = useWatch({ control, name: 'lines' }) || [];
+    const activeLine = activeUomRowIndex !== null ? lines[activeUomRowIndex] : null;
+    const activeItemId = activeLine ? Number(activeLine.item_id || 0) : 0;
+
+    // Fetch conversions for selected item
+    const { data: conversionData, isLoading: isLoadingConversions } = useQuery({
+        queryKey: ['sales-order-uom-conversions', activeItemId],
+        queryFn: () => UOMConversionService.getByItemId(activeItemId),
+        enabled: !!activeItemId && activeItemId > 0,
+        staleTime: 2 * 60 * 1000,
+    });
+
+    // Map UOM conversions to UOMPickerItem[]
+    const uomPickerItems = useMemo((): UOMPickerItem[] => {
+        const conversions = conversionData?.items || [];
+        return conversions.map(conv => {
+            const uomInfo = uoms.find(u => Number(u.uom_id || u.id) === Number(conv.from_unit_id));
+            return {
+                conversion_id: conv.conversion_id,
+                from_unit_id: conv.from_unit_id,
+                from_unit_name: conv.from_unit_name || uomInfo?.uom_name || String(conv.from_unit_id),
+                from_unit_name_en: uomInfo?.uom_name_en || uomInfo?.uom_nameeng || uomInfo?.uom_code || undefined,
+                conversion_factor: conv.conversion_factor,
+                barcode: undefined,
+            };
+        });
+    }, [conversionData, uoms]);
+
+    const handleSelectUom = (item: UOMPickerItem) => {
+        if (activeUomRowIndex !== null) {
+            onLineChange(activeUomRowIndex, 'uom_id', String(item.from_unit_id));
+        }
+        setActiveUomRowIndex(null);
+    };
+
     const getLineError = (index: number) => {
         if (!errors.lines || !Array.isArray(errors.lines)) return undefined;
         return errors.lines[index];
@@ -397,6 +437,7 @@ export function SalesOrderLineTable({
                                     priceLevelNames={priceLevelNames}
                                     getFieldClass={getFieldClass}
                                     hasLineFieldError={hasLineFieldError}
+                                    onOpenUomPicker={(idx) => setActiveUomRowIndex(idx)}
                                 />
                             ))}
                         </tbody>
@@ -417,6 +458,17 @@ export function SalesOrderLineTable({
                     )}
                 </div>
             </div>
+
+            {/* UOM Picker Modal Component */}
+            <UOMPickerModal
+                isOpen={activeUomRowIndex !== null}
+                onClose={() => setActiveUomRowIndex(null)}
+                onSelect={handleSelectUom}
+                items={uomPickerItems}
+                isLoading={isLoadingConversions}
+                selectedFromUnitId={activeLine ? Number(activeLine.uom_id || 0) : undefined}
+                title={`เลือกหน่วยนับสำหรับ ${activeLine?.item_name || 'สินค้า'}`}
+            />
         </section>
     );
 }
