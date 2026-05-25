@@ -12,6 +12,7 @@ import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
 import { validateLineStock, DEFAULT_IC_OPTIONS, type ICOption } from '@sales/shared/utils/stock-validation';
 import { UOMPickerModal, type UOMPickerItem } from '@/shared/components/ui/feedback/UOMPickerModal';
 import { UOMConversionService } from '@inventory/services/uom-conversion.service';
+import { ItemBarcodeService } from '@inventory/services/item-barcode.service';
 
 interface ReservationLineTableProps {
     lines: ReservationLineData[];
@@ -65,21 +66,31 @@ export function ReservationLineTable({
         staleTime: 2 * 60 * 1000,
     });
 
+    // Fetch barcodes for selected item
+    const { data: barcodeData } = useQuery({
+        queryKey: ['reservation-item-barcodes', activeItemId],
+        queryFn: () => ItemBarcodeService.getAll({ item_id: activeItemId }),
+        enabled: !!activeItemId && activeItemId > 0,
+        staleTime: 2 * 60 * 1000,
+    });
+
     // Map UOM conversions to UOMPickerItem[]
     const uomPickerItems = useMemo((): UOMPickerItem[] => {
         const conversions = conversionData?.items || [];
+        const barcodes = barcodeData?.items || [];
         return conversions.map(conv => {
             const uomInfo = uoms.find(u => Number(u.uom_id || u.id) === Number(conv.from_unit_id));
+            const matchedBarcode = barcodes.find(b => Number(b.uom_id) === Number(conv.conversion_id));
             return {
                 conversion_id: conv.conversion_id,
                 from_unit_id: conv.from_unit_id,
                 from_unit_name: conv.from_unit_name || uomInfo?.uom_name || String(conv.from_unit_id),
                 from_unit_name_en: uomInfo?.uom_name_en || uomInfo?.uom_nameeng || uomInfo?.uom_code || undefined,
                 conversion_factor: conv.conversion_factor,
-                barcode: undefined,
+                barcode: matchedBarcode?.barcode || undefined,
             };
         });
-    }, [conversionData, uoms]);
+    }, [conversionData, uoms, barcodeData]);
 
     const handleSelectUom = (item: UOMPickerItem) => {
         if (activeUomRowIndex !== null) {

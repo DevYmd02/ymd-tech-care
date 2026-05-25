@@ -88,7 +88,20 @@ export const useQuotationForm = (isOpen: boolean, onClose: () => void, id?: stri
 
     // 4.5. Dynamic Price Recalculation on Customer or Branch change
     useEffect(() => {
-        if (isDirty && watchedCustomerId && watchedBranchId) {
+        // If the form is clean (initial load/hydration), update ref and skip sync
+        // to avoid overwriting existing transaction prices with engine defaults.
+        if (!isDirty) {
+            lastCustomerAndBranchRef.current = {
+                customerId: watchedCustomerId,
+                branchId: watchedBranchId
+            };
+            return;
+        }
+
+        const customerId = Number(watchedCustomerId || 0);
+        const branchId = Number(watchedBranchId || 0);
+
+        if (customerId > 0 && branchId > 0) {
             const hasChanged = 
                 lastCustomerAndBranchRef.current.customerId !== watchedCustomerId ||
                 lastCustomerAndBranchRef.current.branchId !== watchedBranchId;
