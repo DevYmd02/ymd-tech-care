@@ -99,6 +99,9 @@ export function useQuotationActions({
 
     const handleLineChange = useCallback((index: number, field: keyof QuotationLineValues, value: string | number) => {
         const path = `lines.${index}.${field}` as const;
+        const currentLine = getValues(`lines.${index}`);
+        const prevValue = currentLine ? currentLine[field] : undefined;
+
         setValue(path as never, value as never, { 
             shouldValidate: true, 
             shouldDirty: true,
@@ -120,11 +123,18 @@ export function useQuotationActions({
             setValue(`lines.${index}.line_total`, lineTotal);
 
             if (field === 'unit_price') {
-                setValue(`lines.${index}.price_source`, 3);
-                setValue(`lines.${index}.price_source_name`, 'MANUAL');
+                const hasChanged = Number(prevValue) !== Number(value);
+                if (hasChanged) {
+                    setValue(`lines.${index}.price_source`, 3);
+                    setValue(`lines.${index}.price_source_name`, 'MANUAL');
+                }
             }
         }
-    }, [setValue, getValues]);
+
+        if (field === 'uom_id') {
+            void handleLinePriceSync(index);
+        }
+    }, [setValue, getValues, handleLinePriceSync]);
 
     const handleSelectCustomer = useCallback((customer: CustomerMaster) => {
         setValue('customer_id', Number(customer.customer_id || customer.id || 0), { shouldValidate: true, shouldDirty: true });

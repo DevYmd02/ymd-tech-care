@@ -1,12 +1,12 @@
-/**
- * @file DeliveryLineTable.tsx
- * @description ตารางรายการสินค้าในใบจัดส่ง (delivery_line D12)
- */
-
+import { useState, useMemo } from 'react';
 import { Package, Plus, Trash2, Search } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import type { DeliveryLineValues } from '../schemas/delivery.schemas';
 import type { UOMListItem, WarehouseListItem } from '@master-data/types/master-data-types';
 import type { Location } from '@master-data/inventory/types/inventory-master.types';
+import { UOMPickerModal, type UOMPickerItem } from '@/shared/components/ui/feedback/UOMPickerModal';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
+import { ItemBarcodeService } from '@inventory/services/item-barcode.service';
 
 interface DeliveryLineTableProps {
     lines: DeliveryLineValues[];
@@ -25,9 +25,6 @@ interface DeliveryLineTableProps {
 
 const cellInputClass =
     'w-full h-9 px-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500/50 transition-all disabled:bg-slate-50 dark:disabled:bg-slate-800/40 disabled:text-slate-500 dark:disabled:text-slate-400 disabled:border-slate-100 dark:disabled:border-slate-800/50 disabled:cursor-not-allowed';
-
-const cellSelectClass =
-    'w-full h-9 px-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer disabled:bg-slate-50 dark:disabled:bg-slate-800/40 disabled:text-slate-500 dark:disabled:text-slate-400 disabled:border-slate-100 dark:disabled:border-slate-800/50 disabled:cursor-not-allowed';
 
 const cellNumberClass =
     'w-full h-9 px-3 bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 rounded text-sm text-right text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-blue-500/50 transition-all disabled:bg-slate-50 dark:disabled:bg-slate-800/40 disabled:text-slate-500 dark:disabled:text-slate-400 disabled:border-slate-100 dark:disabled:border-slate-800/50 disabled:cursor-not-allowed';
@@ -51,6 +48,52 @@ export function DeliveryLineTable({
     onSearchLot,
     isViewOnly = false,
 }: DeliveryLineTableProps) {
+    // --- UOM Picker States ---
+    const [activeUomRowIndex, setActiveUomRowIndex] = useState<number | null>(null);
+    const activeLine = activeUomRowIndex !== null ? lines[activeUomRowIndex] : null;
+    const activeItemId = activeLine ? Number(activeLine.item_id || 0) : 0;
+
+    // Fetch conversions for selected item
+    const { data: conversionData, isLoading: isLoadingConversions } = useQuery({
+        queryKey: ['delivery-uom-conversions', activeItemId],
+        queryFn: () => UOMConversionService.getByItemId(activeItemId),
+        enabled: !!activeItemId && activeItemId > 0,
+        staleTime: 2 * 60 * 1000,
+    });
+
+    // Fetch barcodes for selected item
+    const { data: barcodeData } = useQuery({
+        queryKey: ['delivery-item-barcodes', activeItemId],
+        queryFn: () => ItemBarcodeService.getAll({ item_id: activeItemId }),
+        enabled: !!activeItemId && activeItemId > 0,
+        staleTime: 2 * 60 * 1000,
+    });
+
+    // Map UOM conversions to UOMPickerItem[]
+    const uomPickerItems = useMemo((): UOMPickerItem[] => {
+        const conversions = conversionData?.items || [];
+        const barcodes = barcodeData?.items || [];
+        return conversions.map(conv => {
+            const uomInfo = uoms.find(u => Number(u.uom_id || u.id) === Number(conv.from_unit_id));
+            const matchedBarcode = barcodes.find(b => Number(b.uom_id) === Number(conv.conversion_id));
+            return {
+                conversion_id: conv.conversion_id,
+                from_unit_id: conv.from_unit_id,
+                from_unit_name: conv.from_unit_name || uomInfo?.uom_name || String(conv.from_unit_id),
+                from_unit_name_en: uomInfo?.uom_name_en || uomInfo?.uom_nameeng || uomInfo?.uom_code || undefined,
+                conversion_factor: conv.conversion_factor,
+                barcode: matchedBarcode?.barcode || undefined,
+            };
+        });
+    }, [conversionData, uoms, barcodeData]);
+
+    const handleSelectUom = (item: UOMPickerItem) => {
+        if (activeUomRowIndex !== null) {
+            onLineChange(activeUomRowIndex, 'uom_id', String(item.from_unit_id));
+        }
+        setActiveUomRowIndex(null);
+    };
+
     return (
         <div className="space-y-4">
             {/* Section Header */}
@@ -183,30 +226,18 @@ export function DeliveryLineTable({
                                 {/* หน่วย */}
                                 <td className={`${tdClass} border-b border-slate-100 dark:border-slate-800`}>
                                     <div className="relative">
-                                        <select
-                                            value={line.uom_id || ''}
-                                            onChange={(e) => onLineChange(index, 'uom_id', e.target.value)}
-                                            className={cellSelectClass}
-                                            disabled={isViewOnly}
+                                        <button
+                                            type="button"
+                                            disabled={isViewOnly || !line.item_id}
+                                            onClick={() => setActiveUomRowIndex(index)}
+                                            className={`${cellInputClass} text-left flex items-center justify-between font-medium disabled:bg-slate-50 dark:disabled:bg-slate-800/40 disabled:opacity-60 disabled:cursor-not-allowed`}
                                         >
-                                            <option value="" className="bg-white dark:bg-[#1e293b]">-- หน่วย --</option>
-                                            {uoms.map((u) => (
-                                                <option 
-                                                    key={String(u.id || u.uom_id)} 
-                                                    value={String(u.id || u.uom_id)}
-                                                    className="bg-white dark:bg-[#1e293b]"
-                                                >
-                                                    {u.uom_name || u.uom_name || ''}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {!isViewOnly && (
-                                            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
-                                                <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20">
-                                                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                                                </svg>
-                                            </div>
-                                        )}
+                                            <span className="truncate">
+                                                {uoms.find(u => String(u.id || u.uom_id) === String(line.uom_id))?.uom_name || 
+                                                 (line.uom_id ? `[ID: ${line.uom_id}]` : '-- หน่วย --')}
+                                            </span>
+                                            {!isViewOnly && !!line.item_id && <span className="text-slate-400 dark:text-slate-500 text-[10px] ml-1 shrink-0">▼</span>}
+                                        </button>
                                     </div>
                                 </td>
 
@@ -361,6 +392,17 @@ export function DeliveryLineTable({
                     </div>
                 </div>
             )}
+
+            {/* UOM Picker Modal Component */}
+            <UOMPickerModal
+                isOpen={activeUomRowIndex !== null}
+                onClose={() => setActiveUomRowIndex(null)}
+                onSelect={handleSelectUom}
+                items={uomPickerItems}
+                isLoading={isLoadingConversions}
+                selectedFromUnitId={activeLine ? Number(activeLine.uom_id || 0) : undefined}
+                title={`เลือกหน่วยนับสำหรับ ${activeLine?.item_name || 'สินค้า'}`}
+            />
         </div>
     );
 }

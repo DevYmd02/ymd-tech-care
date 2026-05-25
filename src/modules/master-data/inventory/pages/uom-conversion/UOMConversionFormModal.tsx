@@ -8,6 +8,7 @@ import { ItemMasterService } from '@/modules/master-data/inventory/services/item
 import type { ItemListItem } from '@/modules/master-data/types/master-data-types';
 import { DialogFormLayout } from '@ui';
 import { ProductSearchModal } from '@/modules/master-data/inventory/components/ProductSearchModal';
+import { CustomerSearchModal } from '@/modules/master-data/customer/customer-master/components/CustomerSearchModal';
 import { useUOMConversionForm } from '../../hooks/useUOMConversionForm';
 
 interface Props {
@@ -30,6 +31,7 @@ export function UOMConversionFormModal({
     initialItemName
 }: Props) {
     const [isItemSearchOpen, setIsItemSearchOpen] = useState(false);
+    const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
 
     // Fetch details for edit mode
     const { data: existingData, isLoading: isFetchingDetail } = useQuery({
@@ -313,6 +315,47 @@ export function UOMConversionFormModal({
                         </div>
                     </div>
 
+                    {/* Customer Selection */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                        <div>
+                            <label className={styles.label}>ลูกค้า (ถ้าเจาะจง / Specific Customer)</label>
+                            <div className="grid grid-cols-[1fr_45px] gap-2">
+                                <div className={`${styles.input} font-medium flex items-center px-3 truncate bg-gray-50/50 dark:bg-gray-800/30 border-dashed min-h-[42px]`}>
+                                    {formData.customerName ? (
+                                        <span className="font-bold text-blue-600 dark:text-blue-400">
+                                            {formData.customerName}
+                                        </span>
+                                    ) : (
+                                        <span className="text-gray-400 dark:text-gray-500 italic">ทั่วไป (General)</span>
+                                    )}
+                                </div>
+                                <div className="flex gap-1">
+                                    {formData.customer_id && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setValue('customer_id', null);
+                                                setValue('customerName', null);
+                                            }}
+                                            className="h-[42px] px-3 border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg shadow-sm transition-all text-xs font-bold"
+                                            title="ล้างข้อมูลลูกค้า"
+                                        >
+                                            ล้าง
+                                        </button>
+                                    )}
+                                    <button 
+                                        type="button" 
+                                        onClick={() => setIsCustomerSearchOpen(true)}
+                                        className="h-[42px] w-[45px] flex items-center justify-center border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg shadow-sm transition-all"
+                                        title="ค้นหาลูกค้า"
+                                    >
+                                        <Search size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Logic Helper Preview (Always render box to prevent layout jumping) */}
                     <div className="p-3 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100/50 dark:border-blue-800/30 rounded-lg min-h-[84px] flex flex-col justify-center transition-all duration-300">
                         {(formData.fromUnit || formData.toUnit) ? (
@@ -341,6 +384,15 @@ export function UOMConversionFormModal({
             isOpen={isItemSearchOpen}
             onClose={() => setIsItemSearchOpen(false)}
             onSelect={handleProductSelect}
+        />
+
+        <CustomerSearchModal 
+            isOpen={isCustomerSearchOpen}
+            onClose={() => setIsCustomerSearchOpen(false)}
+            onSelect={(customer) => {
+                setValue('customer_id', customer.customer_id || customer.id);
+                setValue('customerName', customer.customer_name_th || customer.customer_name);
+            }}
         />
         </>
     );

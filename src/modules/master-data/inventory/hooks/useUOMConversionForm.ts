@@ -20,6 +20,8 @@ export const uomConversionSchema = z.object({
     conversionFactor: z.number().min(0, 'อัตราแปลงต้องไม่น้อยกว่า 0'),
     isPurchaseUnit: z.boolean(),
     isActive: z.boolean(),
+    customer_id: z.number().nullable().optional(),
+    customerName: z.string().nullable().optional(),
 });
 
 export type UOMConversionFormValues = z.infer<typeof uomConversionSchema>;
@@ -65,6 +67,8 @@ export function useUOMConversionForm(
                 conversionFactor: data.conversion_factor || 0,
                 isPurchaseUnit: data.is_purchase_unit ?? false,
                 isActive: data.is_active ?? true,
+                customer_id: data.customer_id ?? null,
+                customerName: data.customer_name ?? null,
             });
         } else if (preFill) {
             reset({
@@ -103,6 +107,7 @@ export function useUOMConversionForm(
                 factor: data.conversionFactor,
                 is_purchase_uom: data.isPurchaseUnit,
                 is_active: data.isActive,
+                customer_id: data.customer_id ? Number(data.customer_id) : null,
             };
 
             return editId 

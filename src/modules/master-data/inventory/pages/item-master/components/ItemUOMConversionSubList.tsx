@@ -86,6 +86,7 @@ export function ItemUOMConversionSubList({ item_id, item_code, item_name }: Prop
                                 <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">หน่วยต้นทาง (From)</th>
                                 <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">หน่วยปลายทาง (To)</th>
                                 <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">อัตราแปลง (Factor)</th>
+                                <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-48">ลูกค้า (Customer)</th>
                                 <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">ใช้จัดซื้อ</th>
                                 <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">ใช้งาน</th>
                                 <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">จัดการ</th>
@@ -94,7 +95,7 @@ export function ItemUOMConversionSubList({ item_id, item_code, item_name }: Prop
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                             {conversions.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-4 py-10 text-center">
+                                    <td colSpan={8} className="px-4 py-10 text-center">
                                         <div className="flex flex-col items-center gap-2 opacity-40">
                                             <RefreshCcw size={40} className="text-gray-400 animate-spin-slow" />
                                             <p className="text-sm font-medium text-gray-500">ยังไม่มีข้อมูลการแปลงหน่วยสำหรับสินค้านี้</p>
@@ -114,6 +115,17 @@ export function ItemUOMConversionSubList({ item_id, item_code, item_name }: Prop
                                         </td>
                                         <td className="px-4 py-3 text-right text-xs font-mono font-medium text-gray-900 dark:text-white">
                                             {Number(item.conversion_factor || 0).toFixed(6)}
+                                        </td>
+                                        <td className="px-4 py-3 text-xs text-gray-700 dark:text-gray-300">
+                                            {item.customer_name ? (
+                                                <span className="font-semibold text-blue-600 dark:text-blue-400" title={item.customer_name}>
+                                                    {item.customer_name}
+                                                </span>
+                                            ) : (
+                                                <span className="text-gray-400 dark:text-gray-500 italic">
+                                                    ทั่วไป (General)
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-semibold ${
@@ -154,7 +166,7 @@ export function ItemUOMConversionSubList({ item_id, item_code, item_name }: Prop
                         {conversions.length > 0 && (
                             <tfoot>
                                 <tr className="bg-gray-50/30 dark:bg-gray-800/30">
-                                    <td colSpan={7} className="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
+                                    <td colSpan={8} className="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
                                         <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
                                             พบทั้งหมด {conversions.length} รายการ
                                         </div>

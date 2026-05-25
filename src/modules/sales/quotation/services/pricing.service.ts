@@ -32,7 +32,14 @@ export const PricingService = {
      * Hit the Unified Backend Pricing Engine.
      */
     async calculatePrice(params: PricingCalculateParams, signal?: AbortSignal): Promise<PricingCalculateResponse | null> {
+        console.log('[PricingService] calculatePrice called with params:', params);
         if (!params.itemId || !params.customerId || !params.branchId || params.qty <= 0) {
+            console.warn('[PricingService] Missing required fields or invalid quantity:', {
+                itemId: params.itemId,
+                customerId: params.customerId,
+                branchId: params.branchId,
+                qty: params.qty
+            });
             return null;
         }
 
@@ -42,19 +49,37 @@ export const PricingService = {
             if (!finalUomId && params.uomId) {
                 try {
                     const uomConversionsResponse = await UOMConversionService.getByItemId(Number(params.itemId));
+                    console.log('[PricingService] uomConversionsResponse:', uomConversionsResponse);
                     const convs = uomConversionsResponse?.items || [];
-                    const matchedConv = convs.find(c => Number(c.from_unit_id) === Number(params.uomId));
+                    const matchedConv = 
+                        convs.find(c => Number(c.from_unit_id) === Number(params.uomId)) ||
+                        convs.find(c => Number(c.conversion_id) === Number(params.uomId)) ||
+                        convs.find(c => Number(c.to_unit_id) === Number(params.uomId) && Number(c.conversion_factor) === 1);
+
                     if (matchedConv) {
                         finalUomId = matchedConv.conversion_id;
+                        console.log('[PricingService] Resolved global uomId to conversion_id:', {
+                            globalUomId: params.uomId,
+                            conversionId: finalUomId
+                        });
                     } else {
                         // Fallback to global uomId if no conversion found
                         finalUomId = params.uomId;
+                        console.log('[PricingService] No matching conversion found, falling back to global uomId:', finalUomId);
                     }
                 } catch (err) {
                     logger.warn('[PricingService] Error looking up UOM conversions:', err);
                     finalUomId = params.uomId;
                 }
             }
+
+            console.log('[PricingService] Requesting /pricing-engine/calculate with parameters:', {
+                itemId: params.itemId,
+                qty: params.qty,
+                customerId: params.customerId,
+                branchId: params.branchId,
+                uomId: finalUomId,
+            });
 
             const response = await api.get<PricingCalculateResponse>('/pricing-engine/calculate', {
                 params: {
@@ -67,6 +92,7 @@ export const PricingService = {
                 signal
             });
 
+            console.log('[PricingService] Received response from pricing engine:', response);
             logger.info(`[PricingService] ✅ Calculated Price: ${response.unitPrice} from ${response.sourceName} (uomId passed: ${finalUomId})`);
             return response;
 
@@ -75,6 +101,7 @@ export const PricingService = {
             if (err instanceof Error && err.name === 'CanceledError') {
                 return null;
             }
+            console.error('[PricingService] ⚠️ Calculation Failed or Not Found. Error details:', err);
             logger.warn('[PricingService] ⚠️ Calculation Failed or Not Found:', err);
             return null;
         }

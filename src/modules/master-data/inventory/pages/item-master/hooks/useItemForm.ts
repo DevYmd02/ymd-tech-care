@@ -74,6 +74,8 @@ export const itemMasterSchema = z.object({
         conversion_factor: z.coerce.number().min(0.000001, 'อัตราแปลงต้องมากกว่า 0'),
         is_purchase_unit: z.boolean().default(false),
         is_active: z.boolean().default(true),
+        customer_id: z.number().nullable().optional(),
+        customer_name: z.string().nullable().optional(),
     })).default([]),
     is_active: z.boolean().default(true),
     
@@ -244,6 +246,8 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
                     conversion_factor: c.conversion_factor,
                     is_purchase_unit: c.is_purchase_unit,
                     is_active: c.is_active,
+                    customer_id: c.customer_id,
+                    customer_name: c.customer_name,
                     created_at: c.created_at || '',
                     updated_at: ''
                 }));
@@ -324,6 +328,8 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
                     conversion_factor: c.conversion_factor || 1,
                     is_purchase_unit: c.is_purchase_unit ?? false,
                     is_active: c.is_active ?? true,
+                    customer_id: c.customer_id ?? null,
+                    customer_name: c.customer_name ?? null,
                 })),
             });
         }
@@ -404,6 +410,7 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
                     factor: Number(c.conversion_factor),
                     is_purchase_uom: Boolean(c.is_purchase_unit),
                     is_active: Boolean(c.is_active),
+                    customer_id: c.customer_id ? Number(c.customer_id) : null,
                 };
 
                 if (c.conversion_id) {

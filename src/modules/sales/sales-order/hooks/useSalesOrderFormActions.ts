@@ -103,6 +103,7 @@ export function useSalesOrderFormActions({
         const currentLine = getValues(`lines.${index}`);
         if (!currentLine) return;
         
+        const prevValue = currentLine[field];
         const updatedLine = { ...currentLine, [field]: value };
 
         if (field === 'qty_ordered' || field === 'unit_price' || field === 'line_discount_input') {
@@ -123,10 +124,17 @@ export function useSalesOrderFormActions({
         });
 
         if (field === 'unit_price') {
-            setValue(`lines.${index}.price_source` as Path<SalesOrderFormValues>, 3 as never);
-            setValue(`lines.${index}.price_source_name` as Path<SalesOrderFormValues>, 'MANUAL' as never);
+            const hasChanged = Number(prevValue) !== Number(value);
+            if (hasChanged) {
+                setValue(`lines.${index}.price_source` as Path<SalesOrderFormValues>, 3 as never);
+                setValue(`lines.${index}.price_source_name` as Path<SalesOrderFormValues>, 'MANUAL' as never);
+            }
         }
-    }, [getValues, setValue]);
+
+        if (field === 'uom_id') {
+            void handleLinePriceSync(index);
+        }
+    }, [getValues, setValue, handleLinePriceSync]);
 
     const handleSelectCustomer = useCallback((customer: CustomerMaster) => {
         setValue('customer_id', String(customer.customer_id || customer.id || ''), { shouldValidate: true, shouldDirty: true });

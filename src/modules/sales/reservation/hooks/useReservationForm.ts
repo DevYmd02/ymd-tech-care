@@ -431,6 +431,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         if (!currentLines[index]) return;
 
         const newLines = [...currentLines];
+        const prevValue = newLines[index][field];
         const updatedLine = { ...newLines[index], [field]: value };
         
         if (field === 'qty_reserved' || field === 'unit_price' || field === 'line_discount_input') {
@@ -445,8 +446,11 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
 
             // If user manually changed the unit_price, mark as MANUAL (3)
             if (field === 'unit_price') {
-                updatedLine.price_source = 3;
-                updatedLine.price_source_name = 'MANUAL';
+                const hasChanged = Number(prevValue) !== Number(value);
+                if (hasChanged) {
+                    updatedLine.price_source = 3;
+                    updatedLine.price_source_name = 'MANUAL';
+                }
             }
         }
         

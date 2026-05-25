@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { 
@@ -84,6 +84,7 @@ export function useSalesOrderForm({
         handleAddLine,
         handleRemoveLine,
         handleLineChange,
+        handleLinePriceSync,
         handleSelectCustomer,
         handleSelectProduct,
         handleSelectReservation
@@ -96,11 +97,55 @@ export function useSalesOrderForm({
     });
 
     // 4. Shared Watches for UI
+    const watchedCustomerId = useWatch({ control, name: 'customer_id' });
+    const watchedBranchId = useWatch({ control, name: 'branch_id' });
     const isMulticurrency = useWatch({ control, name: 'isMulticurrency' });
     const base_currency_code = useWatch({ control, name: 'base_currency_code' });
     const quote_currency_code = useWatch({ control, name: 'quote_currency_code' });
     const status = useWatch({ control, name: 'status' });
     const discount_amount_watched = useWatch({ control, name: 'discount_amount' });
+
+    const lastCustomerAndBranchRef = useRef<{ 
+        customerId: string | number | undefined; 
+        branchId: string | number | undefined; 
+    }>({
+        customerId: undefined,
+        branchId: undefined
+    });
+
+    // 4.5. Dynamic Price Recalculation on Customer or Branch change
+    useEffect(() => {
+        // If the form is clean (initial load/hydration), update ref and skip sync
+        // to avoid overwriting existing transaction prices with engine defaults.
+        if (!isDirty) {
+            lastCustomerAndBranchRef.current = {
+                customerId: watchedCustomerId,
+                branchId: watchedBranchId
+            };
+            return;
+        }
+
+        const customerId = Number(watchedCustomerId || 0);
+        const branchId = Number(watchedBranchId || 0);
+
+        if (customerId > 0 && branchId > 0) {
+            const hasChanged = 
+                lastCustomerAndBranchRef.current.customerId !== watchedCustomerId ||
+                lastCustomerAndBranchRef.current.branchId !== watchedBranchId;
+                
+            if (hasChanged) {
+                lastCustomerAndBranchRef.current = {
+                    customerId: watchedCustomerId,
+                    branchId: watchedBranchId
+                };
+                
+                const lines = getValues('lines') || [];
+                lines.forEach((_, index) => {
+                    handleLinePriceSync(index);
+                });
+            }
+        }
+    }, [watchedCustomerId, watchedBranchId, isDirty, handleLinePriceSync, getValues]);
 
     // --------------------------------------------------------
     // Currency & Exchange Rate Logic (Keep in main or move to useSalesOrderCurrency)
