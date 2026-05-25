@@ -25,7 +25,8 @@ export const ReservationLineSchema = z.object({
     price_source: z.coerce.number().optional().nullable(),
     price_source_name: z.string().optional().nullable(),
     price_level_priority: z.coerce.number().optional().nullable(),
-});
+    item_uom_id: z.coerce.number().optional().nullable(),
+}).passthrough();
 
 /**
  * Schema สำหรับข้อมูล Header ของใบสั่งจอง

@@ -29,7 +29,8 @@ export const DeliveryLineSchema = z.object({
     lot_no: z.string().optional(),
     serial_no: z.string().optional(),
     remarks: z.string().optional(),
-});
+    item_uom_id: z.coerce.number().optional().nullable(),
+}).passthrough();
 
 // ============================================================
 // delivery_header schema

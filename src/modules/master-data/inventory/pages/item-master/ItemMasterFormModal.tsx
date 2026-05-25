@@ -29,9 +29,13 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
     const {
         formData,
         isSaving,
+        isSavingUOMConversions,
+        isSavingBarcodes,
         errors,
         handleInputChange,
         handleSave,
+        handleSaveUOMConversions,
+        handleSaveBarcodes,
         clearForm,
         register,
         categories,
@@ -113,15 +117,17 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                         onClick={handleCloseAttempt} 
                         className="px-4 py-2 bg-transparent hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors text-sm font-medium"
                     >
-                        ยกเลิก
+                        {activeTab === 'general' ? 'ยกเลิก' : 'ปิดหน้าต่าง'}
                     </button>
-                    <button 
-                        onClick={handleSave} 
-                        disabled={isSaving} 
-                        className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                    >
-                        {isSaving ? 'กำลังบันทึก...' : (editId ? 'บันทึกการแก้ไข' : 'บันทึก')}
-                    </button>
+                    {activeTab === 'general' && (
+                        <button 
+                            onClick={handleSave} 
+                            disabled={isSaving} 
+                            className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                        >
+                            {isSaving ? 'กำลังบันทึก...' : (editId ? 'บันทึกข้อมูลสินค้าหลัก' : 'บันทึก')}
+                        </button>
+                    )}
                 </div>
             }
         >
@@ -178,7 +184,7 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                                     formData={formData} 
                                     onChange={handleInputChange} 
                                     taxCodes={taxCodes}
-                                />
+                                  />
                                 
                                 <ItemStatusControl 
                                     formData={formData} 
@@ -199,6 +205,8 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                             errors={errors}
                             units={uom}
                             editId={editId}
+                            onSave={handleSaveUOMConversions}
+                            isSaving={isSavingUOMConversions}
                         />
                     </div>
                 )}
@@ -214,6 +222,8 @@ export function ItemMasterFormModal({ isOpen, onClose, editId, onSuccess }: Item
                             errors={errors}
                             uomConversions={uomPickerItems}
                             editId={editId}
+                            onSave={handleSaveBarcodes}
+                            isSaving={isSavingBarcodes}
                         />
                     </div>
                 )}

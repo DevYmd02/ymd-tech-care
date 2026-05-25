@@ -71,7 +71,7 @@ export const mapSalesOrderFormToDTO = (data: SalesOrderFormValues, isUpdate = fa
                 so_id: headerSoId || Number(line.so_id || 0),
                 item_id: Number(line.item_id),
                 qty: Number(line.qty_ordered || 0),
-                uom_id: Number(line.uom_id),
+                uom_id: Number((line as Record<string, unknown>).item_uom_id || line.uom_id),
                 unit_price: Number(line.unit_price || 0),
                 net_amount: Number(line.line_total || 0),
                 discount_expression: line.line_discount_input || '0',

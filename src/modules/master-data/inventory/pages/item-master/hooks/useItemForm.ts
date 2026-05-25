@@ -10,6 +10,7 @@ import { ItemMasterService } from '@/modules/master-data/inventory/services/item
 import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
 import { UOMConversionService } from '@/modules/master-data/inventory/services/uom-conversion.service';
+import { ItemBarcodeService } from '@/modules/master-data/inventory/services/item-barcode.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import type { ItemMaster, ItemMasterFormData } from '@/modules/master-data/types/master-data-types';
 import { extractErrorMessage } from '@/core/api/api';
@@ -335,41 +336,19 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
         }
     }, [existingItem, reset]);
 
-    // Redundant barcode query removed as barcodes are now nested in item-detail
-
     const saveMutation = useMutation({
         mutationFn: async (data: ItemFormData) => {
-            // Prepare payload with nested barcodes
+            // Prepare payload for main item update (Tab 1 only)
             const payload: ItemMasterFormData = {
-                ...data,
-                barcodes: (data.barcodes || []).map((b) => {
-                    const existingConv = (existingItem?.uom_conversions || []).find(
-                        (c) => Number(c.from_unit_id) === Number(b.item_uom_id)
-                    );
-                    const formConv = (data.uom_conversions || []).find(
-                        (c) => Number(c.from_uom_id) === Number(b.item_uom_id)
-                    );
-                    const finalItemUomId = existingConv?.conversion_id || formConv?.conversion_id || Number(b.item_uom_id);
-
-                    return {
-                        item_barcode_id: b.barcode_id,
-                        barcode: b.barcode,
-                        item_uom_id: Number(finalItemUomId),
-                        is_primary: b.is_primary,
-                    };
-                })
+                ...data
             };
 
-            // Omit uom_conversions from payload because backend DTO has a whitelist validator 
-            // that rejects it ("property uom_conversions should not exist").
-            // We will save them individually using UOMConversionService instead.
+            // Omit uom_conversions and barcodes to avoid DTO violations and double-saving
             if ('uom_conversions' in payload) {
                 delete payload.uom_conversions;
             }
-
-            // If updating, handle "deleted" barcodes by ensuring they are NOT in the barcodes array
-            if (editId && existingItem?.barcodes) {
-                // If the backend doesn't allow is_active, we simply DON'T include them in the barcodes array.
+            if ('barcodes' in payload) {
+                delete payload.barcodes;
             }
 
             const itemResponse = editId 
@@ -380,6 +359,55 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
             if (!itemId) {
                 throw new Error('บันทึกสินค้าหลักไม่สำเร็จ');
             }
+
+            return !!itemResponse;
+        },
+        onSuccess: async (success) => {
+            if (success) {
+                await confirm({
+                    title: 'บันทึกสำเร็จ!',
+                    description: 'ระบบได้ทำการบันทึกข้อมูลสินค้าเรียบร้อยแล้ว',
+                    confirmText: 'ตกลง',
+                    variant: 'success',
+                    hideCancel: true
+                });
+                
+                queryClient.invalidateQueries({ queryKey: ['items'] });
+                if (editId) {
+                    queryClient.invalidateQueries({ queryKey: ['item-detail', editId] });
+                }
+                if (onSuccess) onSuccess();
+                onClose();
+            } else {
+                throw new Error('บันทึกไม่สำเร็จ');
+            }
+        },
+        onError: async (error: Error) => {
+            logger.error('Save item error:', error);
+            const apiError = extractErrorMessage(error);
+            const errorMsg = apiError.toLowerCase();
+            const isDuplicate = errorMsg.includes('duplicate') || errorMsg.includes('ซ้ำ') || errorMsg.includes('unique constraint');
+            
+            if (isDuplicate) {
+                setError('item_code', { message: 'รหัสสินค้าซ้ำในระบบ' });
+                return;
+            }
+
+            await confirm({
+                title: 'เกิดข้อผิดพลาด',
+                description: apiError || 'เกิดข้อผิดพลาดในการบันทึก',
+                confirmText: 'ตกลง',
+                variant: 'danger',
+                hideCancel: true
+            });
+        }
+    });
+
+    const saveUOMConversionsMutation = useMutation({
+        mutationFn: async () => {
+            if (!editId) return false;
+            const data = getValues();
+            const itemId = editId;
 
             // Sync UOM Conversions individually via UOMConversionService
             const finalConversionIds = new Set(
@@ -397,7 +425,10 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
             // 1. Delete removed ones
             for (const c of deletedConversions) {
                 if (c.conversion_id) {
-                    await UOMConversionService.delete(c.conversion_id);
+                    const success = await UOMConversionService.delete(c.conversion_id);
+                    if (!success) {
+                        throw new Error(`ลบหน่วยนับแปลงไม่สำเร็จ (ID: ${c.conversion_id})`);
+                    }
                 }
             }
 
@@ -427,44 +458,114 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
                     });
                 }
             }
-
-            return !!itemResponse;
+            return true;
         },
         onSuccess: async (success) => {
             if (success) {
                 await confirm({
                     title: 'บันทึกสำเร็จ!',
-                    description: 'ระบบได้ทำการบันทึกข้อมูลเรียบร้อยแล้ว',
+                    description: 'ระบบได้ทำการบันทึกข้อมูลแปลงหน่วยเรียบร้อยแล้ว',
                     confirmText: 'ตกลง',
                     variant: 'success',
                     hideCancel: true
                 });
-                
                 queryClient.invalidateQueries({ queryKey: ['items'] });
                 if (editId) {
                     queryClient.invalidateQueries({ queryKey: ['item-detail', editId] });
-                    queryClient.invalidateQueries({ queryKey: ['item-barcodes', editId] });
                 }
                 if (onSuccess) onSuccess();
-                onClose();
-            } else {
-                throw new Error('บันทึกไม่สำเร็จ');
             }
         },
         onError: async (error: Error) => {
-            logger.error('Save item error:', error);
+            logger.error('Save UOM Conversions error:', error);
             const apiError = extractErrorMessage(error);
-            const errorMsg = apiError.toLowerCase();
-            const isDuplicate = errorMsg.includes('duplicate') || errorMsg.includes('ซ้ำ') || errorMsg.includes('unique constraint');
-            
-            if (isDuplicate) {
-                setError('item_code', { message: 'รหัสสินค้าซ้ำในระบบ' });
-                return;
-            }
-
             await confirm({
                 title: 'เกิดข้อผิดพลาด',
-                description: apiError || 'เกิดข้อผิดพลาดในการบันทึก',
+                description: apiError || 'เกิดข้อผิดพลาดในการบันทึกข้อมูลแปลงหน่วย',
+                confirmText: 'ตกลง',
+                variant: 'danger',
+                hideCancel: true
+            });
+        }
+    });
+
+    const saveBarcodesMutation = useMutation({
+        mutationFn: async () => {
+            if (!editId) return false;
+            const data = getValues();
+            const itemId = editId;
+
+            // Sync Barcodes individually via ItemBarcodeService
+            const finalBarcodeIds = new Set(
+                (data.barcodes || [])
+                    .map(b => b.barcode_id)
+                    .filter(Boolean)
+            );
+
+            // Find deleted barcodes
+            const originalBarcodes = existingItem?.barcodes || [];
+            const deletedBarcodes = originalBarcodes.filter(
+                b => b.item_barcode_id && !finalBarcodeIds.has(b.item_barcode_id)
+            );
+
+            // 1. Delete removed ones
+            for (const b of deletedBarcodes) {
+                if (b.item_barcode_id) {
+                    const success = await ItemBarcodeService.delete(b.item_barcode_id);
+                    if (!success) {
+                        throw new Error(`ลบรายการบาร์โค้ดไม่สำเร็จ (ID: ${b.item_barcode_id})`);
+                    }
+                }
+            }
+
+            // 2. Create/Update active ones
+            for (const b of data.barcodes || []) {
+                const barcodePayload = {
+                    item_id: itemId,
+                    item_uom_id: Number(b.item_uom_id),
+                    barcode: String(b.barcode),
+                    is_primary: Boolean(b.is_primary),
+                    is_active: true
+                };
+
+                if (b.barcode_id) {
+                    // Update existing
+                    const success = await ItemBarcodeService.update(b.barcode_id, barcodePayload);
+                    if (!success) {
+                        throw new Error(`บันทึกรหัสบาร์โค้ด ${b.barcode} ไม่สำเร็จ`);
+                    }
+                } else {
+                    // Create new
+                    const success = await ItemBarcodeService.create(barcodePayload);
+                    if (!success) {
+                        throw new Error(`เพิ่มรหัสบาร์โค้ด ${b.barcode} ไม่สำเร็จ`);
+                    }
+                }
+            }
+            return true;
+        },
+        onSuccess: async (success) => {
+            if (success) {
+                await confirm({
+                    title: 'บันทึกสำเร็จ!',
+                    description: 'ระบบได้ทำการบันทึกข้อมูลบาร์โค้ดเรียบร้อยแล้ว',
+                    confirmText: 'ตกลง',
+                    variant: 'success',
+                    hideCancel: true
+                });
+                queryClient.invalidateQueries({ queryKey: ['items'] });
+                if (editId) {
+                    queryClient.invalidateQueries({ queryKey: ['item-detail', editId] });
+                }
+                if (onSuccess) onSuccess();
+            }
+        },
+        onError: async (error: Error) => {
+            logger.error('Save Barcodes error:', error);
+            const apiError = extractErrorMessage(error);
+            await confirm({
+                title: 'เกิดข้อผิดพลาด',
+                description: apiError || 'เกิดข้อผิดพลาดในการบันทึกข้อมูลบาร์โค้ด',
                 confirmText: 'ตกลง',
                 variant: 'danger',
                 hideCancel: true
@@ -490,6 +591,14 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
         saveMutation.mutate(data);
     });
 
+    const handleSaveUOMConversions = () => {
+        saveUOMConversionsMutation.mutate();
+    };
+
+    const handleSaveBarcodes = () => {
+        saveBarcodesMutation.mutate();
+    };
+
     const clearForm = useCallback(() => {
         reset(initialFormData);
     }, [reset]);
@@ -497,9 +606,13 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
     return {
         formData,
         isSaving: saveMutation.isPending || isLoading,
+        isSavingUOMConversions: saveUOMConversionsMutation.isPending,
+        isSavingBarcodes: saveBarcodesMutation.isPending,
         errors,
         handleInputChange,
         handleSave,
+        handleSaveUOMConversions,
+        handleSaveBarcodes,
         clearForm,
         register,
         units,

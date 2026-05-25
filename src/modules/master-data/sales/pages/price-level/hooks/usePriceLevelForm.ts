@@ -13,7 +13,7 @@ import toast from 'react-hot-toast';
 
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import type { ApiPriceLevel } from '../types/price-level.types';
-import { logger } from '@/shared/utils';
+import { logger, handleError } from '@/shared/utils';
 
 const nullableNumber = z.preprocess((val) => {
   if (val === '' || val === undefined || val === null) return null;
@@ -25,7 +25,11 @@ const priceLevelSchema = z.object({
   itemId: z.union([z.string(), z.number()]).refine(val => val !== '', 'กรุณาเลือกสินค้า'),
   itemUomId: z.union([z.string(), z.number()]).refine(val => val !== '', 'กรุณาเลือกหน่วยนับ'),
   uomId: z.union([z.string(), z.number()]).optional(),
-  itemFromQty: nullableNumber,
+  itemFromQty: z.preprocess((val) => {
+    if (val === '' || val === undefined || val === null) return undefined;
+    const num = Number(val);
+    return isNaN(num) ? undefined : num;
+  }, z.number({ message: 'กรุณากรอกจำนวนเริ่มต้น' }).min(1, 'จำนวนเริ่มต้นต้องมากกว่า 0')),
   itemToQty: nullableNumber,
   itemPrice1: nullableNumber,
   itemPrice2: nullableNumber,
@@ -42,6 +46,12 @@ const priceLevelSchema = z.object({
   itemNameEn: z.string().optional(),
   itemCode: z.string().optional(),
   uomName: z.string().optional(),
+}).refine((data) => {
+  if (data.itemFromQty === undefined || data.itemToQty === null) return true;
+  return Number(data.itemToQty) >= Number(data.itemFromQty);
+}, {
+  message: 'ถึงจำนวนต้องไม่น้อยกว่าจำนวนเริ่มต้น',
+  path: ['itemToQty'],
 });
 
 const initialValues: PriceLevelFormData = {
@@ -177,8 +187,7 @@ export function usePriceLevelForm(editId: string | number | null, onSuccess?: ()
         toast.error(result.message || 'บันทึกไม่สำเร็จ');
       }
     } catch (error: unknown) {
-      logger.error('Submit error:', error);
-      toast.error('เกิดข้อผิดพลาดในการบันทึก');
+      handleError(error, 'บันทึกกำหนดราคาสินค้า');
     }
   };
 

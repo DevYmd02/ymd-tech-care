@@ -333,9 +333,20 @@ export const DeliveryService = {
                     item_name: itemName,
                     qty_ordered: qtyOrdered,
                     remaining_qty: remainingQty,
-                    qty_shipped: Number(l['qty_shipped'] || l['qty'] || l['quantity'] || 0),
-                    uom_id: normalizeId(l['uom_id'] || uom['uom_id'] || uom['id']),
-                    uom_name: String(l['uom_name'] || uom['uom_name'] || uom['name'] || ''),
+                    uom_id: (() => {
+                        const itemUomObj = (l['item_uom'] || l['uom'] || {}) as Record<string, unknown>;
+                        const fromUomObj = (itemUomObj['from_uom'] || itemUomObj['fromUom'] || {}) as Record<string, unknown>;
+                        return normalizeId(fromUomObj['uom_id'] || fromUomObj['id'] || l['uom_id'] || uom['uom_id'] || uom['id']);
+                    })(),
+                    item_uom_id: (() => {
+                        const itemUomObj = (l['item_uom'] || l['uom'] || {}) as Record<string, unknown>;
+                        return Number(itemUomObj['item_uom_id'] || itemUomObj['id'] || l['uom_id'] || uom['uom_id'] || uom['id'] || 0);
+                    })(),
+                    uom_name: String(l['uom_name'] || (() => {
+                        const itemUomObj = (l['item_uom'] || l['uom'] || {}) as Record<string, unknown>;
+                        const fromUomObj = (itemUomObj['from_uom'] || itemUomObj['fromUom'] || {}) as Record<string, unknown>;
+                        return fromUomObj['uom_name'] || itemUomObj['uom_name'] || '';
+                    })() || uom['uom_name'] || uom['name'] || ''),
                     warehouse_id: normalizeId(l['warehouse_id'] || warehouseLine['warehouse_id'] || warehouseLine['id']),
                     location_id: l['location_id'] ? normalizeId(l['location_id']) : undefined,
                     lot_id: normalizeId(lotIdVal ? (
@@ -657,7 +668,7 @@ export const DeliveryService = {
                 const l: Record<string, unknown> = {
                     item_id: mapId(line['item_id']),
                     qty_shipped: Number(line['qty_shipped'] || 0),
-                    uom_id: mapId(line['uom_id']),
+                    uom_id: mapId(line['item_uom_id'] || line['uom_id']),
                     remarks: line['remarks'] || '',
                 };
 

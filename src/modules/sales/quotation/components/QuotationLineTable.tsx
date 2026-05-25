@@ -296,7 +296,10 @@ export function QuotationLineTable({
 
     const handleSelectUom = (item: UOMPickerItem) => {
         if (activeUomRowIndex !== null) {
+            // uom_id = global UOM ID (for UI display/name resolution)
             onLineChange(activeUomRowIndex, 'uom_id', Number(item.from_unit_id));
+            // item_uom_id = conversion PK (for backend foreign key to item_uom table)
+            onLineChange(activeUomRowIndex, 'item_uom_id' as keyof QuotationLineValues, Number(item.conversion_id));
         }
         setActiveUomRowIndex(null);
     };

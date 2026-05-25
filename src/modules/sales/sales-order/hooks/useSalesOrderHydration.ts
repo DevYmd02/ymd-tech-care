@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import type { UseFormReset, UseFormSetValue } from 'react-hook-form';
 import type { SalesOrderFormValues, SalesOrderLineValues } from '../schemas/sales-order.schemas';
 import { getSalesOrderDefaultValues } from '../schemas/sales-order.schemas';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import { logger } from '@/shared/utils';
 
 interface UseSalesOrderHydrationProps {
@@ -108,6 +109,36 @@ export function useSalesOrderHydration({
             } as SalesOrderFormValues);
             isInitializedRef.current = true;
 
+            // 🎯 Dynamically resolve conversion IDs to global UOM IDs on load
+            if (initialData.lines && initialData.lines.length > 0) {
+                const allItemIds = [...new Set(initialData.lines.map(l => Number(l.item_id)).filter(id => id > 0))];
+                if (allItemIds.length > 0) {
+                    Promise.all(allItemIds.map(itemId => 
+                        UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                    )).then(convsList => {
+                        const conversionMap = new Map<number, import('@/modules/master-data/types/master-data-types').UOMConversionListItem[]>();
+                        convsList.forEach(c => { if (c) conversionMap.set(c.itemId, c.items); });
+
+                        const currentLines = (initialData.lines || []) as SalesOrderLineValues[];
+                        const updatedLines = currentLines.map(line => {
+                            const itemId = Number(line.item_id);
+                            const convs = conversionMap.get(itemId) || [];
+                            const currentUomVal = Number(line.uom_id);
+                            const matchedConv = convs.find(c => Number(c.conversion_id) === currentUomVal);
+                            if (matchedConv) {
+                                return {
+                                    ...line,
+                                    uom_id: String(matchedConv.from_unit_id),
+                                    item_uom_id: Number(matchedConv.conversion_id)
+                                };
+                            }
+                            return line;
+                        });
+                        setValue('lines', updatedLines as SalesOrderLineValues[]);
+                    }).catch(() => {});
+                }
+            }
+
             if (initialData.customer_id && initialData.branch_id && initialData.lines) {
                 void recoverSalesOrderPriceSources(
                     initialData.lines as SalesOrderLineValues[],
@@ -116,7 +147,7 @@ export function useSalesOrderHydration({
                 );
             }
         }
-    }, [isOpen, initialData, reset, id, recoverSalesOrderPriceSources]);
+    }, [isOpen, initialData, reset, id, recoverSalesOrderPriceSources, setValue]);
 
     return {
         recoverSalesOrderPriceSources

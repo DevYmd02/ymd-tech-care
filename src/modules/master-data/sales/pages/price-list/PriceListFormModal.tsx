@@ -266,7 +266,7 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
 
                             {/* Row 2 */}
                             <div>
-                                <label className={styles.label}>วันที่เริ่มต้น</label>
+                                <label className={styles.label}>วันที่เริ่มต้น <span className="text-red-500">*</span></label>
                                 <Controller
                                     name="beginDate"
                                     control={control}
@@ -274,14 +274,15 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                         <CustomDateInput
                                             value={field.value || ''}
                                             onChange={field.onChange}
-                                            className={styles.input}
+                                            className={`${styles.input} ${errors.beginDate ? 'border-red-500' : ''}`}
                                         />
                                     )}
                                 />
+                                {errors.beginDate && <p className="text-red-500 text-xs mt-1">{errors.beginDate.message}</p>}
                             </div>
 
                             <div>
-                                <label className={styles.label}>วันที่สิ้นสุด</label>
+                                <label className={styles.label}>วันที่สิ้นสุด <span className="text-red-500">*</span></label>
                                 <Controller
                                     name="endDate"
                                     control={control}
@@ -289,10 +290,11 @@ export default function PriceListFormModal({ isOpen, onClose, editId, onSuccess 
                                         <CustomDateInput
                                             value={field.value || ''}
                                             onChange={field.onChange}
-                                            className={styles.input}
+                                            className={`${styles.input} ${errors.endDate ? 'border-red-500' : ''}`}
                                         />
                                     )}
                                 />
+                                {errors.endDate && <p className="text-red-500 text-xs mt-1">{errors.endDate.message}</p>}
                             </div>
 
                              <div>

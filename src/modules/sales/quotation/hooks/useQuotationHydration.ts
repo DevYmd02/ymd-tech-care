@@ -7,6 +7,7 @@ import { ItemMasterService } from '@inventory/services/item-master.service';
 import { logger } from '@utils';
 import { getQuotationDefaultValues, type QuotationFormValues, type QuotationLineValues } from '@sales/quotation/schemas/quotation-schemas';
 import type { QuotationFormData, QuotationHeader, RawQuotationLine } from '@sales/quotation/types/quotation.types';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 
 interface UseQuotationHydrationProps {
     isOpen: boolean;
@@ -96,29 +97,62 @@ export function useQuotationHydration({
                 .map(l => Number(l.item_id))
         )];
 
-        if (missingIds.length === 0) return;
-        
+        const allItemIds = [...new Set(lines.map(l => Number(l.item_id)).filter(id => id > 0))];
+
         try {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            const results = await Promise.allSettled(missingIds.map(itemId => ItemMasterService.getById(itemId)));
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            // 🚀 Fetch item masters & conversions in parallel
+            const [itemResults, conversionResults] = await Promise.allSettled([
+                missingIds.length > 0 
+                    ? Promise.all(missingIds.map(itemId => ItemMasterService.getById(itemId)))
+                    : Promise.resolve([]),
+                allItemIds.length > 0
+                    ? Promise.all(allItemIds.map(itemId => 
+                        UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                      ))
+                    : Promise.resolve([])
+            ]);
 
             const itemMap = new Map<number, { item_code: string; item_name: string }>();
-            results.forEach((result, i) => {
-                if (result.status === 'fulfilled' && result.value) {
-                    itemMap.set(missingIds[i], {
-                        item_code: result.value.item_code || '',
-                        item_name: result.value.item_name || '',
-                    });
-                }
-            });
+            if (itemResults.status === 'fulfilled') {
+                itemResults.value.forEach((val, i) => {
+                    if (val) {
+                        itemMap.set(missingIds[i], {
+                            item_code: val.item_code || '',
+                            item_name: val.item_name || '',
+                        });
+                    }
+                });
+            }
+
+            const conversionMap = new Map<number, import('@/modules/master-data/types/master-data-types').UOMConversionListItem[]>();
+            if (conversionResults.status === 'fulfilled') {
+                conversionResults.value.forEach((val) => {
+                    if (val) {
+                        conversionMap.set(val.itemId, val.items as import('@/modules/master-data/types/master-data-types').UOMConversionListItem[]);
+                    }
+                });
+            }
 
             const currentLines = getValues('lines');
             currentLines.forEach((line: QuotationLineValues, idx: number) => {
                 const itemId = Number(line.item_id);
-                const found = itemMap.get(itemId);
-                if (found) {
-                    setValue(`lines.${idx}.item_code`, found.item_code, { shouldDirty: false });
-                    setValue(`lines.${idx}.item_name`, found.item_name, { shouldDirty: false });
+                const foundItem = itemMap.get(itemId);
+                if (foundItem) {
+                    setValue(`lines.${idx}.item_code`, foundItem.item_code, { shouldDirty: false });
+                    setValue(`lines.${idx}.item_name`, foundItem.item_name, { shouldDirty: false });
+                }
+
+                // 🎯 Dynamically resolve conversion ID to global UOM ID on load!
+                const convs = conversionMap.get(itemId) || [];
+                const currentUomVal = Number(line.uom_id);
+                
+                // If currentUomVal matches conversion_id, map it!
+                const matchedConv = convs.find(c => Number(c.conversion_id) === currentUomVal);
+                if (matchedConv) {
+                    setValue(`lines.${idx}.uom_id`, Number(matchedConv.from_unit_id), { shouldDirty: false });
+                    setValue(`lines.${idx}.item_uom_id`, Number(matchedConv.conversion_id), { shouldDirty: false });
                 }
             });
         } catch (err) {
@@ -184,6 +218,13 @@ export function useQuotationHydration({
             status_remark: String(apiData.status_remark || ''),
             lines: (apiData.lines || (apiData as QuotationFormData).saleQuotationLines || []).map(line => {
                 const lineRaw = line as RawQuotationLine;
+                const rawLine = line as unknown as Record<string, unknown>;
+                const itemUomObj = (rawLine.item_uom || rawLine.uom || {}) as Record<string, unknown>;
+                const fromUomObj = (itemUomObj.from_uom || itemUomObj.fromUom || {}) as Record<string, unknown>;
+                
+                const globalUomId = Number(fromUomObj.uom_id || fromUomObj.id || lineRaw.uom_id || 0);
+                const itemUomId = Number(itemUomObj.item_uom_id || itemUomObj.id || lineRaw.uom_id || 0);
+
                 return {
                     sq_line_id: String(lineRaw.sq_line_id || ''),
                     sq_id: String(lineRaw.sq_id || ''),
@@ -191,7 +232,8 @@ export function useQuotationHydration({
                     item_code: lineRaw.item_code || lineRaw.product_code || lineRaw.code || '',
                     item_name: lineRaw.item_name || lineRaw.product_name || lineRaw.name || '',
                     qty: Number(lineRaw.qty || 0),
-                    uom_id: Number(lineRaw.uom_id || 0),
+                    uom_id: globalUomId,
+                    item_uom_id: itemUomId,
                     unit_price: Number(line.unit_price || 0),
                     discount_expression: line.line_discount_input || line.discount_expression || '0',
                     line_discount: Number(line.line_discount || 0),

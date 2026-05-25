@@ -12,6 +12,7 @@ import {
     calculateNetTotal, 
     calculateLineTotal 
 } from '@sales/shared/utils/sales-calculations';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import { 
     validateLineStock, 
     DEFAULT_IC_OPTIONS,
@@ -258,6 +259,35 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                             ...data,
                             reservation_id: data.reservation_id || id,
                         });
+                        // 🎯 Dynamically resolve conversion IDs to global UOM IDs on load
+                        if (data.lines && data.lines.length > 0) {
+                            const allItemIds = [...new Set(data.lines.map(l => Number(l.item_id)).filter(id => id > 0))];
+                            if (allItemIds.length > 0) {
+                                Promise.all(allItemIds.map(itemId => 
+                                    UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                                )).then(convsList => {
+                                    const conversionMap = new Map<number, import('@/modules/master-data/types/master-data-types').UOMConversionListItem[]>();
+                                    convsList.forEach(c => { if (c) conversionMap.set(c.itemId, c.items); });
+
+                                    const currentLines = getValues('lines') || [];
+                                    const updatedLines = currentLines.map(line => {
+                                        const itemId = Number(line.item_id);
+                                        const convs = conversionMap.get(itemId) || [];
+                                        const currentUomVal = Number(line.uom_id);
+                                        const matchedConv = convs.find(c => Number(c.conversion_id) === currentUomVal);
+                                        if (matchedConv) {
+                                            return {
+                                                ...line,
+                                                uom_id: String(matchedConv.from_unit_id),
+                                                item_uom_id: Number(matchedConv.conversion_id)
+                                            };
+                                        }
+                                        return line;
+                                    });
+                                    setValue('lines', updatedLines, { shouldDirty: false });
+                                }).catch(() => {});
+                            }
+                        }
                         // 🕵️ Trigger Smart Recovery for missing sources in Edit mode
                         if (data.customer_id && data.branch_id) {
                             void recoverReservationPriceSources(
@@ -282,7 +312,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         };
 
         loadData();
-    }, [isOpen, id, reset, initialData, toast, setValue]);
+    }, [isOpen, id, reset, initialData, toast, setValue, getValues]);
 
 
     // Master Data Hook
@@ -454,6 +484,19 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             }
         }
         
+        if (field === 'uom_id') {
+            if (updatedLine.item_id && value) {
+                UOMConversionService.getByItemId(Number(updatedLine.item_id)).then(response => {
+                    const convs = response?.items || [];
+                    const matchedConv = convs.find(c => Number(c.from_unit_id) === Number(value)) ||
+                                       convs.find(c => Number(c.conversion_factor) === 1);
+                    if (matchedConv) {
+                        setValue(`lines.${index}.item_uom_id` as never, Number(matchedConv.conversion_id) as never, { shouldDirty: true });
+                    }
+                }).catch(() => {});
+            }
+        }
+
         newLines[index] = updatedLine;
         setValue('lines', newLines, { shouldValidate: true });
     }, [setValue, getValues]);
@@ -489,6 +532,19 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             );
 
             line.uom_id = foundUom ? String(foundUom.id || foundUom.uom_id) : String(productUomId || productUomName || 'PCS');
+            
+            // Resolve item_uom_id conversion PK
+            if (line.item_id && line.uom_id) {
+                UOMConversionService.getByItemId(Number(line.item_id)).then(response => {
+                    const convs = response?.items || [];
+                    const matchedConv = convs.find(c => Number(c.from_unit_id) === Number(line.uom_id)) ||
+                                       convs.find(c => Number(c.conversion_factor) === 1);
+                    if (matchedConv) {
+                        setValue(`lines.${activeLineIndex}.item_uom_id` as never, Number(matchedConv.conversion_id) as never, { shouldDirty: true });
+                    }
+                }).catch(() => {});
+            }
+
             line.unit_price = Number(product.standard_cost || 0);
             line.qty_reserved = 1; 
             line.line_discount_input = '';
@@ -971,16 +1027,61 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                 // Filter out lines with 0 qty if it was from AQ (rejected lines have 0 approved_qty)
                 const finalLines = type === 'AQ' ? mappedLines.filter(l => l.qty_reserved > 0) : mappedLines;
                 
-                setValue('lines', finalLines, { shouldDirty: true, shouldValidate: true });
+                // 🎯 Dynamically resolve conversion IDs to global UOM IDs for fetched SQ/AQ lines
+                const allLineItemIds = [...new Set(finalLines.map(l => Number(l.item_id)).filter(id => id > 0))];
+                if (allLineItemIds.length > 0) {
+                    Promise.all(allLineItemIds.map(itemId => 
+                        UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                    )).then(convsList => {
+                        const conversionMap = new Map<number, import('@/modules/master-data/types/master-data-types').UOMConversionListItem[]>();
+                        convsList.forEach(c => { if (c) conversionMap.set(c.itemId, c.items); });
 
-                // 🕵️ Trigger Smart Recovery for missing sources in Reservation view
-                if (detail.customer_id && detail.branch_id) {
-                    void recoverReservationPriceSources(
-                        finalLines, 
-                        Number(detail.customer_id), 
-                        Number(detail.branch_id),
-                        (newLines) => setValue('lines', newLines)
-                    );
+                        const updatedLines = finalLines.map(line => {
+                            const itemId = Number(line.item_id);
+                            const convs = conversionMap.get(itemId) || [];
+                            const currentUomVal = Number(line.uom_id);
+                            const matchedConv = convs.find(c => Number(c.conversion_id) === currentUomVal);
+                            if (matchedConv) {
+                                return {
+                                    ...line,
+                                    uom_id: String(matchedConv.from_unit_id),
+                                    item_uom_id: Number(matchedConv.conversion_id)
+                                };
+                            }
+                            return line;
+                        });
+                        setValue('lines', updatedLines, { shouldDirty: true, shouldValidate: true });
+                        
+                        // 🕵️ Trigger Smart Recovery for missing sources in Reservation view
+                        if (detail.customer_id && detail.branch_id) {
+                            void recoverReservationPriceSources(
+                                updatedLines, 
+                                Number(detail.customer_id), 
+                                Number(detail.branch_id),
+                                (newLines) => setValue('lines', newLines)
+                            );
+                        }
+                    }).catch(() => {
+                        setValue('lines', finalLines, { shouldDirty: true, shouldValidate: true });
+                        if (detail.customer_id && detail.branch_id) {
+                            void recoverReservationPriceSources(
+                                finalLines, 
+                                Number(detail.customer_id), 
+                                Number(detail.branch_id),
+                                (newLines) => setValue('lines', newLines)
+                            );
+                        }
+                    });
+                } else {
+                    setValue('lines', finalLines, { shouldDirty: true, shouldValidate: true });
+                    if (detail.customer_id && detail.branch_id) {
+                        void recoverReservationPriceSources(
+                            finalLines, 
+                            Number(detail.customer_id), 
+                            Number(detail.branch_id),
+                            (newLines) => setValue('lines', newLines)
+                        );
+                    }
                 }
             }
 

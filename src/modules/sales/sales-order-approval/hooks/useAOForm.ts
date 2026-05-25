@@ -79,35 +79,45 @@ function normalizeSO(raw: unknown): SOForApproval | null {
     obj.sale_order_lines || obj.saleOrderLines || obj.so_lines || obj.lines || obj.items || []
   ) as Record<string, unknown>[];
 
-  const lines = rawLinesData.map((l) => ({
-    so_line_id: String(l.so_line_id || l.id || l.line_id || ''),
-    item_id: String(l.item_id || ''),
-    item_code: String(l.item_code || ''),
-    item_name: String(l.item_name || ''),
-    uom_id: String(l.uom_id || ''),
-    uom_name: String(l.uom_name || ''),
-    qty_ordered: Number(l.qty_ordered || l.qty || l.quantity || 0),
-    unit_price: Number(l.unit_price || l.price || 0),
-    line_discount: Number(l.line_discount || l.discount_amount || 0),
-    line_discount_input: String(l.line_discount_input || l.discount_expression || '0'),
-    line_total: Number(l.line_total || l.net_amount || l.amount || 0),
-    is_approved: true,
-    approved_qty: Number(l.approved_qty || l.qty_ordered || l.qty || 0),
-    approved_unit_price: Number(l.approved_unit_price || l.unit_price || 0),
-    approved_line_discount: Number(l.approved_line_discount || l.line_discount || 0),
-    approved_net_amount: Number(l.approved_net_amount || l.line_total || 0),
-    warehouse_id: String(l.warehouse_id || ''),
-    warehouse_name: String(l.warehouse_name || ''),
-    location_id: String(l.location_id || ''),
-    location_name: String(l.location_name || ''),
-    lot_id: String(l.lot_id || ''),
-    lot_no: String(l.lot_no || ''),
-    note: String(l.note || l.remarks || ''),
-    remarks: String(l.remarks || l.note || ''),
-    price_source: l.price_source !== undefined && l.price_source !== null ? Number(l.price_source) : undefined,
-    price_source_name: String(l.price_source_name || ''),
-    price_level_priority: l.price_level_priority !== undefined && l.price_level_priority !== null ? Number(l.price_level_priority) : undefined,
-  }));
+  const lines = rawLinesData.map((l) => {
+    const itemUomObj = (l.item_uom || l.uom || {}) as Record<string, unknown>;
+    const fromUomObj = (itemUomObj.from_uom || itemUomObj.fromUom || {}) as Record<string, unknown>;
+    
+    const globalUomId = String(fromUomObj.uom_id || fromUomObj.id || l.uom_id || '');
+    const itemUomId = String(itemUomObj.item_uom_id || itemUomObj.id || l.uom_id || '');
+    const uomName = String(fromUomObj.uom_name || fromUomObj.name || itemUomObj.uom_name || l.uom_name || '');
+
+    return {
+      so_line_id: String(l.so_line_id || l.id || l.line_id || ''),
+      item_id: String(l.item_id || ''),
+      item_code: String(l.item_code || ''),
+      item_name: String(l.item_name || ''),
+      uom_id: globalUomId || itemUomId,
+      item_uom_id: itemUomId,
+      uom_name: uomName,
+      qty_ordered: Number(l.qty_ordered || l.qty || l.quantity || 0),
+      unit_price: Number(l.unit_price || l.price || 0),
+      line_discount: Number(l.line_discount || l.discount_amount || 0),
+      line_discount_input: String(l.line_discount_input || l.discount_expression || '0'),
+      line_total: Number(l.line_total || l.net_amount || l.amount || 0),
+      is_approved: true,
+      approved_qty: Number(l.approved_qty || l.qty_ordered || l.qty || 0),
+      approved_unit_price: Number(l.approved_unit_price || l.unit_price || 0),
+      approved_line_discount: Number(l.approved_line_discount || l.line_discount || 0),
+      approved_net_amount: Number(l.approved_net_amount || l.line_total || 0),
+      warehouse_id: String(l.warehouse_id || ''),
+      warehouse_name: String(l.warehouse_name || ''),
+      location_id: String(l.location_id || ''),
+      location_name: String(l.location_name || ''),
+      lot_id: String(l.lot_id || ''),
+      lot_no: String(l.lot_no || ''),
+      note: String(l.note || l.remarks || ''),
+      remarks: String(l.remarks || l.note || ''),
+      price_source: l.price_source !== undefined && l.price_source !== null ? Number(l.price_source) : undefined,
+      price_source_name: String(l.price_source_name || ''),
+      price_level_priority: l.price_level_priority !== undefined && l.price_level_priority !== null ? Number(l.price_level_priority) : undefined,
+    };
+  });
 
   const subTotal = lines.reduce((sum, l) => sum + l.line_total, 0);
 

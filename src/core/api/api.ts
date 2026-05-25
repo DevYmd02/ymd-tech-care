@@ -214,7 +214,7 @@ api.interceptors.response.use(
         } else if (status === 429) {
           toast.error('คุณทำรายการบ่อยเกินไป กรุณารอสักครู่');
         } else if (status === 'UNKNOWN') {
-          toast.error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ต');
+          toast.error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ กรุณาตรวจสอบอินเทอร์เน็ต', { id: 'network-error' });
         } else {
           const errorMessage = extractErrorMessage(error);
           toast.error(errorMessage);

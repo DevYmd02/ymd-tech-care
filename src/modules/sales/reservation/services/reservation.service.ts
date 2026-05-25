@@ -523,8 +523,20 @@ export const ReservationService = {
                             item_id: itemId,
                             item_code: itemCode,
                             item_name: itemName,
-                            qty_reserved: Number(l.qty || l.qty_reserved || 0),
-                            uom_id: String(l.uom_id || ''),
+                            uom_id: (() => {
+                                const itemUomObj = (l.item_uom || l.uom || {}) as Record<string, unknown>;
+                                const fromUomObj = (itemUomObj.from_uom || itemUomObj.fromUom || {}) as Record<string, unknown>;
+                                return String(fromUomObj.uom_id || fromUomObj.id || l.uom_id || '');
+                            })(),
+                            item_uom_id: (() => {
+                                const itemUomObj = (l.item_uom || l.uom || {}) as Record<string, unknown>;
+                                return Number(itemUomObj.item_uom_id || itemUomObj.id || l.uom_id || 0);
+                            })(),
+                            uom_name: String(l.uom_name || (() => {
+                                const itemUomObj = (l.item_uom || l.uom || {}) as Record<string, unknown>;
+                                const fromUomObj = (itemUomObj.from_uom || itemUomObj.fromUom || {}) as Record<string, unknown>;
+                                return fromUomObj.uom_name || itemUomObj.uom_name || '';
+                            })() || ''),
                             warehouse_id: String(l.warehouse_id || ''),
                             location_id: String(l.location_id || ''),
                             lot_no: lotNo,
@@ -611,7 +623,7 @@ export const ReservationService = {
                 lot_id: safeNumberOrNull(line.lot_id),
                 note: line.note || '',
                 qty: safeNumber(line.qty_reserved),
-                uom_id: safeNumberOrNull(line.uom_id),
+                uom_id: safeNumberOrNull(line.item_uom_id || line.uom_id),
                 unit_price: safeNumber(line.unit_price),
                 discount_expression: line.line_discount_input || '0',
                 discount_rate: 0, 

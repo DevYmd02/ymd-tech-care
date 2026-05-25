@@ -220,15 +220,16 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
                             </div>
 
                             <div>
-                                <label className={styles.label}>จำนวนเริ่มต้น</label>
+                                <label className={styles.label}>จำนวนเริ่มต้น <span className="text-red-500">*</span></label>
                                 <input
                                     {...register('itemFromQty', { valueAsNumber: true })}
                                     type="number"
-                                    className={styles.input}
+                                    className={`${styles.input} ${errors.itemFromQty ? 'border-red-500 focus:ring-red-200' : ''}`}
                                     placeholder="0"
                                     onFocus={(e) => e.target.select()}
                                     onWheel={(e) => e.currentTarget.blur()}
                                 />
+                                {errors.itemFromQty && <p className="text-red-500 text-xs mt-1">{errors.itemFromQty.message}</p>}
                             </div>
                         </div>
 
@@ -272,11 +273,12 @@ export default function PriceLevelFormModal({ isOpen, onClose, editId, onSuccess
                                 <input
                                     {...register('itemToQty', { valueAsNumber: true })}
                                     type="number"
-                                    className={styles.input}
+                                    className={`${styles.input} ${errors.itemToQty ? 'border-red-500 focus:ring-red-200' : ''}`}
                                     placeholder="0"
                                     onFocus={(e) => e.target.select()}
                                     onWheel={(e) => e.currentTarget.blur()}
                                 />
+                                {errors.itemToQty && <p className="text-red-500 text-xs mt-1">{errors.itemToQty.message}</p>}
                             </div>
                         </div>
                     </div>

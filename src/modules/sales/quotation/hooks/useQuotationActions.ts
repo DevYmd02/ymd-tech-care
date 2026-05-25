@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { UseFormSetValue, UseFormGetValues } from 'react-hook-form';
 import { PricingService } from '@sales/quotation/services/pricing.service';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import { 
     calculateDiscountAmount, 
     calculateLineTotal 
@@ -181,6 +182,19 @@ export function useQuotationActions({
             }
                 
             line.uom_id = resolvedUomId ? Number(resolvedUomId) : 0;
+
+            // 🎯 Phase 3: Resolve item_uom_id (conversion_id) for backend FK
+            if (line.item_id && line.uom_id) {
+                UOMConversionService.getByItemId(Number(line.item_id)).then(response => {
+                    const convs = response?.items || [];
+                    const matchedConv = 
+                        convs.find(c => Number(c.from_unit_id) === Number(line.uom_id)) ||
+                        convs.find(c => Number(c.conversion_factor) === 1); // fallback to base unit
+                    if (matchedConv) {
+                        setValue(`lines.${index}.item_uom_id` as never, Number(matchedConv.conversion_id) as never, { shouldDirty: true });
+                    }
+                }).catch(() => { /* silently continue — UOM picker can fix later */ });
+            }
 
             line.unit_price = Number(product.standard_cost || product.price || 0);
             line.qty = 1;
