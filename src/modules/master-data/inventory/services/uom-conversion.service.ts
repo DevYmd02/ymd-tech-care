@@ -12,6 +12,8 @@ interface RawUOMConversion {
   factor: string | number;
   is_purchase_uom: boolean;
   is_active: boolean;
+  customer_id?: number | null;
+  customer?: { customer_id: number; customer_name?: string; customer_name_th?: string; name_th?: string; customer_code?: string; code?: string } | null;
   item?: { item_code: string; item_name: string } | null;
   from_uom?: { uom_name?: string; uom_code?: string; uom_nameeng?: string; uom_name_en?: string } | null;
   to_uom?: { uom_name?: string; uom_code?: string; uom_nameeng?: string; uom_name_en?: string } | null;
@@ -58,6 +60,8 @@ export const UOMConversionService = {
           conversion_factor: Number(item.factor || 0),
           is_purchase_unit: !!item.is_purchase_uom,
           is_active: !!item.is_active,
+          customer_id: item.customer_id || item.customer?.customer_id || null,
+          customer_name: item.customer?.customer_name_th || item.customer?.name_th || item.customer?.customer_name || null,
           created_at: item.created_at || ''
       }));
 
@@ -98,6 +102,8 @@ export const UOMConversionService = {
             conversion_factor: Number(item.factor || 0),
             is_purchase_unit: !!item.is_purchase_uom,
             is_active: !!item.is_active,
+            customer_id: item.customer_id || item.customer?.customer_id || null,
+            customer_name: item.customer?.customer_name_th || item.customer?.name_th || item.customer?.customer_name || null,
             created_at: item.created_at || ''
         };
     } catch (error) {
@@ -137,6 +143,8 @@ export const UOMConversionService = {
           conversion_factor: Number(item.factor || 0),
           is_purchase_unit: !!item.is_purchase_uom,
           is_active: !!item.is_active,
+          customer_id: item.customer_id || item.customer?.customer_id || null,
+          customer_name: item.customer?.customer_name_th || item.customer?.name_th || item.customer?.customer_name || null,
           created_at: item.created_at || ''
       }));
       return { items, total: items.length, page: 1, limit: items.length };

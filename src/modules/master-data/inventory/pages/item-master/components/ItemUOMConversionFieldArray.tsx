@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useFieldArray, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue, type UseFormGetValues } from 'react-hook-form';
-import { Plus, Trash2, RefreshCcw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, RefreshCcw, CheckCircle2, AlertCircle, Search } from 'lucide-react';
 import type { ItemFormData } from '../hooks/useItemForm';
 import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
+import { CustomerSearchModal } from '@/modules/master-data/customer/customer-master/components/CustomerSearchModal';
 
 interface Props {
     control: Control<ItemFormData>;
@@ -16,10 +18,14 @@ interface Props {
 export const ItemUOMConversionFieldArray: React.FC<Props> = ({
     control,
     register,
+    setValue,
     getValues,
     errors,
     units = [],
 }) => {
+    const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
+    const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
+
     const { fields, append, remove } = useFieldArray({
         control,
         name: 'uom_conversions',
@@ -40,6 +46,8 @@ export const ItemUOMConversionFieldArray: React.FC<Props> = ({
             conversion_factor: 1,
             is_purchase_unit: false,
             is_active: true,
+            customer_id: null,
+            customer_name: null,
         });
     };
 
@@ -73,6 +81,7 @@ export const ItemUOMConversionFieldArray: React.FC<Props> = ({
                             <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/4">หน่วยต้นทาง (From)</th>
                             <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/4">หน่วยปลายทาง (To)</th>
                             <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">อัตราแปลง (Factor)</th>
+                            <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-56">ลูกค้า (Customer)</th>
                             <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">ซื้อ (Purchase)</th>
                             <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">สถานะ (Active)</th>
                             <th className="px-4 py-2.5 text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">ลบ</th>
@@ -81,7 +90,7 @@ export const ItemUOMConversionFieldArray: React.FC<Props> = ({
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                         {fields.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="px-4 py-10 text-center">
+                                <td colSpan={7} className="px-4 py-10 text-center">
                                     <div className="flex flex-col items-center gap-2 opacity-40">
                                         <RefreshCcw size={40} className="text-gray-400" />
                                         <p className="text-sm font-medium text-gray-500">ยังไม่มีการตั้งค่าการแปลงหน่วย</p>
@@ -171,6 +180,47 @@ export const ItemUOMConversionFieldArray: React.FC<Props> = ({
                                             </div>
                                         </td>
 
+                                        {/* Customer */}
+                                        <td className="px-4 py-3">
+                                            <div className="relative flex items-center gap-1.5 w-full">
+                                                <div className="flex-1 flex items-center justify-between border border-gray-300 dark:border-gray-600 rounded-lg h-9 px-3 bg-white dark:bg-gray-800 text-sm overflow-hidden min-w-[140px] max-w-[200px] shadow-sm group-hover:border-blue-400/50">
+                                                    {watchedConversions[index]?.customer_id ? (
+                                                        <span className="text-gray-900 dark:text-white truncate font-semibold flex-1 mr-1" title={watchedConversions[index]?.customer_name || 'มีข้อมูลลูกค้า'}>
+                                                            {watchedConversions[index]?.customer_name || 'เลือกแล้ว'}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-gray-400 dark:text-gray-500 italic flex-1">
+                                                            ทั่วไป (General)
+                                                        </span>
+                                                    )}
+                                                    {watchedConversions[index]?.customer_id && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setValue(`uom_conversions.${index}.customer_id`, null, { shouldDirty: true, shouldValidate: true });
+                                                                setValue(`uom_conversions.${index}.customer_name`, null, { shouldDirty: true, shouldValidate: true });
+                                                            }}
+                                                            className="text-xs text-red-500 hover:text-red-700 transition-colors font-bold px-1"
+                                                            title="ล้างข้อมูลลูกค้า"
+                                                        >
+                                                            ล้าง
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setActiveRowIndex(index);
+                                                        setIsCustomerSearchOpen(true);
+                                                    }}
+                                                    className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 hover:bg-blue-50 dark:bg-gray-700 dark:hover:bg-blue-900/20 text-blue-600 transition-all flex items-center justify-center shrink-0 h-9 w-9 shadow-sm"
+                                                    title="ค้นหาและเลือกลูกค้า"
+                                                >
+                                                    <Search size={14} />
+                                                </button>
+                                            </div>
+                                        </td>
+
                                         {/* Purchase Unit Checkbox */}
                                         <td className="px-4 py-3 text-center">
                                             <label className="relative inline-flex items-center cursor-pointer justify-center">
@@ -214,7 +264,7 @@ export const ItemUOMConversionFieldArray: React.FC<Props> = ({
                     {fields.length > 0 && (
                         <tfoot>
                             <tr className="bg-gray-50/30 dark:bg-gray-800/30">
-                                <td colSpan={6} className="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
+                                <td colSpan={7} className="px-4 py-2 border-t border-gray-100 dark:border-gray-700">
                                     <div className="flex items-center gap-2 text-[10px] text-gray-400 font-medium">
                                         <CheckCircle2 size={10} className="text-blue-500" />
                                         พบทั้งหมด {fields.length} รายการ
@@ -225,6 +275,17 @@ export const ItemUOMConversionFieldArray: React.FC<Props> = ({
                     )}
                 </table>
             </div>
+
+            <CustomerSearchModal 
+                isOpen={isCustomerSearchOpen}
+                onClose={() => setIsCustomerSearchOpen(false)}
+                onSelect={(customer) => {
+                    if (activeRowIndex !== null) {
+                        setValue(`uom_conversions.${activeRowIndex}.customer_id`, customer.customer_id || customer.id, { shouldDirty: true, shouldValidate: true });
+                        setValue(`uom_conversions.${activeRowIndex}.customer_name`, customer.customer_name_th || customer.customer_name, { shouldDirty: true, shouldValidate: true });
+                    }
+                }}
+            />
         </div>
     );
 };

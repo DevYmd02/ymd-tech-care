@@ -15,6 +15,8 @@ export interface ItemUOMConversion {
     conversion_factor: number;
     is_purchase_unit: boolean;
     is_active: boolean;
+    customer_id?: number | null;
+    customer_name?: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -30,6 +32,8 @@ export interface UOMConversionFormData {
     conversionFactor: number;
     isPurchaseUnit: boolean;
     isActive: boolean;
+    customer_id?: number | null;
+    customerName?: string | null;
 }
 
 export interface UOMConversionListItem {
@@ -47,6 +51,8 @@ export interface UOMConversionListItem {
     conversion_factor: number;
     is_purchase_unit: boolean;
     is_active: boolean;
+    customer_id?: number | null;
+    customer_name?: string | null;
     created_at: string;
 }
 
@@ -61,6 +67,8 @@ export const initialUOMConversionFormData: UOMConversionFormData = {
     conversionFactor: 0,
     isPurchaseUnit: false,
     isActive: true,
+    customer_id: null,
+    customerName: null,
 };
 
 export interface UOMConversionCreateRequest {
@@ -71,6 +79,7 @@ export interface UOMConversionCreateRequest {
     factor: number;
     is_purchase_uom: boolean;
     is_active: boolean;
+    customer_id?: number | null;
 }
 
 export interface UOMConversionUpdateRequest extends Partial<UOMConversionCreateRequest> {
