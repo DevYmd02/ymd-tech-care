@@ -106,7 +106,13 @@ export function normalizeSQ(raw: unknown): SQForApproval | null {
   const lines: SQLineForApproval[] = rawLines.map((l: unknown) => {
     const line = l as Record<string, unknown>;
     const item = (line.item as Record<string, unknown>) || (line.item_master as Record<string, unknown>) || {};
-    const uom = (line.uom as Record<string, unknown>) || (line.unit as Record<string, unknown>) || {};
+    
+    const itemUomObj = (line.item_uom || line.uom || {}) as Record<string, unknown>;
+    const fromUomObj = (itemUomObj.from_uom || itemUomObj.fromUom || {}) as Record<string, unknown>;
+    
+    const globalUomId = Number(fromUomObj.uom_id || fromUomObj.id || line.uom_id || 0);
+    const itemUomId = Number(itemUomObj.item_uom_id || itemUomObj.id || line.uom_id || 0);
+    const uomName = String(fromUomObj.uom_name || fromUomObj.name || itemUomObj.uom_name || line.uom_name || '');
     
     return {
       sq_line_id: Number(line.sq_line_id || line.id || 0),
@@ -114,8 +120,9 @@ export function normalizeSQ(raw: unknown): SQForApproval | null {
       item_code: String(line.item_code || item.item_code || line.code || ''),
       item_name: String(line.item_name || item.item_name || item.item_name_th || line.description || line.name || ''),
       qty: Number(line.qty || line.quantity || 0),
-      uom_id: Number(line.uom_id || uom.uom_id || uom.id || 0),
-      uom_name: String(line.uom_name || uom.uom_name || uom.uom_name || uom.name || ''),
+      uom_id: globalUomId || itemUomId,
+      item_uom_id: itemUomId,
+      uom_name: uomName,
       unit_price: Number(line.unit_price || line.price || 0),
       discount_expression: String(line.discount_expression || line.line_discount_input || '0'),
       discount_amount: Number(line.line_discount || line.discount_amount || 0),
@@ -279,6 +286,7 @@ export function mapAQFormDataLines(
       item_name: sqLine.item_name || '',
       qty: originalQty,
       uom_id: Number(sqLine.uom_id),
+      item_uom_id: Number(sqLine.item_uom_id || 0),
       uom_name: sqLine.uom_name || '',
       unit_price: Number(sqLine.unit_price),
       discount_expression: String(sqLine.discount_expression || '0'),

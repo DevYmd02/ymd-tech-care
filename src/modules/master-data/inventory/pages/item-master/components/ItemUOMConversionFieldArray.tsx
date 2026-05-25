@@ -13,6 +13,8 @@ interface Props {
     errors: FieldErrors<ItemFormData>;
     units: UOMListItem[];
     editId?: number | null;
+    onSave?: () => void;
+    isSaving?: boolean;
 }
 
 export const ItemUOMConversionFieldArray: React.FC<Props> = ({
@@ -22,6 +24,9 @@ export const ItemUOMConversionFieldArray: React.FC<Props> = ({
     getValues,
     errors,
     units = [],
+    editId,
+    onSave,
+    isSaving = false,
 }) => {
     const [activeRowIndex, setActiveRowIndex] = useState<number | null>(null);
     const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
@@ -64,13 +69,25 @@ export const ItemUOMConversionFieldArray: React.FC<Props> = ({
                         <p className="text-[10px] text-gray-500 dark:text-gray-400">กำหนดอัตราส่วนการแปลงหน่วยนับเทียบกับหน่วยหลัก</p>
                     </div>
                 </div>
-                <button
-                    type="button"
-                    onClick={handleAddRow}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                    <Plus size={14} /> เพิ่มการแปลงหน่วย
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={handleAddRow}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                        <Plus size={14} /> เพิ่มการแปลงหน่วย
+                    </button>
+                    {editId && (
+                        <button
+                            type="button"
+                            onClick={onSave}
+                            disabled={isSaving}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <CheckCircle2 size={14} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกอัตราแปลงหน่วย'}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* List Body */}

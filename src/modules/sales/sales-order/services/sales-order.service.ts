@@ -257,8 +257,20 @@ export const SalesOrderService = {
                         item_id: itemId,
                         item_code: itemCode,
                         item_name: itemName,
-                        uom_id: normalizeId(l['uom_id'] || ((l['item'] || {}) as Record<string, unknown>)['uom_id']),
-                        uom_name: String(l['uom_name'] || ((l['uom'] || {}) as Record<string, unknown>)['uom_name'] || ''),
+                        uom_id: (() => {
+                            const itemUomObj = (l['item_uom'] || l['uom'] || {}) as Record<string, unknown>;
+                            const fromUomObj = (itemUomObj['from_uom'] || itemUomObj['fromUom'] || {}) as Record<string, unknown>;
+                            return normalizeId(fromUomObj['uom_id'] || fromUomObj['id'] || l['uom_id'] || ((l['item'] || {}) as Record<string, unknown>)['uom_id']);
+                        })(),
+                        item_uom_id: (() => {
+                            const itemUomObj = (l['item_uom'] || l['uom'] || {}) as Record<string, unknown>;
+                            return Number(itemUomObj['item_uom_id'] || itemUomObj['id'] || l['uom_id'] || 0);
+                        })(),
+                        uom_name: String(l['uom_name'] || (() => {
+                            const itemUomObj = (l['item_uom'] || l['uom'] || {}) as Record<string, unknown>;
+                            const fromUomObj = (itemUomObj['from_uom'] || itemUomObj['fromUom'] || {}) as Record<string, unknown>;
+                            return fromUomObj['uom_name'] || itemUomObj['uom_name'] || '';
+                        })() || ((l['item'] || {}) as Record<string, unknown>)['uom_name'] || ''),
                         warehouse_id: normalizeId(l['warehouse_id']),
                         location_id: normalizeId(l['location_id']),
                         qty_ordered: Number(l['qty'] || l['qty_ordered'] || l['quantity'] || 0),

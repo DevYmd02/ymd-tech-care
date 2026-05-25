@@ -13,6 +13,8 @@ interface Props {
     /** UOM Conversion items ของ item นี้ — ใช้ใน picker แทน standard units */
     uomConversions: UOMPickerItem[];
     editId?: number | null;
+    onSave?: () => void;
+    isSaving?: boolean;
 }
 
 export const ItemBarcodeFieldArray: React.FC<Props> = ({
@@ -22,6 +24,9 @@ export const ItemBarcodeFieldArray: React.FC<Props> = ({
     getValues,
     errors,
     uomConversions = [],
+    editId,
+    onSave,
+    isSaving = false,
 }) => {
     const { fields, append, remove } = useFieldArray({
         control,
@@ -70,13 +75,25 @@ export const ItemBarcodeFieldArray: React.FC<Props> = ({
                         <p className="text-[10px] text-gray-500 dark:text-gray-400">ผูกบาร์โค้ดเข้ากับหน่วยนับสินค้า</p>
                     </div>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => append({ item_uom_id: 0, barcode: '', is_primary: false })}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                    <Plus size={14} /> เพิ่มรายการบาร์โค้ด
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => append({ item_uom_id: 0, barcode: '', is_primary: false })}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                        <Plus size={14} /> เพิ่มรายการบาร์โค้ด
+                    </button>
+                    {editId && (
+                        <button
+                            type="button"
+                            onClick={onSave}
+                            disabled={isSaving}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <CheckCircle2 size={14} /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกบาร์โค้ดทั้งหมด'}
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* List Body */}

@@ -5,11 +5,12 @@
  */
 
 import { useEffect, useCallback, useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Save } from 'lucide-react';
-import { logger } from '@/shared/utils';
+import toast from 'react-hot-toast';
+import { logger, handleError } from '@/shared/utils';
 import { styles } from '@/shared/constants/styles';
 import { DialogFormLayout } from '@ui';
 
@@ -23,14 +24,15 @@ import type {
   SalePeriodMaster
 } from '../types/sale-period.types';
 import type {
-  SaleTargetFormData
+  SaleTargetFormData,
+  SaleTargetMaster
 } from '../types/sale-target.types';
 import type { EmployeeMaster } from '@/modules/master-data/company/types/employee.types';
 
 const employeeTargetSchema = z.object({
     emp_id: z.number().min(1, 'กรุณาเลือกพนักงาน'),
     period_id: z.number().min(1, 'กรุณาเลือกงวดเป้าหมาย'),
-    period_target: z.number().min(0, 'กรุณากรอกยอดเป้าหมาย'),
+    period_target: z.number().min(0.01, 'ยอดเป้าหมายต้องมากกว่า 0 บาท'),
     list_no: z.number(),
 });
 
@@ -46,6 +48,7 @@ interface Props {
 export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Props) {
     const [periods, setPeriods] = useState<SalePeriodMaster[]>([]);
     const [employees, setEmployees] = useState<EmployeeMaster[]>([]);
+    const [existingTargets, setExistingTargets] = useState<SaleTargetMaster[]>([]);
     
     const {
         register,
@@ -61,6 +64,11 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
             period_target: 0,
             list_no: 1,
         }
+    });
+
+    const currentPeriodId = useWatch({
+        control,
+        name: 'period_id',
     });
 
     useEffect(() => {
@@ -89,6 +97,11 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                 });
                 
                 setEmployees(salesEmployees);
+
+                // Fetch Existing Targets to check duplicates
+                const targetRes = await SaleTargetService.getList({ limit: 1000 });
+                const allTargets = Array.isArray(targetRes) ? targetRes : (targetRes?.items || (targetRes as unknown as { data: SaleTargetMaster[] })?.data || []);
+                setExistingTargets(allTargets);
 
             } catch (err) {
                 logger.error('Failed to fetch dropdown data:', err);
@@ -127,6 +140,20 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
     }, [isOpen, editId, reset]);
 
     const onSubmit = useCallback(async (values: EmployeeTargetValues) => {
+        // ตรวจสอบข้อมูลเป้าการขายพนักงานซ้ำซ้อนในงวดเดียวกัน
+        const isDuplicate = existingTargets.some(t => {
+            const tId = t.target_id || t.id;
+            if (editId && String(tId) === String(editId)) {
+                return false; // ข้ามการเช็คตัวมันเองตอนกำลังแก้ไข
+            }
+            return Number(t.emp_id) === Number(values.emp_id) && Number(t.period_id) === Number(values.period_id);
+        });
+
+        if (isDuplicate) {
+            toast.error('พนักงานคนนี้ได้รับการตั้งเป้าหมายการขายในงวดนี้ไปแล้ว ไม่สามารถตั้งเป้าหมายซ้ำได้');
+            return;
+        }
+
         try {
             const payload: SaleTargetFormData = {
                 emp_id: values.emp_id,
@@ -143,9 +170,9 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
             if (onSuccess) onSuccess();
             onClose();
         } catch (error) {
-            logger.error('Failed to save sale target:', error);
+            handleError(error, 'บันทึกเป้าหมายการขายพนักงาน');
         }
-    }, [editId, onSuccess, onClose]);
+    }, [editId, onSuccess, onClose, existingTargets]);
 
     const FormFooter = (
         <div className="flex justify-end gap-3 p-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700">
@@ -222,14 +249,19 @@ export function SaleTargetFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                                 className={`${styles.input} ${errors.period_id ? 'border-red-500' : ''}`}
                             >
                                 <option value="0">เลือกงวดเป้าหมาย</option>
-                                {periods.map(p => {
-                                    const pVal = Number(p.period_id || (p as unknown as { id: number }).id);
-                                    return (
-                                        <option key={pVal} value={pVal}>
-                                            {`งวดวันที่ ${new Date(p.begin_date).toLocaleDateString('th-TH')} - ${new Date(p.end_date).toLocaleDateString('th-TH')}`}
-                                        </option>
-                                    );
-                                })}
+                                {periods
+                                    .filter(p => {
+                                        const pVal = Number(p.period_id || (p as unknown as { id: number }).id);
+                                        return !p.close_status || pVal === currentPeriodId;
+                                    })
+                                    .map(p => {
+                                        const pVal = Number(p.period_id || (p as unknown as { id: number }).id);
+                                        return (
+                                            <option key={pVal} value={pVal}>
+                                                {`งวดวันที่ ${new Date(p.begin_date).toLocaleDateString('th-TH')} - ${new Date(p.end_date).toLocaleDateString('th-TH')}`}
+                                            </option>
+                                        );
+                                    })}
                             </select>
                         )}
                     />

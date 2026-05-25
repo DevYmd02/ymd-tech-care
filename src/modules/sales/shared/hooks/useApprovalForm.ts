@@ -20,6 +20,7 @@ import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
 import { ItemMasterService } from '@inventory/services/item-master.service';
 import { UOMService } from '@inventory/services/uom.service';
 import { WarehouseService } from '@inventory/services/warehouse.service';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 
 import { 
   useUnitsContext, 
@@ -345,7 +346,7 @@ export const useApprovalForm = <TForm extends FieldValues, TPayload = unknown>({
             if (match) doc.emp_sale_name = String(match['employee_fullname'] || match['employee_name'] || '');
           }
 
-          // Contextual UOM Enrichment
+          // Contextual UOM & Conversion Enrichment
           if (needsLineEnrichment) {
             const uoms = contextUnits || (await queryClient.fetchQuery({
               queryKey: ['master-uoms'],
@@ -353,8 +354,35 @@ export const useApprovalForm = <TForm extends FieldValues, TPayload = unknown>({
               staleTime: 5 * 60 * 1000
             })) || [];
 
+            const allItemIds = [...new Set(mappedLines.map(l => Number(l.item_id)).filter(id => id > 0))];
+            const conversionMap = new Map<number, import('@/modules/master-data/types/master-data-types').UOMConversionListItem[]>();
+            if (allItemIds.length > 0) {
+              try {
+                const convs = await Promise.all(allItemIds.map(itemId => 
+                  UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                ));
+                convs.forEach(val => {
+                  if (val) conversionMap.set(val.itemId, val.items);
+                });
+              } catch (e) {
+                logger.warn('[useApprovalForm] UOM conversion fetch failed:', e);
+              }
+            }
+
             mappedLines.forEach((l: GenericLineItem) => {
-              if (isPlaceholder(l.uom_name) && l.uom_id) {
+              const itemId = Number(l.item_id);
+              const convs = conversionMap.get(itemId) || [];
+              const currentUomVal = Number(l.uom_id);
+              
+              // Resolve conversion_id to global UOM ID
+              const matchedConv = convs.find(c => Number(c.conversion_id) === currentUomVal);
+              if (matchedConv) {
+                l.uom_id = Number(matchedConv.from_unit_id);
+                l.item_uom_id = Number(matchedConv.conversion_id);
+                
+                const match = uoms.find((u: Record<string, unknown>) => String(u['uom_id'] || u['id'] || '') === String(l.uom_id));
+                if (match) l.uom_name = String(match['uom_name'] || '');
+              } else if (isPlaceholder(l.uom_name) && l.uom_id) {
                 const match = uoms.find((u: Record<string, unknown>) => String(u['uom_id'] || u['id'] || '') === String(l.uom_id));
                 if (match) l.uom_name = String(match['uom_name'] || '');
               }

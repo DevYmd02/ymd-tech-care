@@ -14,6 +14,7 @@ import { DeliveryService } from '../services/delivery.service';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import type { CustomerAddress } from '@customer/customer-master/types/customer-types';
 import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 
 interface UseDeliveryFormProps {
     isOpen: boolean;
@@ -106,6 +107,20 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms, onClose, readOn
         const currentLines = getValues('lines') || [];
         const newLines = [...currentLines];
         const updatedLine = { ...newLines[index], [field]: value };
+        
+        if (field === 'uom_id') {
+            if (updatedLine.item_id && value) {
+                UOMConversionService.getByItemId(Number(updatedLine.item_id)).then(response => {
+                    const convs = response?.items || [];
+                    const matchedConv = convs.find(c => Number(c.from_unit_id) === Number(value)) ||
+                                       convs.find(c => Number(c.conversion_factor) === 1);
+                    if (matchedConv) {
+                        setValue(`lines.${index}.item_uom_id` as never, Number(matchedConv.conversion_id) as never, { shouldDirty: true });
+                    }
+                }).catch(() => {});
+            }
+        }
+
         newLines[index] = updatedLine as DeliveryLineValues;
         setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
     };
@@ -131,6 +146,18 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms, onClose, readOn
                     (u.uom_name && u.uom_name === product.uom_name)
                 );
                 line.uom_id = foundByName ? String(foundByName.id || foundByName.uom_id) : '';
+            }
+
+            // Resolve item_uom_id conversion PK
+            if (line.item_id && line.uom_id) {
+                UOMConversionService.getByItemId(Number(line.item_id)).then(response => {
+                    const convs = response?.items || [];
+                    const matchedConv = convs.find(c => Number(c.from_unit_id) === Number(line.uom_id)) ||
+                                       convs.find(c => Number(c.conversion_factor) === 1);
+                    if (matchedConv) {
+                        setValue(`lines.${index}.item_uom_id` as never, Number(matchedConv.conversion_id) as never, { shouldDirty: true });
+                    }
+                }).catch(() => {});
             }
 
             line.qty_shipped = 1;

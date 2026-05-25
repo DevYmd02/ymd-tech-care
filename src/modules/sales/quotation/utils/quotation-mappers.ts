@@ -68,7 +68,8 @@ export const mapQuotationFormToDTO = (data: QuotationFormValues): Record<string,
             item_id: Number(line.item_id),
             note: line.note || '',
             qty: Number(line.qty) || 0,
-            uom_id: Number(line.uom_id),
+            // Backend expects item_uom PK (conversion_id), not global uom_id
+            uom_id: Number((line as unknown as Record<string, unknown>).item_uom_id || line.uom_id),
             unit_price: Number(line.unit_price) || 0,
             discount_expression: line.discount_expression || '0',
             tax_code_id: line.tax_code_id ? Number(line.tax_code_id) : undefined,
@@ -175,21 +176,33 @@ export const mapDTOToQuotationForm = (response: unknown): QuotationFormData | nu
             (pick('quote_currency_code') && String(pick('quote_currency_code')) !== 'THB')
         ),
         
-        lines: rawLines.map(line => ({
-            sq_line_id: normalizeId(line.sq_line_id || line.id),
-            item_id: normalizeId(line.item_id || line.product_id),
-            item_code: String(line.item_code || line.product_code || line.code || ''),
-            item_name: String(line.item_name || line.product_name || line.name || ''),
-            qty: Number(line.qty || 0),
-            uom_id: normalizeId(line.uom_id),
-            unit_price: Number(line.unit_price || 0),
-            discount_expression: String(line.discount_expression || line.line_discount_input || '0'),
-            line_discount: Number(line.line_discount || 0),
-            line_total: Number(line.line_total || line.net_amount || line.total_amount || 0),
-            price_source: line.price_source !== undefined ? Number(line.price_source) : (line.source !== undefined ? Number(line.source) : undefined),
-            price_source_name: line.price_source_name || line.source_name || '',
-            note: line.note || '',
-        } as QuotationLineData))
+        lines: rawLines.map(line => {
+            const rawLine = line as Record<string, unknown>;
+            const itemUomObj = (rawLine.item_uom || rawLine.uom || {}) as Record<string, unknown>;
+            const fromUomObj = (itemUomObj.from_uom || itemUomObj.fromUom || {}) as Record<string, unknown>;
+            
+            // Resolve global UOM ID (e.g. 1) for frontend display
+            const globalUomId = Number(fromUomObj.uom_id || fromUomObj.id || rawLine.uom_id || 0);
+            // Resolve item_uom_id (conversion PK, e.g. 10) for backend
+            const itemUomId = Number(itemUomObj.item_uom_id || itemUomObj.id || rawLine.uom_id || 0);
+
+            return {
+                sq_line_id: normalizeId(line.sq_line_id || line.id),
+                item_id: normalizeId(line.item_id || line.product_id),
+                item_code: String(line.item_code || line.product_code || line.code || ''),
+                item_name: String(line.item_name || line.product_name || line.name || ''),
+                qty: Number(line.qty || 0),
+                uom_id: globalUomId,
+                item_uom_id: itemUomId,
+                unit_price: Number(line.unit_price || 0),
+                discount_expression: String(line.discount_expression || line.line_discount_input || '0'),
+                line_discount: Number(line.line_discount || 0),
+                line_total: Number(line.line_total || line.net_amount || line.total_amount || 0),
+                price_source: line.price_source !== undefined ? Number(line.price_source) : (line.source !== undefined ? Number(line.source) : undefined),
+                price_source_name: line.price_source_name || line.source_name || '',
+                note: line.note || '',
+            } as QuotationLineData;
+        })
     };
 };
 

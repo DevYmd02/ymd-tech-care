@@ -3,12 +3,12 @@
  * @description Hook for managing Price List form logic
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useForm, useFieldArray, type SubmitHandler, type Path, type PathValue, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { PriceListService } from '@master-data/sales/pages/price-list/services/price-list.service';
-import type { PriceListFormData } from '../types/price-list.types';
+import type { PriceListFormData, PriceListMaster } from '../types/price-list.types';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
@@ -17,7 +17,7 @@ import { ItemMasterService } from '@inventory/services/item-master.service';
 import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
 import type { FieldErrors } from 'react-hook-form';
-import { logger } from '@/shared/utils';
+import { logger, handleError } from '@/shared/utils';
 
 const priceListItemSchema = z.object({
     priceListItemId: z.string().optional(),
@@ -47,8 +47,8 @@ const priceListSchema = z.object({
     priceListName: z.string().min(1, 'กรุณากรอกชื่อ Price List'),
     priceListDate: z.string().min(1, 'กรุณากรอกวันที่'),
     isActive: z.boolean(),
-    beginDate: z.string().nullable(),
-    endDate: z.string().nullable(),
+    beginDate: z.string().min(1, 'กรุณาเลือกวันที่เริ่มต้น'),
+    endDate: z.string().min(1, 'กรุณาเลือกวันที่สิ้นสุด'),
     branchId: z.string().min(1, 'กรุณาเลือกสาขา'),
     customerGroupId: z.string(),
     customerId: z.string(),
@@ -65,6 +65,17 @@ const priceListSchema = z.object({
     saveEmpName: z.string().optional(),
     items: z.array(priceListItemSchema),
 }).superRefine((data, ctx) => {
+    // Check if beginDate is greater than endDate
+    if (data.beginDate && data.endDate) {
+        if (new Date(data.endDate) < new Date(data.beginDate)) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น',
+                path: ['endDate'],
+            });
+        }
+    }
+
     // Check for duplicate Item + UOM pairs
     const seen = new Set<string>();
     data.items.forEach((item, index) => {
@@ -91,8 +102,8 @@ const initialValues: FormValues = {
     priceListName: '',
     priceListDate: new Date().toISOString().split('T')[0],
     isActive: true,
-    beginDate: null,
-    endDate: null,
+    beginDate: '',
+    endDate: '',
     branchId: '',
     customerGroupId: '',
     customerId: '',
@@ -112,6 +123,21 @@ const initialValues: FormValues = {
 
 export function usePriceListForm(editId: string | null, onSuccess?: () => void, isOpen?: boolean) {
     const { user } = useAuth();
+    const [existingPriceLists, setExistingPriceLists] = useState<PriceListMaster[]>([]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        const fetchExistingLists = async () => {
+            try {
+                const res = await PriceListService.getList().catch(() => []);
+                setExistingPriceLists(res);
+            } catch (err) {
+                logger.error('Failed to fetch existing price lists:', err);
+            }
+        };
+        fetchExistingLists();
+    }, [isOpen]);
+
     const {
         register,
         handleSubmit,
@@ -227,8 +253,8 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
                         priceListName: data.price_list_name,
                         priceListDate: data.price_list_date?.split('T')[0],
                         isActive: data.is_active,
-                        beginDate: data.begin_date ? data.begin_date.split('T')[0] : null,
-                        endDate: data.end_date ? data.end_date.split('T')[0] : null,
+                        beginDate: data.begin_date ? data.begin_date.split('T')[0] : '',
+                        endDate: data.end_date ? data.end_date.split('T')[0] : '',
                         branchId: String(data.branch_id || ''),
                         customerId: String(customerIdNum || ''),
                         customerCode: customer?.customer_code || String(customerIdNum || ''),
@@ -262,6 +288,20 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
     }, [editId, reset, user, isOpen]);
 
     const onSubmit: SubmitHandler<FormValues> = async (formData) => {
+        // ตรวจสอบเลขที่ Price List ซ้ำซ้อนก่อนทำการบันทึก
+        const isDuplicate = existingPriceLists.some(p => {
+            const pId = p.price_list_header_id || p.price_list_id || p.id;
+            if (editId && String(pId) === String(editId)) {
+                return false; // ข้ามการตรวจสอบตัวเองขณะอยู่ในโหมดแก้ไข
+            }
+            return p.price_list_no?.trim().toUpperCase() === formData.priceListNo?.trim().toUpperCase();
+        });
+
+        if (isDuplicate) {
+            toast.error('เลขที่ Price List นี้มีอยู่ในระบบแล้ว กรุณาใช้เลขที่อื่น');
+            return;
+        }
+
         try {
             // Convert any percentage/string discounts to absolute amounts for the API
             const submissionData = {
@@ -296,8 +336,7 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
                 toast.error(result.message || 'บันทึกไม่สำเร็จ');
             }
         } catch (error) {
-            logger.error('Submit error:', error);
-            toast.error('เกิดข้อผิดพลาดในการบันทึก');
+            handleError(error, 'บันทึกรายการราคา');
         }
     };
 

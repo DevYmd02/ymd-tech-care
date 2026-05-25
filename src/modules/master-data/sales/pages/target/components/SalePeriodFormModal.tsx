@@ -22,6 +22,12 @@ const targetSchema = z.object({
     end_date: z.string().min(1, 'กรุณาเลือกวันที่สิ้นสุด'),
     period_target: z.number().min(0, 'กรุณากรอกยอดเป้าหมาย'),
     close_status: z.boolean(),
+}).refine((data) => {
+    if (!data.begin_date || !data.end_date) return true;
+    return new Date(data.end_date) >= new Date(data.begin_date);
+}, {
+    message: 'วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่มต้น',
+    path: ['end_date'],
 });
 
 type TargetFormValues = z.infer<typeof targetSchema>;
@@ -155,6 +161,7 @@ export function SalePeriodFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                                 />
                             )}
                         />
+                        {errors.begin_date && <p className="text-red-500 text-xs mt-1">{errors.begin_date.message}</p>}
                     </div>
 
                     <div>
@@ -170,6 +177,7 @@ export function SalePeriodFormModal({ isOpen, onClose, editId, onSuccess }: Prop
                                 />
                             )}
                         />
+                        {errors.end_date && <p className="text-red-500 text-xs mt-1">{errors.end_date.message}</p>}
                     </div>
                 </div>
 

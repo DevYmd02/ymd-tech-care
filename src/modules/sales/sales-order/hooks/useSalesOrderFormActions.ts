@@ -8,6 +8,7 @@ import type { ReservationHeader } from '@sales/reservation/services/reservation.
 import { ReservationService } from '@sales/reservation/services/reservation.service';
 import { OrgEmployeeService } from '@master-data/company/services/employee.service';
 import { calculateDiscountAmount, calculateLineTotal } from '@sales/shared/utils/sales-calculations';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import { logger } from '@/shared/utils';
 
 interface UseSalesOrderFormActionsProps {
@@ -133,6 +134,16 @@ export function useSalesOrderFormActions({
 
         if (field === 'uom_id') {
             void handleLinePriceSync(index);
+            if (currentLine.item_id && value) {
+                UOMConversionService.getByItemId(Number(currentLine.item_id)).then(response => {
+                    const convs = response?.items || [];
+                    const matchedConv = convs.find(c => Number(c.from_unit_id) === Number(value)) ||
+                                       convs.find(c => Number(c.conversion_factor) === 1);
+                    if (matchedConv) {
+                        setValue(`lines.${index}.item_uom_id` as never, Number(matchedConv.conversion_id) as never, { shouldDirty: true });
+                    }
+                }).catch(() => {});
+            }
         }
     }, [getValues, setValue, handleLinePriceSync]);
 
@@ -162,6 +173,18 @@ export function useSalesOrderFormActions({
                     (u.uom_name && u.uom_name === product.uom_name)
                 );
                 line.uom_id = foundByName ? String(foundByName.id || foundByName.uom_id) : '';
+            }
+
+            // Resolve item_uom_id conversion PK
+            if (line.item_id && line.uom_id) {
+                UOMConversionService.getByItemId(Number(line.item_id)).then(response => {
+                    const convs = response?.items || [];
+                    const matchedConv = convs.find(c => Number(c.from_unit_id) === Number(line.uom_id)) ||
+                                       convs.find(c => Number(c.conversion_factor) === 1);
+                    if (matchedConv) {
+                        setValue(`lines.${index}.item_uom_id` as never, Number(matchedConv.conversion_id) as never, { shouldDirty: true });
+                    }
+                }).catch(() => {});
             }
 
             line.unit_price = Number(product.standard_cost || product.price || 0);
@@ -242,6 +265,7 @@ export function useSalesOrderFormActions({
                         warehouse_id: String(line.warehouse_id || ''),
                         location_id: String(line.location_id || ''),
                         uom_id: String(line.uom_id || ''),
+                        item_uom_id: (line as Record<string, unknown>).item_uom_id ? Number((line as Record<string, unknown>).item_uom_id) : undefined,
                         unit_price: Number(line.unit_price || 0),
                         lot_id: line.lot_id ? String(line.lot_id) : undefined,
                         lot_no: line.lot_no || '',
@@ -256,9 +280,44 @@ export function useSalesOrderFormActions({
                         price_level_priority: line.price_level_priority !== undefined ? Number(line.price_level_priority) : undefined,
                     }));
                     
-                    setValue('lines', mappedLines, { shouldValidate: true, shouldDirty: true });
-                    if (rsData.customer_id && rsData.branch_id) {
-                        void recoverPriceSources(mappedLines, Number(rsData.customer_id), Number(rsData.branch_id));
+                    // 🎯 Dynamically resolve conversion IDs to global UOM IDs when pulling from Reservation
+                    const allItemIds = [...new Set(mappedLines.map(l => Number(l.item_id)).filter(id => id > 0))];
+                    if (allItemIds.length > 0) {
+                        Promise.all(allItemIds.map(itemId => 
+                            UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                        )).then(convsList => {
+                            const conversionMap = new Map<number, import('@/modules/master-data/types/master-data-types').UOMConversionListItem[]>();
+                            convsList.forEach(c => { if (c) conversionMap.set(c.itemId, c.items); });
+
+                            const updatedLines = mappedLines.map(line => {
+                                const itemId = Number(line.item_id);
+                                const convs = conversionMap.get(itemId) || [];
+                                const currentUomVal = Number(line.uom_id);
+                                const matchedConv = convs.find(c => Number(c.conversion_id) === currentUomVal);
+                                if (matchedConv) {
+                                    return {
+                                        ...line,
+                                        uom_id: String(matchedConv.from_unit_id),
+                                        item_uom_id: Number(matchedConv.conversion_id)
+                                    };
+                                }
+                                return line;
+                            });
+                            setValue('lines', updatedLines as SalesOrderLineValues[], { shouldValidate: true, shouldDirty: true });
+                            if (rsData.customer_id && rsData.branch_id) {
+                                void recoverPriceSources(updatedLines as SalesOrderLineValues[], Number(rsData.customer_id), Number(rsData.branch_id));
+                            }
+                        }).catch(() => {
+                            setValue('lines', mappedLines, { shouldValidate: true, shouldDirty: true });
+                            if (rsData.customer_id && rsData.branch_id) {
+                                void recoverPriceSources(mappedLines, Number(rsData.customer_id), Number(rsData.branch_id));
+                            }
+                        });
+                    } else {
+                        setValue('lines', mappedLines, { shouldValidate: true, shouldDirty: true });
+                        if (rsData.customer_id && rsData.branch_id) {
+                            void recoverPriceSources(mappedLines, Number(rsData.customer_id), Number(rsData.branch_id));
+                        }
                     }
                 }
             }

@@ -17,11 +17,7 @@ export const QuotationLineSchema = z.object({
     tax_code_id: z.coerce.number().nullable().optional(),
     line_total: z.coerce.number().min(0, 'ยอดรวมต้องไม่ติดลบ (ตรวจสอบส่วนลด)').max(9999999999999, 'ค่าที่ระบุมีจำนวนมากเกินไป').default(0),
     note: z.string().optional(),
-    // Data from Pricing Engine
-    price_source: z.number().optional(),      // 1=Price List, 2=Price Level
-    price_source_name: z.string().optional(), // "PRICE_LIST", "PRICE_LEVEL", "MANUAL"
-    price_level_priority: z.number().optional(), // Level Number (1, 2, 3...)
-});
+}).passthrough(); // Allow extra display-only fields (price_source, price_source_name, price_level_priority) to pass through without validation
 
 /**
  * Schema สำหรับข้อมูล Header ของใบเสนอราคา
@@ -61,7 +57,14 @@ export const QuotationFormSchema = z.object({
 });
 
 export type QuotationFormValues = z.infer<typeof QuotationFormSchema>;
-export type QuotationLineValues = z.infer<typeof QuotationLineSchema>;
+export type QuotationLineValues = z.infer<typeof QuotationLineSchema> & {
+    // Display-only fields from Pricing Engine (not validated, not sent to backend)
+    price_source?: number;          // 1=Price List, 2=Price Level, 3=Manual
+    price_source_name?: string;     // "PRICE_LIST", "PRICE_LEVEL", "MANUAL"
+    price_level_priority?: number;  // Level Number (1, 2, 3...)
+    // UOM mapping: uom_id = global UOM (for UI display), item_uom_id = conversion PK (for backend)
+    item_uom_id?: number;
+};
 
 /**
  * ค่าเริ่มต้นสำหรับฟอร์มใบเสนอราคา
