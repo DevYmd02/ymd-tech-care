@@ -30,6 +30,7 @@ export interface PriceListHeader extends BaseMasterData {
     save_emp_id: string; // uuid
     price_list_flag: '+' | '-' | 'A' | 'S' | null; // char(1) [UPDATED] Added A, S to match actual API response
     approve_status: 'WAITING' | 'APPROVED' | null; // varchar(20)
+    status?: 'WAITING' | 'APPROVED' | null; // varchar(20) [NEW] Added to match API response
     id?: string | number; // [NEW] Backend sometimes uses id instead of price_list_id
     
     // Virtual fields / Joined data (Inferred for UI)
