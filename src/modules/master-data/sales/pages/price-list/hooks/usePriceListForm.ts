@@ -93,6 +93,28 @@ const priceListSchema = z.object({
     });
 });
 
+// Create dynamic schema helper to inject existing items validation
+export const createPriceListSchema = (existingPriceLists: PriceListMaster[], editId: string | null) => {
+    return priceListSchema.superRefine((data, ctx) => {
+        if (data.priceListNo) {
+            const isDuplicate = existingPriceLists.some(p => {
+                const pId = p.price_list_header_id || p.price_list_id || p.id;
+                if (editId && String(pId) === String(editId)) {
+                    return false;
+                }
+                return p.price_list_no?.trim().toUpperCase() === data.priceListNo?.trim().toUpperCase();
+            });
+            if (isDuplicate) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: 'เลขที่ Price List นี้มีอยู่ในระบบแล้ว กรุณาใช้เลขที่อื่น',
+                    path: ['priceListNo'],
+                });
+            }
+        }
+    });
+};
+
 // Standardize on Zod-inferred types for 100% type safety with zodResolver
 type FormValues = z.infer<typeof priceListSchema>;
 type ItemValues = z.infer<typeof priceListItemSchema>;
@@ -148,7 +170,7 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
         getValues,
         formState: { errors, isSubmitting }
     } = useForm<FormValues>({
-        resolver: zodResolver(priceListSchema) as Resolver<FormValues>,
+        resolver: zodResolver(createPriceListSchema(existingPriceLists, editId)) as Resolver<FormValues>,
         defaultValues: initialValues,
         mode: 'onChange'
     });
@@ -342,10 +364,46 @@ export function usePriceListForm(editId: string | null, onSuccess?: () => void, 
 
     const onInvalid = (errors: FieldErrors<FormValues>) => {
         logger.warn('Form Validation Errors:', errors);
+        
+        // Map field names to friendly Thai messages
+        const fieldNameMap: Record<string, string> = {
+            priceListNo: 'เลขที่ Price List',
+            priceListName: 'ชื่อ Price List',
+            priceListDate: 'วันที่เอกสาร',
+            beginDate: 'วันที่เริ่มต้น',
+            endDate: 'วันที่สิ้นสุด',
+            branchId: 'สาขา',
+            empDeptId: 'แผนก',
+            permitEmpId: 'ผู้อนุมัติ',
+            items: 'รายการสินค้า'
+        };
+
         const firstErrorField = Object.keys(errors)[0] as keyof FormValues;
         if (firstErrorField) {
-            const error = errors[firstErrorField] as { message?: string };
-            const message = error?.message || `กรุณตรวจสอบฟิลด์ ${String(firstErrorField)}`;
+            const error = errors[firstErrorField];
+            let message = '';
+            
+            if (error && 'message' in error && typeof error.message === 'string') {
+                message = error.message;
+            } else if (firstErrorField === 'items' && errors.items) {
+                // If the error is inside items list
+                const itemErrors = errors.items;
+                if (Array.isArray(itemErrors)) {
+                    const firstItemErrorIndex = itemErrors.findIndex(e => e !== undefined);
+                    if (firstItemErrorIndex !== -1) {
+                        const subErrors = itemErrors[firstItemErrorIndex];
+                        const firstSubField = Object.keys(subErrors)[0];
+                        const subErrorMessage = subErrors[firstSubField]?.message;
+                        message = subErrorMessage || `ข้อมูลรายการสินค้าแถวที่ ${firstItemErrorIndex + 1} ไม่ถูกต้อง`;
+                    }
+                } else {
+                    message = 'กรุณากรอกข้อมูลรายการสินค้าให้ถูกต้อง';
+                }
+            } else {
+                const thaiFieldName = fieldNameMap[String(firstErrorField)] || String(firstErrorField);
+                message = `กรุณาตรวจสอบข้อมูลช่อง ${thaiFieldName}`;
+            }
+
             toast.error(message);
         }
     };
