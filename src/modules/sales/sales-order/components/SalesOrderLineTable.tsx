@@ -248,7 +248,7 @@ const SalesOrderLineRow = ({
                         className={`${compactInputClass} text-right bg-white dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700`}
                     />
                     {Number(line.line_discount) > 0 && line.line_discount_input && (
-                        <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-1.5 rounded-sm">
+                        <span className="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-1.5 rounded-sm">
                             -{formatNumber(line.line_discount || 0)}
                         </span>
                     )}

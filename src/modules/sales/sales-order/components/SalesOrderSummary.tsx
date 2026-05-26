@@ -59,9 +59,9 @@ export function SalesOrderSummary({
                     </span>
                 </div>
 
-                <div className="flex justify-between items-center text-sm group">
-                    <span className="text-gray-500">ส่วนลดท้ายบิล (discount_amount):</span>
-                    <div className="relative w-40">
+                <div className="flex justify-between items-start text-sm group">
+                    <span className="text-gray-500 pt-2">ส่วนลดท้ายบิล (discount_amount):</span>
+                    <div className="flex flex-col items-end gap-1 w-40">
                         <input
                             type="text"
                             placeholder="0.00"
@@ -71,6 +71,11 @@ export function SalesOrderSummary({
                             maxLength={15}
                             className={`${styles.input} h-9 py-0 text-right ${readOnly ? 'bg-gray-100 dark:bg-gray-800/50 cursor-not-allowed border-gray-200' : 'bg-white border-emerald-200 focus:border-emerald-500'} font-semibold text-emerald-600`}
                         />
+                        {String(discountInput || '').includes('%') && discountAmount > 0 && (
+                            <span className="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded-sm">
+                                -{formatNumber(discountAmount)}
+                            </span>
+                        )}
                     </div>
                 </div>
 
