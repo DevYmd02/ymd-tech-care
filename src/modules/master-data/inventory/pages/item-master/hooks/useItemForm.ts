@@ -520,9 +520,15 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
 
             // 2. Create/Update active ones
             for (const b of data.barcodes || []) {
+                // ค้นหารายการแปลงหน่วย (conversion) ที่มี from_unit_id ตรงกับหน่วยที่เลือกใน UI
+                const conversion = (existingItem?.uom_conversions || []).find(
+                    (c) => Number(c.from_unit_id) === Number(b.item_uom_id)
+                );
+                const dbUomId = conversion ? conversion.conversion_id : Number(b.item_uom_id);
+
                 const barcodePayload = {
                     item_id: itemId,
-                    item_uom_id: Number(b.item_uom_id),
+                    item_uom_id: Number(dbUomId),
                     barcode: String(b.barcode),
                     is_primary: Boolean(b.is_primary),
                     is_active: true

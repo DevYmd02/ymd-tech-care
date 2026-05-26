@@ -220,6 +220,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right">จำนวนคงเหลือ<br/>(ON HAND)</th>
                                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right text-orange-600 dark:text-orange-400">ยอดจอง<br/>(RESERVED)</th>
                                     <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right text-emerald-600 dark:text-emerald-400">พร้อมใช้งาน<br/>(AVAILABLE)</th>
+                                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-right text-teal-600 dark:text-teal-400">SALE STOCK</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">คลัง/ที่เก็บ</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">วันผลิต/หมดอายุ</th>
                                     <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700 text-center">จัดการ</th>
@@ -244,25 +245,32 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                                         {lot.name_th && <span className="text-[10px] text-gray-500 mt-0.5">{lot.name_th}</span>}
                                                     </div>
                                                 </td>
-
+ 
                                                 {/* ON HAND */}
                                                 <td className="px-6 py-4 text-right whitespace-nowrap">
                                                     <span className="font-bold text-gray-900 dark:text-white">
                                                         {formatNumber(lot.qty_on_hand ?? lot.balance_qty ?? 0)}
                                                     </span>
                                                 </td>
-
+ 
                                                 {/* RESERVED */}
                                                 <td className="px-6 py-4 text-right whitespace-nowrap">
                                                     <span className="font-bold text-orange-600 dark:text-orange-400">
                                                         {formatNumber(lot.qty_reserved ?? 0)}
                                                     </span>
                                                 </td>
-
+ 
                                                 {/* AVAILABLE */}
                                                 <td className="px-6 py-4 text-right whitespace-nowrap">
                                                     <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                                                        {formatNumber(lot.qty_available ?? lot.sale_stock ?? 0)}
+                                                        {formatNumber(lot.qty_available ?? 0)}
+                                                    </span>
+                                                </td>
+
+                                                {/* SALE STOCK */}
+                                                <td className="px-6 py-4 text-right whitespace-nowrap">
+                                                    <span className="font-bold text-teal-600 dark:text-teal-400">
+                                                        {formatNumber(lot.sale_stock ?? 0)}
                                                     </span>
                                                 </td>
 
@@ -305,7 +313,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                     })
                                 ) : (
                                     <tr>
-                                        <td colSpan={7} className="px-6 py-20 text-center">
+                                        <td colSpan={8} className="px-6 py-20 text-center">
                                             <div className="flex flex-col items-center text-gray-400 dark:text-gray-500">
                                                 <Tag size={48} className="mb-3 opacity-20" />
                                                 <p className="font-bold">ไม่พบข้อมูลล็อต</p>
