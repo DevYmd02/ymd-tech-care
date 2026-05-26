@@ -17,6 +17,10 @@ import { useConfirmation } from '@/shared/hooks/useConfirmation';
 import { formatNumber } from '@/shared/utils';
 import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
 
+import type { CustomerMaster } from '@customer/customer-master/types/customer-types';
+
+import { extractArrayFromResponse } from '@utils/clientFilterUtils';
+
 // ====================================================================================
 // CONSTANTS
 // ====================================================================================
@@ -72,13 +76,19 @@ export default function ReservationListPage() {
 
     const customerMap = useMemo(() => {
         const map = new Map<string | number, string>();
-        (customerResponse?.data || []).forEach(c => {
+        const items = extractArrayFromResponse<CustomerMaster>(customerResponse as object);
+        items.forEach(c => {
             map.set(String(c.customer_id), c.customer_name_th || c.customer_name || '');
         });
         return map;
     }, [customerResponse]);
 
-    const displayData = useMemo(() => apiData?.data || [], [apiData]);
+    const displayData = useMemo(() => {
+        return (apiData?.data || []).map(item => ({
+            ...item,
+            customer_name: customerMap.get(String(item.customer_id)) || item.customer_name || 'ไม่ระบุ'
+        }));
+    }, [apiData, customerMap]);
 
     // Handlers
     const handleCreateNew = useCallback(() => {
@@ -171,8 +181,7 @@ export default function ReservationListPage() {
         columnHelper.accessor('customer_id', {
             header: 'ลูกค้า',
             cell: (info) => {
-                const customerId = info.getValue();
-                const displayName = customerMap.get(String(customerId)) || info.row.original.customer_name || 'ไม่ระบุ';
+                const displayName = info.row.original.customer_name || 'ไม่ระบุ';
                 return (
                     <div className="flex flex-col">
                         <span className="font-medium text-gray-900 dark:text-gray-100">{displayName}</span>
@@ -230,7 +239,7 @@ export default function ReservationListPage() {
             size: 220,
             enableSorting: false,
         }),
-    ], [columnHelper, page, limit, customerMap, handleView, handleEdit, handleConfirmReservation]);
+    ], [columnHelper, page, limit, handleView, handleEdit, handleConfirmReservation]);
 
     return (
         <ErrorBoundary>
