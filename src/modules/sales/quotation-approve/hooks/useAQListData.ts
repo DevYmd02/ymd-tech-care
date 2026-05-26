@@ -36,23 +36,23 @@ export const useAQListData = (params: UseAQListDataParams) => {
 
   // 2. Actionable Pending SQs
   const { data: actionableData, isLoading: isLoadingActionable, refetch: refetchActionable } = useQuery({
-    queryKey: ['sq-approvals-actionable', customerMap.size > 0],
+    queryKey: ['sq-approvals', 'actionable', customerMap.size > 0],
     queryFn: () => AQService.getPendingSQs(customerMap),
-    staleTime: 3 * 60 * 1000,
+    staleTime: 0,
   });
 
   // 3. Fallback Pending SQs
   const { data: fallbackData, isLoading: isLoadingFallback, refetch: refetchFallback } = useQuery({
-    queryKey: ['sq-approvals-fallback', customerMap.size > 0],
+    queryKey: ['sq-approvals', 'fallback', customerMap.size > 0],
     queryFn: () => AQService.getAllPendingSQsFallback(customerMap),
-    staleTime: 3 * 60 * 1000,
+    staleTime: 0,
   });
 
   // 4. AQ History
   const { data: historyData, isLoading: isLoadingHistory, refetch: refetchHistory } = useQuery({
-    queryKey: ['sq-approvals-history', customerMap.size > 0],
+    queryKey: ['sq-approvals', 'history', customerMap.size > 0],
     queryFn: () => AQService.getApprovalList({ limit: 1000, page: 1 }, customerMap),
-    staleTime: 3 * 60 * 1000,
+    staleTime: 0,
   });
 
   const refetch = () => {

@@ -217,9 +217,11 @@ export function ICOptionListTab({ icOptionId }: Props) {
 
     const itemMap = useMemo(() => {
         const map = new Map<number, ICOptionListItem>();
-        listItems.forEach((item) => map.set(Number(item.system_document_id), item));
+        listItems
+            .filter((item) => String(item.ic_option_id) === String(icOptionId))
+            .forEach((item) => map.set(Number(item.system_document_id), item));
         return map;
-    }, [listItems]);
+    }, [listItems, icOptionId]);
 
     const handleSaved = useCallback(() => {
         queryClient.invalidateQueries({ queryKey: qkList });

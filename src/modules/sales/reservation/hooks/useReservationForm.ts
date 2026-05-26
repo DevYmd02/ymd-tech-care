@@ -13,14 +13,8 @@ import {
     calculateLineTotal 
 } from '@sales/shared/utils/sales-calculations';
 import { UOMConversionService } from '@inventory/services/uom-conversion.service';
-import { 
-    validateLineStock, 
-    DEFAULT_IC_OPTIONS,
-    type ICOption
-} from '@sales/shared/utils/stock-validation';
-import { ICOptionService } from '@/modules/master-data/sales/pages/ic-option/services/ic-option.service';
-import { ICOptionListService } from '@/modules/master-data/sales/pages/ic-option/services/ic-option-list.service';
-import { SystemDocumentService } from '@/modules/master-data/sales/pages/ic-option/services/system-document.service';
+import { validateLineStock } from '@sales/shared/utils/stock-validation';
+import { useBranchICOptions } from '@sales/shared/hooks/useBranchICOptions';
 import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
 import { useConfirmation } from '@hooks/useConfirmation';
 import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
@@ -174,68 +168,11 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
 
     const formData = useWatch({ control }) as ReservationFormValues;
 
-    const [branchIcOptions, setBranchIcOptions] = useState<ICOption>(DEFAULT_IC_OPTIONS);
-
-    // Fetch IC Options when Branch ID changes
-    const selectedBranchId = formData.branch_id;
-    useEffect(() => {
-        if (!selectedBranchId) {
-            setBranchIcOptions(DEFAULT_IC_OPTIONS);
-            return;
-        }
-
-        const fetchBranchICOptions = async () => {
-            try {
-                // 1. Get all IC options and find the one for the selected branch
-                const allOptions = await ICOptionService.getICOptions();
-                const branchOption = allOptions.find((opt) => String(opt.branch_id) === String(selectedBranchId));
-                
-                if (branchOption && branchOption.ic_option_id) {
-                    // 2. Fetch the document option list for this branch's IC Option ID
-                    const listItems = await ICOptionListService.getByICOptionId(branchOption.ic_option_id);
-                    console.log('--- DEBUG IC OPTIONS LIST ITEMS ---', listItems);
-                    
-                    const systemDocs = await SystemDocumentService.getAll();
-                    const rsvDoc = systemDocs.find((doc) => doc.system_document_code === SYSTEM_DOCUMENT_CODES.SALES_RESERVATION);
-                    
-                    // 3. Find the option specifically configured for the Sales Reservation document by ID
-                    const rsvOption = rsvDoc 
-                        ? listItems.find((item) => Number(item.system_document_id) === Number(rsvDoc.system_document_id))
-                        : undefined;
-                    
-                    if (rsvOption) {
-                        // 4. Map the configuration, falling back to global DEFAULT_IC_OPTIONS for '0' (Default) values
-                        const negativeStockCheck = rsvOption.negative_stock_check === 0 
-                            ? DEFAULT_IC_OPTIONS.negative_stock_check 
-                            : rsvOption.negative_stock_check;
-
-                        const negativeStockMode = rsvOption.negative_stock_mode === 0
-                            ? DEFAULT_IC_OPTIONS.negative_stock_mode
-                            : rsvOption.negative_stock_mode;
-
-                        const qtyValidationFlag = rsvOption.quantity_validation_flag === 0
-                            ? DEFAULT_IC_OPTIONS.quantity_validation_flag
-                            : rsvOption.quantity_validation_flag;
-
-                        setBranchIcOptions({
-                            negative_stock_check: negativeStockCheck,
-                            negative_stock_mode: negativeStockMode,
-                            quantity_validation_flag: qtyValidationFlag
-                        });
-                        return;
-                    }
-                }
-                
-                // Fallback to default if no specific configuration is found
-                setBranchIcOptions(DEFAULT_IC_OPTIONS);
-            } catch (error) {
-                logger.error('Failed to load IC Options for branch:', error);
-                setBranchIcOptions(DEFAULT_IC_OPTIONS);
-            }
-        };
-
-        fetchBranchICOptions();
-    }, [selectedBranchId]);
+    // 🛡️ Centralized IC Option Resolution (Document-specific → Branch General → Global Default)
+    const { icOptions: branchIcOptions } = useBranchICOptions(
+        formData.branch_id,
+        SYSTEM_DOCUMENT_CODES.SALES_RESERVATION
+    );
 
     // Initialization Guard
     const lastInitializedId = useRef<string | null | 'new'>(null);
@@ -442,7 +379,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             qty_reserved: 0, 
             warehouse_id: '',
             location_id: '',
-            uom_id: 'PCS', 
+            uom_id: '', 
             unit_price: 0, 
             lot_no: '',
             line_discount_input: '',

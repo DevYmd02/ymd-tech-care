@@ -195,6 +195,7 @@ export function ReservationLineTable({
                             const isQtyError = !!(stockValidation.message && [
                                 'INVALID_QTY',
                                 'NEGATIVE_STOCK_ALLOWED',
+                                'NEGATIVE_STOCK_NOT_ALLOWED',
                                 'INSUFFICIENT_STOCK_WARNING'
                             ].includes(stockValidation.code || ''));
 

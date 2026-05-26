@@ -156,7 +156,7 @@ export default function SalesDashboard() {
                         <div className="flex items-center justify-between mb-6">
                             <div>
                                 <h2 className="text-xl font-black text-gray-900 dark:text-white">ประสิทธิภาพตามเป้าหมายรายเดือน</h2>
-                                <p className="text-sm text-gray-500 font-medium">ติดตามความสำเร็จสำหรับเมษายน 2026</p>
+                                <p className="text-sm text-gray-500 font-medium">ติดตามความสำเร็จสำหรับมิถุนายน 2026</p>
                             </div>
                             <div className="text-right">
                                 <span className="text-3xl font-black text-blue-600 dark:text-blue-400">82.4%</span>
@@ -209,7 +209,7 @@ export default function SalesDashboard() {
                         <div className="space-y-4">
                             <div className="bg-white/10 p-4 rounded-xl backdrop-blur-md border border-white/10">
                                 <p className="text-xs font-bold text-indigo-200 uppercase mb-2">คำแนะนำอัจฉริยะ (Smart Recommendation)</p>
-                                <p className="text-sm font-medium">เติมสต็อก Eco Charging Stations ภายในวันที่ 15 เมษายน เพื่อรอรับความต้องการที่กำลังเป็นเทรนด์</p>
+                                <p className="text-sm font-medium">เติมสต็อก Eco Charging Stations ภายในวันที่ 15 มิถุนายน เพื่อรอรับความต้องการที่กำลังเป็นเทรนด์</p>
                             </div>
                             <button className="w-full py-3 bg-white text-indigo-700 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-50 transition-colors shadow-lg">
                                 ดูรายงานฉบับเต็ม
