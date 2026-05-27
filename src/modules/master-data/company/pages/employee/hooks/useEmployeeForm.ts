@@ -12,6 +12,7 @@ import { OrgEmployeeService } from '@company/services/employee.service';
 import { EmployeeDeptService } from '@company/services/employee-dept.service';
 import { PositionService } from '@company/services/org-position.service';
 import { EmployeeGroupService } from '@company/services/employee-group.service';
+import { BranchService } from '@company/services/org-branch.service';
 import api from '@/core/api/api';
 import { type AxiosError } from 'axios';
 import type { EmployeeFormData, EmployeeAddress, EmployeeMaster } from '@company/types/employee.types';
@@ -22,7 +23,7 @@ import React from 'react';
 
 export const employeeSchema = z.object({
     // ข้อมูลพื้นฐาน
-    branch_id:             z.number().nullable(),
+    branch_id:             z.number({ message: 'กรุณาเลือกสาขา' }),
     employee_code:         z.string().trim().min(1, 'กรุณากรอกรหัสพนักงาน').max(25, 'รหัสพนักงานต้องไม่เกิน 25 ตัวอักษร'),
     employee_title_th:     z.string().min(1, 'กรุณาเลือกคำนำหน้า (ไทย)').max(50),
     employee_title_en:     z.string().max(255).or(z.literal('')),
@@ -75,7 +76,7 @@ export const userAccountSchema = z.object({
 export type UserAccountFormData = z.infer<typeof userAccountSchema>;
 
 export const initialEmployeeData: EmployeeFormData = {
-    branch_id: 1, // Default branch
+    branch_id: null as unknown as number, // Force null for default selection
     employee_code: '',
     employee_title_th: '',
     employee_title_en: '',
@@ -228,6 +229,12 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
     });
 
     // Fetch dependencies
+    const { data: branchesData } = useQuery({
+        queryKey: ['branches-dropdown'],
+        queryFn: () => BranchService.getList({ page: 1, limit: 1000 }),
+        enabled: isOpen,
+    });
+
     const { data: deptsData } = useQuery({
         queryKey: ['employee-departments-dropdown'],
         queryFn: () => EmployeeDeptService.getList({ page: 1, limit: 1000 }),
@@ -252,6 +259,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
         enabled: isOpen,
     });
 
+    const branches = useMemo(() => (branchesData?.items || []).filter(item => item.is_active !== false), [branchesData]);
     const departments = useMemo(() => (deptsData?.items || []).filter(item => item.is_active !== false), [deptsData]);
     const positions = useMemo(() => (positionsData || []).filter(item => item.is_active !== false), [positionsData]);
     const employeeGroups = useMemo(() => (empGroupsData?.items || []).filter(item => item.is_active !== false), [empGroupsData]);
@@ -638,6 +646,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
     return {
         register,
         errors,
+        branches,
         departments,
         positions,
         employeeGroups,

@@ -38,7 +38,12 @@ export const unwrapResponseData = <T>(response: unknown): T => {
     }
     
     if (unwrapped && unwrapped.data !== undefined) {
-        return unwrapped.data as T;
+        const hasListMetadata = unwrapped.total !== undefined || unwrapped.page !== undefined || unwrapped.limit !== undefined;
+        if (Array.isArray(unwrapped.data) && hasListMetadata) {
+            // Keep the envelope intact so normalizeListResponse can extract total/items properly
+        } else {
+            return unwrapped.data as T;
+        }
     }
     return unwrapped as T;
 };
@@ -95,6 +100,14 @@ export const normalizeListResponse = <T>(response: unknown): PaginatedListRespon
                 total: Number(original.total || original.items.length),
                 page: Number(original.page || 1),
                 limit: Number(original.limit || original.items.length)
+            };
+        }
+        if (Array.isArray(original.data)) {
+             return {
+                items: original.data as T[],
+                total: Number(original.total || original.data.length),
+                page: Number(original.page || 1),
+                limit: Number(original.limit || original.data.length)
             };
         }
     }

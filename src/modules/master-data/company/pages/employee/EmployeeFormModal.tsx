@@ -12,6 +12,7 @@ import { useEmployeeForm } from './hooks/useEmployeeForm';
 import type { EmployeeAddress, EmployeeMaster } from '@company/types/employee.types';
 import type { EmployeeDeptMaster } from '@company/types/employee-dept.types';
 import type { PositionMaster } from '@company/types/position.types';
+import type { BranchListItem } from '@/modules/master-data/types/master-data-types';
 import { EmployeeSignatureManager } from '@/modules/master-data/employee/components/EmployeeSignatureManager';
 
 interface EmployeeFormModalProps {
@@ -57,6 +58,7 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
     const {
         register,
         errors,
+        branches,
         departments,
         positions,
         heads,
@@ -391,6 +393,14 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                 <SectionHeader icon={<Building2 className="w-4 h-4" />} title="ข้อมูลองค์กร" />
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                     <div>
+                                        <label className={styles.label}>สาขา <span className="text-red-500">*</span></label>
+                                        <select {...register('branch_id', { setValueAs: (v: string) => v === "" ? null : Number(v) })} className={`${styles.input} ${errors.branch_id ? 'border-red-500' : ''}`}>
+                                            <option value="">-- เลือกสาขา --</option>
+                                            {branches?.map((b: BranchListItem) => <option key={b.branch_id || b.id} value={b.branch_id || b.id}>{b.branch_code} - {b.branch_name}</option>)}
+                                        </select>
+                                        {errors.branch_id && <p className="text-red-500 text-xs mt-1">{errors.branch_id.message}</p>}
+                                    </div>
+                                    <div>
                                         <label className={styles.label}>แผนก <span className="text-red-500">*</span></label>
                                         <select {...register('emp_dept_id', { setValueAs: (v: string) => v === "" ? null : Number(v) })} className={`${styles.input} ${errors.emp_dept_id ? 'border-red-500' : ''}`}>
                                             <option value="">-- เลือกแผนก --</option>
@@ -398,6 +408,9 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                         </select>
                                         {errors.emp_dept_id && <p className="text-red-500 text-xs mt-1">{errors.emp_dept_id.message}</p>}
                                     </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                     <div>
                                         <label className={styles.label}>ตำแหน่ง <span className="text-red-500">*</span></label>
                                         <select {...register('position_id', { setValueAs: (v: string) => v === "" ? null : Number(v) })} className={`${styles.input} ${errors.position_id ? 'border-red-500' : ''}`}>
@@ -406,15 +419,15 @@ export const EmployeeFormModal = ({ isOpen, onClose, onSuccess, editId }: Employ
                                         </select>
                                         {errors.position_id && <p className="text-red-500 text-xs mt-1">{errors.position_id.message}</p>}
                                     </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <label className={styles.label}>ประเภทพนักงาน</label>
                                         <select {...register('emp_type')} className={styles.input}>
                                             {EMP_TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                                         </select>
                                     </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
                                         <label className={styles.label}>ผู้บังคับบัญชา (Superior)</label>
                                         <select {...register('employee_head_id', { setValueAs: (v: string) => v === "" ? null : Number(v) })} className={styles.input}>
