@@ -123,6 +123,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
 
     const onFormSubmit = async (data: ReservationFormData) => {
         setIsSubmitting(true);
+        let showingConfirm = false;
         try {
             // Validate stock logic via Backend API before allowing submit
             const validationPromises = data.lines.map(async (line) => {
@@ -151,11 +152,15 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
 
             setPendingData(data);
             setIsConfirmOpen(true);
+            showingConfirm = true;
         } catch (error) {
             toast('เกิดข้อผิดพลาดในการตรวจสอบเงื่อนไขสต็อก', 'error');
             logger.error('API Validation Error:', error);
         } finally {
-            setIsSubmitting(false);
+            // 🛡️ Only reset if NOT showing confirmation modal (prevents double-submit window)
+            if (!showingConfirm) {
+                setIsSubmitting(false);
+            }
         }
     };
 
@@ -361,7 +366,13 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
             {/* Confirmation Modal */}
             <ConfirmationModal 
                 isOpen={isConfirmOpen}
-                onClose={() => !isSubmitting && setIsConfirmOpen(false)}
+                onClose={() => {
+                    if (!isSubmitting) {
+                        setIsConfirmOpen(false);
+                        setIsSubmitting(false);
+                        setPendingData(null);
+                    }
+                }}
                 onConfirm={handleConfirmSave}
                 title="ยืนยันการบันทึก"
                 description={`คุณต้องการยืนยันการ${isEdit ? 'อัปเดต' : 'สร้าง'}ใบสั่งจองนี้ใช่หรือไม่?`}

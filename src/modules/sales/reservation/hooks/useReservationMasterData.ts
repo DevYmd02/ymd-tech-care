@@ -1,33 +1,27 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import {
+    useBranches, useUoms, useWarehouses, useLocations,
+    useCurrencies, useTaxCodes, useDepartments, useProjects,
+    useSaleAreas, useEmployees
+} from '@master-data/hooks/useMasterData';
 import { MasterDataService } from '@master-data';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
-import { UOMService } from '@inventory/services/uom.service';
-import { TaxCodeService } from '@master-data/tax/services/tax-code.service';
-import { WarehouseService } from '@inventory/services/warehouse.service';
-import { LocationService } from '@inventory/services/inventory-master.service';
-import { SaleAreaService } from '@sales-master/pages/area/services/area.service';
-import type { Currency } from '@master-data/types/master-data-types';
-import type { TaxCode } from '@master-data/tax/types/tax-types';
 
 export const useReservationMasterData = (isOpen: boolean) => {
-    // Branches
-    const { data: branches = [] } = useQuery({
-        queryKey: ['master-branches'],
-        queryFn: MasterDataService.getBranches,
-        enabled: isOpen,
-        staleTime: 5 * 60 * 1000,
-    });
+    // ✅ Shared-cache global hooks — queryKeys consistent with MasterDataProvider
+    const { data: branches = [] } = useBranches(isOpen);
+    const { data: currencies = [] } = useCurrencies(isOpen);
+    const { data: taxCodes = [] } = useTaxCodes(isOpen);
+    const { data: departments = [] } = useDepartments(isOpen);
+    const { data: projects = [] } = useProjects(isOpen);
+    const { data: saleAreas = [] } = useSaleAreas(isOpen);
+    const { data: allEmployees = [] } = useEmployees(isOpen);
+    const { data: uomResponse } = useUoms(isOpen);
+    const { data: warehouseResponse } = useWarehouses(isOpen);
+    const { data: locationResponse } = useLocations(isOpen, 1000);
 
-    // Currencies
-    const { data: currencies = [] } = useQuery<Currency[]>({
-        queryKey: ['master-currencies'],
-        queryFn: MasterDataService.getCurrencies,
-        enabled: isOpen,
-        staleTime: 5 * 60 * 1000,
-    });
-
-    // Customers
+    // Custom queries (no global hook available)
     const { data: customerResponse } = useQuery({
         queryKey: ['master-customers'],
         queryFn: () => CustomerService.getList({ limit: 1000 }),
@@ -36,77 +30,6 @@ export const useReservationMasterData = (isOpen: boolean) => {
     });
     const customers = customerResponse?.data || [];
 
-    // Tax Codes
-    const { data: taxCodes = [] } = useQuery<TaxCode[]>({
-        queryKey: ['master-tax-codes'],
-        queryFn: TaxCodeService.getTaxCodes,
-        enabled: isOpen,
-        staleTime: 5 * 60 * 1000,
-    });
-
-    // Departments
-    const { data: departments = [] } = useQuery({
-        queryKey: ['master-departments'],
-        queryFn: MasterDataService.getDepartments,
-        enabled: isOpen,
-        staleTime: 5 * 60 * 1000,
-    });
-
-    // Projects
-    const { data: projects = [] } = useQuery({
-        queryKey: ['master-projects'],
-        queryFn: MasterDataService.getProjects,
-        enabled: isOpen,
-        staleTime: 5 * 60 * 1000,
-    });
-
-    // Sale Areas
-    const { data: saleAreas = [] } = useQuery({
-        queryKey: ['master-sale-areas'],
-        queryFn: () => SaleAreaService.getList(),
-        enabled: isOpen,
-        staleTime: 5 * 60 * 1000,
-    });
-
-    // Employees
-    const { data: allEmployees = [] } = useQuery({
-        queryKey: ['master-employees'],
-        queryFn: MasterDataService.getEmployees,
-        enabled: isOpen,
-        staleTime: 5 * 60 * 1000,
-    });
-
-    const employees = useMemo(() => 
-        allEmployees.filter(emp => emp.emp_type?.toString().trim() === 'S'),
-    [allEmployees]);
-
-    // Units (UOMs)
-    const { data: uomResponse } = useQuery({
-        queryKey: ['master-units'],
-        queryFn: () => UOMService.getAll({ limit: 1000 }),
-        enabled: isOpen,
-        staleTime: 5 * 60 * 1000,
-    });
-    const uoms = useMemo(() => uomResponse?.items || [], [uomResponse]);
-
-    // Warehouses
-    const { data: warehouseResponse } = useQuery({
-        queryKey: ['master-warehouses'],
-        queryFn: () => WarehouseService.getAll(),
-        enabled: isOpen,
-        staleTime: 5 * 60 * 1000,
-    });
-    const warehouses = useMemo(() => warehouseResponse?.items || [], [warehouseResponse]);
-
-    // Locations
-    const { data: locationResponse } = useQuery({
-        queryKey: ['master-locations'],
-        queryFn: () => LocationService.getAll({ limit: 1000 }),
-        enabled: isOpen,
-        staleTime: 5 * 60 * 1000,
-    });
-    const locations = useMemo(() => locationResponse?.items || [], [locationResponse]);
-
     // Price Level Names
     const { data: priceLevelNames = [] } = useQuery({
         queryKey: ['master-price-level-names'],
@@ -114,6 +37,15 @@ export const useReservationMasterData = (isOpen: boolean) => {
         enabled: isOpen,
         staleTime: 5 * 60 * 1000,
     });
+
+    // Derived values
+    const employees = useMemo(() => 
+        allEmployees.filter(emp => emp.emp_type?.toString().trim() === 'S'),
+    [allEmployees]);
+
+    const uoms = useMemo(() => uomResponse?.items || [], [uomResponse]);
+    const warehouses = useMemo(() => warehouseResponse?.items || [], [warehouseResponse]);
+    const locations = useMemo(() => locationResponse?.items || [], [locationResponse]);
 
     const isMasterDataReady = useMemo(() => {
         if (!isOpen) return true;
