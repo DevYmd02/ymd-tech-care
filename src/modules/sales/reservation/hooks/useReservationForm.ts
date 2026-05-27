@@ -129,6 +129,9 @@ async function recoverReservationPriceSources(
 
 
 
+// =============================================================================
+// 🎛️ SECTION 1: HOOK DECLARATION & LOCAL UI STATE
+// =============================================================================
 export const useReservationForm = (isOpen: boolean, id?: string, initialData?: Partial<ReservationFormValues>, onClose?: () => void, readOnly: boolean = false) => {
     const { toast } = useToast();
     const { confirm } = useConfirmation();
@@ -166,14 +169,72 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         onSafeClose: onClose || (() => {})
     });
 
-    const formData = useWatch({ control }) as ReservationFormValues;
+    const watchedFields = useWatch({
+        control,
+        name: [
+            'branch_id',
+            'isMulticurrency',
+            'base_currency_code',
+            'quote_currency_code',
+            'lines',
+            'discount_input',
+            'tax_code_id',
+            'sub_total',
+            'discount_amount',
+            'vat_amount',
+            'total_amount'
+        ]
+    });
+
+    const [
+        branchId,
+        isMulti,
+        sourceCurrency,
+        targetCurrency,
+        watchedLines,
+        watchedDiscountInput,
+        taxCodeId,
+        subTotal,
+        discountAmount,
+        vatAmount,
+        totalAmount
+    ] = watchedFields;
+
+    const formData = useMemo(() => ({
+        branch_id: branchId,
+        isMulticurrency: isMulti,
+        base_currency_code: sourceCurrency,
+        quote_currency_code: targetCurrency,
+        lines: watchedLines || [],
+        discount_input: watchedDiscountInput,
+        tax_code_id: taxCodeId,
+        sub_total: subTotal || 0,
+        discount_amount: discountAmount || 0,
+        vat_amount: vatAmount || 0,
+        total_amount: totalAmount || 0
+    }), [
+        branchId,
+        isMulti,
+        sourceCurrency,
+        targetCurrency,
+        watchedLines,
+        watchedDiscountInput,
+        taxCodeId,
+        subTotal,
+        discountAmount,
+        vatAmount,
+        totalAmount
+    ]);
 
     // 🛡️ Centralized IC Option Resolution (Document-specific → Branch General → Global Default)
     const { icOptions: branchIcOptions } = useBranchICOptions(
-        formData.branch_id,
+        branchId,
         SYSTEM_DOCUMENT_CODES.SALES_RESERVATION
     );
 
+    // =============================================================================
+    // 🔄 SECTION 2: DATA HYDRATION & LIFECYCLE EFFECTS
+    // =============================================================================
     // Initialization Guard
     const lastInitializedId = useRef<string | null | 'new'>(null);
     const defaultValues = useMemo(() => getReservationDefaultValues(), []);
@@ -296,10 +357,10 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         }
     }, [isOpen, isMasterDataReady, id, initialData, reset, defaultValues]);
 
+    // =============================================================================
+    // 🧮 SECTION 3: EXCHANGE RATE & TAX & TOTAL CALCULATIONS
+    // =============================================================================
     // Exchange Rate Sync Logic
-    const isMulti = useWatch({ control, name: 'isMulticurrency' });
-    const sourceCurrency = useWatch({ control, name: 'base_currency_code' });
-    const targetCurrency = useWatch({ control, name: 'quote_currency_code' });
 
     useEffect(() => {
         if (!sourceCurrency || !isMulti) return;
@@ -324,11 +385,8 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     }, [currencies, sourceCurrency, targetCurrency, setValue, isMulti]);
 
     // Header Totals Logic
-    const watchedLines = useWatch({ control, name: 'lines' });
     const lines = useMemo(() => watchedLines || [], [watchedLines]);
-    const watchedDiscountInput = useWatch({ control, name: 'discount_input' });
     const discountInput = watchedDiscountInput || '';
-    const taxCodeId = useWatch({ control, name: 'tax_code_id' });
 
     useEffect(() => {
         const calculatedSubTotal = lines.reduce((sum: number, line: ReservationLineValues) => sum + (line.line_total || 0), 0);
@@ -375,6 +433,9 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         }
     }, [taxCodeId, setValue, getValues]);
 
+    // =============================================================================
+    // 📝 SECTION 4: LINE ITEMS MANAGEMENT HANDLERS (ADD / REMOVE / UPDATE)
+    // =============================================================================
     // Event Handlers
     const handleAddLine = useCallback(() => {
         const newLine: ReservationLineValues = { 
@@ -445,6 +506,9 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         setValue('lines', newLines, { shouldValidate: true });
     }, [setValue, getValues]);
 
+    // =============================================================================
+    // 🔍 SECTION 5: MODAL SEARCH SELECTION HANDLERS
+    // =============================================================================
     const handleSelectCustomer = useCallback((customer: CustomerMaster) => {
         setValue('customer_id', String(customer.customer_id || customer.id || ''));
         setIsCustomerSearchOpen(false);
@@ -606,6 +670,9 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
 
 
 
+    // =============================================================================
+    // 🔌 SECTION 6: EXTERNAL REFERENCE INTEGRATIONS (SQ/AQ QUOTATION FETCHING)
+    // =============================================================================
     const handleFetchQuotation = useCallback(async (type: 'SQ' | 'AQ', overrideId?: string) => {
         const field = type === 'SQ' ? 'sq_id' : 'aq_id';
         const val = overrideId || getValues(field);
@@ -1057,6 +1124,9 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         handleFetchQuotation('AQ', String(aq.aq_no || aq.aq_id));
     }, [setValue, handleFetchQuotation]);
 
+    // =============================================================================
+    // 📤 SECTION 7: HOOK EXPORTS / OUTPUT API
+    // =============================================================================
     return {
         isEdit,
         isSubmitting,

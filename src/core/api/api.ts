@@ -25,6 +25,9 @@ export const API_BASE_URL = (import.meta.env.VITE_API_URL as string) || '/api';
  */
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 
+const MAX_RETRIES = 2;
+const INITIAL_RETRY_DELAY = 1000;
+
 export const AUTH_TOKEN_KEY = 'token';
 export const AUTH_PROFILE_KEY = 'user_profile';
 
@@ -90,9 +93,17 @@ api.request = (config: AxiosRequestConfig): Promise<any> => { // eslint-disable-
       return pendingRequests.get(key)!;
     }
     
-    const requestPromise = originalRequest(config).finally(() => {
-      pendingRequests.delete(key);
-    }) as Promise<unknown>;
+    const requestPromise = originalRequest(config)
+      .then(
+        (response) => {
+          pendingRequests.delete(key);
+          return response;
+        },
+        (error) => {
+          pendingRequests.delete(key);
+          return Promise.reject(error);
+        }
+      ) as Promise<unknown>;
     
     pendingRequests.set(key, requestPromise);
     return requestPromise as Promise<any>; // eslint-disable-line
@@ -287,9 +298,6 @@ export const extractErrorMessage = (error: unknown): string => {
 /**
  * 💡 Extract machine-readable error code for frontend mapping/i18n
  */
-const MAX_RETRIES = 2;
-const INITIAL_RETRY_DELAY = 1000;
- 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  
 export const getErrorCode = (error: unknown): string | null => {
