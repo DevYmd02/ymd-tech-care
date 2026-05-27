@@ -121,9 +121,11 @@ export const useReservationMasterData = (isOpen: boolean) => {
             branches.length > 0 &&
             taxCodes.length > 0 &&
             uoms.length > 0 &&
-            currencies.length > 0
+            currencies.length > 0 &&
+            warehouses.length > 0 &&
+            locations.length > 0
         );
-    }, [isOpen, branches.length, taxCodes.length, uoms.length, currencies.length]);
+    }, [isOpen, branches.length, taxCodes.length, uoms.length, currencies.length, warehouses.length, locations.length]);
 
     return {
         branches,
