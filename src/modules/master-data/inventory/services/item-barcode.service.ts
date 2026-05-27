@@ -107,7 +107,7 @@ export const ItemBarcodeService = {
       }
   },
 
-  create: async (data: ItemBarcodeCreateRequest): Promise<boolean> => {
+  create: async (data: ItemBarcodeCreateRequest, config?: { skipToast?: boolean }): Promise<boolean> => {
       try {
           const payload = {
               barcode: data.barcode,
@@ -116,7 +116,7 @@ export const ItemBarcodeService = {
               is_primary: data.is_primary ?? data.is_default ?? false,
               is_active: data.is_active ?? true
           };
-          await api.post<SuccessResponse>('/item-barcodes', payload);
+          await api.post<SuccessResponse>('/item-barcodes', payload, config);
           return true;
       } catch (error) {
           logger.error('[ItemBarcodeService] create error:', error);
@@ -124,7 +124,7 @@ export const ItemBarcodeService = {
       }
   },
 
-  update: async (id: number, data: Partial<ItemBarcodeUpdateRequest>): Promise<boolean> => {
+  update: async (id: number, data: Partial<ItemBarcodeUpdateRequest>, config?: { skipToast?: boolean }): Promise<boolean> => {
       try {
           const payload = {
               barcode: data.barcode,
@@ -133,7 +133,7 @@ export const ItemBarcodeService = {
               is_primary: data.is_primary ?? data.is_default,
               is_active: data.is_active
           };
-          await api.patch<SuccessResponse>(`/item-barcodes/${id}`, payload);
+          await api.patch<SuccessResponse>(`/item-barcodes/${id}`, payload, config);
           return true;
       } catch (error) {
           logger.error('[ItemBarcodeService] update error:', error);
@@ -141,9 +141,9 @@ export const ItemBarcodeService = {
       }
   },
 
-  delete: async (id: number): Promise<boolean> => {
+  delete: async (id: number, config?: { skipToast?: boolean }): Promise<boolean> => {
     try {
-      await api.delete<SuccessResponse>(`/item-barcodes/${id}`);
+      await api.delete<SuccessResponse>(`/item-barcodes/${id}`, config);
       return true;
     } catch (error) {
       logger.error('[ItemBarcodeService] delete error:', error);

@@ -154,10 +154,10 @@ export const UOMConversionService = {
     }
   },
 
-  create: async (data: UOMConversionCreateRequest): Promise<SuccessResponse> => {
+  create: async (data: UOMConversionCreateRequest, config?: { skipToast?: boolean }): Promise<SuccessResponse> => {
     if (USE_MOCK) return { success: true };
     try {
-      const response = await api.post<Record<string, unknown>>('/item-uom', data);
+      const response = await api.post<Record<string, unknown>>('/item-uom', data, config);
       const isSuccess = response && typeof response === 'object' && response.success !== false;
       return { 
         success: isSuccess, 
@@ -170,10 +170,10 @@ export const UOMConversionService = {
     }
   },
 
-  update: async (id: number, data: UOMConversionUpdateRequest): Promise<SuccessResponse> => {
+  update: async (id: number, data: UOMConversionUpdateRequest, config?: { skipToast?: boolean }): Promise<SuccessResponse> => {
     if (USE_MOCK) return { success: true };
     try {
-      const response = await api.patch<Record<string, unknown>>(`/item-uom/${id}`, data);
+      const response = await api.patch<Record<string, unknown>>(`/item-uom/${id}`, data, config);
       const isSuccess = response && typeof response === 'object' && response.success !== false;
       return { 
         success: isSuccess, 
@@ -186,10 +186,10 @@ export const UOMConversionService = {
     }
   },
 
-  delete: async (id: number): Promise<boolean> => {
+  delete: async (id: number, config?: { skipToast?: boolean }): Promise<boolean> => {
     if (USE_MOCK) return true;
     try {
-      await api.delete<SuccessResponse>(`/item-uom/${id}`);
+      await api.delete<SuccessResponse>(`/item-uom/${id}`, config);
       return true;
     } catch (error) {
       logger.error('[UOMConversionService] delete error:', error);

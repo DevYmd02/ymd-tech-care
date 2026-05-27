@@ -7,11 +7,11 @@ import { useDebounce } from '@/shared/hooks/useDebounce';
 
 import { logger } from '@/shared/utils';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
-import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
 import { ProductCategoryService } from '@/modules/master-data/inventory/services/product-category.service';
 import { UOMConversionService } from '@/modules/master-data/inventory/services/uom-conversion.service';
 import { ItemBarcodeService } from '@/modules/master-data/inventory/services/item-barcode.service';
 import { useConfirmation } from '@/shared/hooks/useConfirmation';
+import { useUoms } from '@/modules/master-data/hooks/useMasterData';
 import type { ItemMaster, ItemMasterFormData } from '@/modules/master-data/types/master-data-types';
 import { extractErrorMessage } from '@/core/api/api';
 
@@ -209,20 +209,16 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
 
 
     // Real Data Fetching
-    const { data: units = [] } = useQuery({
-        queryKey: ['uoms'],
-        queryFn: async () => {
-            const res = await UOMService.getAll();
-            return res.items || [];
-        }
-    });
+    const { data: uomData } = useUoms();
+    const units = uomData?.items || [];
 
     const { data: categories = [] } = useQuery({
         queryKey: ['product-categories'],
         queryFn: async () => {
             const res = await ProductCategoryService.getAll();
             return res.items || [];
-        }
+        },
+        staleTime: 5 * 60 * 1000 // 5 minutes cache to prevent redundant fetches
     });
 
     // Fetch data if editing
@@ -422,42 +418,44 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
                 c => c.conversion_id && !finalConversionIds.has(c.conversion_id)
             );
 
-            // 1. Delete removed ones
-            for (const c of deletedConversions) {
-                if (c.conversion_id) {
-                    const success = await UOMConversionService.delete(c.conversion_id);
-                    if (!success) {
-                        throw new Error(`ลบหน่วยนับแปลงไม่สำเร็จ (ID: ${c.conversion_id})`);
+            // 1. Delete removed ones (PARALLEL)
+            await Promise.all(
+                deletedConversions
+                    .filter(c => c.conversion_id)
+                    .map(async (c) => {
+                        const success = await UOMConversionService.delete(c.conversion_id!, { skipToast: true });
+                        if (!success) {
+                            throw new Error(`ลบหน่วยนับแปลงไม่สำเร็จ (ID: ${c.conversion_id})`);
+                        }
+                    })
+            );
+
+            // 2. Create/Update active ones (PARALLEL)
+            await Promise.all(
+                (data.uom_conversions || []).map(async (c) => {
+                    const convPayload = {
+                        item_id: itemId,
+                        from_uom_id: Number(c.from_uom_id),
+                        to_uom_id: Number(c.to_uom_id),
+                        factor: Number(c.conversion_factor),
+                        is_purchase_uom: Boolean(c.is_purchase_unit),
+                        is_active: Boolean(c.is_active),
+                        customer_id: c.customer_id ? Number(c.customer_id) : null,
+                    };
+
+                    if (c.conversion_id) {
+                        await UOMConversionService.update(c.conversion_id, {
+                            item_uom_id: c.conversion_id,
+                            ...convPayload
+                        }, { skipToast: true });
+                    } else {
+                        await UOMConversionService.create({
+                            item_uom_id: 0,
+                            ...convPayload
+                        }, { skipToast: true });
                     }
-                }
-            }
-
-            // 2. Create/Update active ones
-            for (const c of data.uom_conversions || []) {
-                const convPayload = {
-                    item_id: itemId,
-                    from_uom_id: Number(c.from_uom_id),
-                    to_uom_id: Number(c.to_uom_id),
-                    factor: Number(c.conversion_factor),
-                    is_purchase_uom: Boolean(c.is_purchase_unit),
-                    is_active: Boolean(c.is_active),
-                    customer_id: c.customer_id ? Number(c.customer_id) : null,
-                };
-
-                if (c.conversion_id) {
-                    // Update existing
-                    await UOMConversionService.update(c.conversion_id, {
-                        item_uom_id: c.conversion_id,
-                        ...convPayload
-                    });
-                } else {
-                    // Create new
-                    await UOMConversionService.create({
-                        item_uom_id: 0,
-                        ...convPayload
-                    });
-                }
-            }
+                })
+            );
             return true;
         },
         onSuccess: async (success) => {
@@ -508,46 +506,48 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
                 b => b.item_barcode_id && !finalBarcodeIds.has(b.item_barcode_id)
             );
 
-            // 1. Delete removed ones
-            for (const b of deletedBarcodes) {
-                if (b.item_barcode_id) {
-                    const success = await ItemBarcodeService.delete(b.item_barcode_id);
-                    if (!success) {
-                        throw new Error(`ลบรายการบาร์โค้ดไม่สำเร็จ (ID: ${b.item_barcode_id})`);
-                    }
-                }
-            }
+            // 1. Delete removed ones (PARALLEL)
+            await Promise.all(
+                deletedBarcodes
+                    .filter(b => b.item_barcode_id)
+                    .map(async (b) => {
+                        const success = await ItemBarcodeService.delete(b.item_barcode_id!, { skipToast: true });
+                        if (!success) {
+                            throw new Error(`ลบรายการบาร์โค้ดไม่สำเร็จ (ID: ${b.item_barcode_id})`);
+                        }
+                    })
+            );
 
-            // 2. Create/Update active ones
-            for (const b of data.barcodes || []) {
-                // ค้นหารายการแปลงหน่วย (conversion) ที่มี from_unit_id ตรงกับหน่วยที่เลือกใน UI
-                const conversion = (existingItem?.uom_conversions || []).find(
-                    (c) => Number(c.from_unit_id) === Number(b.item_uom_id)
-                );
-                const dbUomId = conversion ? conversion.conversion_id : Number(b.item_uom_id);
+            // 2. Create/Update active ones (PARALLEL)
+            await Promise.all(
+                (data.barcodes || []).map(async (b) => {
+                    // ค้นหารายการแปลงหน่วย (conversion) ที่มี from_unit_id ตรงกับหน่วยที่เลือกใน UI
+                    const conversion = (existingItem?.uom_conversions || []).find(
+                        (c) => Number(c.from_unit_id) === Number(b.item_uom_id)
+                    );
+                    const dbUomId = conversion ? conversion.conversion_id : Number(b.item_uom_id);
 
-                const barcodePayload = {
-                    item_id: itemId,
-                    item_uom_id: Number(dbUomId),
-                    barcode: String(b.barcode),
-                    is_primary: Boolean(b.is_primary),
-                    is_active: true
-                };
+                    const barcodePayload = {
+                        item_id: itemId,
+                        item_uom_id: Number(dbUomId),
+                        barcode: String(b.barcode),
+                        is_primary: Boolean(b.is_primary),
+                        is_active: true
+                    };
 
-                if (b.barcode_id) {
-                    // Update existing
-                    const success = await ItemBarcodeService.update(b.barcode_id, barcodePayload);
-                    if (!success) {
-                        throw new Error(`บันทึกรหัสบาร์โค้ด ${b.barcode} ไม่สำเร็จ`);
+                    if (b.barcode_id) {
+                        const success = await ItemBarcodeService.update(b.barcode_id, barcodePayload, { skipToast: true });
+                        if (!success) {
+                            throw new Error(`บันทึกรหัสบาร์โค้ด ${b.barcode} ไม่สำเร็จ`);
+                        }
+                    } else {
+                        const success = await ItemBarcodeService.create(barcodePayload, { skipToast: true });
+                        if (!success) {
+                            throw new Error(`เพิ่มรหัสบาร์โค้ด ${b.barcode} ไม่สำเร็จ`);
+                        }
                     }
-                } else {
-                    // Create new
-                    const success = await ItemBarcodeService.create(barcodePayload);
-                    if (!success) {
-                        throw new Error(`เพิ่มรหัสบาร์โค้ด ${b.barcode} ไม่สำเร็จ`);
-                    }
-                }
-            }
+                })
+            );
             return true;
         },
         onSuccess: async (success) => {

@@ -185,11 +185,14 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             return;
         }
 
+        let active = true;
+
         const loadData = async () => {
             if (id && lastInitializedId.current !== id) {
                 setIsLoading(true);
                 try {
                     const data = await ReservationService.getById(id);
+                    if (!active) return; // 🛡️ Guard against stale updates after unmount
                     if (data) {
                         // 🎯 Dynamically resolve conversion IDs to global UOM IDs on load (PRE-HYDRATION)
                         if (data.lines && data.lines.length > 0) {
@@ -239,10 +242,11 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                         lastInitializedId.current = id;
                     }
                 } catch (error) {
+                    if (!active) return;
                     logger.error('Failed to load reservation data:', error);
                     toast('ไม่สามารถโหลดข้อมูลได้', 'error');
                 } finally {
-                    setIsLoading(false);
+                    if (active) setIsLoading(false);
                 }
             } else if (!id && lastInitializedId.current !== 'new') {
                 reset({ ...getReservationDefaultValues(), ...(initialData || {}) });
@@ -251,6 +255,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         };
 
         loadData();
+        return () => { active = false; };
     }, [isOpen, id, reset, initialData, toast, setValue, getValues]);
 
 
