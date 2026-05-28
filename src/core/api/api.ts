@@ -156,20 +156,24 @@ api.interceptors.response.use(
     // we treat the whole object as the data payload.
     if (resBody && typeof resBody === 'object' && resBody.data !== undefined) {
       const envelopeKeys = ['success', 'message', 'statusCode', 'status', 'error'];
+      const paginationKeys = ['total', 'page', 'pageSize', 'totalPages', 'limit', 'meta', 'pagination'];
       const bodyKeys = Object.keys(resBody);
       
       // If there are keys that are NOT in our envelope whitelist (excluding 'data' itself),
       // it's likely a data object that just happens to have a 'data' property.
-      const hasDataSpecificKeys = bodyKeys.some(key => key !== 'data' && !envelopeKeys.includes(key));
+      const unknownKeys = bodyKeys.filter(k => k !== 'data' && !envelopeKeys.includes(k) && !paginationKeys.includes(k));
+      const hasPaginationKeys = bodyKeys.some(k => paginationKeys.includes(k));
+      const hasDataSpecificKeys = unknownKeys.length > 0;
 
       if (import.meta.env.DEV && hasDataSpecificKeys) {
         console.warn(
           '[api.ts] Skipped unwrap — unknown keys found:',
-          bodyKeys.filter(k => k !== 'data' && !envelopeKeys.includes(k))
+          unknownKeys
         );
       } 
       
-      if (!hasDataSpecificKeys) {
+      // We unwrap if there are no unknown keys AND it's not a paginated response
+      if (!hasDataSpecificKeys && !hasPaginationKeys) {
         return resBody.data;
       }
     }

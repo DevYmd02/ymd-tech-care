@@ -169,12 +169,18 @@ export function useDocLinkIC() {
         const createdId = result?.doc_link_ic_id;
 
         if (createdId && children.length > 0) {
+            // Find the max doc_type_no already used by this system_document_id to avoid duplicates
+            const existingSubs = rawList.filter(r => Number(r.system_document_id) === Number(newRowData.system_document_id));
+            const maxDocTypeNo = existingSubs.reduce((max, r) => Math.max(max, r.doc_type_no ?? 0), 0);
+
             for (let idx = 0; idx < children.length; idx++) {
                 const child = children[idx];
+                const docTypeNo = maxDocTypeNo + idx + 1;
                 await DocLinkICService.createItem({
-                    docu_type_id: String(createdId),
-                    docu_item_no: idx + 1,
-                    doc_type_no: idx + 1,
+                    system_document_id: Number(newRowData.system_document_id),
+                    docu_type_id: String(newRowData.system_document_id),
+                    docu_item_no: docTypeNo,
+                    doc_type_no: docTypeNo,
                     docu_item_name: child.name,
                     doc_type_name: child.name,
                     stock_effect_ic: (child.stock_effect_ic ?? 0) as 0|1|2,
@@ -192,7 +198,8 @@ export function useDocLinkIC() {
         const subs = (editData.initial_sub_items || []).filter(s => s.name.trim());
         const primarySub = subs[0];
         
-        updateMutation.mutate({ 
+        // 1) Await parent update to complete first
+        await updateMutation.mutateAsync({ 
             id: editingId, 
             data: { 
                 doc_type_name: primarySub?.name || '',
@@ -203,22 +210,31 @@ export function useDocLinkIC() {
             } 
         });
 
-        const origSubs = getSubsFor(rawList.find(r => String(r.doc_link_ic_id ?? r.docu_type_id) === editingId)!);
+        const parentRow = rawList.find(r => String(r.doc_link_ic_id ?? r.docu_type_id) === editingId);
+        const systemDocId = parentRow ? Number(parentRow.system_document_id) : null;
+        const origSubs = parentRow ? getSubsFor(parentRow) : [];
         const childSubs = subs.slice(1);
         const origChildren = origSubs.filter(o => o.doc_type_no !== undefined && o.doc_type_no !== null && o.doc_type_no > 0);
         const newIds = new Set(childSubs.filter(s => s.docu_item_id).map(s => s.docu_item_id!));
         
-        for (const orig of origChildren) { 
-            if (!newIds.has(String(orig.docu_item_id))) {
-                await DocLinkICService.removeItem(String(orig.docu_item_id)); 
-            }
-        }
+        // 2) Delete removed sub-items FIRST — await all deletions before creating new ones
+        const deletions = origChildren
+            .filter(orig => !newIds.has(String(orig.docu_item_id)))
+            .map(orig => DocLinkICService.removeItem(String(orig.docu_item_id)));
+        await Promise.all(deletions);
         
+        // 3) Now update existing and create new sub-items sequentially
+        // Use unique doc_type_no values starting after existing max
+        const remainingOrigIds = new Set(origChildren.filter(o => newIds.has(String(o.docu_item_id))).map(o => String(o.docu_item_id)));
+        const allExistingSubs = rawList.filter(r => Number(r.system_document_id) === systemDocId);
+        const maxDocTypeNo = allExistingSubs.reduce((max, r) => Math.max(max, r.doc_type_no ?? 0), 0);
+        let nextDocTypeNo = maxDocTypeNo + 1;
+
         for (let idx = 0; idx < childSubs.length; idx++) {
             const child = childSubs[idx];
-            if (child.docu_item_id) {
+            if (child.docu_item_id && remainingOrigIds.has(child.docu_item_id)) {
+                // Update existing sub-item — keep its current doc_type_no to avoid collision
                 await DocLinkICService.updateItem(child.docu_item_id, {
-                    doc_type_no: idx + 1,
                     doc_type_name: child.name,
                     stock_effect_ic: (child.stock_effect_ic ?? 0) as 0|1|2,
                     docu_desc: child.docu_desc || '',
@@ -226,10 +242,12 @@ export function useDocLinkIC() {
                     is_active: true
                 });
             } else {
+                // Create new sub-item with a unique doc_type_no
                 await DocLinkICService.createItem({
-                    docu_type_id: String(editingId),
-                    docu_item_no: idx + 1,
-                    doc_type_no: idx + 1,
+                    system_document_id: systemDocId ?? undefined,
+                    docu_type_id: String(systemDocId ?? editingId),
+                    docu_item_no: nextDocTypeNo,
+                    doc_type_no: nextDocTypeNo,
                     docu_item_name: child.name,
                     doc_type_name: child.name,
                     stock_effect_ic: (child.stock_effect_ic ?? 0) as 0|1|2,
@@ -237,6 +255,7 @@ export function useDocLinkIC() {
                     remark: child.remark || '',
                     is_active: true
                 });
+                nextDocTypeNo++;
             }
         }
         queryClient.invalidateQueries({ queryKey: ['doc-link-ic'] });

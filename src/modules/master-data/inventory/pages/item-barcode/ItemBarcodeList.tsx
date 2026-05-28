@@ -9,6 +9,7 @@ import { ItemBarcodeFormModal } from './ItemBarcodeFormModal';
 import { ItemBarcodeService } from '@/modules/master-data/inventory/services/item-barcode.service';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { UOMService } from '@/modules/master-data/inventory/services/uom.service';
+import { UOMConversionService } from '@/modules/master-data/inventory/services/uom-conversion.service';
 import type { ItemBarcodeListItem } from '@/modules/master-data/types/master-data-types';
 import { ActiveStatusBadge } from '@ui';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
@@ -75,14 +76,16 @@ export default function ItemBarcodeList() {
     const { data: response, isLoading, refetch } = useQuery({
         queryKey: ['item-barcodes', filters],
         queryFn: async () => {
-            const [result, itemsRes, uomsRes] = await Promise.all([
+            const [result, itemsRes, uomsRes, conversionsRes] = await Promise.all([
                 ItemBarcodeService.getAll(),
                 ItemMasterService.getAll({ limit: 10000 }),
-                UOMService.getAll({ limit: 10000 })
+                UOMService.getAll({ limit: 10000 }),
+                UOMConversionService.getAll({ limit: 10000 })
             ]);
             let items = result.items || [];
             const allItems = itemsRes.items || [];
             const allUoms = uomsRes.items || [];
+            const allConversions = conversionsRes.items || [];
 
             // Map item_id to item
             const itemMap = new Map<number, typeof allItems[0]>();
@@ -100,14 +103,23 @@ export default function ItemBarcodeList() {
                 }
             });
 
+            // Map conversion_id (item_uom_id) to conversion
+            const conversionMap = new Map<number, typeof allConversions[0]>();
+            allConversions.forEach(c => {
+                if (c.conversion_id) {
+                    conversionMap.set(c.conversion_id, c);
+                }
+            });
+
             items = items.map(item => {
                 const mappedItem = item.item_id ? itemMap.get(item.item_id) : undefined;
+                const mappedConversion = item.uom_id ? conversionMap.get(item.uom_id) : undefined;
                 const mappedUom = item.uom_id ? uomMap.get(item.uom_id) : undefined;
                 return {
                     ...item,
                     item_code: item.item_code || mappedItem?.item_code || '',
                     item_name: item.item_name || mappedItem?.item_name || '',
-                    uom_name: item.uom_name || mappedUom?.uom_name || '',
+                    uom_name: item.uom_name || mappedConversion?.from_unit_name || mappedUom?.uom_name || '',
                 };
             });
             

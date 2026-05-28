@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
+import { useQueryClient } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { QuotationService } from '@sales/quotation/services/quotation.service';
 import type { QuotationFormData } from '@sales/quotation/types/quotation.types';
@@ -136,6 +137,8 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     const { toast } = useToast();
     const { confirm } = useConfirmation();
     const isEdit = !!id;
+    const queryClient = useQueryClient();
+    const isFetchingRef = useRef(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     
@@ -261,7 +264,11 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                             if (allItemIds.length > 0) {
                                 try {
                                     const convsList = await Promise.all(allItemIds.map(itemId => 
-                                        UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                                        queryClient.fetchQuery({
+                                            queryKey: ['uom-conversions', itemId],
+                                            queryFn: () => UOMConversionService.getByItemId(itemId),
+                                            staleTime: 10 * 60 * 1000,
+                                        }).then(res => ({ itemId, items: res?.items || [] }))
                                     ));
                                     const conversionMap = new Map<number, import('@/modules/master-data/types/master-data-types').UOMConversionListItem[]>();
                                     convsList.forEach(c => { if (c) conversionMap.set(c.itemId, c.items); });
@@ -317,7 +324,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
 
         loadData();
         return () => { active = false; };
-    }, [isOpen, id, reset, initialData, toast, setValue, getValues]);
+    }, [isOpen, id, reset, initialData, toast, setValue, getValues, queryClient]);
 
 
     // Master Data Hook
@@ -491,7 +498,11 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         
         if (field === 'uom_id') {
             if (updatedLine.item_id && value) {
-                UOMConversionService.getByItemId(Number(updatedLine.item_id)).then(response => {
+                queryClient.fetchQuery({
+                    queryKey: ['uom-conversions', Number(updatedLine.item_id)],
+                    queryFn: () => UOMConversionService.getByItemId(Number(updatedLine.item_id)),
+                    staleTime: 10 * 60 * 1000,
+                }).then(response => {
                     const convs = response?.items || [];
                     const matchedConv = convs.find(c => Number(c.from_unit_id) === Number(value)) ||
                                        convs.find(c => Number(c.conversion_factor) === 1);
@@ -504,7 +515,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
 
         newLines[index] = updatedLine;
         setValue('lines', newLines, { shouldValidate: true });
-    }, [setValue, getValues]);
+    }, [setValue, getValues, queryClient]);
 
     // =============================================================================
     // 🔍 SECTION 5: MODAL SEARCH SELECTION HANDLERS
@@ -543,7 +554,11 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             
             // Resolve item_uom_id conversion PK
             if (line.item_id && line.uom_id) {
-                UOMConversionService.getByItemId(Number(line.item_id)).then(response => {
+                queryClient.fetchQuery({
+                    queryKey: ['uom-conversions', Number(line.item_id)],
+                    queryFn: () => UOMConversionService.getByItemId(Number(line.item_id)),
+                    staleTime: 10 * 60 * 1000,
+                }).then(response => {
                     const convs = response?.items || [];
                     const matchedConv = convs.find(c => Number(c.from_unit_id) === Number(line.uom_id)) ||
                                        convs.find(c => Number(c.conversion_factor) === 1);
@@ -562,7 +577,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             setValue('lines', newLines, { shouldValidate: true, shouldDirty: true });
         }
         setIsProductSearchOpen(false);
-    }, [activeLineIndex, getValues, setValue, uoms]);
+    }, [activeLineIndex, getValues, setValue, uoms, queryClient]);
 
     const handleSelectLot = useCallback(async (lot: LotNo) => {
         if (activeLotLineIndex !== null) {
@@ -674,6 +689,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
     // 🔌 SECTION 6: EXTERNAL REFERENCE INTEGRATIONS (SQ/AQ QUOTATION FETCHING)
     // =============================================================================
     const handleFetchQuotation = useCallback(async (type: 'SQ' | 'AQ', overrideId?: string) => {
+        if (isFetchingRef.current) return;
         const field = type === 'SQ' ? 'sq_id' : 'aq_id';
         const val = overrideId || getValues(field);
 
@@ -683,6 +699,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             return;
         }
 
+        isFetchingRef.current = true;
         setIsSubmitting(true);
         try {
             let quotationId: string | number | undefined;
@@ -1049,7 +1066,11 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                 const allLineItemIds = [...new Set(finalLines.map(l => Number(l.item_id)).filter(id => id > 0))];
                 if (allLineItemIds.length > 0) {
                     Promise.all(allLineItemIds.map(itemId => 
-                        UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                        queryClient.fetchQuery({
+                            queryKey: ['uom-conversions', itemId],
+                            queryFn: () => UOMConversionService.getByItemId(itemId),
+                            staleTime: 10 * 60 * 1000,
+                        }).then(res => ({ itemId, items: res?.items || [] }))
                     )).then(convsList => {
                         const conversionMap = new Map<number, import('@/modules/master-data/types/master-data-types').UOMConversionListItem[]>();
                         convsList.forEach(c => { if (c) conversionMap.set(c.itemId, c.items); });
@@ -1107,9 +1128,10 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         } catch {
             toast('เกิดข้อผิดพลาดในการดึงข้อมูล', 'error');
         } finally {
+            isFetchingRef.current = false;
             setIsSubmitting(false);
         }
-    }, [getValues, setValue, setIsSubmitting, toast]);
+    }, [getValues, setValue, setIsSubmitting, toast, queryClient]);
 
     const handleSelectAQ = useCallback((aq: AvailableApproval) => {
         // Correctly set both ID and NO fields

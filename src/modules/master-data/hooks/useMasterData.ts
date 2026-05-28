@@ -51,7 +51,7 @@ export function useUoms(enabled = true) {
 /**
  * Hook to fetch all units (Deprecated - please transition to useUoms in new code)
  */
-export function useUnits(enabled = true, _limit = 1000) {
+export function useUnits(enabled = true) {
     return useUoms(enabled);
 }
 
@@ -73,7 +73,7 @@ export function useWarehouses(enabled = true) {
  */
 export function useLocations(enabled = true, limit = 1000) {
     return useQuery({
-        queryKey: ['master-locations', limit],
+        queryKey: ['master-locations'],
         queryFn: () => LocationService.getAll({ limit }),
         enabled,
         staleTime: MASTER_DATA_STALE_TIME,

@@ -9,7 +9,7 @@ import { logger } from '@/shared/utils';
 interface VendorSearchProps {
   onVendorSelect: (vendor: VendorSelection | null) => void;
   selectedVendorId?: string;
-  selectedVendorName?: string;
+  selectedVendorName?: string | null;
   label?: string;
   placeholder?: string;
   error?: string;
