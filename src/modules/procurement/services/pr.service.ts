@@ -146,25 +146,28 @@ export const PRService = {
     if (needsClientFilter || USE_MOCK) {
         const filterParams: Record<string, string | number | boolean | undefined | null> = { ...safeParams };
         let hydratedItems = [...allItems];
-        try {
-            const now = Date.now();
-            if (!cachedVendors || (now - lastVendorFetchTime > VENDOR_CACHE_TTL)) {
-                cachedVendors = await VendorService.getList(config);
-                lastVendorFetchTime = now;
-            }
-            const vendorsRes = cachedVendors;
-            const vendorMap = createVendorMap(vendorsRes.items || []);
+        const now = Date.now();
+        // 🚀 Parallel fetch: Vendor + AV Status (M5 fix — was sequential)
+        const [vendorsResult, avStatusResult] = await Promise.allSettled([
+            (async () => {
+                if (!cachedVendors || (now - lastVendorFetchTime > VENDOR_CACHE_TTL)) {
+                    cachedVendors = await VendorService.getList(config);
+                    lastVendorFetchTime = now;
+                }
+                return cachedVendors!;
+            })(),
+            (!USE_MOCK ? buildAVStatusMap(config) : Promise.resolve(new Map<number, { status: string; av_no?: string }>()))
+        ]);
+        if (vendorsResult.status === 'fulfilled') {
+            const vendorMap = createVendorMap(vendorsResult.value.items || []);
             hydratedItems = hydratePRList(allItems, vendorMap);
-        } catch (err) {
-            logger.error('[PRService] Failed to hydrate vendors for filtering:', err);
+        } else {
+            logger.error('[PRService] Failed to hydrate vendors for filtering:', vendorsResult.reason);
         }
-        try {
-            if (!USE_MOCK) {
-                const avStatusMap = await buildAVStatusMap(config);
-                hydratedItems = overlayAVStatus(hydratedItems, avStatusMap);
-            }
-        } catch (err) {
-            logger.warn('[PRService] AV status hydration failed:', err);
+        if (!USE_MOCK && avStatusResult.status === 'fulfilled') {
+            hydratedItems = overlayAVStatus(hydratedItems, avStatusResult.value);
+        } else if (!USE_MOCK && avStatusResult.status === 'rejected') {
+            logger.warn('[PRService] AV status hydration failed:', avStatusResult.reason);
         }
         const uniqueItems = deduplicatePRs(hydratedItems);
         return applyClientFilters<PRHeader>(uniqueItems, filterParams, {
@@ -179,13 +182,19 @@ export const PRService = {
         let hydratedItems = deduplicatePRs(allItems);
         try {
             const now = Date.now();
-            if (!cachedVendors || (now - lastVendorFetchTime > VENDOR_CACHE_TTL)) {
-                cachedVendors = await VendorService.getList(config);
-                lastVendorFetchTime = now;
-            }
-            const vendorMap = createVendorMap(cachedVendors.items || []);
+            // 🚀 Parallel fetch: Vendor + AV Status (M5 fix — was sequential)
+            const [vendorsRes, avStatusMap] = await Promise.all([
+                (async () => {
+                    if (!cachedVendors || (now - lastVendorFetchTime > VENDOR_CACHE_TTL)) {
+                        cachedVendors = await VendorService.getList(config);
+                        lastVendorFetchTime = now;
+                    }
+                    return cachedVendors!;
+                })(),
+                buildAVStatusMap(config)
+            ]);
+            const vendorMap = createVendorMap(vendorsRes.items || []);
             hydratedItems = hydratePRList(hydratedItems, vendorMap);
-            const avStatusMap = await buildAVStatusMap(config);
             hydratedItems = overlayAVStatus(hydratedItems, avStatusMap);
         } catch (err) {
              logger.debug('Hydration failed during fallback', err);
@@ -222,12 +231,14 @@ export const PRService = {
   },
 
   create: async (data: CreatePRPayload, config?: CustomAxiosConfig): Promise<PRHeaderExtended> => {
-    const response = await api.post<ApiResponse<PRHeaderExtended>>(ENDPOINTS.list, data, config);
+    const sanitizedData = PRService.sanitizeData(data as unknown as Record<string, unknown>);
+    const response = await api.post<ApiResponse<PRHeaderExtended>>(ENDPOINTS.list, sanitizedData, config);
     return unwrapResponseData(response);
   },
 
   update: async (id: number, data: PRUpdatePayload, config?: CustomAxiosConfig): Promise<PRHeaderExtended> => {
-    const response = await api.patch<ApiResponse<PRHeaderExtended>>(ENDPOINTS.detail(id), data, config);
+    const sanitizedData = PRService.sanitizeData(data as unknown as Record<string, unknown>);
+    const response = await api.patch<ApiResponse<PRHeaderExtended>>(ENDPOINTS.detail(id), sanitizedData, config);
     return unwrapResponseData(response);
   },
 

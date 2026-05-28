@@ -73,8 +73,8 @@ export const calculatePricingSummary = (
  * Parses a discount string (e.g., "10%", "500") and returns the discount amount.
  * Supports percentage-based (e.g., "10%" → baseAmount * 0.10) and fixed values.
  */
-export const parseDiscountAmount = (raw: string | number | undefined, baseAmount: number): number => {
-    if (!raw) return 0;
+export const parseDiscountAmount = (raw: string | number | undefined | null, baseAmount: number): number => {
+    if (raw === undefined || raw === null || raw === '') return 0;
     const str = String(raw).trim();
     if (str.endsWith('%')) {
         const percent = parseFloat(str.replace('%', ''));
@@ -83,4 +83,3 @@ export const parseDiscountAmount = (raw: string | number | undefined, baseAmount
     const val = parseFloat(str);
     return isNaN(val) ? 0 : round(val);
 };
-

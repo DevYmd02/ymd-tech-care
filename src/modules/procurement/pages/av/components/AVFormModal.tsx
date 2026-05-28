@@ -60,7 +60,7 @@ export const AVFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, a
   const readOnly = propReadOnly ?? false;
 
   // Date Formatting Helpers
-  const formatDisplayDate = (val?: string) => {
+  const formatDisplayDate = (val?: string | null) => {
     if (!val) return '';
     if (val.includes('-') && val.length >= 10) {
       const [y, m, d] = val.split('-');

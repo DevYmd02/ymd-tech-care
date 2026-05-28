@@ -260,7 +260,7 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
 
     // Hydrate form
     useEffect(() => {
-        if (existingItem) {
+        if (existingItem && isOpen) {
             const item = existingItem;
             reset({
                 item_code: item.item_code,
@@ -330,7 +330,7 @@ export function useItemForm(editId: number | null, isOpen: boolean, onClose: () 
                 })),
             });
         }
-    }, [existingItem, reset]);
+    }, [existingItem, reset, isOpen]);
 
     const saveMutation = useMutation({
         mutationFn: async (data: ItemFormData) => {
