@@ -222,7 +222,11 @@ export function DocLinkICTab() {
                                             <td className="px-3 py-3 w-[280px] align-top border-b border-gray-200 dark:border-gray-700/60">
                                                 <div className="flex flex-col gap-1">
                                                     {subs.length>0
-                                                        ? subs.map((s,i)=><span key={i} className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium ${STOCK_TAG_COLOR[s.stock_effect_ic??0]}`}>{i+1}. {s.doc_type_name||s.docu_item_name}</span>)
+                                                        ? subs.map((s,i)=>(
+                                                            <div key={i} className="h-7 flex items-center">
+                                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium ${STOCK_TAG_COLOR[s.stock_effect_ic??0]}`}>{i+1}. {s.doc_type_name||s.docu_item_name}</span>
+                                                            </div>
+                                                        ))
                                                         : <span className="text-sm text-gray-400 italic">ไม่มีรายการย่อย</span>
                                                     }
                                                 </div>
@@ -230,7 +234,11 @@ export function DocLinkICTab() {
                                             <td className="px-3 py-3 w-[180px] align-top border-b border-gray-200 dark:border-gray-700/60">
                                                 <div className="flex flex-col gap-1">
                                                     {subs.length > 0
-                                                        ? subs.map((s,i) => <span key={i} className={STOCK_BADGE_CLS[s.stock_effect_ic??0]}>{STOCK_LABEL[s.stock_effect_ic??0]}</span>)
+                                                        ? subs.map((s,i) => (
+                                                            <div key={i} className="h-7 flex items-center">
+                                                                <span className={STOCK_BADGE_CLS[s.stock_effect_ic??0]}>{STOCK_LABEL[s.stock_effect_ic??0]}</span>
+                                                            </div>
+                                                        ))
                                                         : <span className={STOCK_BADGE_CLS[item.stock_effect_ic??0]}>{STOCK_LABEL[item.stock_effect_ic??0]}</span>
                                                     }
                                                 </div>
@@ -239,9 +247,11 @@ export function DocLinkICTab() {
                                                 {subs.length > 0
                                                     ? <div className="flex flex-col gap-1">
                                                         {subs.map((s, i) => (
-                                                            <span key={i} className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-[210px]" title={s.docu_desc || s.doc_type_name || ''}>
-                                                                {s.docu_desc || s.doc_type_name || '-'}
-                                                            </span>
+                                                            <div key={i} className="h-7 flex items-center">
+                                                                <span className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-[210px]" title={s.docu_desc || s.doc_type_name || ''}>
+                                                                    {s.docu_desc || s.doc_type_name || '-'}
+                                                                </span>
+                                                            </div>
                                                         ))}
                                                       </div>
                                                     : <span className="text-sm text-gray-600 dark:text-gray-300 truncate" title={item.docu_desc}>{item.docu_desc || sysdoc?.system_document_name || '-'}</span>
@@ -251,9 +261,11 @@ export function DocLinkICTab() {
                                                 {subs.length > 0
                                                     ? <div className="flex flex-col gap-1">
                                                         {subs.map((s, i) => (
-                                                            <span key={i} className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-[170px]" title={s.remark || s.doc_type_name || ''}>
-                                                                {s.remark || s.doc_type_name || '-'}
-                                                            </span>
+                                                            <div key={i} className="h-7 flex items-center">
+                                                                <span className="text-sm text-gray-600 dark:text-gray-300 truncate max-w-[170px]" title={s.remark || s.doc_type_name || ''}>
+                                                                    {s.remark || s.doc_type_name || '-'}
+                                                                </span>
+                                                            </div>
                                                         ))}
                                                       </div>
                                                     : <span className="text-sm text-gray-600 dark:text-gray-300 truncate" title={item.remark}>{item.remark || '-'}</span>

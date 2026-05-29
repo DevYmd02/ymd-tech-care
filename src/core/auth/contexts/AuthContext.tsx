@@ -29,47 +29,49 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  // // Inactivity timeout setting (in milliseconds, e.g., 30 minutes)
-  // const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
-
-  // // Ref to store the timer ID
-  // const logoutTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // const resetInactivityTimer = useCallback(() => {
-  //   if (!isAuthenticated) return;
-    
-  //   if (logoutTimerRef.current) {
-  //     clearTimeout(logoutTimerRef.current);
-  //   }
-    
-  //   logoutTimerRef.current = setTimeout(() => {
-  //     logger.warn('⏳ Session expired due to inactivity');
-  //     clearAuthStorage();
-  //     setIsAuthenticated(false);
-  //     setUser(null);
-  //     navigate('/auth/login', { replace: true, state: { reason: 'timeout' } });
-  //   }, INACTIVITY_TIMEOUT);
-  // }, [isAuthenticated, navigate, INACTIVITY_TIMEOUT]);
-
-  // // Setup activity listeners
-  // useEffect(() => {
-  //   if (isAuthenticated) {
-  //     resetInactivityTimer();
-  //     const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-      
-  //     const handleActivity = () => resetInactivityTimer();
-      
-  //     events.forEach(event => document.addEventListener(event, handleActivity));
-      
-  //     return () => {
-  //       events.forEach(event => document.removeEventListener(event, handleActivity));
-  //       if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
-  //     };
-  //   }
-  // }, [isAuthenticated, resetInactivityTimer]);
-
   const hasInitialized = React.useRef(false);
   const authChannel = React.useMemo(() => new BroadcastChannel('auth_sync'), []);
+
+  // Inactivity timeout setting (in milliseconds, e.g., 30 minutes)
+  const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
+
+  // Ref to store the timer ID
+  const logoutTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetInactivityTimer = useCallback(() => {
+    if (!isAuthenticated) return;
+    
+    if (logoutTimerRef.current) {
+      clearTimeout(logoutTimerRef.current);
+    }
+    
+    logoutTimerRef.current = setTimeout(() => {
+      logger.warn('⏳ Session expired due to inactivity');
+      clearAuthStorage();
+      setIsAuthenticated(false);
+      setUser(null);
+      // Synchronize logout across tabs
+      authChannel.postMessage({ type: 'LOGOUT' });
+      navigate('/auth/login', { replace: true, state: { reason: 'timeout' } });
+    }, INACTIVITY_TIMEOUT);
+  }, [isAuthenticated, navigate, INACTIVITY_TIMEOUT, authChannel]);
+
+  // Setup activity listeners
+  useEffect(() => {
+    if (isAuthenticated) {
+      resetInactivityTimer();
+      const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+      
+      const handleActivity = () => resetInactivityTimer();
+      
+      events.forEach(event => document.addEventListener(event, handleActivity));
+      
+      return () => {
+        events.forEach(event => document.removeEventListener(event, handleActivity));
+        if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+      };
+    }
+  }, [isAuthenticated, resetInactivityTimer]);
 
   useEffect(() => {
     const handleSync = (event: MessageEvent) => {
