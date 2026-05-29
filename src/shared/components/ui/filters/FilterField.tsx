@@ -69,6 +69,44 @@ export const FilterField: React.FC<FilterFieldProps> = ({
     const inputClass = `${baseInputClass} ${className} ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`;
     const labelClass = styles.label;
 
+    // 🎯 LOCAL DEBOUNCE SYSTEM - Prevents API storms on 40+ master lists system-wide
+    const [localValue, setLocalValue] = React.useState(value);
+
+    // Keep local value in sync when value changes programmatically (e.g. Filter reset)
+    React.useEffect(() => {
+        setLocalValue(value);
+    }, [value]);
+
+    // Handle debounced change propagation
+    React.useEffect(() => {
+        if (type !== 'text') return;
+
+        // Skip initial mount update to prevent loop
+        if (localValue === value) return;
+
+        const handler = setTimeout(() => {
+            onChange(localValue);
+        }, 400); // 400ms debouncing window
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [localValue, onChange, type, value]);
+
+    // Instantly sync on Blur to prevent race conditions before clicking "Search"
+    const handleBlur = () => {
+        if (type === 'text' && localValue !== value) {
+            onChange(localValue);
+        }
+    };
+
+    // Instantly sync when pressing Enter
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && localValue !== value) {
+            onChange(localValue);
+        }
+    };
+
     return (
         <div>
             <label className={labelClass}>{label}</label>
@@ -103,8 +141,10 @@ export const FilterField: React.FC<FilterFieldProps> = ({
             ) : (
                 <input
                     type="text"
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
+                    value={localValue}
+                    onChange={(e) => setLocalValue(e.target.value)}
+                    onBlur={handleBlur}
+                    onKeyDown={handleKeyDown}
                     placeholder={placeholder}
                     disabled={disabled}
                     className={inputClass}

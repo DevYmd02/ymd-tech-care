@@ -6,6 +6,10 @@ import type { TaxCode } from '@/modules/master-data/tax/types/tax-types';
 import { logger } from '@/shared/utils';
 import { useQuery } from '@tanstack/react-query';
 
+// Caching Constants for Master Data (Standardized from useMasterData.ts)
+const MASTER_DATA_STALE_TIME = 5 * 60 * 1000; // 5 minutes
+const MASTER_DATA_GC_TIME = 30 * 60 * 1000;    // 30 minutes
+
 export interface MappedOption<T> {
     value: number | string;
     label: string;
@@ -24,14 +28,18 @@ export const usePRMasterData = (enabled = true) => {
     const { data: costCentersRes, isLoading: isLoadingCC } = useQuery({
         queryKey: ['master-cost-centers'],
         queryFn: () => MasterDataService.getCostCenters(),
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     // 3. Items (We use a simple query for initial items, search function for dynamic)
     const { data: itemsRes, isLoading: isLoadingItems } = useQuery({
         queryKey: ['master-items-initial'],
         queryFn: () => MasterDataService.getItems(),
-        enabled
+        enabled,
+        staleTime: MASTER_DATA_STALE_TIME,
+        gcTime: MASTER_DATA_GC_TIME,
     });
 
     const [products, setProducts] = useState<ItemListItem[]>([]);
