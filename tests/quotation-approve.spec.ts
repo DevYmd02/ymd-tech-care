@@ -62,7 +62,7 @@ test.describe('ระบบอนุมัติใบเสนอราคา (
               sq_no: 'SQ-2026-0001',
               sq_date: '2026-06-02',
               customer_id: 1,
-              customer_name: 'บริษัท สยามทีทีเค จำกัด',
+              customer_name: 'บริษัท ทดสอบ จำกัด',
               customer_code: 'CUST-001',
               status: 'PENDING',
               quote_total_amount: 1500,
@@ -84,7 +84,7 @@ test.describe('ระบบอนุมัติใบเสนอราคา (
             sq_no: 'SQ-2026-0001',
             sq_date: '2026-06-02',
             customer_id: 1,
-            customer_name: 'บริษัท สยามทีทีเค จำกัด',
+            customer_name: 'บริษัท ทดสอบ จำกัด',
             customer_code: 'CUST-001',
             branch_id: 1,
             currency_code: 'THB',
@@ -176,7 +176,7 @@ test.describe('ระบบอนุมัติใบเสนอราคา (
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify([
-            { branch_id: 1, branch_name: 'สำนักงานใหญ่' }
+            { branch_id: 1, branch_name: 'ทดสอบBranch1' }
           ]),
         });
       });
