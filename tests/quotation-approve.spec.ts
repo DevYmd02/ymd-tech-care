@@ -6,6 +6,50 @@ test.describe('ระบบอนุมัติใบเสนอราคา (
     const useRealBackend = process.env.USE_REAL_BACKEND === 'true';
 
     if (!useRealBackend) {
+      // Mock Auth endpoints
+      await page.route('**/api/auth/login*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            access_token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock_signature_for_dev",
+            user: {
+              id: 2,
+              username: "admin",
+              employee_id: 2,
+              employee: {
+                employee_id: 2,
+                branch_id: 1,
+                employee_code: "EMP0003",
+                employee_fullname: "นาย สมชาย ใจดี",
+                position_id: 1,
+                department_id: 1
+              }
+            }
+          }),
+        });
+      });
+
+      await page.route('**/api/auth/me*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 2,
+            username: "admin",
+            employee_id: 2,
+            employee: {
+              employee_id: 2,
+              branch_id: 1,
+              employee_code: "EMP0003",
+              employee_fullname: "นาย สมชาย ใจดี",
+              position_id: 1,
+              department_id: 1
+            }
+          }),
+        });
+      });
+
       // 1. Mock API ข้อมูลรายการรออนุมัติ (Pending Approval SQs)
       await page.route('**/api/sale-quotation-approval/pending-approval*', async (route) => {
         await route.fulfill({
