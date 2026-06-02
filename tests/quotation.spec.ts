@@ -66,7 +66,7 @@ test.describe('ระบบใบเสนอราคา (Sales Quotation E2E A
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify([
-            { branch_id: 1, branch_name: 'สำนักงานใหญ่' }
+            { branch_id: 1, branch_name: 'ทดสอบBranch1' }
           ]),
         });
       });
@@ -272,7 +272,7 @@ test.describe('ระบบใบเสนอราคา (Sales Quotation E2E A
     // -----------------------------------------------------
     
     // 2.1 เลือกสาขา
-    await page.selectOption('select[name="branch_id"]', { label: 'สำนักงานใหญ่' });
+    await page.selectOption('select[name="branch_id"]', { label: 'ทดสอบBranch1' });
 
     // 2.2 ค้นหาและเลือกลูกค้าผ่าน CustomerSearchModal
     // คลิกปุ่มแว่นขยายค้นหาลูกค้า
@@ -349,7 +349,7 @@ test.describe('ระบบใบเสนอราคา (Sales Quotation E2E A
     await page.click('button:has-text("สร้างใบเสนอราคาใหม่")');
 
     // กรอกข้อมูลให้ครบเพื่อเตรียมเซฟ (Happy Path)
-    await page.selectOption('select[name="branch_id"]', { label: 'สำนักงานใหญ่' });
+    await page.selectOption('select[name="branch_id"]', { label: 'ทดสอบBranch1' });
     await page.click('div:has(> label:has-text("ลูกค้า")) button');
     await page.fill('input[placeholder*="ค้นหารหัสลูกค้า"]', 'สยามทีทีเค');
     await page.keyboard.press('Enter');

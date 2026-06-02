@@ -18,6 +18,8 @@ const createMockReservationFormData = (
     sq_no: null,
     aq_id: null,
     aq_no: null,
+    so_id: null,
+    so_no: null,
     currency_code: 'THB',
     isMulticurrency: false,
     base_currency_code: 'THB',

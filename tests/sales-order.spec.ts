@@ -66,7 +66,7 @@ test.describe('ระบบใบสั่งขาย (Sales Order E2E Automati
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify([
-            { branch_id: 1, branch_name: 'สำนักงานใหญ่' }
+            { branch_id: 1, branch_name: 'ทดสอบBranch1' }
           ]),
         });
       });
@@ -284,7 +284,7 @@ test.describe('ระบบใบสั่งขาย (Sales Order E2E Automati
     // -----------------------------------------------------
     
     // 2.1 เลือกสาขา
-    await page.selectOption('select[name="branch_id"]', { label: 'สำนักงานใหญ่' });
+    await page.selectOption('select[name="branch_id"]', { label: 'ทดสอบBranch1' });
 
     // 2.2 ค้นหาและเลือกลูกค้าผ่าน CustomerSearchModal
     // คลิกปุ่มแว่นขยายค้นหาลูกค้า

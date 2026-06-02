@@ -62,7 +62,7 @@ export interface ReservationHeader {
     quote_currency_code?: string;
     currency?: string;
     exchange_rate?: number;
-    status: 'DRAFT' | 'CONFIRMED' | 'RELEASED' | 'EXPIRED' | 'CANCELLED';
+    status: 'DRAFT' | 'CONFIRMED' | 'POSTED' | 'RELEASED' | 'EXPIRED' | 'CANCELLED';
     branch_name?: string;
     rawData?: Record<string, unknown>;
 }
@@ -262,6 +262,7 @@ export const ReservationService = {
                 const r = (rRaw['sale_reservation'] || rRaw['reservation_header'] || rRaw['reservation'] || rRaw['header'] || rRaw) as Record<string, unknown>;
 
                 // Discover nested SQ and AQ info recursively
+                // Discover nested SQ, AQ, and SO info recursively
                 const sqDiscovered = findDocRef(r, SQ_CONFIG) || findDocRef(rRaw, SQ_CONFIG);
                 const aqDiscovered = findDocRef(r, AQ_CONFIG) || findDocRef(rRaw, AQ_CONFIG);
 
@@ -270,11 +271,23 @@ export const ReservationService = {
                 if (aqDiscovered.no) r.aq_no = aqDiscovered.no;
                 if (aqDiscovered.id && !r.aq_id) r.aq_id = aqDiscovered.id;
 
-                // Clean existing SQ/AQ reference numbers first to handle parsed "null" or "undefined" strings
+                // Discover linked SO (Sales Order)
+                const SO_CONFIG = {
+                    noFields: ['so_no', 'sale_order_no', 'order_no', 'ref_so_no'],
+                    idFields: ['so_id', 'sale_order_id', 'order_id'],
+                    nestedKeys: ['so', 'sale_order', 'order']
+                };
+                const soDiscovered = findDocRef(r, SO_CONFIG) || findDocRef(rRaw, SO_CONFIG);
+                if (soDiscovered.no) r.so_no = soDiscovered.no;
+                if (soDiscovered.id && !r.so_id) r.so_id = soDiscovered.id;
+
+                // Clean existing SQ/AQ/SO reference numbers first to handle parsed "null" or "undefined" strings
                 r.sq_no = cleanRefNo(r.sq_no || rRaw.sq_no);
                 r.aq_no = cleanRefNo(r.aq_no || rRaw.aq_no);
+                r.so_no = cleanRefNo(r.so_no || rRaw.so_no);
                 rRaw.sq_no = r.sq_no;
                 rRaw.aq_no = r.aq_no;
+                rRaw.so_no = r.so_no;
 
                 const sqId = (r.sq_id || r.sale_quotation_id || r.quotation_id || r.sq_header_id || rRaw.sq_id) as string | number | undefined;
                 
@@ -350,6 +363,7 @@ export const ReservationService = {
                 // Sync values back to raw data to ensure UI form reads them correctly
                 rRaw.sq_no = r.sq_no;
                 rRaw.aq_no = r.aq_no;
+                rRaw.so_no = r.so_no;
                 
                 // 📅 Date Formatting
                 if (r.reservation_date) r.reservation_date = String(r.reservation_date).split('T')[0];
@@ -379,7 +393,7 @@ export const ReservationService = {
                 r.vat_amount = safeNumber(r.vat_amount || r.base_vat_amount || 0);
                 r.total_amount = safeNumber(r.total_amount || r.base_total_amount || 0);
 
-                const idFields = ['sq_id', 'aq_id', 'customer_id', 'branch_id', 'emp_dept_id', 'emp_sale_id', 'sale_area_id', 'tax_code_id'];
+                const idFields = ['sq_id', 'aq_id', 'so_id', 'customer_id', 'branch_id', 'emp_dept_id', 'emp_sale_id', 'sale_area_id', 'tax_code_id'];
                 idFields.forEach(f => {
                     if (r[f]) r[f] = String(r[f]);
                 });
@@ -387,7 +401,7 @@ export const ReservationService = {
                 // Copy critical fields from r to rRaw if r !== rRaw
                 if (r !== rRaw) {
                     const criticalFields = [
-                        'reservation_no', 'reservation_date', 'sq_id', 'sq_no', 'aq_id', 'aq_no',
+                        'reservation_no', 'reservation_date', 'sq_id', 'sq_no', 'aq_id', 'aq_no', 'so_id', 'so_no',
                         'customer_id', 'branch_id', 'payment_term_days', 'ship_days',
                         'emp_dept_id', 'tax_code_id', 'emp_sale_id', 'sale_area_id', 'job_id',
                         'remarks', 'status', 'onhold', 'status_remark', 'sub_total', 'discount_amount',

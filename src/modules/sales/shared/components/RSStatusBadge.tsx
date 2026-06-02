@@ -10,6 +10,10 @@ const RS_STATUS_CONFIG: Record<string, { label: string; colorClass: string }> = 
     label: 'ยืนยันแล้ว',
     colorClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   },
+  POSTED: {
+    label: 'ดำเนินการแล้ว',
+    colorClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+  },
   RELEASED: {
     label: 'จ่ายของแล้ว',
     colorClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
