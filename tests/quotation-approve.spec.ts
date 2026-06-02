@@ -170,6 +170,26 @@ test.describe('ระบบอนุมัติใบเสนอราคา (
           ]),
         });
       });
+
+      await page.route('**/api/org-branches*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            { branch_id: 1, branch_name: 'สำนักงานใหญ่' }
+          ]),
+        });
+      });
+
+      await page.route('**/api/department*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            { emp_dept_id: 5, emp_dept_name: 'แผนกการขายและการตลาด', emp_dept_code: 'MKT' }
+          ]),
+        });
+      });
     }
 
     // เปิดหน้าแรกของแอปและทำ Login เข้าสู่ระบบ

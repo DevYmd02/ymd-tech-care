@@ -111,6 +111,36 @@ test.describe('ระบบใบสั่งขาย (Sales Order E2E Automati
         });
       });
 
+      await page.route('**/api/employee-sale-area*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            { sale_area_id: 1, sale_area_code: 'BKK', sale_area_name: 'กรุงเทพและปริมณฑล' }
+          ]),
+        });
+      });
+
+      await page.route('**/api/employees*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            { employee_id: 1, employee_code: 'EMP-001', employee_fullname: 'สมชาย ขายดี', emp_type: 'S' }
+          ]),
+        });
+      });
+
+      await page.route('**/api/price-level*', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([
+            { id: 1, code: 'LV1', name: 'ราคาขายส่ง', level_no: 1 }
+          ]),
+        });
+      });
+
       // Mock รายการสินค้าสำหรับ ProductSearchModal
       await page.route('**/api/item-master*', async (route) => {
         await route.fulfill({
