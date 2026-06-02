@@ -14,6 +14,7 @@ import { Toaster } from 'react-hot-toast';
 
 import { placeholderRoutes, ROUTES } from '@/core/config/routes';
 import { AuthProvider, useAuth } from '@/core/auth/contexts/AuthContext';
+import { PermissionProvider } from '@/core/auth/contexts/PermissionContext';
 import { MasterDataProvider } from '@/core/providers/MasterDataProvider';
 import { ProtectedRoute } from '@/core/auth/components/ProtectedRoute';
 import { PublicRoute } from '@/core/auth/components/PublicRoute';
@@ -424,7 +425,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <PermissionProvider>
+        <AppContent />
+      </PermissionProvider>
     </AuthProvider>
   );
 }

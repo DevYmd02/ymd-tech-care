@@ -158,7 +158,14 @@ export const EmployeeSearchModal: React.FC<EmployeeSearchModalProps> = React.mem
                                                 {emp.employee_firstname_th} {emp.employee_lastname_th}
                                             </td>
                                             <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">
-                                                {emp.department?.department_name || '-'}
+                                                {(() => {
+                                                    const d = emp as unknown as {
+                                                        department?: { department_name?: string; emp_dept_name?: string };
+                                                        emp_dept?: { emp_dept_name?: string; dept_name?: string };
+                                                        dept?: { dept_name?: string };
+                                                    };
+                                                    return d.department?.department_name || d.emp_dept?.emp_dept_name || d.department?.emp_dept_name || d.emp_dept?.dept_name || d.dept?.dept_name || '-';
+                                                })()}
                                             </td>
                                             <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">
                                                 {emp.position?.position_name || '-'}

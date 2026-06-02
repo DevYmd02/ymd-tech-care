@@ -117,7 +117,16 @@ export const EmployeePage: React.FC = () => {
                     <td className="p-4 font-medium text-blue-600">{emp.employee_code}</td>
                     <td className="p-4">{emp.employee_firstname_th} {emp.employee_lastname_th}</td>
                     <td className="p-4">{emp.position?.position_name || '-'}</td>
-                    <td className="p-4">{emp.department?.department_name || '-'}</td>
+                    <td className="p-4">
+                      {(() => {
+                        const d = emp as unknown as {
+                          department?: { department_name?: string; emp_dept_name?: string };
+                          emp_dept?: { emp_dept_name?: string; dept_name?: string };
+                          dept?: { dept_name?: string };
+                        };
+                        return d.department?.department_name || d.emp_dept?.emp_dept_name || d.department?.emp_dept_name || d.emp_dept?.dept_name || d.dept?.dept_name || '-';
+                      })()}
+                    </td>
                     <td className="p-4">{emp.branch?.branch_name || '-'}</td>
                     <td className="p-4 text-center">
                       <span className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
