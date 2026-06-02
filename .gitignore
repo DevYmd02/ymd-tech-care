@@ -32,3 +32,9 @@ stats.html
 # Documentation with sensitive information
 *.md
 !README.md
+
+# Playwright test results and reports
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

@@ -448,7 +448,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
                 })
             };
 
-            console.log('🚀 PAYLOAD TO SEND:', JSON.stringify(payload, null, 2));
+            logger.debug('🚀 PAYLOAD TO SEND:', JSON.stringify(payload, null, 2));
 
             if (isEdit && editId) {
                 return api.patch<EmployeeMaster & { success?: boolean; data?: EmployeeMaster; message?: string }>(`/employees/${editId}`, payload, { skipToast: true });
@@ -456,7 +456,7 @@ export function useEmployeeForm(editId: number | null, isOpen: boolean, onClose:
             return api.post<EmployeeMaster & { success?: boolean; data?: EmployeeMaster; message?: string }>('/employees', payload, { skipToast: true });
         },
         onSuccess: (res) => {
-            console.log('📥 RESPONSE FROM SERVER:', res);
+            logger.debug('📥 RESPONSE FROM SERVER:', res);
             
             // Treat as success if we get an ID back (Backend returns the object directly)
             if (res.success || res.data || res.employee_id || res.id) {

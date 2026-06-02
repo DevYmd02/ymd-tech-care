@@ -472,5 +472,3 @@ export function SalesOrderFormModal({
         </WindowFormLayout>
     );
 }
-
-
