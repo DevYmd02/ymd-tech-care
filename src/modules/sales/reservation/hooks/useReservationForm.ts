@@ -165,9 +165,17 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
 
     const { setValue, reset, control, getValues, handleSubmit, formState: { isDirty } } = methods;
 
+    const watchedStatus = useWatch({ control, name: 'status' });
+    const watchedSoNo = useWatch({ control, name: 'so_no' });
+    const watchedSoId = useWatch({ control, name: 'so_id' });
+
+    const isReadOnly = useMemo(() => {
+        return readOnly || (watchedStatus !== 'DRAFT' && watchedStatus !== 'CONFIRMED') || !!watchedSoNo || !!watchedSoId;
+    }, [readOnly, watchedStatus, watchedSoNo, watchedSoId]);
+
     // 🛡️ Unsaved Changes Guard
     const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
-        isDirty: isDirty && !readOnly,
+        isDirty: isDirty && !isReadOnly,
         enabled: isOpen,
         onSafeClose: onClose || (() => {})
     });
@@ -1218,6 +1226,7 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
         handleSelectAQ,
         handleFetchQuotation,
         onClose: handleCloseAttempt,
-        blocker
+        blocker,
+        readOnly: isReadOnly
     };
 };

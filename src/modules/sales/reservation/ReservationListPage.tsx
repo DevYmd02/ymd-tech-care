@@ -346,7 +346,7 @@ export default function ReservationListPage() {
                                         >
                                             <Search size={14} /> ดูรายละเอียด
                                         </button>
-                                        {(item.status === 'DRAFT' || item.status === 'CONFIRMED') && (
+                                        {(item.status === 'DRAFT' || item.status === 'CONFIRMED') && !item.so_no && !item.so_id && (
                                             <button 
                                                 onClick={() => handleEdit(String(item.reservation_id || item.id))}
                                                 className="flex-1 h-9 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all active:scale-95"

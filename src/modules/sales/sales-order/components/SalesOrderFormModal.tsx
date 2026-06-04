@@ -453,6 +453,7 @@ export function SalesOrderFormModal({
                         // Update lot info
                         handleLineChange(activeLineIndex, 'lot_no', lot.code || '');
                         handleLineChange(activeLineIndex, 'lot_id', String(lot.lot_id || lot.lot_no_id || lot.id || ''));
+                        handleLineChange(activeLineIndex, 'lot_balance_id', lot.lot_balance_id ? Number(lot.lot_balance_id) : (lot.id ? Number(lot.id) : undefined));
 
                         // 💡 Sync warehouse & location to match the selected LOT
                         // Critical when user picks from "Show All Stock" (different warehouse)

@@ -14,7 +14,7 @@ export const KNOWN_SO_DTO_FIELDS = [
 /** 🎯 Fields allowed by the backend DTO for Sales Order Lines (Aligned with D10) */
 export const KNOWN_SO_LINE_DTO_FIELDS = [
     'so_id', 'so_line_id', 'item_id', 'qty', 'uom_id', 'unit_price', 'net_amount',
-    'discount_expression', 'note', 'warehouse_id', 'location_id', 'lot_id', 'reservation_line_id'
+    'discount_expression', 'note', 'warehouse_id', 'location_id', 'lot_id', 'lot_balance_id', 'reservation_line_id'
 ];
 
 /**
@@ -68,7 +68,6 @@ export const mapSalesOrderFormToDTO = (data: SalesOrderFormValues, isUpdate = fa
         const headerSoId = Number(data.so_id || 0);
         transformed.saleOrderLines = data.lines.map((line: SalesOrderLineValues) => {
             const l: Record<string, unknown> = {
-                so_id: headerSoId || Number(line.so_id || 0),
                 item_id: Number(line.item_id),
                 qty: Number(line.qty_ordered || 0),
                 uom_id: Number((line as Record<string, unknown>).item_uom_id || line.uom_id),
@@ -78,9 +77,14 @@ export const mapSalesOrderFormToDTO = (data: SalesOrderFormValues, isUpdate = fa
                 note: line.note || '',
             };
 
+            if (isUpdate && (headerSoId || line.so_id)) {
+                l.so_id = headerSoId || Number(line.so_id || 0);
+            }
+
             if (isValidId(line.warehouse_id)) l.warehouse_id = Number(line.warehouse_id);
             if (isValidId(line.location_id)) l.location_id = Number(line.location_id);
             if (isValidId(line.lot_id)) l.lot_id = Number(line.lot_id);
+            if (isValidId(line.lot_balance_id)) l.lot_balance_id = Number(line.lot_balance_id);
             if (isValidId(line.reservation_line_id)) l.reservation_line_id = Number(line.reservation_line_id);
 
             if (isUpdate && line.so_line_id) {

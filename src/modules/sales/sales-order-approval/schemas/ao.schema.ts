@@ -36,6 +36,7 @@ export const AOLineSchema = z.object({
   location_name: z.string().optional().default(''),
   lot_id: zIdSchema.optional().default(''),
   lot_no: z.string().optional().default(''),
+  lot_balance_id: z.coerce.number().optional().nullable(),
 
   // Approval interaction
   is_approved: z.boolean().default(false),

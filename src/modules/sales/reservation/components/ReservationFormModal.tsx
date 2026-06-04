@@ -44,7 +44,7 @@ const FIELD_LABELS: Record<string, string> = {
 
 const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden';
 
-export function ReservationFormModal({ isOpen, onClose, id, initialData, onSuccess, readOnly }: ReservationFormModalProps) {
+export function ReservationFormModal({ isOpen, onClose, id, initialData, onSuccess, readOnly: readOnlyProp }: ReservationFormModalProps) {
     const { toast } = useToast();
     const {
         isEdit,
@@ -103,7 +103,8 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
         activeLocationLineIndex,
         activeWarehouseLineIndex,
         onClose: handleClose,
-    } = useReservationForm(isOpen, id, initialData, onClose, readOnly);
+        readOnly,
+    } = useReservationForm(isOpen, id, initialData, onClose, readOnlyProp);
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [pendingData, setPendingData] = useState<ReservationFormData | null>(null);

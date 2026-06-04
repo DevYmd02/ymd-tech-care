@@ -24,7 +24,7 @@ const KNOWN_DELIVERY_DTO_FIELDS = [
 /** Fields allowed by the backend DTO for Delivery Lines */
 const KNOWN_DELIVERY_LINE_FIELDS = [
     'item_id', 'qty_shipped', 'uom_id', 'remarks', 'so_line_id', 
-    'warehouse_id', 'location_id', 'lot_id', 'serial_no', 'delivery_line_id'
+    'warehouse_id', 'location_id', 'lot_id', 'lot_balance_id', 'serial_no', 'delivery_line_id'
 ];
 
 // ============================================================
@@ -355,6 +355,7 @@ export const DeliveryService = {
                             : lotIdVal
                     ) : undefined),
                     lot_no: lotNo,
+                    lot_balance_id: l['lot_balance_id'] ? Number(l['lot_balance_id']) : undefined,
                     serial_no: String(l['serial_no'] || ''),
                     remarks: String(l['remarks'] || ''),
                 };
@@ -568,6 +569,7 @@ export const DeliveryService = {
 
                 const lotId = l['lot_id'] ? String(l['lot_id']) : '';
                 let lotNo = String(l['lot_no'] || '');
+                const lotBalanceId = l['lot_balance_id'] ? Number(l['lot_balance_id']) : undefined;
 
                 if (lotId && !lotNo) {
                     try {
@@ -602,6 +604,7 @@ export const DeliveryService = {
                     location_name: locationName,
                     lot_id: lotId,
                     lot_no: lotNo,
+                    lot_balance_id: lotBalanceId,
                     serial_no: String(l['serial_no'] || ''),
                 };
             }));
@@ -676,6 +679,7 @@ export const DeliveryService = {
                 if (isValidId(line['warehouse_id'])) l['warehouse_id'] = mapId(line['warehouse_id']);
                 if (isValidId(line['location_id'])) l['location_id'] = mapId(line['location_id']);
                 if (isValidId(line['lot_id'])) l['lot_id'] = mapId(line['lot_id']);
+                if (isValidId(line['lot_balance_id'])) l['lot_balance_id'] = Number(line['lot_balance_id']);
                 if (line['serial_no']) l['serial_no'] = String(line['serial_no']);
 
                 if (isUpdate && line.delivery_line_id && isValidId(line.delivery_line_id)) {

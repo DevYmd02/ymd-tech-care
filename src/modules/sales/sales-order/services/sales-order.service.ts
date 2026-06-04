@@ -283,6 +283,7 @@ export const SalesOrderService = {
                                 : lotIdVal
                         ) : undefined),
                         lot_no: lotNo,
+                        lot_balance_id: l['lot_balance_id'] ? Number(l['lot_balance_id']) : undefined,
                         price_source: l['price_source'],
                         price_source_name: String(l['price_source_name'] || ''),
                         price_level_priority: l['price_level_priority'],

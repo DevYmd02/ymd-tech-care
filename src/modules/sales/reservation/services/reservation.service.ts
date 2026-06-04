@@ -65,6 +65,8 @@ export interface ReservationHeader {
     status: 'DRAFT' | 'CONFIRMED' | 'POSTED' | 'RELEASED' | 'EXPIRED' | 'CANCELLED';
     branch_name?: string;
     rawData?: Record<string, unknown>;
+    so_id?: string | number;
+    so_no?: string;
 }
 
 export interface AvailableApproval {
@@ -232,11 +234,31 @@ export const ReservationService = {
         logger.debug('Fetching reservations with params:', params);
         try {
             const response = await api.get<{ data: ReservationHeader[], total: number } | ReservationHeader[]>('/sale-reservation', { params });
+            const rawItems = Array.isArray(response) ? response : (response.data || []);
+            
+            const SO_CONFIG = {
+                noFields: ['so_no', 'sale_order_no', 'order_no', 'ref_so_no'],
+                idFields: ['so_id', 'sale_order_id', 'order_id'],
+                nestedKeys: ['so', 'sale_order', 'order']
+            };
+
+            const mappedItems = rawItems.map((item: unknown): ReservationHeader => {
+                const rRaw = item as Record<string, unknown>;
+                const r = (rRaw['sale_reservation'] || rRaw['reservation_header'] || rRaw['reservation'] || rRaw['header'] || rRaw) as Record<string, unknown>;
+                const soDiscovered = findDocRef(r, SO_CONFIG) || findDocRef(rRaw, SO_CONFIG);
+                
+                return {
+                    ...(item as ReservationHeader),
+                    so_no: soDiscovered.no || cleanRefNo(rRaw.so_no),
+                    so_id: soDiscovered.id ? String(soDiscovered.id) : (rRaw.so_id ? String(rRaw.so_id) : undefined),
+                };
+            });
+
             if (Array.isArray(response)) {
-                return { data: response, total: response.length };
+                return { data: mappedItems, total: mappedItems.length };
             }
             return {
-                data: response.data || [],
+                data: mappedItems,
                 total: response.total || 0
             };
         } catch (error) {

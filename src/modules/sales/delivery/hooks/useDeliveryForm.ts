@@ -9,7 +9,7 @@ import {
 } from '../schemas/delivery.schemas';
 import { logger } from '@/shared/utils';
 import type { ItemListItem } from '@inventory/types/product-types';
-import type { UOMListItem } from '@master-data/types/master-data-types';
+import type { UOMListItem, UOMConversionListItem } from '@master-data/types/master-data-types';
 import { DeliveryService } from '../services/delivery.service';
 import { CustomerService } from '@customer/customer-master/services/customer.service';
 import type { CustomerAddress } from '@customer/customer-master/types/customer-types';
@@ -50,6 +50,45 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms, onClose, readOn
 
     const isInitializedRef = useRef(false);
 
+    const hydrateLines = async (linesToHydrate: DeliveryLineValues[]): Promise<DeliveryLineValues[]> => {
+        if (!linesToHydrate || linesToHydrate.length === 0) return [];
+        try {
+            const allItemIds = [...new Set(linesToHydrate.map(l => Number(l.item_id)).filter(id => id > 0))];
+            if (allItemIds.length === 0) return linesToHydrate;
+
+            const convsList = await Promise.all(allItemIds.map(itemId => 
+                UOMConversionService.getByItemId(itemId)
+                    .then(res => ({ itemId, items: res?.items || [] }))
+                    .catch(() => ({ itemId, items: [] }))
+            ));
+
+            const conversionMap = new Map<number, UOMConversionListItem[]>();
+            convsList.forEach(c => { if (c) conversionMap.set(c.itemId, c.items); });
+
+            return linesToHydrate.map(line => {
+                const itemId = Number(line.item_id);
+                const convs = conversionMap.get(itemId) || [];
+                const currentUomVal = Number(line.uom_id);
+                
+                const matchedConv = convs.find(c => Number(c.conversion_id) === currentUomVal) ||
+                                    convs.find(c => Number(c.from_unit_id) === currentUomVal);
+                
+                if (matchedConv) {
+                    return {
+                        ...line,
+                        uom_id: String(matchedConv.from_unit_id),
+                        item_uom_id: Number(matchedConv.conversion_id),
+                        uom_name: matchedConv.from_unit_name || line.uom_name
+                    };
+                }
+                return line;
+            });
+        } catch (err) {
+            logger.warn('[useDeliveryForm] Failed to hydrate:', err);
+            return linesToHydrate;
+        }
+    };
+
     // Reset form when modal opens or initialData changes
     useEffect(() => {
         if (!isOpen) {
@@ -63,12 +102,30 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms, onClose, readOn
         const shouldInitialize = !isInitializedRef.current && (!id || (id && initialData));
 
         if (shouldInitialize) {
-            reset({
-                ...getDeliveryDefaultValues(),
-                ...(initialData || {}),
-            } as DeliveryFormValues);
-            isInitializedRef.current = true;
-            logger.debug('[useDeliveryForm] Form initialized:', id || 'new');
+            if (initialData && initialData.lines && initialData.lines.length > 0) {
+                hydrateLines(initialData.lines as DeliveryLineValues[]).then(hydratedLines => {
+                    reset({
+                        ...getDeliveryDefaultValues(),
+                        ...initialData,
+                        lines: hydratedLines
+                    } as DeliveryFormValues);
+                    isInitializedRef.current = true;
+                    logger.debug('[useDeliveryForm] Form initialized with hydration:', id || 'new');
+                }).catch(() => {
+                    reset({
+                        ...getDeliveryDefaultValues(),
+                        ...(initialData || {}),
+                    } as DeliveryFormValues);
+                    isInitializedRef.current = true;
+                });
+            } else {
+                reset({
+                    ...getDeliveryDefaultValues(),
+                    ...(initialData || {}),
+                } as DeliveryFormValues);
+                isInitializedRef.current = true;
+                logger.debug('[useDeliveryForm] Form initialized:', id || 'new');
+            }
         }
     }, [isOpen, initialData, reset, id]);
 
@@ -85,8 +142,9 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms, onClose, readOn
             uom_name: '',
             warehouse_id: '',
             location_id: '',
-            lot_id: '',
+            lot_id: undefined,
             lot_no: '',
+            lot_balance_id: undefined,
             serial_no: '',
             remarks: '',
         };
@@ -210,11 +268,12 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms, onClose, readOn
         try {
             const detail = await DeliveryService.getPendingDeliveryDetail(soId);
             if (detail && detail.lines && detail.lines.length > 0) {
-                setValue('lines', detail.lines as DeliveryLineValues[], {
+                const hydratedLines = await hydrateLines(detail.lines as DeliveryLineValues[]);
+                setValue('lines', hydratedLines, {
                     shouldValidate: true,
                     shouldDirty: true,
                 });
-                logger.debug('[useDeliveryForm] Auto-populated lines from SO:', detail.lines.length);
+                logger.debug('[useDeliveryForm] Auto-populated lines from SO with hydration:', detail.lines.length);
             }
         } catch (error) {
             logger.error('[useDeliveryForm] Failed to fetch SO pending details:', error);

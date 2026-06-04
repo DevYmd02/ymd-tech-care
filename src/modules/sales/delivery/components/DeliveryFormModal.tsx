@@ -382,7 +382,8 @@ export function DeliveryFormModal({
                 onSelect={(lot: LotNo) => {
                     if (activeLineIndex !== null) {
                         handleLineChange(activeLineIndex, 'lot_no', lot.code || '');
-                        if (lot.lot_id) handleLineChange(activeLineIndex, 'lot_id', String(lot.lot_id));
+                        if (lot.lot_id || lot.id) handleLineChange(activeLineIndex, 'lot_id', String(lot.lot_id || lot.id));
+                        handleLineChange(activeLineIndex, 'lot_balance_id', lot.lot_balance_id ? Number(lot.lot_balance_id) : (lot.id ? Number(lot.id) : undefined));
                         if (lot.warehouse_id) {
                             handleLineChange(activeLineIndex, 'warehouse_id', String(lot.warehouse_id));
                         }

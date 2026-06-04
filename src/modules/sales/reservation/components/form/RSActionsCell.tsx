@@ -55,7 +55,7 @@ export const RSActionsCell: React.FC<RSActionsCellProps> = ({
             </button>
 
             {/* 2. EDIT Button (Ghost Gold style) */}
-            {(row.status === 'DRAFT' || row.status === 'CONFIRMED') && (
+            {(row.status === 'DRAFT' || row.status === 'CONFIRMED') && !row.so_no && !row.so_id && (
                 <button 
                     onClick={() => onEdit(id, row)}
                     onMouseEnter={() => handleMouseEnter(id)}
