@@ -557,6 +557,7 @@ export const ReservationService = {
                             lot_id: (typeof lotIdVal === 'object' && lotIdVal !== null) 
                                 ? String((lotIdVal as Record<string, unknown>).id || (lotIdVal as Record<string, unknown>).lot_id || '') 
                                 : (lotIdVal ? String(lotIdVal) : undefined),
+                            lot_balance_id: Number(l.lot_balance_id || 0),
                             line_discount_input: String(l.discount_expression || l.line_discount_input || '0'),
                             qty_reserved: Number(l.qty_reserved !== undefined ? l.qty_reserved : (l.qty !== undefined ? l.qty : 0)),
                             lot_available_qty: (() => {
@@ -654,6 +655,7 @@ export const ReservationService = {
                 warehouse_id: safeNumberOrNull(line.warehouse_id),
                 location_id: safeNumberOrNull(line.location_id),
                 lot_id: safeNumberOrNull(line.lot_id),
+                lot_balance_id: safeNumberOrNull(line.lot_balance_id),
                 note: line.note || '',
                 qty: safeNumber(line.qty_reserved),
                 uom_id: safeNumberOrNull(line.item_uom_id || line.uom_id),
