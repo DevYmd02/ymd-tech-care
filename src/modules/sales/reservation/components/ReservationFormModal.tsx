@@ -123,7 +123,6 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
 
     const onFormSubmit = async (data: ReservationFormData) => {
         setIsSubmitting(true);
-        let showingConfirm = false;
         try {
             // Validate stock logic via Backend API before allowing submit
             const validationPromises = data.lines.map(async (line) => {
@@ -152,15 +151,11 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
 
             setPendingData(data);
             setIsConfirmOpen(true);
-            showingConfirm = true;
         } catch (error) {
             toast('เกิดข้อผิดพลาดในการตรวจสอบเงื่อนไขสต็อก', 'error');
             logger.error('API Validation Error:', error);
         } finally {
-            // 🛡️ Only reset if NOT showing confirmation modal (prevents double-submit window)
-            if (!showingConfirm) {
-                setIsSubmitting(false);
-            }
+            setIsSubmitting(false);
         }
     };
 
@@ -185,17 +180,29 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
             logger.error('Submit reservation error:', error);
             
             let errorMessage = 'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง';
-            const err = error as { response?: { data?: { message?: string | string[], error?: string } } };
+            const err = error as { response?: { data?: { message?: string | string[], error?: string }, status?: number, statusText?: string }, message?: string };
             
             if (err?.response?.data?.message) {
                 const backendMsg = err.response.data.message;
                 if (Array.isArray(backendMsg)) {
                     errorMessage = `ข้อมูลไม่ถูกต้อง:\n${backendMsg.join('\n')}`;
                 } else if (typeof backendMsg === 'string') {
-                    errorMessage = `ข้อมูลไม่ถูกต้อง: ${backendMsg}`;
+                    // Map known backend errors to Thai messages
+                    if (backendMsg.includes('BALANCE NOT FOUND')) {
+                        errorMessage = 'ไม่พบข้อมูลยอดคงเหลือสต็อก (BALANCE NOT FOUND)\nกรุณาตรวจสอบว่าสินค้ามีล็อต คลังสินค้า และที่เก็บที่ถูกต้อง';
+                    } else {
+                        errorMessage = `ข้อมูลไม่ถูกต้อง: ${backendMsg}`;
+                    }
                 }
             } else if (err?.response?.data?.error) {
-                errorMessage = `เซิร์ฟเวอร์ปฏิเสธข้อมูล: ${err.response.data.error}`;
+                const backendErr = err.response.data.error;
+                if (backendErr.includes('BALANCE NOT FOUND')) {
+                    errorMessage = 'ไม่พบข้อมูลยอดคงเหลือสต็อก (BALANCE NOT FOUND)\nกรุณาตรวจสอบว่าสินค้ามีล็อต คลังสินค้า และที่เก็บที่ถูกต้อง';
+                } else {
+                    errorMessage = `เซิร์ฟเวอร์ปฏิเสธข้อมูล: ${backendErr}`;
+                }
+            } else if (err?.message) {
+                errorMessage = `เกิดข้อผิดพลาด: ${err.message}`;
             }
 
             toast(

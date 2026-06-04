@@ -6,6 +6,7 @@ import { MOCK_LOT_NUMBERS } from '@inventory/mocks/inventory-master.mock';
 
 interface ItemLotBalanceRecord {
     id?: number;
+    lot_balance_id?: number;
     lot_id?: number;
     item_id?: number;
     warehouse_id?: number;
@@ -96,6 +97,7 @@ export const ReservationInventoryService = {
                     return {
                         ...item,
                         id: item.id || item.lot_id || lotData.id || 0,
+                        lot_balance_id: Number(item.lot_balance_id || item.id || 0),
                         lot_no_id: item.lot_id || lotData.id || item.id || 0,
                         code: lotData.code || lotData.lot_no || lotData.lot_no_code || '',
                         name_th: lotData.name_th || '',

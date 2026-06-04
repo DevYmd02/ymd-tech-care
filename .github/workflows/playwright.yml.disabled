@@ -19,7 +19,8 @@ jobs:
       run: npx playwright install --with-deps
     - name: Run Playwright tests
       env:
-        VITE_USE_MOCK: 'true'
+        VITE_USE_MOCK: 'false'
+        USE_REAL_BACKEND: 'true'
       run: npx playwright test
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}

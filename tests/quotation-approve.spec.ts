@@ -204,19 +204,74 @@ test.describe('ระบบอนุมัติใบเสนอราคา (
     await page.waitForTimeout(2000);
   });
 
-  test('จำลองผู้ใช้อนุมัติใบเสนอราคาสำเร็จ (Approve Journey)', async ({ page }) => {
+  test('จำลองผู้ใช้สร้างใบเสนอราคาใหม่และอนุมัติสำเร็จ (Approve Journey)', async ({ page }) => {
     // -----------------------------------------------------
-    // STEP 1: เดินทางเข้าสู่หน้าจอการอนุมัติใบเสนอราคา
+    // STEP 1: สร้างใบเสนอราคาตัวใหม่ขึ้นมาเพื่อทำรายการอนุมัติ
+    // -----------------------------------------------------
+    await page.goto('/sales/quotation');
+    await page.click('button:has-text("สร้างใบเสนอราคาใหม่")');
+
+    // เลือกข้อมูลหัวเอกสารด้วย index เพื่อรองรับ DB dev
+    await page.selectOption('select[name="branch_id"]', { index: 1 });
+    await page.click('div:has(> label:has-text("ลูกค้า")) button');
+    await page.fill('input[placeholder*="ค้นหารหัสลูกค้า"]', 'ทดสอบ');
+    await page.keyboard.press('Enter');
+    await page.locator('div[role="dialog"] tr:has-text("บริษัท ทดสอบ จำกัด")').locator('button:has-text("เลือก")').click();
+
+    await page.fill('input[name="payment_term_days"]', '30');
+    await page.selectOption('select[name="emp_dept_id"]', { index: 1 });
+    await page.selectOption('select[name="tax_code_id"]', { index: 1 });
+    await page.selectOption('select[name="sale_area_id"]', { index: 1 });
+    await page.selectOption('select[name="emp_sale_id"]', { index: 1 });
+    await page.selectOption('select[name="project_id"]', { index: 1 });
+    await page.fill('textarea[name="remarks"]', 'Automated E2E Test - เอกสารเพื่อรออนุมัติ');
+
+    // เพิ่มรายการสินค้าตัวแรกแบบ dynamic
+    await page.click('button:has-text("เพิ่มรายการ")');
+    await page.waitForSelector('#quotation-form table tbody tr', { state: 'visible', timeout: 5000 });
+    await page.locator('#quotation-form table tbody tr').first().locator('button').first().click();
+    await page.locator('div[role="dialog"] input[placeholder*="ค้นหารหัสสินค้า"]').press('Enter');
+    await page.waitForTimeout(800);
+    await page.locator('div[role="dialog"] table tbody tr').first().click({ force: true });
+
+    await page.locator('#quotation-form table tbody tr').first().locator('input').nth(2).fill('1');
+    await page.locator('#quotation-form table tbody tr').first().locator('input').nth(3).fill('100.00');
+
+    // ยืนยันบันทึกเอกสาร
+    await page.click('button:has-text("บันทึกข้อมูล")');
+    await page.click('button:has-text("ยืนยันการบันทึก")');
+    await expect(page.locator('form#quotation-form')).toBeHidden();
+
+    // กรองประเภทเฉพาะสถานะ "แบบร่าง" (DRAFT) เพื่อหาใบเสนอราคาใบที่เพิ่งสร้างได้ถูกต้อง
+    await page.locator('div:has(> label:has-text("สถานะ")) select').selectOption('DRAFT');
+    await page.click('button:has-text("ค้นหา")');
+    await page.waitForTimeout(1500); // รอให้ตารางฟิลเตอร์อัปเดตข้อมูลล่าสุด
+
+    // ดึงเลขที่ใบเสนอราคาจากแถวสุดท้ายของสถานะแบบร่าง (เนื่องจากระบบเรียงลำดับจากเก่าไปใหม่ล่าสุดจึงอยู่ล่างสุด)
+    const targetRow = page.locator('table tbody tr').last();
+    const sqNo = await targetRow.locator('td').nth(1).innerText(); // ดึง text จากคอลัมน์เลขที่เอกสาร
+    console.log(`✨ เอกสารที่สร้างสำเร็จเพื่อนำไปอนุมัติ: ${sqNo}`);
+
+    // คลิกปุ่มส่งอนุมัติ (Send Approval) เพื่อเปลี่ยนสถานะเป็น รออนุมัติ (PENDING)
+    await targetRow.locator('button:has-text("ส่งอนุมัติ")').click();
+    await page.click('button:has-text("ยืนยันส่งอนุมัติ")');
+    await page.waitForTimeout(1500); // รอให้สถานะอัปเดตและบันทึกใน DB สำเร็จ
+
+    // -----------------------------------------------------
+    // STEP 2: เดินทางเข้าสู่หน้าจออนุมัติเพื่ออนุมัติใบเสนอราคาใบนี้
     // -----------------------------------------------------
     await page.goto('/sales/quotation-approval');
     
-    // ตรวจสอบว่าตารางเรนเดอร์เอกสาร SQ-2026-0001 สำเร็จ
-    await expect(page.locator('table >> text="SQ-2026-0001"')).toBeVisible();
+    // พิมพ์รหัสเอกสารลงในช่องค้นหาเพื่อเจาะจงใบที่เราเพิ่งสร้าง
+    await page.locator('input[placeholder="SQ-xxxx"]').fill(sqNo);
+    await page.click('button:has-text("ค้นหา")');
+    await page.waitForTimeout(1000);
+    
+    // ตรวจสอบว่าตารางเรนเดอร์เอกสารที่เราสร้างขึ้นมาสำเร็จ
+    await expect(page.locator(`table >> text="${sqNo}"`)).toBeVisible();
 
-    // -----------------------------------------------------
-    // STEP 2: คลิกพิจารณาอนุมัติ เพื่อเปิด Modal
-    // -----------------------------------------------------
-    await page.click('table button:has-text("พิจารณาอนุมัติ")');
+    // คลิกพิจารณาอนุมัติ เพื่อเปิด Modal
+    await page.locator(`tr:has-text("${sqNo}")`).locator('button:has-text("พิจารณาอนุมัติ")').click();
     
     // รอให้ Modal เปิดขึ้นมา
     await page.waitForSelector('text="พิจารณาอนุมัติใบเสนอราคา (Quotation Approval)"', { state: 'visible', timeout: 5000 });
@@ -224,16 +279,109 @@ test.describe('ระบบอนุมัติใบเสนอราคา (
     // -----------------------------------------------------
     // STEP 3: คลิกยืนยันการอนุมัติ
     // -----------------------------------------------------
-    // คลิกปุ่ม "อนุมัติ" สีเขียวที่ footer ของ Modal พิจารณาอนุมัติ
     await page.locator('div[role="dialog"]').first().getByRole('button', { name: 'อนุมัติ', exact: true }).click();
-
-    // ยืนยันในกล่อง Confirmation Dialog
     await page.locator('div').filter({ has: page.locator('h3:has-text("ยืนยันการอนุมัติใบเสนอราคา")') }).getByRole('button', { name: 'อนุมัติ', exact: true }).click();
 
     // -----------------------------------------------------
     // STEP 4: ตรวจสอบความสำเร็จ
     // -----------------------------------------------------
-    // ตรวจสอบว่า Modal พิจารณาอนุมัติถูกปิดลงเรียบร้อย
+    await expect(page.locator('text="พิจารณาอนุมัติใบเสนอราคา (Quotation Approval)"')).toBeHidden();
+  });
+
+  test('จำลองผู้ใช้สร้างใบเสนอราคาใหม่และกดไม่อนุมัติสำเร็จ (Reject Journey)', async ({ page }) => {
+    // =============================================================
+    // STEP 1: สร้างใบเสนอราคาตัวใหม่ขึ้นมาเพื่อทำรายการไม่อนุมัติ
+    // =============================================================
+    await page.goto('/sales/quotation');
+    await page.click('button:has-text("สร้างใบเสนอราคาใหม่")');
+
+    // เลือกข้อมูลหัวเอกสารด้วย index เพื่อรองรับ DB dev
+    await page.selectOption('select[name="branch_id"]', { index: 1 });
+    await page.click('div:has(> label:has-text("ลูกค้า")) button');
+    await page.fill('input[placeholder*="ค้นหารหัสลูกค้า"]', 'ทดสอบ');
+    await page.keyboard.press('Enter');
+    await page.locator('div[role="dialog"] tr:has-text("บริษัท ทดสอบ จำกัด")').locator('button:has-text("เลือก")').click();
+
+    await page.fill('input[name="payment_term_days"]', '30');
+    await page.selectOption('select[name="emp_dept_id"]', { index: 1 });
+    await page.selectOption('select[name="tax_code_id"]', { index: 1 });
+    await page.selectOption('select[name="sale_area_id"]', { index: 1 });
+    await page.selectOption('select[name="emp_sale_id"]', { index: 1 });
+    await page.selectOption('select[name="project_id"]', { index: 1 });
+    await page.fill('textarea[name="remarks"]', 'Automated E2E Test - เอกสารเพื่อทดสอบการไม่อนุมัติ');
+
+    // เพิ่มรายการสินค้าตัวแรกแบบ dynamic
+    await page.click('button:has-text("เพิ่มรายการ")');
+    await page.waitForSelector('#quotation-form table tbody tr', { state: 'visible', timeout: 5000 });
+    await page.locator('#quotation-form table tbody tr').first().locator('button').first().click();
+    await page.locator('div[role="dialog"] input[placeholder*="ค้นหารหัสสินค้า"]').press('Enter');
+    await page.waitForTimeout(800);
+    await page.locator('div[role="dialog"] table tbody tr').first().click({ force: true });
+
+    await page.locator('#quotation-form table tbody tr').first().locator('input').nth(2).fill('1');
+    await page.locator('#quotation-form table tbody tr').first().locator('input').nth(3).fill('100.00');
+
+    // ยืนยันบันทึกเอกสาร
+    await page.click('button:has-text("บันทึกข้อมูล")');
+    await page.click('button:has-text("ยืนยันการบันทึก")');
+    await expect(page.locator('form#quotation-form')).toBeHidden();
+
+    // กรองสถานะ "แบบร่าง" (DRAFT) เพื่อหาใบที่เพิ่งสร้าง
+    await page.locator('div:has(> label:has-text("สถานะ")) select').selectOption('DRAFT');
+    await page.click('button:has-text("ค้นหา")');
+    await page.waitForTimeout(1500);
+
+    const targetRow = page.locator('table tbody tr').last();
+    const sqNo = await targetRow.locator('td').nth(1).innerText();
+    console.log(`🚫 เอกสารที่สร้างสำเร็จเพื่อทดสอบการไม่อนุมัติ: ${sqNo}`);
+
+    // คลิกส่งอนุมัติ เพื่อเปลี่ยนสถานะเป็น PENDING
+    await targetRow.locator('button:has-text("ส่งอนุมัติ")').click();
+    await page.click('button:has-text("ยืนยันส่งอนุมัติ")');
+    await page.waitForTimeout(1500);
+
+    // =============================================================
+    // STEP 2: เดินทางเข้าสู่หน้าจออนุมัติ
+    // =============================================================
+    await page.goto('/sales/quotation-approval');
+
+    await page.locator('input[placeholder="SQ-xxxx"]').fill(sqNo);
+    await page.click('button:has-text("ค้นหา")');
+    await page.waitForTimeout(1000);
+
+    // ตรวจสอบว่าเอกสารแสดงในตาราง
+    await expect(page.locator(`table >> text="${sqNo}"`)).toBeVisible();
+
+    // คลิกพิจารณาอนุมัติ เพื่อเปิด Modal
+    await page.locator(`tr:has-text("${sqNo}")`).locator('button:has-text("พิจารณาอนุมัติ")').click();
+    await page.waitForSelector('text="พิจารณาอนุมัติใบเสนอราคา (Quotation Approval)"', { state: 'visible', timeout: 5000 });
+
+    // =============================================================
+    // STEP 3: ทดสอบกดไม่อนุมัติโดยไม่กรอกเหตุผล (ต้องแสดง Validation Error)
+    // =============================================================
+    await page.locator('div[role="dialog"]').first().getByRole('button', { name: 'ไม่อนุมัติ', exact: true }).click();
+    
+    // ระบบต้องแสดงข้อความแจ้งเตือน "กรุณาระบุเหตุผลที่ไม่อนุมัติ" 
+    // และ Modal ยืนยันต้องไม่ขึ้นมา
+    await page.waitForTimeout(500);
+    await expect(page.locator('text="ยืนยันการไม่อนุมัติใบเสนอราคา"')).toBeHidden();
+
+    // =============================================================
+    // STEP 4: กรอกเหตุผลที่ไม่อนุมัติ แล้วกดไม่อนุมัติอีกครั้ง
+    // =============================================================
+    await page.locator('input[placeholder="ระบุเหตุผล..."]').fill('E2E Test - ราคาไม่เหมาะสม ต้องปรับปรุงใหม่');
+
+    await page.locator('div[role="dialog"]').first().getByRole('button', { name: 'ไม่อนุมัติ', exact: true }).click();
+
+    // รอ Confirmation Modal ขึ้นมา
+    await page.waitForSelector('text="ยืนยันการไม่อนุมัติใบเสนอราคา"', { state: 'visible', timeout: 5000 });
+
+    // คลิกยืนยันไม่อนุมัติ
+    await page.locator('div').filter({ has: page.locator('h3:has-text("ยืนยันการไม่อนุมัติใบเสนอราคา")') }).getByRole('button', { name: 'ยืนยันไม่อนุมัติ', exact: true }).click();
+
+    // =============================================================
+    // STEP 5: ตรวจสอบความสำเร็จ — Modal ต้องปิดลง
+    // =============================================================
     await expect(page.locator('text="พิจารณาอนุมัติใบเสนอราคา (Quotation Approval)"')).toBeHidden();
   });
 });

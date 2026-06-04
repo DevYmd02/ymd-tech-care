@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// บังคับให้วิ่งหา REAL Backend บน VM เสมอตอนเทส (ห้ามรัน Mock)
+process.env.VITE_USE_MOCK = 'false';
+process.env.USE_REAL_BACKEND = 'true';
+
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
@@ -27,7 +31,8 @@ export default defineConfig({
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     env: {
-      VITE_USE_MOCK: 'true',
+      VITE_USE_MOCK: 'false',
+      USE_REAL_BACKEND: 'true',
     },
   },
 });

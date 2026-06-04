@@ -115,6 +115,8 @@ describe('ReservationService Unit Tests', () => {
           warehouse_id: '10',
           location_id: '20',
           lot_id: 5,
+          lot_no: 'LOT-999',
+          lot_balance_id: 5,
           note: 'Line note',
           qty_reserved: 5,
           uom_id: '2',

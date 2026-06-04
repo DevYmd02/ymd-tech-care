@@ -170,19 +170,7 @@ export function ReservationHeaderForm({
                     </div>
                 </div>
 
-                <div className="space-y-1">
-                    <label className={labelClass}>อ้างอิงใบสั่งขาย (SO)</label>
-                    <div className="relative group">
-                        <input 
-                            {...register('so_no')}
-                            readOnly
-                            disabled
-                            className={`${inputClass} bg-gray-100 border-gray-200 cursor-not-allowed italic`} 
-                            placeholder="ยังไม่ได้สร้างใบสั่งขาย"
-                        />
-                        <input type="hidden" {...register('so_id')} />
-                    </div>
-                </div>
+
 
                 {/* Row 2: Client & Lead */}
                 <div className="space-y-1 lg:col-span-2">

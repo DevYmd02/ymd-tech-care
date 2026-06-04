@@ -454,7 +454,9 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
             location_id: '',
             uom_id: '', 
             unit_price: 0, 
+            lot_id: 0,
             lot_no: '',
+            lot_balance_id: 0,
             line_discount_input: '',
             line_discount: 0, 
             line_total: 0, 
@@ -627,9 +629,14 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                 }
             }
 
-            line.lot_id = lot.lot_no_id ? Number(lot.lot_no_id) : (lot.id ? Number(lot.id) : null);
+            line.lot_id = lot.lot_no_id ? Number(lot.lot_no_id) : (lot.id ? Number(lot.id) : 0);
             line.lot_no = lot.code || '';
             line.lot_available_qty = lotAvailableQty;
+            // lot_balance_id = PK ของ item_lot_balance table (Backend ต้องการสำหรับ Stock Commit)
+            // LotSearchModal map id = lot_balance_id, ส่วน lot_no_id = master lot_id
+            line.lot_balance_id = lot.lot_balance_id 
+                ? Number(lot.lot_balance_id) 
+                : (lot.id ? Number(lot.id) : 0);
 
             // 💡 Ensure Warehouse/Location match the selected LOT
             // This is critical when selecting from "Show All Stock"
@@ -1005,7 +1012,9 @@ export const useReservationForm = (isOpen: boolean, id?: string, initialData?: P
                         location_id: '',  
                         uom_id: String(qLine.uom_id || qLine.uom_id || 'PCS'),
                         unit_price: price,
+                        lot_id: 0,
                         lot_no: '',
+                        lot_balance_id: 0,
                         line_discount_input: ldInput,
                         line_discount: calculatedLD,
                         line_total: calculateLineTotal(qtyToUse, price, calculatedLD),

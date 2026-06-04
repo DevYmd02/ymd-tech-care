@@ -271,27 +271,25 @@ test.describe('ระบบใบเสนอราคา (Sales Quotation E2E A
     // STEP 2: เลือกข้อมูลส่วนหัวเอกสาร (Header Fields)
     // -----------------------------------------------------
     
-    // 2.1 เลือกสาขา
-    await page.selectOption('select[name="branch_id"]', { label: 'ทดสอบBranch1' });
+    // 2.1 เลือกสาขา (ใช้ index 1 แทนเพื่อความยืดหยุ่น)
+    await page.selectOption('select[name="branch_id"]', { index: 1 });
 
     // 2.2 ค้นหาและเลือกลูกค้าผ่าน CustomerSearchModal
-    // คลิกปุ่มแว่นขยายค้นหาลูกค้า
-    await page.click('div:has(> label:has-text("ลูกค้า")) button'); // ปุ่มแว่นขยายในช่องลูกค้า
-    // พิมพ์ค้นหาในช่องค้นหาของ Modal
-    await page.fill('input[placeholder*="ค้นหารหัสลูกค้า"]', 'สยามทีทีเค');
+    await page.click('div:has(> label:has-text("ลูกค้า")) button');
+    await page.fill('input[placeholder*="ค้นหารหัสลูกค้า"]', 'ทดสอบ');
     await page.keyboard.press('Enter');
-    // ดับเบิ้ลคลิกเลือกหรือคลิกเลือกรายการที่พบในตารางค้นหา
-    await page.click('text="บริษัท สยามทีทีเค จำกัด"');
+    await page.locator('div[role="dialog"] tr:has-text("บริษัท ทดสอบ จำกัด")').locator('button:has-text("เลือก")').click();
 
     // 2.3 กรอกเงื่อนไขเครดิตเทอม
     await page.fill('input[name="payment_term_days"]', '30');
 
     // 2.4 เลือกหน่วยงาน แผนก ประเภทภาษี เขตการขาย พนักงานขาย และโครงการ
-    await page.selectOption('select[name="emp_dept_id"]', { label: 'MKT - แผนกการขายและการตลาด' });
-    await page.selectOption('select[name="tax_code_id"]', { label: 'VAT 7%' });
-    await page.selectOption('select[name="sale_area_id"]', { label: 'BKK - กรุงเทพและปริมณฑล' });
-    await page.selectOption('select[name="emp_sale_id"]', { label: 'EMP-001 - สมชาย ขายดี' });
-    await page.selectOption('select[name="project_id"]', { label: 'โครงการขยายศูนย์คอมพิวเตอร์' });
+    // เลือกตัวเลือกแรกที่มีอยู่จริงของแต่ละ Dropdown (index 1 เพราะ index 0 มักเป็นค่าว่าง)
+    await page.selectOption('select[name="emp_dept_id"]', { index: 1 });
+    await page.selectOption('select[name="tax_code_id"]', { index: 1 });
+    await page.selectOption('select[name="sale_area_id"]', { index: 1 });
+    await page.selectOption('select[name="emp_sale_id"]', { index: 1 });
+    await page.selectOption('select[name="project_id"]', { index: 1 });
 
     // 2.5 ระบุหมายเหตุของบิลขายนี้
     await page.fill('textarea[name="remarks"]', 'Automated E2E Test - เสนอราคาสายเคเบิล');
@@ -306,9 +304,11 @@ test.describe('ระบบใบเสนอราคา (Sales Quotation E2E A
 
     // 3.2 ค้นหาเลือกสินค้าตัวแรก
     await page.locator('#quotation-form table tbody tr').first().locator('button').first().click(); // ปุ่มค้นหาสินค้าในแถวแรก
-    await page.fill('input[placeholder*="ค้นหารหัสสินค้า"]', 'สายเคเบิล');
-    await page.keyboard.press('Enter');
-    await page.click('text="สายเคเบิลทองแดง TYPE-C"');
+    // กด Enter ในช่องค้นหาทันทีเพื่อให้ระบบลิสต์สินค้าทั้งหมดที่มีมาให้เลือก
+    await page.locator('div[role="dialog"] input[placeholder*="ค้นหารหัสสินค้า"]').press('Enter');
+    await page.waitForTimeout(800); // รอให้ตารางโหลดรายการเล็กน้อย
+    // คลิกไปที่แถวแรกของตารางค้นหาโดยตรง (ใช้ force เพื่อป้องกันปัญหาสิ่งกีดขวางในบราวเซอร์จำลอง)
+    await page.locator('div[role="dialog"] table tbody tr').first().click({ force: true });
 
     // 3.3 กรอกจำนวนสินค้า
     await page.locator('#quotation-form table tbody tr').first().locator('input').nth(2).fill('10'); // qty (ลำดับ input ที่ 3 ในแถว)
@@ -349,31 +349,41 @@ test.describe('ระบบใบเสนอราคา (Sales Quotation E2E A
     await page.click('button:has-text("สร้างใบเสนอราคาใหม่")');
 
     // กรอกข้อมูลให้ครบเพื่อเตรียมเซฟ (Happy Path)
-    await page.selectOption('select[name="branch_id"]', { label: 'ทดสอบBranch1' });
+    await page.selectOption('select[name="branch_id"]', { index: 1 });
     await page.click('div:has(> label:has-text("ลูกค้า")) button');
-    await page.fill('input[placeholder*="ค้นหารหัสลูกค้า"]', 'สยามทีทีเค');
+    await page.fill('input[placeholder*="ค้นหารหัสลูกค้า"]', 'ทดสอบ');
     await page.keyboard.press('Enter');
-    await page.click('text="บริษัท สยามทีทีเค จำกัด"');
+    await page.locator('div[role="dialog"] tr:has-text("บริษัท ทดสอบ จำกัด")').locator('button:has-text("เลือก")').click();
 
     await page.fill('input[name="payment_term_days"]', '30');
-    await page.selectOption('select[name="emp_dept_id"]', { label: 'MKT - แผนกการขายและการตลาด' });
-    await page.selectOption('select[name="tax_code_id"]', { label: 'VAT 7%' });
-    await page.selectOption('select[name="sale_area_id"]', { label: 'BKK - กรุงเทพและปริมณฑล' });
-    await page.selectOption('select[name="emp_sale_id"]', { label: 'EMP-001 - สมชาย ขายดี' });
-    await page.selectOption('select[name="project_id"]', { label: 'โครงการขยายศูนย์คอมพิวเตอร์' });
+    await page.selectOption('select[name="emp_dept_id"]', { index: 1 });
+    await page.selectOption('select[name="tax_code_id"]', { index: 1 });
+    await page.selectOption('select[name="sale_area_id"]', { index: 1 });
+    await page.selectOption('select[name="emp_sale_id"]', { index: 1 });
+    await page.selectOption('select[name="project_id"]', { index: 1 });
     
     await page.click('button:has-text("เพิ่มรายการ")');
     await page.waitForSelector('#quotation-form table tbody tr', { state: 'visible', timeout: 5000 });
 
     await page.locator('#quotation-form table tbody tr').first().locator('button').first().click();
-    await page.fill('input[placeholder*="ค้นหารหัสสินค้า"]', 'สายเคเบิล');
-    await page.keyboard.press('Enter');
-    await page.click('text="สายเคเบิลทองแดง TYPE-C"');
+    await page.locator('div[role="dialog"] input[placeholder*="ค้นหารหัสสินค้า"]').press('Enter');
+    await page.waitForTimeout(800);
+    await page.locator('div[role="dialog"] table tbody tr').first().click({ force: true });
 
     await page.locator('#quotation-form table tbody tr').first().locator('input').nth(2).fill('10');
     await page.locator('#quotation-form table tbody tr').first().locator('input').nth(3).fill('150.00');
 
     // --- จำลองอินเทอร์เน็ตหลุดกะทันหันก่อนกดยืนยันเซฟ ---
+    // ⚠️ รอให้ Pricing Engine API (async) ทำงานเสร็จก่อนตัดเน็ต
+    // ใน UI mode, pricing engine จะยิง async หลัง fill() ทำให้ networkidle จบเร็วเกินไป
+    // ถ้าไม่รอ → pricing engine ถูก abort → ค่าราคาถูก reset เป็น 0 → validation fail
+    await page.waitForTimeout(2000);
+    await page.waitForLoadState('networkidle');
+
+    // กรอกราคาซ้ำอีกครั้ง เผื่อ Pricing Engine เขียนทับค่าที่กรอกไว้
+    await page.locator('#quotation-form table tbody tr').first().locator('input').nth(3).fill('150.00');
+    await page.waitForTimeout(300);
+
     await context.setOffline(true);
 
     try {
@@ -385,7 +395,11 @@ test.describe('ระบบใบเสนอราคา (Sales Quotation E2E A
       await expect(page.locator('form#quotation-form')).toBeVisible();
     } finally {
       // คืนค่าอินเทอร์เน็ตกลับมาออนไลน์เพื่อให้บราวเซอร์สามารถรันเคสถัดไปได้เป็นปกติ
-      await context.setOffline(false);
+      try {
+        await context.setOffline(false);
+      } catch {
+        // context อาจถูกปิดไปแล้วกรณี test timeout — ไม่ต้อง throw ซ้ำ
+      }
     }
   });
 });

@@ -280,7 +280,7 @@ export const AQFormModal: React.FC<Props> = ({
       <ConfirmationModal
         isOpen={isConfirmRejectOpen}
         onClose={() => setIsConfirmRejectOpen(false)}
-        onConfirm={handleConfirmReject}
+        onConfirm={() => handleConfirmReject()}
         title="ยืนยันการไม่อนุมัติใบเสนอราคา"
         description="คุณต้องการปฏิเสธใบเสนอราคานี้ใช่หรือไม่? สถานะ SQ จะเปลี่ยนเป็น 'ไม่อนุมัติ'"
         confirmText="ยืนยันไม่อนุมัติ"

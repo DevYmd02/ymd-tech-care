@@ -282,26 +282,25 @@ test.describe('ระบบใบสั่งขาย (Sales Order E2E Automati
     // -----------------------------------------------------
     // STEP 2: เลือกข้อมูลส่วนหัวเอกสาร (Header Fields)
     // -----------------------------------------------------
-    
-    // 2.1 เลือกสาขา
-    await page.selectOption('select[name="branch_id"]', { label: 'ทดสอบBranch1' });
+    // 2.1 เลือกสาขา (ใช้ index 1 แทนเพื่อความยืดหยุ่น)
+    await page.selectOption('select[name="branch_id"]', { index: 1 });
 
     // 2.2 ค้นหาและเลือกลูกค้าผ่าน CustomerSearchModal
     // คลิกปุ่มแว่นขยายค้นหาลูกค้า
     await page.click('div:has(> label:has-text("ลูกค้า")) button'); // ปุ่มแว่นขยายในช่องลูกค้า
     // พิมพ์ค้นหาในช่องค้นหาของ Modal
-    await page.fill('input[placeholder*="ค้นหารหัสลูกค้า"]', 'สยามทีทีเค');
+    await page.fill('input[placeholder*="ค้นหารหัสลูกค้า"]', 'ทดสอบ');
     await page.keyboard.press('Enter');
     // ดับเบิ้ลคลิกเลือกหรือคลิกเลือกรายการที่พบในตารางค้นหา
-    await page.click('text="บริษัท สยามทีทีเค จำกัด"');
+    await page.locator('div[role="dialog"] tr:has-text("บริษัท ทดสอบ จำกัด")').locator('button:has-text("เลือก")').click();
 
     // 2.3 กรอกเงื่อนไขเครดิตเทอมและวันที่ส่งสินค้า
     await page.fill('input[name="payment_term_days"]', '30');
     await page.fill('input[name="ship_days"]', '7');
 
     // 2.4 เลือกหน่วยงานฝ่ายขายและประเภทภาษี
-    await page.selectOption('select[name="emp_dept_id"]', { label: 'แผนกการขายและการตลาด' });
-    await page.selectOption('select[name="tax_code_id"]', { label: 'VAT 7%' });
+    await page.selectOption('select[name="emp_dept_id"]', { index: 1 });
+    await page.selectOption('select[name="tax_code_id"]', { index: 1 });
 
     // 2.5 ระบุหมายเหตุของบิลขายนี้
     await page.fill('textarea[name="remarks"]', 'Automated E2E Test - สั่งซื้อสายไฟด่วน');
@@ -316,20 +315,22 @@ test.describe('ระบบใบสั่งขาย (Sales Order E2E Automati
 
     // 3.2 ค้นหาเลือกสินค้าตัวแรก
     await page.locator('#so-form tbody tr').first().locator('button').first().click(); // ปุ่มค้นหาสินค้าในแถวแรก
-    await page.fill('input[placeholder*="ค้นหารหัสสินค้า"]', 'สายเคเบิล');
-    await page.keyboard.press('Enter');
-    await page.click('text="สายเคเบิลทองแดง TYPE-C"');
+    await page.locator('div[role="dialog"] input[placeholder*="ค้นหารหัสสินค้า"]').press('Enter');
+    await page.waitForTimeout(800); // รอให้ตารางโหลดรายการเล็กน้อย
+    await page.locator('div[role="dialog"] table tbody tr').first().click({ force: true });
 
     // 3.3 เลือกคลังสินค้าและที่เก็บ (ฟิลด์บังคับใน Schema)
     await page.locator('#so-form tbody tr').first().locator('input').nth(2).click(); // คลิกช่องคลัง
-    await page.fill('input[placeholder*="ระบุชื่อ หรือรหัสคลัง"]', 'คลังสินค้าหลัก');
-    await page.keyboard.press('Enter');
-    await page.locator('button:has-text("เลือก")').first().click();
+    await page.locator('div[role="dialog"] input[placeholder*="ระบุชื่อ หรือรหัสคลัง"]').press('Enter');
+    await page.waitForTimeout(800); // รอโหลดข้อมูลคลังสินค้า
+    // คลิกไปที่แถวแรกสุดของตารางค้นหาคลังสินค้าโดยตรงด้วย force click
+    await page.locator('div[role="dialog"] table tbody tr').first().click({ force: true });
 
     await page.locator('#so-form tbody tr').first().locator('input').nth(3).click(); // คลิกช่องที่เก็บ
-    await page.fill('input[placeholder*="ระบุชื่อ หรือรหัสที่เก็บ"]', 'ชั้นวาง A1');
-    await page.keyboard.press('Enter');
-    await page.locator('button:has-text("เลือก")').first().click();
+    await page.locator('div[role="dialog"] input[placeholder*="ระบุชื่อ หรือรหัสที่เก็บ"]').press('Enter');
+    await page.waitForTimeout(800); // รอโหลดข้อมูลที่เก็บสินค้า
+    // คลิกไปที่แถวแรกสุดของตารางค้นหาที่เก็บสินค้าโดยตรงด้วย force click
+    await page.locator('div[role="dialog"] table tbody tr').first().click({ force: true });
 
     // 3.4 กรอกจำนวนชิ้นสินค้า
     await page.locator('#so-form tbody tr').first().locator('input').nth(4).fill('10');
