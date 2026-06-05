@@ -281,7 +281,7 @@ export function useDeliveryForm({ isOpen, id, initialData, uoms, onClose, readOn
     };
 
     const handleSelectEmployee = (emp: import('@master-data/company/types/employee-types').IEmployee) => {
-        const empId = String(emp.id || '');
+        const empId = String(emp.employee_id || emp.id || '');
         const empName = `${emp.employee_firstname_th || ''} ${emp.employee_lastname_th || ''}`.trim();
         
         

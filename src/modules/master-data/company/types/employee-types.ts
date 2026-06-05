@@ -41,6 +41,7 @@ export interface IEmployeeResponse extends IEmployeeCreateRequest {
 
 export interface IEmployee {
   id: number;
+  employee_id?: number;
   employee_code: string;
   employee_firstname_th: string;
   employee_lastname_th: string;
