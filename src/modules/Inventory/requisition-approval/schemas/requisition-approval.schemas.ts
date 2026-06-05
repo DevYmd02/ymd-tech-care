@@ -14,6 +14,8 @@ export const requisitionApproveLineSchema = z.object({
     lot_id: z.string().optional().nullable(),
     lot_no: z.string().optional(),
     qty_ic: z.number(),
+    qty_approved: z.number().default(0),
+    is_approved: z.boolean().default(true),
     remark: z.string().optional(),
 });
 
@@ -35,8 +37,10 @@ export const requisitionApproveSchema = z.object({
     qty_total: z.number().default(0),
 
     // Approval fields
+    approval_no: z.string().optional(),
     approval_emp_id: z.string().min(1, 'กรุณาเลือกผู้อนุมัติ'),
     approval_emp_name: z.string().optional(),
+    approved_date: z.string().optional(),
     status: z.enum(['PENDING', 'APPROVED', 'REJECTED']).default('PENDING'),
     reject_reason: z.string().optional().default(''),
 
