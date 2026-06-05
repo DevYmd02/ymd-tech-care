@@ -334,6 +334,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
         remarks: l.remarks || '',
         unit_price: Number(l.unit_price || 0),
         discount_expression: l.discount_expression || '0',
+        lot_balance_id: l.lot_balance_id ? Number(l.lot_balance_id) : undefined,
       })),
     };
   }, []);
@@ -368,6 +369,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
         remarks: reason,
         unit_price: Number(l.unit_price || 0),
         discount_expression: l.discount_expression || '0',
+        lot_balance_id: l.lot_balance_id ? Number(l.lot_balance_id) : undefined,
       })),
     };
   }, []);
