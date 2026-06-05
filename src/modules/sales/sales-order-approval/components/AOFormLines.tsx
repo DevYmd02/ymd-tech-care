@@ -4,11 +4,16 @@ import type { AOLineFormData } from '../schemas/ao.schema';
 import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
 import type { PriceLevelName } from '@sales-master/pages/price-level-name/types/price-level-name.types';
 
+import type { WarehouseListItem } from '@master-data/types/master-data-types';
+import type { Location } from '@inventory/types/inventory-master.types';
+
 interface Props {
   lines: AOLineFormData[];
   updateLine: (index: number, field: keyof AOLineFormData, value: unknown) => void;
   priceLevelNames?: PriceLevelName[];
   readOnly?: boolean;
+  warehouses?: WarehouseListItem[];
+  locations?: Location[];
 }
 
 export const AOFormLines: React.FC<Props> = ({
@@ -16,6 +21,8 @@ export const AOFormLines: React.FC<Props> = ({
   updateLine,
   priceLevelNames = [],
   readOnly = false,
+  warehouses = [],
+  locations = [],
 }) => {
   const toggleAll = (checked: boolean) => {
     if (readOnly) return;
@@ -38,6 +45,20 @@ export const AOFormLines: React.FC<Props> = ({
   const stickyCellClass = 'z-20 border-r border-gray-100 dark:border-gray-800 shadow-[4px_0_10px_-2px_rgba(0,0,0,0.15)] transition-colors';
 
   const fmt = (val: number) => new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val || 0);
+
+  const getWarehouseDisplayName = (line: AOLineFormData) => {
+    if (line.warehouse_name) return line.warehouse_name;
+    if (!line.warehouse_id || line.warehouse_id === '0') return '';
+    const found = warehouses.find((w) => String(w.warehouse_id) === String(line.warehouse_id));
+    return found ? found.warehouse_name || '' : String(line.warehouse_id);
+  };
+
+  const getLocationDisplayName = (line: AOLineFormData) => {
+    if (line.location_name) return line.location_name;
+    if (!line.location_id || line.location_id === '0') return '';
+    const found = locations.find((l) => String(l.location_id) === String(line.location_id));
+    return found ? found.name_th || found.code || '' : String(line.location_id);
+  };
 
   return (
     <section className="space-y-4">
@@ -210,7 +231,7 @@ export const AOFormLines: React.FC<Props> = ({
                     {/* Warehouse */}
                     <td className={tdClass}>
                       <input
-                        value={line.warehouse_name || (line.warehouse_id && line.warehouse_id !== '0' ? String(line.warehouse_id) : '')}
+                        value={getWarehouseDisplayName(line)}
                         readOnly
                         className={`${inputClass} bg-gray-50/30 italic cursor-not-allowed border-transparent text-gray-500`}
                         placeholder="-"
@@ -220,7 +241,7 @@ export const AOFormLines: React.FC<Props> = ({
                     {/* Location */}
                     <td className={tdClass}>
                       <input
-                        value={line.location_name || (line.location_id && line.location_id !== '0' ? String(line.location_id) : '')}
+                        value={getLocationDisplayName(line)}
                         readOnly
                         className={`${inputClass} bg-gray-50/30 italic cursor-not-allowed border-transparent text-gray-500`}
                         placeholder="-"
