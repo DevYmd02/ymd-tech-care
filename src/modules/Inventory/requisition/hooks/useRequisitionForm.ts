@@ -205,6 +205,7 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
                 ...DEFAULT_VALUES, 
                 docu_date: getTodayISO(), 
                 save_emp_id: user?.employee_id ? String(user.employee_id) : '',
+                branch_id: user?.employee?.branch_id ? String(user.employee.branch_id) : '',
                 lines: [createDefaultLine(1)] 
             });
         }

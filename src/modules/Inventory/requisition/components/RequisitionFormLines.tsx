@@ -9,7 +9,6 @@ import { useFormContext, Controller } from 'react-hook-form';
 import { Plus, Trash2, ShoppingBag, Search } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { RequisitionHeaderFormData, RequisitionLineFormData } from '../schemas/requisition.schemas';
-import { STOCK_FLAG_OPTIONS } from '../types/requisition.types';
 
 interface RequisitionFormLinesProps {
     fields: FieldArrayWithId<RequisitionHeaderFormData, 'lines', '_id'>[];
@@ -82,7 +81,6 @@ export const RequisitionFormLines: React.FC<RequisitionFormLinesProps> = React.m
                                 <th className="p-3 w-48 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">ที่เก็บ</th>
                                 <th className="p-3 w-32 text-right font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">จำนวน <span className="text-blue-200">*</span></th>
                                 <th className="p-3 w-40 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">Lot</th>
-                                <th className="p-3 w-40 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">ผลต่อ Stock</th>
                                 <th className="p-3 min-w-[150px] text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">หมายเหตุ</th>
                                 {!readOnly && <th className="p-3 w-14 text-center sticky right-0 z-20 bg-blue-600 uppercase tracking-wider text-[11px]">ลบ</th>}
                             </tr>
@@ -199,20 +197,7 @@ export const RequisitionFormLines: React.FC<RequisitionFormLinesProps> = React.m
                                             />
                                         </td>
 
-                                        {/* Stock Flag */}
-                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <Controller
-                                                name={`lines.${index}.stock_flag`}
-                                                control={control}
-                                                render={({ field: f }) => (
-                                                    <select {...f} value={String(f.value ?? 0)} onChange={e => f.onChange(Number(e.target.value))} disabled={readOnly} className={selectClass}>
-                                                        {STOCK_FLAG_OPTIONS.map(opt => (
-                                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                                        ))}
-                                                    </select>
-                                                )}
-                                            />
-                                        </td>
+
 
                                         {/* Remark */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
