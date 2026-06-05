@@ -100,6 +100,10 @@ const ICDocumentLinkList = React.lazy(() => import('@/modules/master-data/invent
 // Inventory Transaction Pages
 const RequisitionListPage = React.lazy(() => import('@/modules/Inventory/requisition/RequisitionListPage'));
 const RequisitionApprovalListPage = React.lazy(() => import('@/modules/Inventory/requisition-approval/RequisitionApprovalListPage'));
+const IssueListPage = React.lazy(() => import('@/modules/Inventory/issue/IssueListPage'));
+const ReturnListPage = React.lazy(() => import('@/modules/Inventory/return-issue/ReturnListPage'));
+const TransferListPage = React.lazy(() => import('@/modules/Inventory/transfer/TransferListPage'));
+const TransferApprovalListPage = React.lazy(() => import('@/modules/Inventory/transfer-approval/TransferApprovalListPage'));
 const InventoryDashboard = React.lazy(() => import('@/modules/Inventory/dashboard/InventoryDashboard'));
 // Currency Pages
 const CurrencyCodeList = React.lazy(() => import('@/modules/master-data/currency/pages/code/CurrencyCodeList'));
@@ -342,6 +346,10 @@ function AppContent() {
               <Route path="dashboard" element={<InventoryDashboard />} />
               <Route path="requisition" element={<RequisitionListPage />} />
               <Route path="requisition-approval" element={<RequisitionApprovalListPage />} />
+              <Route path="issue" element={<IssueListPage />} />
+              <Route path="return" element={<ReturnListPage />} />
+              <Route path="transfer" element={<TransferListPage />} />
+              <Route path="transfer-approval" element={<TransferApprovalListPage />} />
             </Route>
 
             {/* ==================== PLACEHOLDER ROUTES ==================== */}

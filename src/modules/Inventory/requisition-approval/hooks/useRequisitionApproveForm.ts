@@ -76,7 +76,22 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
             const saveEmp = employees.find(e => String(e.employee_id || e.id) === String(header.save_emp_id));
             const auditEmp = employees.find(e => String(e.employee_id || e.id) === String(header.audit_emp_id));
 
-            const defaultApproveDate = new Date().toISOString().split('T')[0];
+            const rawStatus = (rawHeader.status as 'PENDING' | 'APPROVED' | 'REJECTED') || 'PENDING';
+            const isPending = rawStatus === 'PENDING';
+
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const localTodayStr = `${year}-${month}-${day}`;
+
+            const resolvedEmpId = (!rawHeader.approval_emp_id || String(rawHeader.approval_emp_id) === '0' || isPending)
+                ? String(user?.employee_id || user?.employee?.employee_id || '')
+                : String(rawHeader.approval_emp_id);
+
+            const resolvedApproveDate = (!rawHeader.approved_date && !rawHeader.approve_date || isPending)
+                ? localTodayStr
+                : String(rawHeader.approved_date || rawHeader.approve_date || localTodayStr);
 
             reset({
                 docu_item_id: header.docu_item_id,
@@ -92,9 +107,9 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
                 remark: header.remark || '',
                 qty_total: header.qty_total,
                 approval_no: String(rawHeader.approval_no || rawHeader.approve_no || ''),
-                approval_emp_id: rawHeader.approval_emp_id ? String(rawHeader.approval_emp_id) : (user?.employee_id ? String(user.employee_id) : ''),
-                status: (rawHeader.status as 'PENDING' | 'APPROVED' | 'REJECTED') || 'PENDING',
-                approved_date: String(rawHeader.approved_date || rawHeader.approve_date || defaultApproveDate),
+                approval_emp_id: resolvedEmpId,
+                status: rawStatus,
+                approved_date: resolvedApproveDate,
                 reject_reason: String(rawHeader.reject_reason || ''),
                 lines: lines.map((l, i) => {
                     const rawLine = l as unknown as Record<string, unknown>;

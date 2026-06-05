@@ -179,7 +179,7 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
                                 {...field}
                                 disabled={isFinalized}
                                 placeholder="ระบบจะสร้างอัตโนมัติเมื่ออนุมัติ"
-                                className={isFinalized ? inputClass : "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500"}
+                                className={isFinalized ? inputClass : "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-900 dark:text-white"}
                             />
                         )}
                     />
@@ -201,11 +201,11 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
                             ) : (
                                 <select
                                     {...field}
-                                    className="h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                    className="h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-900 dark:text-white"
                                 >
-                                    <option value="">-- เลือกผู้อนุมัติ --</option>
+                                    <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">-- เลือกผู้อนุมัติ --</option>
                                     {empOptions.map(emp => (
-                                        <option key={emp.id} value={emp.id}>
+                                        <option key={emp.id} value={emp.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
                                             {emp.name}
                                         </option>
                                     ))}
@@ -226,7 +226,7 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
                                 value={field.value || ''}
                                 onChange={field.onChange}
                                 disabled={isFinalized}
-                                className={isFinalized ? inputClass : "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500"}
+                                className={isFinalized ? inputClass : "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-900 dark:text-white"}
                             />
                         )}
                     />
