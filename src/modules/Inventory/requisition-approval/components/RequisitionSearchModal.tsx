@@ -64,6 +64,7 @@ export const RequisitionSearchModal: React.FC<RequisitionSearchModalProps> = Rea
                 </div>
             }
             width="max-w-[1000px]"
+            headerColor="bg-emerald-700"
         >
             <div className="flex flex-col h-[70vh]">
                 {/* Search Bar */}
@@ -172,12 +173,25 @@ export const RequisitionSearchModal: React.FC<RequisitionSearchModalProps> = Rea
                     <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                         พบรายการ <span className="font-bold text-emerald-600 dark:text-emerald-400">{filteredData.length}</span> รายการ
                     </p>
-                    <button
-                        onClick={onClose}
-                        className="px-6 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all shadow-sm active:scale-95"
-                    >
-                        ยกเลิก
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                onSelect('TEST_REQ_ID');
+                                onClose();
+                            }}
+                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95"
+                        >
+                            เปิดแบบทดสอบ (Test Modal)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="px-6 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all shadow-sm active:scale-95"
+                        >
+                            ยกเลิก
+                        </button>
+                    </div>
                 </div>
             </div>
         </DialogFormLayout>

@@ -19,6 +19,8 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
 }) => {
     const { control } = useFormContext<RequisitionApproveFormData>();
     const watchedSaveEmpId = useWatch({ control, name: 'save_emp_id' });
+    const status = useWatch({ control, name: 'status' });
+    const isFinalized = status === 'APPROVED' || status === 'REJECTED';
 
     const inputClass = "h-9 w-full px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md text-gray-500 cursor-not-allowed shadow-sm font-medium";
     const labelClass = "block text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wider";
@@ -152,6 +154,79 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
                                 {...field}
                                 disabled
                                 className={inputClass}
+                            />
+                        )}
+                    />
+                </div>
+            </div>
+
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800 pt-2">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                    <ClipboardList size={20} strokeWidth={2.5} />
+                    <h3 className="text-lg font-bold">ข้อมูลการอนุมัติ — Approval Information</h3>
+                </div>
+            </div>
+
+            <div className={cardSection}>
+                {/* เลขที่อนุมัติใบขอเบิก */}
+                <div className="space-y-1">
+                    <label className={labelClass}>เลขที่อนุมัติใบขอเบิก</label>
+                    <Controller
+                        name="approval_no"
+                        control={control}
+                        render={({ field }) => (
+                            <input
+                                {...field}
+                                disabled={isFinalized}
+                                placeholder="ระบบจะสร้างอัตโนมัติเมื่ออนุมัติ"
+                                className={isFinalized ? inputClass : "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500"}
+                            />
+                        )}
+                    />
+                </div>
+
+                {/* ผู้อนุมัติ */}
+                <div className="space-y-1">
+                    <label className={labelClass}>ผู้อนุมัติ <span className="text-red-500">*</span></label>
+                    <Controller
+                        name="approval_emp_id"
+                        control={control}
+                        render={({ field }) => (
+                            isFinalized ? (
+                                <input
+                                    value={empOptions.find(e => String(e.id) === String(field.value))?.name || field.value || '-'}
+                                    disabled
+                                    className={inputClass}
+                                />
+                            ) : (
+                                <select
+                                    {...field}
+                                    className="h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                >
+                                    <option value="">-- เลือกผู้อนุมัติ --</option>
+                                    {empOptions.map(emp => (
+                                        <option key={emp.id} value={emp.id}>
+                                            {emp.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            )
+                        )}
+                    />
+                </div>
+
+                {/* วันที่อนุมัติ */}
+                <div className="space-y-1">
+                    <label className={labelClass}>วันที่อนุมัติ</label>
+                    <Controller
+                        name="approved_date"
+                        control={control}
+                        render={({ field }) => (
+                            <CustomDateInput
+                                value={field.value || ''}
+                                onChange={field.onChange}
+                                disabled={isFinalized}
+                                className={isFinalized ? inputClass : "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500"}
                             />
                         )}
                     />

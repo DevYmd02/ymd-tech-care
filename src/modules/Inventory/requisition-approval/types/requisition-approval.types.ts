@@ -27,4 +27,11 @@ export interface ApproveRequisitionPayload {
     status: 'APPROVED' | 'REJECTED';
     approval_emp_id: number | string;
     reject_reason?: string;
+    approved_date?: string;
+    approval_no?: string;
+    lines?: {
+        docu_item_line_id?: number;
+        qty_approved: number;
+        is_approved: boolean;
+    }[];
 }

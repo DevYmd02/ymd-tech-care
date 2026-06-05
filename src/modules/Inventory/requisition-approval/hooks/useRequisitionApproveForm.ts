@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { requisitionApproveSchema, type RequisitionApproveFormData } from '../schemas/requisition-approval.schemas';
 import { RequisitionApprovalService } from '../services/requisition-approval.service';
+import type { ApproveRequisitionPayload } from '../types/requisition-approval.types';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 
 interface UseRequisitionApproveFormOptions {
@@ -30,8 +31,10 @@ const DEFAULT_VALUES: RequisitionApproveFormData = {
     audit_emp_name: '',
     remark: '',
     qty_total: 0,
+    approval_no: '',
     approval_emp_id: '',
     approval_emp_name: '',
+    approved_date: '',
     status: 'PENDING',
     reject_reason: '',
     lines: [],
@@ -67,10 +70,13 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
     useEffect(() => {
         if (detailData) {
             const { header, lines } = detailData;
+            const rawHeader = header as unknown as Record<string, unknown>;
             
             // Map IDs to employee names
             const saveEmp = employees.find(e => String(e.employee_id || e.id) === String(header.save_emp_id));
             const auditEmp = employees.find(e => String(e.employee_id || e.id) === String(header.audit_emp_id));
+
+            const defaultApproveDate = new Date().toISOString().split('T')[0];
 
             reset({
                 docu_item_id: header.docu_item_id,
@@ -85,25 +91,32 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
                 audit_emp_name: auditEmp ? auditEmp.employee_fullname || auditEmp.employee_name : '',
                 remark: header.remark || '',
                 qty_total: header.qty_total,
-                approval_emp_id: user?.employee_id ? String(user.employee_id) : '',
-                status: 'PENDING',
-                reject_reason: '',
-                lines: lines.map((l, i) => ({
-                    docu_item_line_id: l.docu_item_line_id,
-                    listno: l.listno || i + 1,
-                    item_id: l.item_id,
-                    item_code: l.item_code,
-                    item_name: l.item_name,
-                    uom_id: l.uom_id,
-                    warehouse_id: l.warehouse_id,
-                    warehouse_name: l.warehouse_name,
-                    location_id: l.location_id,
-                    location_name: l.location_name,
-                    lot_id: l.lot_id,
-                    lot_no: l.lot_no,
-                    qty_ic: l.qty_ic,
-                    remark: l.remark || '',
-                })),
+                approval_no: String(rawHeader.approval_no || rawHeader.approve_no || ''),
+                approval_emp_id: rawHeader.approval_emp_id ? String(rawHeader.approval_emp_id) : (user?.employee_id ? String(user.employee_id) : ''),
+                status: (rawHeader.status as 'PENDING' | 'APPROVED' | 'REJECTED') || 'PENDING',
+                approved_date: String(rawHeader.approved_date || rawHeader.approve_date || defaultApproveDate),
+                reject_reason: String(rawHeader.reject_reason || ''),
+                lines: lines.map((l, i) => {
+                    const rawLine = l as unknown as Record<string, unknown>;
+                    return {
+                        docu_item_line_id: l.docu_item_line_id,
+                        listno: l.listno || i + 1,
+                        item_id: l.item_id,
+                        item_code: l.item_code,
+                        item_name: l.item_name,
+                        uom_id: l.uom_id,
+                        warehouse_id: l.warehouse_id,
+                        warehouse_name: l.warehouse_name,
+                        location_id: l.location_id,
+                        location_name: l.location_name,
+                        lot_id: l.lot_id,
+                        lot_no: l.lot_no,
+                        qty_ic: l.qty_ic,
+                        qty_approved: typeof rawLine.qty_approved === 'number' ? rawLine.qty_approved : l.qty_ic,
+                        is_approved: typeof rawLine.is_approved === 'boolean' ? rawLine.is_approved : true,
+                        remark: l.remark || '',
+                    };
+                }),
             });
         } else if (!requisitionId && isOpen) {
             reset(DEFAULT_VALUES);
@@ -114,12 +127,20 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
     const approveMutation = useMutation({
         mutationFn: (payload: { status: 'APPROVED' | 'REJECTED'; rejectReason?: string }) => {
             if (!requisitionId) throw new Error('Requisition ID is required');
+            const formValues = formMethods.getValues();
             return RequisitionApprovalService.approve({
                 docu_item_id: requisitionId,
                 status: payload.status,
-                approval_emp_id: user?.employee_id || 0,
+                approval_emp_id: formValues.approval_emp_id || user?.employee_id || 0,
+                approved_date: formValues.approved_date,
+                approval_no: formValues.approval_no,
                 reject_reason: payload.rejectReason,
-            });
+                lines: formValues.lines.map(l => ({
+                    docu_item_line_id: l.docu_item_line_id,
+                    qty_approved: l.is_approved ? Number(l.qty_approved) : 0,
+                    is_approved: l.is_approved,
+                })),
+            } as ApproveRequisitionPayload);
         },
         onSuccess: (result) => {
             if (result.success) {

@@ -15,6 +15,13 @@ import { formatNumber } from '@/shared/utils';
 
 const colHelper = createColumnHelper<RequisitionApprovalListItem>();
 
+const STATUS_OPTIONS = [
+    { value: 'ALL', label: 'ทั้งหมด' },
+    { value: 'PENDING', label: 'รออนุมัติ' },
+    { value: 'APPROVED', label: 'อนุมัติแล้ว' },
+    { value: 'REJECTED', label: 'ไม่อนุมัติ' },
+];
+
 export interface RequisitionApprovalListPageProps {
     isModal?: boolean;
     onClose?: () => void;
@@ -57,8 +64,10 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
         handlePageChange,
         setFilters,
     } = useTableFilters({
+        defaultStatus: 'ALL',
         customParamKeys: {
             search: 'issue_req_no',
+            status: 'status',
         },
     });
 
@@ -96,6 +105,9 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
             if (filters.date_end && item.docu_date > filters.date_end) {
                 return false;
             }
+            if (filters.status && filters.status !== 'ALL' && item.status !== filters.status) {
+                return false;
+            }
             return true;
         });
     }, [items, filters]);
@@ -119,8 +131,9 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
     };
 
     // ── Columns ──────────────────────────────────────────────────────────────────────
-    const columns = useMemo(() => {
-        const baseCols: ColumnDef<RequisitionApprovalListItem, any>[] = [
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const columns: ColumnDef<RequisitionApprovalListItem, any>[] = useMemo(() => {
+        return [
             colHelper.display({
                 id: 'index',
                 header: () => <div className="flex justify-center items-center w-full">ลำดับ</div>,
@@ -172,29 +185,24 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                 ),
                 size: 110,
             }),
-        ];
-
-        if (activeTab === 'history') {
-            baseCols.push(
-                colHelper.accessor('status' as any, {
-                    header: () => <div className="flex justify-center items-center w-full">สถานะการพิจารณา</div>,
-                    cell: info => (
-                        <div className="flex justify-center items-center w-full">
-                            <StatusBadge status={info.getValue() as any} />
-                        </div>
-                    ),
-                    size: 130,
-                }) as any,
-                colHelper.accessor('approval_emp_name', {
-                    header: 'ผู้อนุมัติ',
-                    cell: info => <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
-                    size: 150,
-                })
-            );
-        }
-
-        // Action Column
-        baseCols.push(
+            ...(activeTab === 'history'
+                ? [
+                      colHelper.accessor('status', {
+                          header: () => <div className="flex justify-center items-center w-full">สถานะการพิจารณา</div>,
+                          cell: info => (
+                              <div className="flex justify-center items-center w-full">
+                                  <StatusBadge status={info.getValue()} />
+                              </div>
+                          ),
+                          size: 130,
+                      }),
+                      colHelper.accessor('approval_emp_name', {
+                          header: 'ผู้อนุมัติ',
+                          cell: info => <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
+                          size: 150,
+                      }),
+                  ]
+                : []),
             colHelper.display({
                 id: 'actions',
                 header: () => <div className="flex justify-center items-center w-full">จัดการ</div>,
@@ -214,10 +222,8 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                     </div>
                 ),
                 size: 120,
-            })
-        );
-
-        return baseCols;
+            }),
+        ];
     }, [activeTab, handleView]);
 
     const modalContent = (
@@ -242,6 +248,14 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                     type="date"
                     value={localFilters.date_end}
                     onChange={(v) => handleFilterChange('date_end', v)}
+                    accentColor="emerald"
+                />
+                <FilterField
+                    label="สถานะ"
+                    type="select"
+                    value={localFilters.status}
+                    onChange={(v) => handleFilterChange('status', v)}
+                    options={STATUS_OPTIONS}
                     accentColor="emerald"
                 />
 
@@ -302,7 +316,7 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <SmartTable
                     data={filteredItems}
-                    columns={columns as ColumnDef<RequisitionApprovalListItem, unknown>[]}
+                    columns={columns}
                     isLoading={isLoading}
                     pagination={{
                         pageIndex: filters.page,
@@ -388,6 +402,14 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                         onChange={(v) => handleFilterChange('date_end', v)}
                         accentColor="emerald"
                     />
+                    <FilterField
+                        label="สถานะ"
+                        type="select"
+                        value={localFilters.status}
+                        onChange={(v) => handleFilterChange('status', v)}
+                        options={STATUS_OPTIONS}
+                        accentColor="emerald"
+                    />
  
                     {/* Action Buttons */}
                     <div className="md:col-span-4 flex flex-col md:flex-row md:justify-between items-center gap-3 mt-2 w-full">
@@ -448,7 +470,7 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <SmartTable
                     data={filteredItems}
-                    columns={columns as ColumnDef<RequisitionApprovalListItem, unknown>[]}
+                    columns={columns}
                     isLoading={isLoading}
                     pagination={{
                         pageIndex: filters.page,

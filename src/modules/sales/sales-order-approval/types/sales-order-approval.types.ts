@@ -247,6 +247,10 @@ export interface ApproveSalesOrderLine {
   remarks?: string;
   unit_price?: number;
   discount_expression?: string;
+  lot_id?: number;
+  lot_balance_id?: number;
+  location_id?: number;
+  warehouse_id?: number;
 }
 
 
