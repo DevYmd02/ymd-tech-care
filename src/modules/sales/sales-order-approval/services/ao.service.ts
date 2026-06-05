@@ -3,6 +3,7 @@ import type { ApproveSalesOrderPayload, AOListItem } from '../types/sales-order-
 import { extractArrayFromResponse } from '@utils/clientFilterUtils';
 import { SalesOrderService } from '@sales/sales-order/services/sales-order.service';
 import type { SalesOrderFormData } from '@sales/sales-order/types/sales-order.types';
+import { logger } from '@utils';
 
 // API Endpoint constants
 const ENDPOINTS = {
@@ -140,17 +141,21 @@ export const AOService = {
   },
 
   updateSOStatus: async (id: string | number, status: string) => {
-    // 🛡️ Sync SO Status using the robust SalesOrderService.update
-    // This avoids "400 Bad Request" errors caused by missing mandatory fields in partial patches.
-    const fullData = await SalesOrderService.getById(String(id));
-    if (fullData) {
-      return await SalesOrderService.update(String(id), {
-        ...fullData,
-        status: status as SalesOrderFormData['status']
-      });
+    try {
+      // 🛡️ Sync SO Status using the dedicated status update endpoint first.
+      // This avoids triggering full line updates and double unallocation errors.
+      return await SalesOrderService.updateStatus(String(id), status);
+    } catch (err) {
+      logger.warn('[AOService] updateStatus endpoint failed, trying fallback update:', err);
+      const fullData = await SalesOrderService.getById(String(id));
+      if (fullData) {
+        return await SalesOrderService.update(String(id), {
+          ...fullData,
+          status: status as SalesOrderFormData['status']
+        });
+      }
+      // Fallback if full data fetch fails
+      return await api.patch(ENDPOINTS.updateSO(id), { status });
     }
-    
-    // Fallback if full data fetch fails
-    return await api.patch(ENDPOINTS.updateSO(id), { status });
   }
 };

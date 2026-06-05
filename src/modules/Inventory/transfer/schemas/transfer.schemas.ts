@@ -1,0 +1,96 @@
+/**
+ * @file transfer.schemas.ts
+ * @description Zod validation schemas สำหรับ Transfer Requisition (ใบขอโอนย้ายสินค้า)
+ */
+
+import { z } from 'zod';
+
+// ====================================================================================
+// LINE SCHEMA (D10)
+// ====================================================================================
+
+export const transferLineSchema = z.object({
+    _tempId: z.string().optional(),
+    listno: z.number().int().min(1),
+    item_id: z.string().min(1, 'กรุณาเลือกสินค้า'),
+    item_code: z.string().optional(),
+    item_name: z.string().max(255).optional(),
+    uom_id: z.string().min(1, 'กรุณาเลือกหน่วยนับ'),
+    income_inve_id: z.string().min(1, 'กรุณาเลือกคลังต้นทาง'),
+    income_inve_name: z.string().optional(),
+    income_loca_id: z.string().optional().nullable(),
+    income_loca_name: z.string().optional(),
+    out_inve_id: z.string().min(1, 'กรุณาเลือกคลังปลายทาง'),
+    out_inve_name: z.string().optional(),
+    out_loca_id: z.string().optional().nullable(),
+    out_loca_name: z.string().optional(),
+    qty_ic: z
+        .union([z.number(), z.literal('')])
+        .refine(v => v !== '' && Number(v) > 0, { message: 'จำนวนต้องมากกว่า 0' }),
+    lot_id: z.string().optional().nullable(),
+    lot_no: z.string().optional(),
+    stock_flag: z.number().int().refine(v => [-1, 0, 1].includes(v), {
+        message: 'ผลต่อ Stock ต้องเป็น -1, 0 หรือ 1',
+    }).default(0), // default 0 = ไม่ส่งผลต่อยอดรวมใหญ่ทันที หรือเป็นไปตามกระบวนการโอนย้าย
+    remark: z.string().max(255).optional(),
+}).refine(data => {
+    // ป้องกันการเลือกคลังต้นทางและปลายทางเป็นคลังเดียวกัน
+    return data.income_inve_id !== data.out_inve_id;
+}, {
+    message: 'คลังปลายทางต้องไม่ใช่คลังเดียวกับคลังต้นทาง',
+    path: ['out_inve_id'],
+});
+
+// ====================================================================================
+// HEADER SCHEMA (D9)
+// ====================================================================================
+
+export const transferHeaderSchema = z.object({
+    transfer__req_id: z.string().uuid().optional(),
+
+    transfer__req_no: z
+        .string()
+        .min(1, 'กรุณาระบุเลขที่เอกสารขอโอนย้าย')
+        .max(50),
+
+    docu_date: z
+        .string()
+        .min(1, 'กรุณาระบุวันที่เอกสาร'),
+
+    branch_id: z
+        .string()
+        .min(1, 'กรุณาเลือกสาขา'),
+
+    save_emp_id: z
+        .string()
+        .min(1, 'กรุณาเลือกผู้บันทึก'),
+
+    transfer_emp_id: z
+        .string()
+        .min(1, 'กรุณาเลือกผู้ขอโอน'),
+
+    stock_effect_ic: z
+        .number()
+        .int()
+        .nullable()
+        .optional()
+        .default(0),
+
+    remark: z.string().max(255).optional(),
+
+    cancelflag: z.string().length(1).default('N'),
+
+    cancle_remark: z.string().max(255).optional(),
+
+    lines: z
+        .array(transferLineSchema)
+        .min(1, 'กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการ'),
+});
+
+// ====================================================================================
+// INFERRED TYPES
+// ====================================================================================
+
+export type TransferHeaderFormData = z.infer<typeof transferHeaderSchema>;
+export type TransferLineFormData = z.infer<typeof transferLineSchema>;
+export type TransferFormData = TransferHeaderFormData;
