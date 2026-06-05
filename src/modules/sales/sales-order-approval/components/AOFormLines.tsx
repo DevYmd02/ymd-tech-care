@@ -184,12 +184,8 @@ export const AOFormLines: React.FC<Props> = ({
                           if (val > 0 && !isSelected) updateLine(index, 'is_approved', true);
                           else if (val === 0 && isSelected) updateLine(index, 'is_approved', false);
                         }}
-                        readOnly={readOnly || !isSelected}
-                        className={`${inputClass} text-center font-bold ${
-                          !isSelected || readOnly 
-                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed' 
-                            : 'bg-white dark:bg-gray-800 font-bold text-emerald-700 dark:text-emerald-400 border-emerald-500 ring-1 ring-emerald-500/20'
-                        }`}
+                        readOnly={true}
+                        className={`${inputClass} text-center font-bold bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-200 dark:border-gray-700 cursor-not-allowed`}
                       />
                     </td>
 
