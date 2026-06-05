@@ -87,6 +87,18 @@ export function DeliveryLineTable({
         });
     }, [conversionData, uoms, barcodeData]);
 
+    const summaryByUom = useMemo(() => {
+        const groups: Record<string, number> = {};
+        lines.forEach(l => {
+            const uomName = uoms.find(u => String(u.id || u.uom_id) === String(l.uom_id))?.uom_name || 
+                            l.uom_name || 
+                            (l.uom_id ? `[ID: ${l.uom_id}]` : '-- หน่วย --');
+            const qty = Number(l.qty_shipped || 0);
+            groups[uomName] = (groups[uomName] || 0) + qty;
+        });
+        return Object.entries(groups).map(([unit, qty]) => ({ unit, qty }));
+    }, [lines, uoms]);
+
     const handleSelectUom = (item: UOMPickerItem) => {
         if (activeUomRowIndex !== null) {
             onLineChange(activeUomRowIndex, 'uom_id', String(item.from_unit_id));
@@ -234,6 +246,7 @@ export function DeliveryLineTable({
                                         >
                                             <span className="truncate">
                                                 {uoms.find(u => String(u.id || u.uom_id) === String(line.uom_id))?.uom_name || 
+                                                 line.uom_name ||
                                                  (line.uom_id ? `[ID: ${line.uom_id}]` : '-- หน่วย --')}
                                             </span>
                                             {!isViewOnly && !!line.item_id && <span className="text-slate-400 dark:text-slate-500 text-[10px] ml-1 shrink-0">▼</span>}
@@ -379,15 +392,19 @@ export function DeliveryLineTable({
             {/* Footer Summary */}
             {lines.length > 0 && (
                 <div className="mt-4 p-4 bg-slate-50 dark:bg-[#1a1f2e]/50 rounded-xl border border-slate-200 dark:border-slate-800/50 flex items-center justify-between">
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">
                         รวมรายการจัดส่งทั้งหมด
                     </span>
                     <div className="flex items-center gap-6">
-                        <div className="flex flex-col items-end">
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest">จำนวนรวม</span>
-                            <span className="text-lg font-bold text-blue-600 dark:text-blue-400 font-mono">
-                                {lines.reduce((sum, l) => sum + (l.qty_shipped || 0), 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}
-                            </span>
+                        <div className="flex gap-4 flex-wrap">
+                            {summaryByUom.map(({ unit, qty }) => (
+                                <div key={unit} className="flex flex-col items-end border-r border-slate-200 dark:border-slate-800 last:border-0 pr-4 last:pr-0">
+                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest font-semibold">{unit}</span>
+                                    <span className="text-base font-bold text-blue-600 dark:text-blue-400 font-mono">
+                                        {qty.toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 3 })}
+                                    </span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>

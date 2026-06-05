@@ -111,6 +111,7 @@ function normalizeSO(raw: unknown): SOForApproval | null {
       location_name: String(l.location_name || ''),
       lot_id: String(l.lot_id || ''),
       lot_no: String(l.lot_no || ''),
+      lot_balance_id: l.lot_balance_id ? Number(l.lot_balance_id) : undefined,
       note: String(l.note || l.remarks || ''),
       remarks: String(l.remarks || l.note || ''),
       price_source: l.price_source !== undefined && l.price_source !== null ? Number(l.price_source) : undefined,
@@ -420,6 +421,7 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
         location_name: String(soLine.location_name || ''),
         lot_id: String(soLine.lot_id || ''),
         lot_no: String(soLine.lot_no || ''),
+        lot_balance_id: soLine.lot_balance_id ? Number(soLine.lot_balance_id) : undefined,
         remarks: String(aoLine?.remarks || soLine.note || soLine.remarks || ''),
         price_source: soLine.price_source !== undefined && soLine.price_source !== null ? Number(soLine.price_source) : undefined,
         price_source_name: String(soLine.price_source_name || ''),
@@ -475,7 +477,13 @@ export const useAOForm = ({ soId, isOpen, onClose, onSuccess, approvalItem }: Us
       netAmount: 'net_amount',
       remarks: 'remarks',
     },
-    queryKeysToInvalidate: [['sales-orders'], ['so-approvals']],
+    queryKeysToInvalidate: [
+      ['sales-orders'], 
+      ['so-approvals'],
+      ['so-approvals-pending-list'],
+      ['so-approvals-history-list'],
+      ['so-numbers-lookup']
+    ],
     toastMessages: {
       approveSuccess: 'อนุมัติใบสั่งขายเรียบร้อยแล้ว',
       rejectSuccess: 'ไม่อนุมัติใบสั่งขายเรียบร้อยแล้ว',

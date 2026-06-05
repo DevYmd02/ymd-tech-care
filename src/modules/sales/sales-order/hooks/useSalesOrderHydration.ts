@@ -103,13 +103,9 @@ export function useSalesOrderHydration({
 
         if (isEditing && hasActualData && !isInitializedRef.current) {
             logger.debug('[useSalesOrderHydration] Initializing Edit Mode with data:', initialData.so_no);
-            reset({
-                ...getSalesOrderDefaultValues(),
-                ...initialData,
-            } as SalesOrderFormValues);
             isInitializedRef.current = true;
 
-            // 🎯 Dynamically resolve conversion IDs to global UOM IDs on load
+            // 🎯 Dynamically resolve conversion IDs to global UOM IDs on load before resetting form
             if (initialData.lines && initialData.lines.length > 0) {
                 const allItemIds = [...new Set(initialData.lines.map(l => Number(l.item_id)).filter(id => id > 0))];
                 if (allItemIds.length > 0) {
@@ -129,15 +125,48 @@ export function useSalesOrderHydration({
                                 return {
                                     ...line,
                                     uom_id: String(matchedConv.from_unit_id),
-                                    item_uom_id: Number(matchedConv.conversion_id)
+                                    item_uom_id: Number(matchedConv.conversion_id),
+                                    uom_name: matchedConv.from_unit_name
                                 };
                             }
                             return line;
                         });
-                        setValue('lines', updatedLines as SalesOrderLineValues[]);
-                    }).catch(() => {});
+
+                        reset({
+                            ...getSalesOrderDefaultValues(),
+                            ...initialData,
+                            lines: updatedLines
+                        } as SalesOrderFormValues);
+
+                        if (initialData.customer_id && initialData.branch_id) {
+                            void recoverSalesOrderPriceSources(
+                                updatedLines,
+                                Number(initialData.customer_id),
+                                Number(initialData.branch_id)
+                            );
+                        }
+                    }).catch(() => {
+                        reset({
+                            ...getSalesOrderDefaultValues(),
+                            ...initialData,
+                        } as SalesOrderFormValues);
+
+                        if (initialData.customer_id && initialData.branch_id && initialData.lines) {
+                            void recoverSalesOrderPriceSources(
+                                initialData.lines as SalesOrderLineValues[],
+                                Number(initialData.customer_id),
+                                Number(initialData.branch_id)
+                            );
+                        }
+                    });
+                    return;
                 }
             }
+
+            reset({
+                ...getSalesOrderDefaultValues(),
+                ...initialData,
+            } as SalesOrderFormValues);
 
             if (initialData.customer_id && initialData.branch_id && initialData.lines) {
                 void recoverSalesOrderPriceSources(
@@ -147,7 +176,7 @@ export function useSalesOrderHydration({
                 );
             }
         }
-    }, [isOpen, initialData, reset, id, recoverSalesOrderPriceSources, setValue]);
+    }, [isOpen, initialData, reset, id, recoverSalesOrderPriceSources]);
 
     return {
         recoverSalesOrderPriceSources

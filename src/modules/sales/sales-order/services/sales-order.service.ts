@@ -276,6 +276,7 @@ export const SalesOrderService = {
                         qty_ordered: Number(l['qty'] || l['qty_ordered'] || l['quantity'] || 0),
                         unit_price: Number(l['unit_price'] || l['price'] || 0),
                         line_discount: Number(l['discount_amount'] || l['line_discount'] || 0),
+                        line_discount_input: String(l['discount_expression'] || l['line_discount_input'] || '0'),
                         line_total: Number(l['net_amount'] || l['line_total'] || l['amount'] || 0),
                         lot_id: normalizeId(lotIdVal ? (
                             (typeof lotIdVal === 'object' && lotIdVal !== null)
@@ -283,6 +284,7 @@ export const SalesOrderService = {
                                 : lotIdVal
                         ) : undefined),
                         lot_no: lotNo,
+                        lot_balance_id: l['lot_balance_id'] ? Number(l['lot_balance_id']) : undefined,
                         price_source: l['price_source'],
                         price_source_name: String(l['price_source_name'] || ''),
                         price_level_priority: l['price_level_priority'],

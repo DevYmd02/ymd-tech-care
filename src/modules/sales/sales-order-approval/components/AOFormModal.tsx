@@ -18,6 +18,8 @@ import type { AOLineFormData } from '../schemas/ao.schema';
 import { SalesFormSkeleton } from '@sales/shared/components/SalesFormSkeleton';
 import { SOSearchModal } from './SOSearchModal';
 
+import { useWarehouses, useLocations } from '@master-data/hooks/useMasterData';
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
@@ -50,6 +52,11 @@ export const AOFormModal: React.FC<Props> = ({
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSOSearchOpen, setIsSOSearchOpen] = useState(false);
   const { allItems: priceLevelNames } = usePriceLevelName(isOpen);
+
+  const { data: warehouseResponse } = useWarehouses(isOpen);
+  const { data: locationResponse } = useLocations(isOpen, 1000);
+  const warehouses = warehouseResponse?.items || [];
+  const locations = locationResponse?.items || [];
 
   const handleSelectSO = (so: SOForApproval) => {
     if (so.so_id) {
@@ -233,6 +240,8 @@ export const AOFormModal: React.FC<Props> = ({
                       updateLine={updateLine}
                       priceLevelNames={priceLevelNames}
                       readOnly={isAlreadyProcessed}
+                      warehouses={warehouses}
+                      locations={locations}
                     />
                   </div>
                 </div>
