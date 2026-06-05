@@ -19,6 +19,7 @@ import { LocationSearchModal } from '@Inventory/shared/components/LocationSearch
 import { LotSearchModal } from '@Inventory/shared/components/LotSearchModal';
 import type { WarehouseListItem } from '@master-data/inventory/types/warehouse-types';
 import type { Location, LotNo } from '@master-data/inventory/types/inventory-master.types';
+import { LocationService } from '@master-data/inventory/services/inventory-master.service';
 
 interface RequisitionFormPageProps {
     isOpen: boolean;
@@ -104,15 +105,30 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
         setActiveLineIndex(index);
         setIsWarehouseSearchOpen(true);
     };
-    const handleSelectWarehouse = (warehouse: WarehouseListItem) => {
+    const handleSelectWarehouse = async (warehouse: WarehouseListItem) => {
         if (activeLineIndex !== null) {
+            let locId = '';
+            let locName = '';
+            try {
+                const res = await LocationService.getAll({ 
+                    warehouse_id: warehouse.warehouse_id, 
+                    limit: 1 
+                });
+                const firstLoc = res?.items?.[0];
+                if (firstLoc) {
+                    locId = String(firstLoc.location_id);
+                    locName = firstLoc.name_th || firstLoc.code || '';
+                }
+            } catch (err) {
+                console.error('Failed to fetch first location:', err);
+            }
+
             updateLine(activeLineIndex, null, {
                 ...fields[activeLineIndex],
                 warehouse_id: String(warehouse.warehouse_id),
                 warehouse_name: warehouse.warehouse_name,
-                // Reset location when warehouse changes
-                location_id: '',
-                location_name: '',
+                location_id: locId,
+                location_name: locName,
             } as RequisitionLineFormData);
         }
         setIsWarehouseSearchOpen(false);
@@ -234,7 +250,7 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
                             <Loader2 className="animate-spin text-blue-600" size={32} />
                         </div>
                     ) : (
-                        <form id="requisition-form" onSubmit={formMethods.handleSubmit(onFormSubmit, handleFormError)} className="max-w-[1400px] mx-auto space-y-6">
+                        <form id="requisition-form" onSubmit={formMethods.handleSubmit(onFormSubmit, handleFormError)} className="w-full space-y-6">
                             {/* 1. Header Section */}
                             <div className={cardClass}>
                                 <div className="p-6">
@@ -338,6 +354,10 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
                 onClose={() => setIsLotSearchOpen(false)}
                 onSelect={handleSelectLot}
                 itemId={activeItemId}
+                warehouseId={activeLineIndex !== null ? (fields[activeLineIndex]?.warehouse_id || undefined) : undefined}
+                locationId={activeLineIndex !== null ? (fields[activeLineIndex]?.location_id || undefined) : undefined}
+                itemName={activeLineIndex !== null ? fields[activeLineIndex]?.item_name : undefined}
+                itemCode={activeLineIndex !== null ? fields[activeLineIndex]?.item_code : undefined}
             />
         </WindowFormLayout>
     );

@@ -141,7 +141,6 @@ export const placeholderRoutes: Record<string, PlaceholderRoute[]> = {
         { path: 'procurement/invoice', title: 'ใบแจ้งหนี้ผู้ขาย (Vendor Invoice)' },
     ],
     inventory: [
-        { path: 'inventory/requisition-approval', title: 'อนุมัติใบขอเบิก' },
         { path: 'inventory/issue', title: 'ใบเบิก' },
         { path: 'inventory/return', title: 'รับคืนจากการเบิก' },
         { path: 'inventory/item-master', title: 'Item Master' },
