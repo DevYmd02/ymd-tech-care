@@ -3,11 +3,12 @@
  * @description ส่วน Header ของฟอร์มใบเบิก (Stock Issue)
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useFormContext, Controller, useWatch } from 'react-hook-form';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Search } from 'lucide-react';
 import type { IssueStockHeaderFormData } from '../schemas/issue.schemas';
 import { CustomDateInput } from '@ui';
+import { EmployeeSearchModal } from '@/modules/master-data/employee/components/EmployeeSearchModal';
 
 interface IssueFormHeaderProps {
     deptOptions?: { id: string; name: string }[];
@@ -24,10 +25,14 @@ export const IssueFormHeader: React.FC<IssueFormHeaderProps> = ({
     empOptions = [],
     readOnly = false,
 }) => {
-    const { register, control, formState: { errors } } = useFormContext<IssueStockHeaderFormData>();
+    const { register, control, formState: { errors }, setValue } = useFormContext<IssueStockHeaderFormData>();
     const watchedSaveEmpId = useWatch({ control, name: 'save_emp_id' });
+    const watchedReceEmpId = useWatch({ control, name: 'rece_emp_id' });
+
+    const [isEmpSearchOpen, setIsEmpSearchOpen] = useState(false);
 
     const isLocked = readOnly;
+    const selectedEmpName = empOptions.find(e => e.id === watchedReceEmpId)?.name || '';
 
     const inputClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white placeholder-gray-400 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
     const selectClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -207,49 +212,31 @@ export const IssueFormHeader: React.FC<IssueFormHeaderProps> = ({
                 {/* 8. ผู้รับสินค้า */}
                 <div className="space-y-1">
                     <label className={labelClass}>ผู้รับสินค้า <span className="text-red-500">*</span></label>
-                    <Controller
-                        name="rece_emp_id"
-                        control={control}
-                        render={({ field }) => (
-                            <select
-                                {...field}
-                                disabled={isLocked}
-                                className={`${selectClass} ${getErrorClass('rece_emp_id')}`}
+                    <div className="flex gap-1">
+                        <input
+                            type="text"
+                            readOnly
+                            placeholder="คลิกเพื่อค้นหาผู้รับสินค้า"
+                            value={selectedEmpName}
+                            onClick={() => !isLocked && setIsEmpSearchOpen(true)}
+                            className={`${inputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${getErrorClass('rece_emp_id')}`}
+                        />
+                        {!isLocked && (
+                            <button
+                                type="button"
+                                onClick={() => setIsEmpSearchOpen(true)}
+                                className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded transition-all shadow-sm active:scale-95 shrink-0 h-9 w-9 flex items-center justify-center"
                             >
-                                <option value="">-- เลือกผู้รับสินค้า --</option>
-                                {empOptions.map(e => (
-                                    <option key={e.id} value={e.id}>{e.name}</option>
-                                ))}
-                            </select>
+                                <Search size={16} />
+                            </button>
                         )}
-                    />
+                        <input type="hidden" {...register('rece_emp_id')} />
+                    </div>
                     {errors.rece_emp_id && <span className="text-[10px] text-red-500 font-medium">{errors.rece_emp_id.message}</span>}
                 </div>
 
-                {/* 9. ผลต่อคลัง */}
-                <div className="space-y-1">
-                    <label className={labelClass}>ผลต่อคลัง <span className="text-red-500">*</span></label>
-                    <Controller
-                        name="stock_effect_ic"
-                        control={control}
-                        render={({ field }) => (
-                            <select
-                                value={field.value}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                disabled={isLocked}
-                                className={`${selectClass} ${getErrorClass('stock_effect_ic')}`}
-                            >
-                                <option value="-1">ลดคลัง (-1)</option>
-                                <option value="0">ไม่มีผลต่อคลัง (0)</option>
-                                <option value="1">เพิ่มคลัง (1)</option>
-                            </select>
-                        )}
-                    />
-                    {errors.stock_effect_ic && <span className="text-[10px] text-red-500 font-medium">{errors.stock_effect_ic.message}</span>}
-                </div>
-
                 {/* 10. หมายเหตุ */}
-                <div className="lg:col-span-3 space-y-1">
+                <div className="md:col-span-2 lg:col-span-4 space-y-1">
                     <label className={labelClass}>หมายเหตุ</label>
                     <input
                         {...register('remark')}
@@ -259,6 +246,16 @@ export const IssueFormHeader: React.FC<IssueFormHeaderProps> = ({
                     />
                 </div>
             </div>
+
+            {isEmpSearchOpen && (
+                <EmployeeSearchModal
+                    isOpen={isEmpSearchOpen}
+                    onClose={() => setIsEmpSearchOpen(false)}
+                    onSelect={(emp) => {
+                        setValue('rece_emp_id', String(emp.id));
+                    }}
+                />
+            )}
         </section>
     );
 };

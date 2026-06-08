@@ -174,6 +174,16 @@ export const TransferSearchModal: React.FC<TransferSearchModalProps> = React.mem
                     <div className="flex gap-2">
                         <button
                             type="button"
+                            onClick={() => {
+                                onSelect('TEST_REQ_ID');
+                                onClose();
+                            }}
+                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95"
+                        >
+                            เปิดแบบทดสอบ (Test Modal)
+                        </button>
+                        <button
+                            type="button"
                             onClick={onClose}
                             className="px-6 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-all shadow-sm active:scale-95"
                         >

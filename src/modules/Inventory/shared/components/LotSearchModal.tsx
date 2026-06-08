@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Search, Tag, Check, Plus, PackagePlus, Layers, List, Edit2, MapPin } from 'lucide-react';
+import { Search, Tag, Check, Layers, List, Edit2, MapPin } from 'lucide-react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
 import { ReservationInventoryService } from '@/modules/sales/reservation/services/reservation-inventory.service';
 import type { LotNo } from '@master-data/inventory/types/inventory-master.types';
@@ -53,7 +53,7 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
     const [isCreateBalanceOpen, setIsCreateBalanceOpen] = useState(false);
     
     const [selectedLotForAdjust, setSelectedLotForAdjust] = useState<LotNo | null>(null);
-    const [preSelectedLotId, setPreSelectedLotId] = useState<number | undefined>(undefined);
+    const [preSelectedLotId] = useState<number | undefined>(undefined);
 
     const numericItemId = itemId ? Number(itemId) : 0;
 
@@ -171,11 +171,6 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
         setIsAdjustOpen(true);
     };
 
-    const handleAddBalance = (lotId?: number) => {
-        setPreSelectedLotId(lotId);
-        setIsCreateBalanceOpen(true);
-    };
-
     const handleViewStock = (lotNo: string) => {
         setSearchTerm(lotNo);
         setActiveTab('available');
@@ -232,34 +227,6 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                 >
                                     <List size={18} />
                                     รายการล็อตทั้งหมด ({masterLots.length})
-                                </button>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => numericItemId > 0 && handleAddBalance()}
-                                    disabled={numericItemId <= 0}
-                                    className={`h-10 px-4 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap ${
-                                        numericItemId > 0
-                                            ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20'
-                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
-                                    }`}
-                                >
-                                    <PackagePlus size={18} />
-                                    นำเข้าสต็อก
-                                </button>
-                                <button
-                                    onClick={() => numericItemId > 0 && setIsCreateOpen(true)}
-                                    disabled={numericItemId <= 0}
-                                    className={`h-10 px-4 rounded-xl text-sm font-bold shadow-sm transition-all flex items-center gap-2 whitespace-nowrap ${
-                                        numericItemId > 0
-                                            ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20'
-                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
-                                    }`}
-                                >
-                                    <Plus size={18} />
-                                    สร้าง Lot ใหม่
                                 </button>
                             </div>
                         </div>
@@ -459,14 +426,6 @@ export const LotSearchModal: React.FC<LotSearchModalProps> = React.memo(({
                                                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all active:scale-95"
                                                             >
                                                                 เลือก <Check size={14} />
-                                                            </button>
-                                                            
-                                                            <button 
-                                                                onClick={() => handleAddBalance(id)}
-                                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-amber-200 dark:border-amber-700/50 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95"
-                                                            >
-                                                                <PackagePlus size={14} />
-                                                                + เติมสต็อก
                                                             </button>
                                                         </div>
                                                     </td>

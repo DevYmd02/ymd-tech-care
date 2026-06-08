@@ -262,29 +262,8 @@ export const TransferApproveHeader: React.FC<TransferApproveHeaderProps> = ({
                     {errors.appv_flag && <span className="text-[10px] text-red-500 font-medium">{errors.appv_flag.message}</span>}
                 </div>
 
-                {/* 10. ผลต่อคลัง */}
-                <div className="space-y-1">
-                    <label className={labelClass}>ผลต่อคลัง <span className="text-red-500">*</span></label>
-                    <Controller
-                        name="stock_effect_ic"
-                        control={control}
-                        render={({ field }) => (
-                            <select
-                                value={field.value ?? 0}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                disabled={isLocked}
-                                className={`${selectClass} ${getErrorClass('stock_effect_ic')}`}
-                            >
-                                <option value="0">ไม่มีผลต่อคลัง (0)</option>
-                                <option value="1">เพิ่มคลัง (1)</option>
-                                <option value="-1">ลดคลัง (-1)</option>
-                            </select>
-                        )}
-                    />
-                </div>
-
                 {/* 11. หมายเหตุ */}
-                <div className="md:col-span-2 space-y-1">
+                <div className="md:col-span-2 lg:col-span-3 space-y-1">
                     <label className={labelClass}>หมายเหตุ</label>
                     <input
                         {...register('remark')}

@@ -4,12 +4,13 @@
  * @pattern ตาม Sales pattern (Premium styling, Balanced grid, Header section)
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useFormContext, Controller, useWatch } from 'react-hook-form';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, Search } from 'lucide-react';
 import type { RequisitionHeaderFormData } from '../schemas/requisition.schemas';
 import type { DocLinkOption } from '../types/requisition.types';
 import { CustomDateInput } from '@ui';
+import { EmployeeSearchModal } from '@/modules/master-data/employee/components/EmployeeSearchModal';
 
 interface RequisitionFormHeaderProps {
     docLinks: DocLinkOption[];
@@ -32,10 +33,14 @@ export const RequisitionFormHeader: React.FC<RequisitionFormHeaderProps> = ({
     empOptions = [],
     readOnly = false,
 }) => {
-    const { register, control, formState: { errors } } = useFormContext<RequisitionHeaderFormData>();
+    const { register, control, formState: { errors }, setValue } = useFormContext<RequisitionHeaderFormData>();
     const watchedSaveEmpId = useWatch({ control, name: 'save_emp_id' });
+    const watchedAuditEmpId = useWatch({ control, name: 'audit_emp_id' });
+
+    const [isEmpSearchOpen, setIsEmpSearchOpen] = useState(false);
 
     const isLocked = readOnly;
+    const selectedEmpName = empOptions.find(e => e.id === watchedAuditEmpId)?.name || '';
 
     // Premium Styles from Sales Pattern
     const inputClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white placeholder-gray-400 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -222,22 +227,26 @@ export const RequisitionFormHeader: React.FC<RequisitionFormHeaderProps> = ({
                 {/* 8. ผู้ขอเบิก */}
                 <div className="space-y-1">
                     <label className={labelClass}>ผู้ขอเบิก <span className="text-red-500">*</span></label>
-                    <Controller
-                        name="audit_emp_id"
-                        control={control}
-                        render={({ field }) => (
-                            <select
-                                {...field}
-                                disabled={isLocked}
-                                className={`${selectClass} ${getErrorClass('audit_emp_id')}`}
+                    <div className="flex gap-1">
+                        <input
+                            type="text"
+                            readOnly
+                            placeholder="คลิกเพื่อค้นหาผู้ขอเบิก"
+                            value={selectedEmpName}
+                            onClick={() => !isLocked && setIsEmpSearchOpen(true)}
+                            className={`${inputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${getErrorClass('audit_emp_id')}`}
+                        />
+                        {!isLocked && (
+                            <button
+                                type="button"
+                                onClick={() => setIsEmpSearchOpen(true)}
+                                className="p-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded transition-all shadow-sm active:scale-95 shrink-0 h-9 w-9 flex items-center justify-center"
                             >
-                                <option value="">-- เลือกผู้ขอเบิก --</option>
-                                {empOptions.map(e => (
-                                    <option key={e.id} value={e.id}>{e.name}</option>
-                                ))}
-                            </select>
+                                <Search size={16} />
+                            </button>
                         )}
-                    />
+                        <input type="hidden" {...register('audit_emp_id')} />
+                    </div>
                     {errors.audit_emp_id && <span className="text-[10px] text-red-500 font-medium">{errors.audit_emp_id.message}</span>}
                 </div>
 
@@ -254,6 +263,16 @@ export const RequisitionFormHeader: React.FC<RequisitionFormHeaderProps> = ({
                     />
                 </div>
             </div>
+
+            {isEmpSearchOpen && (
+                <EmployeeSearchModal
+                    isOpen={isEmpSearchOpen}
+                    onClose={() => setIsEmpSearchOpen(false)}
+                    onSelect={(emp) => {
+                        setValue('audit_emp_id', String(emp.id));
+                    }}
+                />
+            )}
         </section>
     );
 };
