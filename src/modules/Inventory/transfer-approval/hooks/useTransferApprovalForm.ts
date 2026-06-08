@@ -15,12 +15,14 @@ import { transferApprovalSchema } from '../schemas/transfer-approval.schemas';
 import type { TransferApprovalFormData, TransferApprovalLineFormData } from '../schemas/transfer-approval.schemas';
 import { TransferApprovalService } from '../services/transfer-approval.service';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import type {
     BranchListItem,
     EmployeeListItem,
     DepartmentListItem,
     Project,
-    UOMListItem
+    UOMListItem,
+    UOMConversionListItem,
 } from '@/modules/master-data/types/master-data-types';
 
 const getTodayISO = () => new Date().toISOString().split('T')[0];
@@ -140,44 +142,73 @@ export function useTransferApprovalForm({
     useEffect(() => {
         if (editData && isOpen) {
             const { header, lines } = editData;
-            reset({
-                appv_transfer_id: header.appv_transfer_id,
-                appv_transfer_no: header.appv_transfer_no,
-                transfer_req_id: header.transfer_req_id,
-                appv_date: header.appv_date,
-                emp_dept_id: header.emp_dept_id,
-                job_id: header.job_id ?? '',
-                remark: header.remark ?? '',
-                branch_id: header.branch_id,
-                appv_flag: header.appv_flag as 'Y' | 'P' | 'N',
-                cancel_date: header.cancel_date ?? '',
-                cancel_flag: header.cancel_flag,
-                cancel_remark: header.cancel_remark ?? '',
-                save_emp_id: header.save_emp_id ?? '',
-                appv_emp_id: header.appv_emp_id ?? '',
-                stock_effect_ic: header.stock_effect_ic ?? 0,
-                lines: lines.map((l, i) => ({
-                    listno: l.listno ?? i + 1,
-                    item_id: l.item_id,
-                    item_code: l.item_code || '',
-                    item_name: l.item_name || '',
-                    uom_id: l.uom_id,
-                    income_inve_id: l.income_inve_id,
-                    income_inve_name: l.income_inve_name || '',
-                    income_loca_id: l.income_loca_id ?? '',
-                    income_loca_name: l.income_loca_name || '',
-                    out_inve_id: l.out_inve_id,
-                    out_inve_name: l.out_inve_name || '',
-                    out_loca_id: l.out_loca_id ?? '',
-                    out_loca_name: l.out_loca_name || '',
-                    qty_ic: l.qty_ic,
-                    appv_stock_qty: l.appv_stock_qty,
-                    lot_id: l.lot_id ?? '',
-                    lot_no: l.lot_no || '',
-                    stock_flag: l.stock_flag ?? 0,
-                    remark: l.remark ?? '',
-                })),
-            });
+            const allItemIds = [...new Set(lines.map(l => Number(l.item_id)).filter(id => id > 0))];
+
+            const handleHydration = async () => {
+                const conversionMap = new Map<number, UOMConversionListItem[]>();
+                if (allItemIds.length > 0) {
+                    try {
+                        const convsList = await Promise.all(
+                            allItemIds.map(itemId =>
+                                UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                            )
+                        );
+                        convsList.forEach(c => {
+                            if (c) conversionMap.set(c.itemId, c.items);
+                        });
+                    } catch (err) {
+                        logger.warn('[useTransferApprovalForm] UOM conversions load failed:', err);
+                    }
+                }
+
+                reset({
+                    appv_transfer_id: header.appv_transfer_id,
+                    appv_transfer_no: header.appv_transfer_no,
+                    transfer_req_id: header.transfer_req_id,
+                    appv_date: header.appv_date,
+                    emp_dept_id: header.emp_dept_id,
+                    job_id: header.job_id ?? '',
+                    remark: header.remark ?? '',
+                    branch_id: header.branch_id,
+                    appv_flag: header.appv_flag as 'Y' | 'P' | 'N',
+                    cancel_date: header.cancel_date ?? '',
+                    cancel_flag: header.cancel_flag,
+                    cancel_remark: header.cancel_remark ?? '',
+                    save_emp_id: header.save_emp_id ?? '',
+                    appv_emp_id: header.appv_emp_id ?? '',
+                    stock_effect_ic: header.stock_effect_ic ?? 0,
+                    lines: lines.map((l, i) => {
+                        const itemId = Number(l.item_id);
+                        const convs = conversionMap.get(itemId) || [];
+                        const currentUomVal = String(l.uom_id);
+                        const matchedConv = convs.find(c => String(c.conversion_id) === currentUomVal);
+
+                        return {
+                            listno: l.listno ?? i + 1,
+                            item_id: l.item_id,
+                            item_code: l.item_code || '',
+                            item_name: l.item_name || '',
+                            uom_id: matchedConv ? String(matchedConv.from_unit_id) : l.uom_id,
+                            item_uom_id: matchedConv ? String(matchedConv.conversion_id) : l.uom_id,
+                            income_inve_id: l.income_inve_id,
+                            income_inve_name: l.income_inve_name || '',
+                            income_loca_id: l.income_loca_id ?? '',
+                            income_loca_name: l.income_loca_name || '',
+                            out_inve_id: l.out_inve_id,
+                            out_inve_name: l.out_inve_name || '',
+                            out_loca_id: l.out_loca_id ?? '',
+                            out_loca_name: l.out_loca_name || '',
+                            qty_ic: l.qty_ic,
+                            appv_stock_qty: l.appv_stock_qty,
+                            lot_id: l.lot_id ?? '',
+                            lot_no: l.lot_no || '',
+                            stock_flag: l.stock_flag ?? 0,
+                            remark: l.remark ?? '',
+                        };
+                    }),
+                });
+            };
+            void handleHydration();
         }
     }, [editData, isOpen, reset]);
 
@@ -185,35 +216,64 @@ export function useTransferApprovalForm({
     useEffect(() => {
         if (reqData && !editId && isOpen) {
             const { header, lines } = reqData;
-            reset({
-                ...DEFAULT_VALUES,
-                transfer_req_id: header.transfer__req_id,
-                transfer_req_no: header.transfer__req_no,
-                branch_id: header.branch_id,
-                save_emp_id: user?.employee_id ? String(user.employee_id) : '',
-                appv_emp_id: user?.employee_id ? String(user.employee_id) : '',
-                lines: lines.map((l, i) => ({
-                    listno: l.listno ?? i + 1,
-                    item_id: l.item_id,
-                    item_code: l.item_code || '',
-                    item_name: l.item_name || '',
-                    uom_id: l.uom_id,
-                    income_inve_id: l.income_inve_id,
-                    income_inve_name: l.income_inve_name || '',
-                    income_loca_id: l.income_loca_id ?? '',
-                    income_loca_name: l.income_loca_name || '',
-                    out_inve_id: l.out_inve_id,
-                    out_inve_name: l.out_inve_name || '',
-                    out_loca_id: l.out_loca_id ?? '',
-                    out_loca_name: l.out_loca_name || '',
-                    qty_ic: l.qty_ic,
-                    appv_stock_qty: l.qty_ic, // Default approved quantity to request quantity
-                    lot_id: l.lot_id ?? '',
-                    lot_no: l.lot_no || '',
-                    stock_flag: l.stock_flag ?? 0,
-                    remark: l.remark ?? '',
-                })),
-            });
+            const allItemIds = [...new Set(lines.map(l => Number(l.item_id)).filter(id => id > 0))];
+
+            const handleHydration = async () => {
+                const conversionMap = new Map<number, UOMConversionListItem[]>();
+                if (allItemIds.length > 0) {
+                    try {
+                        const convsList = await Promise.all(
+                            allItemIds.map(itemId =>
+                                UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                            )
+                        );
+                        convsList.forEach(c => {
+                            if (c) conversionMap.set(c.itemId, c.items);
+                        });
+                    } catch (err) {
+                        logger.warn('[useTransferApprovalForm] UOM conversions load failed:', err);
+                    }
+                }
+
+                reset({
+                    ...DEFAULT_VALUES,
+                    transfer_req_id: header.transfer__req_id,
+                    transfer_req_no: header.transfer__req_no,
+                    branch_id: header.branch_id,
+                    save_emp_id: user?.employee_id ? String(user.employee_id) : '',
+                    appv_emp_id: user?.employee_id ? String(user.employee_id) : '',
+                    lines: lines.map((l, i) => {
+                        const itemId = Number(l.item_id);
+                        const convs = conversionMap.get(itemId) || [];
+                        const currentUomVal = String(l.uom_id);
+                        const matchedConv = convs.find(c => String(c.conversion_id) === currentUomVal);
+
+                        return {
+                            listno: l.listno ?? i + 1,
+                            item_id: l.item_id,
+                            item_code: l.item_code || '',
+                            item_name: l.item_name || '',
+                            uom_id: matchedConv ? String(matchedConv.from_unit_id) : l.uom_id,
+                            item_uom_id: matchedConv ? String(matchedConv.conversion_id) : l.uom_id,
+                            income_inve_id: l.income_inve_id,
+                            income_inve_name: l.income_inve_name || '',
+                            income_loca_id: l.income_loca_id ?? '',
+                            income_loca_name: l.income_loca_name || '',
+                            out_inve_id: l.out_inve_id,
+                            out_inve_name: l.out_inve_name || '',
+                            out_loca_id: l.out_loca_id ?? '',
+                            out_loca_name: l.out_loca_name || '',
+                            qty_ic: l.qty_ic,
+                            appv_stock_qty: l.qty_ic, // Default approved quantity to request quantity
+                            lot_id: l.lot_id ?? '',
+                            lot_no: l.lot_no || '',
+                            stock_flag: l.stock_flag ?? 0,
+                            remark: l.remark ?? '',
+                        };
+                    }),
+                });
+            };
+            void handleHydration();
         } else if (!editId && !requisitionId && isOpen) {
             reset({
                 ...DEFAULT_VALUES,
@@ -260,7 +320,13 @@ export function useTransferApprovalForm({
     // ── Submit Handler ────────────────────────────────────────────────────────────
     const onSubmit = useCallback(
         async (data: TransferApprovalFormData) => {
-            const payload = { ...data };
+            const payload = {
+                ...data,
+                lines: data.lines.map(l => ({
+                    ...l,
+                    uom_id: l.item_uom_id || l.uom_id,
+                })),
+            };
             if (payload.appv_transfer_no === 'ระบบจะกรอกอัตโนมัติ') {
                 payload.appv_transfer_no = '';
             }

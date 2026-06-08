@@ -91,21 +91,25 @@ export const TransferApproveFormLines: React.FC<TransferApproveFormLinesProps> =
                                             />
                                         </td>
 
-                                        {/* UOM */}
-                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <Controller
-                                                name={`lines.${index}.uom_id`}
-                                                control={control}
-                                                render={({ field: f }) => (
-                                                    <select {...f} disabled className={`${selectClass} bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed`}>
-                                                        <option value="">-- หน่วย --</option>
-                                                        {uomOptions.map(u => (
-                                                            <option key={u.id} value={u.id}>{u.name}</option>
-                                                        ))}
-                                                    </select>
-                                                )}
-                                            />
-                                        </td>
+                                         {/* UOM */}
+                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
+                                             <Controller
+                                                 name={`lines.${index}.uom_id`}
+                                                 control={control}
+                                                 render={({ field: f }) => (
+                                                     <button
+                                                         type="button"
+                                                         disabled
+                                                         className={`${tableInputClass} text-left flex items-center justify-between font-medium bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed opacity-75`}
+                                                     >
+                                                         <span className="truncate">
+                                                             {uomOptions.find(u => String(u.id) === String(f.value))?.name || 
+                                                              (f.value ? `[ID: ${f.value}]` : '-- เลือกหน่วย --')}
+                                                         </span>
+                                                     </button>
+                                                 )}
+                                             />
+                                         </td>
 
                                         {/* Source Warehouse */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">

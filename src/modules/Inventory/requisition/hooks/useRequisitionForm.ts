@@ -21,6 +21,9 @@ import type { RequisitionHeaderFormData, RequisitionLineFormData } from '../sche
 import { RequisitionService } from '../services/requisition.service';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
+import type { UOMConversionListItem } from '@/modules/master-data/types/master-data-types';
+
 // ====================================================================================
 // HELPERS
 // ====================================================================================
@@ -34,6 +37,7 @@ const createDefaultLine = (listno: number): RequisitionLineFormData => ({
     item_code: '',
     item_name: '',
     uom_id: '',
+    item_uom_id: '',
     warehouse_id: '',
     warehouse_name: '',
     location_id: '',
@@ -165,41 +169,70 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
     useEffect(() => {
         if (editData) {
             const { header, lines } = editData;
-            reset({
-                docu_item_id: header.docu_item_id,
-                docu_item_no: header.docu_item_no,
-                issue_req_no: header.issue_req_no,
-                docu_date: header.docu_date,
-                emp_dept_id: header.emp_dept_id,
-                job_id: header.job_id,
-                branch_id: header.branch_id,
-                save_emp_id: header.save_emp_id,
-                audit_emp_id: header.audit_emp_id,
-                qty_total: header.qty_total,
-                stock_effect_ic: header.stock_effect_ic,
-                remark: header.remark ?? '',
-                cancel_flag: header.cancel_flag,
-                cancel_date: header.cancel_date ?? null,
-                cancel_remark: header.cancel_remark ?? '',
-                lines: lines.map((l, i) => ({
-                    _tempId: `edit-${l.docu_item_line_id ?? i}`,
-                    docu_item_line_id: l.docu_item_line_id,
-                    listno: l.listno ?? i + 1,
-                    item_id: l.item_id,
-                    item_code: l.item_code || '',
-                    item_name: l.item_name || '',
-                    uom_id: l.uom_id,
-                    warehouse_id: l.warehouse_id,
-                    warehouse_name: l.warehouse_name || '',
-                    location_id: l.location_id ?? '',
-                    location_name: l.location_name || '',
-                    lot_id: l.lot_id ?? '',
-                    lot_no: l.lot_no || '',
-                    qty_ic: l.qty_ic,
-                    stock_flag: l.stock_flag ?? 0,
-                    remark: l.remark ?? '',
-                })),
-            });
+            const allItemIds = [...new Set(lines.map(l => Number(l.item_id)).filter(id => id > 0))];
+
+            const handleHydration = async () => {
+                const conversionMap = new Map<number, UOMConversionListItem[]>();
+                if (allItemIds.length > 0) {
+                    try {
+                        const convsList = await Promise.all(
+                            allItemIds.map(itemId =>
+                                UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                            )
+                        );
+                        convsList.forEach(c => {
+                            if (c) conversionMap.set(c.itemId, c.items);
+                        });
+                    } catch (err) {
+                        logger.warn('[useRequisitionForm] UOM conversions load failed:', err);
+                    }
+                }
+
+                reset({
+                    docu_item_id: header.docu_item_id,
+                    docu_item_no: header.docu_item_no,
+                    issue_req_no: header.issue_req_no,
+                    docu_date: header.docu_date,
+                    emp_dept_id: header.emp_dept_id,
+                    job_id: header.job_id,
+                    branch_id: header.branch_id,
+                    save_emp_id: header.save_emp_id,
+                    audit_emp_id: header.audit_emp_id,
+                    qty_total: header.qty_total,
+                    stock_effect_ic: header.stock_effect_ic,
+                    remark: header.remark ?? '',
+                    cancel_flag: header.cancel_flag,
+                    cancel_date: header.cancel_date ?? null,
+                    cancel_remark: header.cancel_remark ?? '',
+                    lines: lines.map((l, i) => {
+                        const itemId = Number(l.item_id);
+                        const convs = conversionMap.get(itemId) || [];
+                        const currentUomVal = String(l.uom_id);
+                        const matchedConv = convs.find(c => String(c.conversion_id) === currentUomVal);
+
+                        return {
+                            _tempId: `edit-${l.docu_item_line_id ?? i}`,
+                            docu_item_line_id: l.docu_item_line_id,
+                            listno: l.listno ?? i + 1,
+                            item_id: l.item_id,
+                            item_code: l.item_code || '',
+                            item_name: l.item_name || '',
+                            uom_id: matchedConv ? String(matchedConv.from_unit_id) : l.uom_id,
+                            item_uom_id: matchedConv ? String(matchedConv.conversion_id) : l.uom_id,
+                            warehouse_id: l.warehouse_id,
+                            warehouse_name: l.warehouse_name || '',
+                            location_id: l.location_id ?? '',
+                            location_name: l.location_name || '',
+                            lot_id: l.lot_id ?? '',
+                            lot_no: l.lot_no || '',
+                            qty_ic: l.qty_ic,
+                            stock_flag: l.stock_flag ?? 0,
+                            remark: l.remark ?? '',
+                        };
+                    }),
+                });
+            };
+            void handleHydration();
         } else if (!editId && isOpen) {
             reset({ 
                 ...DEFAULT_VALUES, 
@@ -252,6 +285,14 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
             const payload = { ...data };
             if (payload.issue_req_no === 'ระบบจะกรอกอัตโนมัติ') {
                 payload.issue_req_no = ''; // Let backend generate
+            }
+
+            // Map uom_id to item_uom_id for backend API compatibility
+            if (payload.lines && Array.isArray(payload.lines)) {
+                payload.lines = payload.lines.map((l: RequisitionLineFormData) => ({
+                    ...l,
+                    uom_id: String(l.item_uom_id || l.uom_id),
+                }));
             }
 
             try {

@@ -16,6 +16,7 @@ export const issueStockLineSchema = z.object({
     item_code: z.string().optional(),
     item_name: z.string().max(255).optional(),
     uom_id: z.string().min(1, 'กรุณาเลือกหน่วยนับ'),
+    item_uom_id: z.any().optional(),
     warehouse_id: z.string().min(1, 'กรุณาเลือกคลังสินค้า'),
     warehouse_name: z.string().optional(),
     location_id: z.string().optional().nullable(),

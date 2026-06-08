@@ -21,10 +21,10 @@ interface RequisitionFormLinesProps {
     onSearchWarehouse?: (index: number) => void;
     onSearchLocation?: (index: number, warehouseId?: string) => void;
     onSearchLot?: (index: number, itemId?: string) => void;
+    onOpenUomPicker?: (index: number) => void;
 }
 
 const tableInputClass = "w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
-const selectClass = "w-full h-9 px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
 
 export const RequisitionFormLines: React.FC<RequisitionFormLinesProps> = React.memo(
     ({
@@ -37,6 +37,7 @@ export const RequisitionFormLines: React.FC<RequisitionFormLinesProps> = React.m
         onSearchWarehouse,
         onSearchLocation,
         onSearchLot,
+        onOpenUomPicker,
     }) => {
         const { register, control, getValues, formState: { errors } } = useFormContext<RequisitionHeaderFormData>();
         const lineErrors = errors.lines;
@@ -129,18 +130,27 @@ export const RequisitionFormLines: React.FC<RequisitionFormLinesProps> = React.m
 
                                         {/* UOM */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <Controller
-                                                name={`lines.${index}.uom_id`}
-                                                control={control}
-                                                render={({ field: f }) => (
-                                                    <select {...f} disabled={readOnly} className={`${selectClass} ${lineErr?.uom_id ? 'border-red-500' : ''}`}>
-                                                        <option value="">-- เลือกหน่วย --</option>
-                                                        {uomOptions.map(u => (
-                                                            <option key={u.id} value={u.id}>{u.name}</option>
-                                                        ))}
-                                                    </select>
-                                                )}
-                                            />
+                                             <Controller
+                                                 name={`lines.${index}.uom_id`}
+                                                 control={control}
+                                                 render={({ field: f }) => {
+                                                     const itemId = getValues(`lines.${index}.item_id`);
+                                                     return (
+                                                         <button
+                                                             type="button"
+                                                             disabled={readOnly || !itemId}
+                                                             onClick={() => onOpenUomPicker?.(index)}
+                                                             className={`${tableInputClass} text-left flex items-center justify-between font-medium disabled:bg-gray-50 dark:disabled:bg-gray-800/50 disabled:opacity-60 disabled:cursor-not-allowed ${lineErr?.uom_id ? 'border-red-500 focus:ring-red-500' : ''}`}
+                                                         >
+                                                             <span className="truncate">
+                                                                 {uomOptions.find(u => String(u.id) === String(f.value))?.name || 
+                                                                  (f.value ? `[ID: ${f.value}]` : '-- เลือกหน่วย --')}
+                                                             </span>
+                                                             {!readOnly && !!itemId && <span className="text-gray-400 text-[10px] ml-1 shrink-0">▼</span>}
+                                                         </button>
+                                                     );
+                                                 }}
+                                             />
                                         </td>
 
                                         {/* Warehouse */}

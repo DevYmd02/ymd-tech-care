@@ -16,6 +16,7 @@ export const transferLineSchema = z.object({
     item_code: z.string().optional(),
     item_name: z.string().max(255).optional(),
     uom_id: z.string().min(1, 'กรุณาเลือกหน่วยนับ'),
+    item_uom_id: z.string().optional(),
     income_inve_id: z.string().min(1, 'กรุณาเลือกคลังต้นทาง'),
     income_inve_name: z.string().optional(),
     income_loca_id: z.string().optional().nullable(),

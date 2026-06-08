@@ -6,6 +6,7 @@ export const transferApprovalLineSchema = z.object({
     item_code: z.string().optional(),
     item_name: z.string().min(1, 'กรุณาระบุชื่อสินค้า'),
     uom_id: z.string().min(1, 'กรุณาระบุหน่วยนับ'),
+    item_uom_id: z.string().optional(),
     income_inve_id: z.string().min(1, 'กรุณาระบุคลังต้นทาง'),
     income_inve_name: z.string().optional(),
     income_loca_id: z.string().optional().nullable(),
