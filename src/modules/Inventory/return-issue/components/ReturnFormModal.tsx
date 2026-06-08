@@ -19,6 +19,11 @@ import { LotSearchModal } from '@Inventory/shared/components/LotSearchModal';
 import type { WarehouseListItem } from '@master-data/inventory/types/warehouse-types';
 import type { Location, LotNo } from '@master-data/inventory/types/inventory-master.types';
 import { LocationService } from '@master-data/inventory/services/inventory-master.service';
+import { useQuery } from '@tanstack/react-query';
+import { UOMPickerModal, type UOMPickerItem } from '@/shared/components/ui/feedback/UOMPickerModal';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
+import { ItemBarcodeService } from '@inventory/services/item-barcode.service';
+import { ItemMasterService } from '@inventory/services/item-master.service';
 
 interface ReturnFormModalProps {
     isOpen: boolean;
@@ -67,22 +72,111 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
     const [isLotSearchOpen, setIsLotSearchOpen] = useState(false);
     const [activeItemId, setActiveItemId] = useState<string | number | undefined>(undefined);
 
+    // 🔍 UOM Picker Modal State & Queries
+    const [activeUomRowIndex, setActiveUomRowIndex] = useState<number | null>(null);
+    const watchedLinesForUom = formMethods.watch('lines') || [];
+    const activeUomLine = activeUomRowIndex !== null ? watchedLinesForUom[activeUomRowIndex] : null;
+    const activeUomItemId = activeUomLine ? Number(activeUomLine.item_id || 0) : 0;
+
+    // Fetch conversions for selected item
+    const { data: conversionData, isLoading: isLoadingConversions } = useQuery({
+        queryKey: ['return-uom-conversions', activeUomItemId],
+        queryFn: () => UOMConversionService.getByItemId(activeUomItemId),
+        enabled: !!activeUomItemId && activeUomItemId > 0,
+        staleTime: 2 * 60 * 1000,
+    });
+
+    // Fetch barcodes for selected item
+    const { data: barcodeData } = useQuery({
+        queryKey: ['return-item-barcodes', activeUomItemId],
+        queryFn: () => ItemBarcodeService.getAll({ item_id: activeUomItemId }),
+        enabled: !!activeUomItemId && activeUomItemId > 0,
+        staleTime: 2 * 60 * 1000,
+    });
+
+    // Map UOM conversions to UOMPickerItem[]
+    const uomPickerItems = React.useMemo((): UOMPickerItem[] => {
+        const conversions = conversionData?.items || [];
+        const barcodes = barcodeData?.items || [];
+        return conversions.map(conv => {
+            const uomInfo = uoms.find(u => Number(u.uom_id || u.id) === Number(conv.from_unit_id));
+            const matchedBarcode = barcodes.find(b => Number(b.uom_id) === Number(conv.conversion_id));
+            return {
+                conversion_id: conv.conversion_id,
+                from_unit_id: conv.from_unit_id,
+                from_unit_name: conv.from_unit_name || uomInfo?.uom_name || String(conv.from_unit_id),
+                from_unit_name_en: uomInfo?.uom_name_en || uomInfo?.uom_nameeng || uomInfo?.uom_code || undefined,
+                conversion_factor: conv.conversion_factor,
+                barcode: matchedBarcode?.barcode || undefined,
+            };
+        });
+    }, [conversionData, uoms, barcodeData]);
+
+    const handleSelectUom = (item: UOMPickerItem) => {
+        if (activeUomRowIndex !== null) {
+            updateLine(activeUomRowIndex, null, {
+                ...fields[activeUomRowIndex],
+                uom_id: String(item.from_unit_id),
+                item_uom_id: String(item.conversion_id),
+            } as ReturnIssueLineFormData);
+        }
+        setActiveUomRowIndex(null);
+    };
+
     const handleOpenProductSearch = (index: number) => {
         setActiveLineIndex(index);
         setIsProductSearchOpen(true);
     };
 
-    const handleSelectProduct = (product: Product) => {
+    const handleSelectProduct = async (product: Product) => {
         if (activeLineIndex !== null) {
-            let targetUomId = String(product.uom_id || product.base_uom_id || product.purchasing_unit_id || '');
-            
-            if (!targetUomId || targetUomId === '0') {
-                const foundUom = uoms.find(u => 
-                    (u.uom_name && (u.uom_name === product.uom_name))
-                );
-                if (foundUom) {
-                    targetUomId = String(foundUom.uom_id || foundUom.id);
+            let targetUomId = '';
+            let targetItemUomId = '';
+
+            try {
+                // Fetch the full product master detail to get the base_uom_id directly
+                const itemDetail = await ItemMasterService.getById(Number(product.item_id || product.id));
+                const dbBaseUomId = itemDetail?.base_uom_id;
+
+                const convs = await UOMConversionService.getByItemId(Number(product.item_id || product.id));
+                const convList = convs?.items || [];
+                
+                // Prioritize conversion with factor === 1 (Base UOM)
+                const baseConv = convList.find(c => Number(c.conversion_factor) === 1);
+                
+                if (baseConv) {
+                    targetUomId = String(baseConv.from_unit_id);
+                    targetItemUomId = String(baseConv.conversion_id);
+                } else {
+                    // Determine the Base UOM ID
+                    let baseUomId = dbBaseUomId ? String(dbBaseUomId) : '';
+                    if (!baseUomId && convList.length > 0) {
+                        baseUomId = String(convList[0].to_unit_id);
+                    }
+                    if (!baseUomId) {
+                        baseUomId = String(product.base_uom_id || product.uom_id || product.purchasing_unit_id || '');
+                    }
+                    if (!baseUomId || baseUomId === '0') {
+                        const foundUom = uoms.find(u => 
+                            u.uom_name && (u.uom_name === product.uom_name)
+                        );
+                        if (foundUom) {
+                            baseUomId = String(foundUom.uom_id || foundUom.id);
+                        }
+                    }
+
+                    targetUomId = baseUomId;
+                    targetItemUomId = targetUomId;
+                    
+                    const matchedConv = convList.find(c => String(c.from_unit_id) === targetUomId);
+                    if (matchedConv) {
+                        targetItemUomId = String(matchedConv.conversion_id);
+                    }
                 }
+            } catch (err) {
+                console.warn('Failed to fetch default UOM conversion for selected product:', err);
+                targetUomId = String(product.base_uom_id || product.uom_id || product.purchasing_unit_id || '');
+                targetItemUomId = targetUomId;
             }
 
             updateLine(activeLineIndex, null, {
@@ -91,6 +185,7 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
                 item_code: product.item_code || '',
                 item_name: product.item_name || '',
                 uom_id: targetUomId,
+                item_uom_id: targetItemUomId,
                 warehouse_id: product.warehouse_id ? String(product.warehouse_id) : fields[activeLineIndex].warehouse_id,
                 warehouse_name: product.warehouse || fields[activeLineIndex].warehouse_name,
                 unit_cost: product.standard_cost || 0,
@@ -301,6 +396,7 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
                                             onSearchWarehouse={handleOpenWarehouseSearch}
                                             onSearchLocation={handleOpenLocationSearch}
                                             onSearchLot={handleOpenLotSearch}
+                                            onOpenUomPicker={setActiveUomRowIndex}
                                         />
                                     </div>
                                 </div>
@@ -349,6 +445,16 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
                     locationId={activeLineIndex !== null ? (fields[activeLineIndex]?.location_id || undefined) : undefined}
                     itemName={activeLineIndex !== null ? fields[activeLineIndex]?.item_name : undefined}
                     itemCode={activeLineIndex !== null ? fields[activeLineIndex]?.item_code : undefined}
+                />
+
+                <UOMPickerModal
+                    isOpen={activeUomRowIndex !== null}
+                    onClose={() => setActiveUomRowIndex(null)}
+                    onSelect={handleSelectUom}
+                    items={uomPickerItems}
+                    isLoading={isLoadingConversions}
+                    selectedFromUnitId={activeUomLine ? Number(activeUomLine.uom_id || 0) : undefined}
+                    title={`เลือกหน่วยนับสำหรับ ${activeUomLine?.item_name || 'สินค้า'}`}
                 />
             </WindowFormLayout>
         </>
