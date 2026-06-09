@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { AVService } from '@/modules/procurement/services/av.service';
+import { PRService } from '@/modules/procurement/services/pr.service';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
@@ -55,7 +56,7 @@ export default function PrintAVPage() {
       
       if (av.pr_id) {
         try {
-          prDetail = await AVService.getPRById(av.pr_id);
+          prDetail = await PRService.getDetail(av.pr_id);
           const vendorId = prDetail.preferred_vendor_id ?? prDetail.vendor_id;
           if (vendorId) {
             vendorInfo = await VendorService.getById(Number(vendorId));
@@ -116,7 +117,7 @@ export default function PrintAVPage() {
     const unitPrice = Number(prLine?.est_unit_price || prLine?.unit_price || 0);
     
     // Line discount
-    const discountExpr = prLine?.line_discount_raw || '';
+    const discountExpr = prLine?.line_discount_raw && prLine?.line_discount_raw !== '0' ? prLine.line_discount_raw : '';
     const gross = qtyApproved * unitPrice;
     const discountAmount = parseDiscountAmount(discountExpr, gross);
     const amount = gross - discountAmount;
@@ -150,7 +151,8 @@ export default function PrintAVPage() {
 
   // Calculations for summary
   const subtotal = rows.reduce((acc, row) => acc + (row.amount || 0), 0);
-  const globalDiscount = parseDiscountAmount(av.discount_expression || '0', subtotal);
+  const globalDiscountExpr = av.discount_expression || pr?.pr_discount_raw || '0';
+  const globalDiscount = parseDiscountAmount(globalDiscountExpr, subtotal) || Number(av.base_discount_amount || 0);
   
   // Extract vendor info if available
   const addressesList = vendorInfo?.addresses || (vendorInfo as unknown as { vendorAddresses?: { is_default: boolean; address: string; sub_district?: string; district?: string; province?: string; postal_code?: string; phone?: string }[] })?.vendorAddresses || [];
@@ -195,7 +197,8 @@ export default function PrintAVPage() {
     { label: 'เลขที่เอกสารอนุมัติ:', value: av.approval_no || '-' },
     { label: 'เลขที่ใบขอซื้อ (PR):', value: pr?.pr_no || '-' },
     { label: 'วันที่อนุมัติ:', value: fmtDate(av.approval_date) },
-    { label: 'วันที่ต้องการใช้:', value: fmtDate(av.need_by_date || pr?.need_by_date) },
+    { label: 'วันที่กำหนดส่ง:', value: fmtDate(av.need_by_date || pr?.need_by_date) },
+    { label: 'จำนวนวันเครดิต:', value: pr?.credit_days != null ? `${pr.credit_days} วัน` : '-' },
   ];
 
   return (
@@ -206,7 +209,9 @@ export default function PrintAVPage() {
           <FormTitle title="ใบอนุมัติขอซื้อ (Approval Voucher)" />
           <HeaderGrid topLeft={topLeft} left={leftFields} right={rightFields} />
           <ItemsTable
-            columns={['code', 'name', 'qty', 'qtyApproved', 'uom', 'unitPrice', 'discount', 'amount']}
+            columns={['code', 'name', 'qtyApproved', 'uom', 'unitPrice', 'discount', 'amount']}
+            customHeaders={{ name: 'รายการ', qtyApproved: 'จำนวนอนุมัติ' }}
+            customWidths={{ name: '34%', qtyApproved: '14%' }}
             rows={rows}
             minRows={12}
           />
@@ -217,7 +222,7 @@ export default function PrintAVPage() {
             notes={av.remarks || ''}
             costCode={(prExtObj?.cost_center_code as string) || (pr?.cost_center_id ? String(pr.cost_center_id) : '')}
           />
-          <SignatureRow slots={['ผู้เสนออนุมัติ', 'ผู้ตรวจสอบ', 'ผู้อนุมัติ']} />
+          <SignatureRow slots={['ผู้จัดทำ', 'ผู้ตรวจสอบ', 'ผู้อนุมัติ']} />
         </A4Page>
       </div>
     </PrintAuthGate>

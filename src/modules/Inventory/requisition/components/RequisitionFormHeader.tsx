@@ -115,7 +115,7 @@ export const RequisitionFormHeader: React.FC<RequisitionFormHeaderProps> = ({
                                 <option value="">-- เลือกรายการเอกสาร --</option>
                                 {docLinks.map(d => (
                                     <option key={d.docu_type_id} value={d.docu_type_id}>
-                                        {d.docu_type_code} – {d.docu_name_th ?? d.docu_name_en}
+                                        {d.docu_type_code ? `${d.docu_type_code} – ` : ''}{d.docu_name_th ?? d.docu_name_en}
                                     </option>
                                 ))}
                             </select>
@@ -269,7 +269,7 @@ export const RequisitionFormHeader: React.FC<RequisitionFormHeaderProps> = ({
                     isOpen={isEmpSearchOpen}
                     onClose={() => setIsEmpSearchOpen(false)}
                     onSelect={(emp) => {
-                        setValue('request_by_emp_id', String(emp.id));
+                        setValue('request_by_emp_id', String(emp.id ?? emp.employee_id ?? ''));
                     }}
                 />
             )}

@@ -34,9 +34,31 @@ export default function PrintQCPage() {
   const { data: qcPrintData, isLoading, error } = useQuery({
     queryKey: ['qc-detail-print', qcId],
     queryFn: async () => {
-      const qc = await QCService.getById(qcId);
-      const qcExt = qc as unknown as Record<string, unknown>;
-      const rfqId = qc.rfq_id || (qcExt.rfq_header_id as number | undefined);
+      let qc: Record<string, unknown> | null = null;
+      try {
+        const res = await QCService.getById(qcId);
+        const resObj = res as unknown as Record<string, unknown>;
+        qc = (resObj?.data as Record<string, unknown>) || resObj;
+      } catch (err) {
+        console.warn('QCDetail fetch failed, trying list fallback...', err);
+        try {
+          const listRes = await QCService.getList({ limit: 1000 });
+          const list = (listRes?.data || []) as unknown as Record<string, unknown>[];
+          const matched = list.find((item) => Number(item.qc_id) === qcId);
+          if (matched) {
+            qc = (matched?.data as Record<string, unknown>) || matched;
+          }
+        } catch (fallbackErr) {
+          console.error('QC list fallback failed as well:', fallbackErr);
+        }
+      }
+
+      if (!qc) {
+        throw new Error('ไม่พบข้อมูลใบเปรียบเทียบราคา');
+      }
+
+      const qcExt = qc;
+      const rfqId = (qc.rfq_id as number | undefined) || (qcExt.rfq_header_id as number | undefined);
       
       let rfqDetail = null;
       let vqList: Record<string, unknown>[] = [];
@@ -84,8 +106,8 @@ export default function PrintQCPage() {
 
   // Limit vendors to compare to max 3
   const activeVQs = vqList.slice(0, 3);
-  const qcExt = qc as unknown as Record<string, unknown>;
-  const winnerVQId = Number(qc.winning_vq_id || (qcExt.vq_header_id as number | undefined) || 0);
+  const qcExt = (qc || {}) as Record<string, unknown>;
+  const winnerVQId = Number(qcExt.winning_vq_id || qcExt.vq_header_id || 0);
 
   // Extract RFQ Lines
   const rfqLines = rfq?.rfqLines || rfq?.lines || [];
@@ -130,15 +152,15 @@ export default function PrintQCPage() {
   const vendorColWidth = activeVQs.length > 0 ? `${40 / activeVQs.length}%` : '40%';
 
   const leftFields = [
-    { label: 'เลขที่ RFQ:', value: rfq?.rfq_no || (qc.rfq_no as string) || '-' },
-    { label: 'เลขที่ PR อ้างอิง:', value: (qcExt.ref_pr_no as string) || (qcExt.pr_no as string) || '-' },
+    { label: 'เลขที่ RFQ:', value: rfq?.rfq_no || String(qcExt.rfq_no || '-') },
+    { label: 'เลขที่ PR อ้างอิง:', value: String(qcExt.ref_pr_no || qcExt.pr_no || '-') },
   ];
 
-  const dateVal = qc.comparison_date || qc.created_at;
+  const dateVal = qcExt.comparison_date || qcExt.created_at;
   const displayDate = dateVal instanceof Date ? dateVal.toISOString() : (dateVal as string | undefined);
 
   const rightFields = [
-    { label: 'เลขที่ตารางเปรียบเทียบ:', value: qc.qc_no || '-' },
+    { label: 'เลขที่ตารางเปรียบเทียบ:', value: String(qcExt.qc_no || '-') },
     { label: 'วันที่เปรียบเทียบ:', value: fmtDate(displayDate) },
   ];
 
@@ -231,7 +253,7 @@ export default function PrintQCPage() {
               const winner = activeVQs.find((vq) => Number(vq.quotation_id || vq.vq_header_id) === winnerVQId);
               return winner ? (
                 <span className="font-bold text-emerald-700">
-                  {(winner.vendor_name as string)} — ยอดสุทธิ {fmtMoneyTH(Number(qc.vq_total_amount || winner.total_amount || 0))} THB
+                  {(winner.vendor_name as string)} — ยอดสุทธิ {fmtMoneyTH(Number(qcExt.vq_total_amount || winner.total_amount || 0))} THB
                 </span>
               ) : (
                 <span className="text-gray-500 italic">ไม่ได้ระบุผู้เสนอราคาที่ชนะ</span>

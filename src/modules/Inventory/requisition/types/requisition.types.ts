@@ -61,8 +61,10 @@ export interface RequisitionListItem {
     docu_date: string;
     dept_name?: string;
     save_emp_name?: string;
+    created_emp_name?: string;
     cancel_flag: string;
     qty_total: number;
+    uom_name?: string;
 }
 
 /** Query params สำหรับ List API */

@@ -2,6 +2,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { RFQService } from '@/modules/procurement/services/rfq.service';
 import { VendorService } from '@/modules/master-data/vendor/services/vendor.service';
+import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 import { fmtDate } from '@/shared/utils';
 import {
   PrintAuthGate,
@@ -68,7 +69,11 @@ export default function PrintRFQPage() {
   const { data: rfqPrintData, isLoading, error } = useQuery({
     queryKey: ['rfq-detail-print', rfqId],
     queryFn: async () => {
-      const rfq = await RFQService.getById(rfqId);
+      const [rfq, masterItems, masterUoms] = await Promise.all([
+        RFQService.getById(rfqId),
+        MasterDataService.getItems(),
+        MasterDataService.getUOMs().catch(() => []),
+      ]);
       const vendorList = rfq.rfqVendors || rfq.vendors || [];
       const firstVendor = vendorList[0];
       const vendorId = firstVendor?.vendor_id || firstVendor?.id;
@@ -80,7 +85,7 @@ export default function PrintRFQPage() {
           console.error('Failed to load vendor details:', e);
         }
       }
-      return { rfq, vendorInfo };
+      return { rfq, vendorInfo, masterItems, masterUoms };
     },
     enabled: !!rfqId,
   });
@@ -109,6 +114,8 @@ export default function PrintRFQPage() {
 
   const rfqDetailAny = rfqPrintData.rfq as unknown as ExtendedRFQHeader;
   const vendorInfo = rfqPrintData.vendorInfo;
+  const masterItems = rfqPrintData.masterItems || [];
+  const masterUoms = rfqPrintData.masterUoms || [];
 
   // Map backend lines to PrintRow format
   const rows: PrintRow[] = (rfqDetailAny.rfqLines || []).map((line) => {
@@ -120,15 +127,21 @@ export default function PrintRFQPage() {
     const itemObj = (rawLine.item || {}) as Record<string, unknown>;
     const uomObj = (rawLine.uom || {}) as Record<string, unknown>;
 
-    const itemCode = String(line.item_code || rawLine.itemCode || itemObj.item_code || itemObj.itemCode || itemObj.code || '');
-    const itemName = String(line.item_name || rawLine.itemName || itemObj.item_name || itemObj.itemName || itemObj.name || line.description || '');
-    const uomName = String(rawLine.uom_name || rawLine.uomName || uomObj.uom_name || uomObj.name_th || uomObj.name || '');
+    // Resolve from master data as fallback
+    const itemId = rawLine.item_id as number | undefined;
+    const uomId = rawLine.uom_id as number | undefined;
+    const matchedItem = itemId ? masterItems.find((i) => String(i.item_id) === String(itemId)) : undefined;
+    const matchedUom = uomId ? masterUoms.find((u) => String(u.uom_id) === String(uomId)) : undefined;
+
+    const itemCode = String(line.item_code || rawLine.itemCode || itemObj.item_code || itemObj.itemCode || itemObj.code || matchedItem?.item_code || '');
+    const itemName = String(line.item_name || rawLine.itemName || itemObj.item_name || itemObj.itemName || itemObj.name || matchedItem?.item_name || line.description || '');
+    const uomName = String(rawLine.uom_name || rawLine.uomName || uomObj.uom_name || uomObj.name_th || uomObj.name || matchedUom?.uom_name || '');
 
     return {
       code: itemCode,
       name: itemName,
       qty,
-      uom: uomName || 'หน่วย',
+      uom: uomName || '-',
       unitPrice,
       discount: 0,
       amount,
@@ -194,7 +207,8 @@ export default function PrintRFQPage() {
           <FormTitle title="ใบขอใบเสนอราคา (Request for Quotation)" />
           <HeaderGrid topLeft={topLeft} left={leftFields} right={rightFields} />
           <ItemsTable
-            columns={['code', 'name', 'qty', 'uom']}
+            columns={['code', 'name', 'qty', 'uom', 'unitPrice', 'discount', 'amount']}
+            customHeaders={{ name: 'รายการ', uom: 'หน่วยนับ' }}
             rows={rows}
             minRows={15}
           />

@@ -162,10 +162,32 @@ export default function PrintPOAPage() {
   const vendorFax = vendorInfoObj?.fax || vendorInfoObj?.vendor_fax || defaultAddressObj?.fax || defaultAddressObj?.vendor_fax || poaExtObj?.vendor_fax || poaExtObj?.fax || '';
   const vendorAddress = addrParts.join(' ') || poaExtObj?.vendor_address || '';
 
+  const rawVendor = vendorInfo as unknown as {
+    contact_person?: string;
+    contacts?: { is_primary: boolean; contact_name: string }[];
+    vendorContacts?: { is_primary: boolean; contact_name: string }[];
+  } | undefined;
+  
+  const rawPOATyped = poa as unknown as Record<string, unknown> & {
+    contact_person?: string;
+    contact_name?: string;
+  };
+
+  const contactName = 
+    rawVendor?.contact_person ||
+    rawVendor?.contacts?.find((c) => c.is_primary)?.contact_name ||
+    rawVendor?.contacts?.[0]?.contact_name ||
+    rawVendor?.vendorContacts?.find((c) => c.is_primary)?.contact_name ||
+    rawVendor?.vendorContacts?.[0]?.contact_name ||
+    rawPOATyped?.contact_person ||
+    rawPOATyped?.contact_name ||
+    '-';
+
   const topLeft = vendorCode ? { label: 'รหัสผู้ขาย:', value: vendorCode } : undefined;
 
   const leftFields = [
     { label: 'ชื่อผู้ขาย:', value: vendorName || '-' },
+    { label: 'ชื่อผู้ติดต่อ:', value: contactName || '-' },
     { label: 'ที่อยู่:', value: vendorAddress || '-' },
     { 
       label: 'โทร.:', 
@@ -181,11 +203,36 @@ export default function PrintPOAPage() {
 
   const creditDays = poa.payment_term_days ?? poa.credit_days ?? 0;
 
+  interface POADataFields {
+    created_at?: string;
+    approval_date?: string;
+    payment_terms?: string;
+    payment_term_hint?: string;
+    poHeader?: {
+      po_date?: string;
+      approval_date?: string;
+      payment_terms?: string;
+      payment_term_hint?: string;
+    };
+    po_header?: {
+      po_date?: string;
+      approval_date?: string;
+      payment_terms?: string;
+      payment_term_hint?: string;
+    };
+  }
+
+  const rawPOA = poa as unknown as POADataFields;
+  const poHeader = rawPOA.poHeader || rawPOA.po_header || {};
+
   const rightFields = [
     { label: 'เลขที่เอกสารอนุมัติ:', value: poa.poa_no || '-' },
+    { label: 'วันที่เอกสาร:', value: fmtDate(rawPOA.created_at || poa.po_date) },
     { label: 'เลขที่ใบสั่งซื้อ (PO):', value: poa.po_no || '-' },
-    { label: 'วันที่อนุมัติ:', value: fmtDate(poa.po_date) },
+    { label: 'วันที่ใบสั่งซื้อ:', value: fmtDate(poHeader.po_date || poa.po_date) },
+    { label: 'วันที่ใบอนุมัติขอซื้อ:', value: fmtDate(String(rawPOA.approval_date || poHeader.approval_date || '')) },
     { label: 'วันที่กำหนดส่ง:', value: fmtDate(poa.delivery_date) },
+    { label: 'เงื่อนไขการชำระ:', value: String(rawPOA.payment_terms || poHeader.payment_terms || rawPOA.payment_term_hint || poHeader.payment_term_hint || (creditDays ? `เครดิต ${creditDays} วัน` : 'เงินสด')) },
     { label: 'จำนวนวันเครดิต:', value: creditDays ? `${creditDays} วัน` : '-' },
   ];
 

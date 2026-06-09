@@ -157,7 +157,42 @@ export default function PrintPOPage() {
   const vendorFax = vendorInfoObj?.fax || vendorInfoObj?.vendor_fax || defaultAddressObj?.fax || defaultAddressObj?.vendor_fax || poExtObj?.vendor_fax || poExtObj?.fax || '';
   const vendorAddress = addrParts.join(' ') || poExtObj?.vendor_address || '';
 
-  const topLeft = vendorCode ? { label: 'รหัสผู้ขาย:', value: vendorCode } : undefined;
+  interface VendorContact {
+    contact_name?: string;
+    is_primary?: boolean;
+  }
+
+  const rawVendor = vendorInfo as unknown as Record<string, unknown> & {
+    contact_person?: string;
+    contacts?: VendorContact[];
+    vendorContacts?: VendorContact[];
+  };
+
+  const rawPOTyped = po as unknown as Record<string, unknown> & {
+    contact_person?: string;
+    contact_name?: string;
+  };
+
+  const contactName = 
+    rawVendor?.contact_person ||
+    rawVendor?.contacts?.find((c) => c.is_primary)?.contact_name ||
+    rawVendor?.contacts?.[0]?.contact_name ||
+    rawVendor?.vendorContacts?.find((c) => c.is_primary)?.contact_name ||
+    rawVendor?.vendorContacts?.[0]?.contact_name ||
+    rawPOTyped?.contact_person ||
+    rawPOTyped?.contact_name ||
+    '-';
+
+  const topLeft = vendorCode ? { 
+    label: 'รหัสผู้ขาย:', 
+    value: (
+      <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+        <span>{vendorCode}</span>
+        <span style={{ marginLeft: '40px', fontWeight: 600 }}>ชื่อผู้ติดต่อ:</span>
+        <span style={{ marginLeft: '8px' }}>{contactName}</span>
+      </span>
+    )
+  } : undefined;
 
   const leftFields = [
     { label: 'ชื่อผู้ขาย:', value: vendorName || '-' },
@@ -175,12 +210,16 @@ export default function PrintPOPage() {
   ];
 
   const creditDays = po.payment_term_days ?? po.credit_days ?? 0;
+  const rawPO = po as unknown as Record<string, unknown>;
 
   const rightFields = [
     { label: 'เลขที่เอกสาร:', value: po.po_no || '-' },
     { label: 'วันที่เอกสาร:', value: fmtDate(po.po_date) },
     { label: 'วันที่กำหนดส่ง:', value: fmtDate(po.delivery_date) },
     { label: 'จำนวนวันเครดิต:', value: creditDays ? `${creditDays} วัน` : '-' },
+    { label: 'เลขที่อนุมัติขอซื้อ:', value: String(rawPO.approval_no || rawPO.av_no || rawPO.ref_approved_pr_no || rawPO.approved_pr_no || rawPO.pr_approval_no || rawPO.pr_no || '-') },
+    { label: 'วันที่อนุมัติขอซื้อ:', value: fmtDate(String(rawPO.approval_date || rawPO.av_date || rawPO.approved_pr_date || rawPO.pr_approval_date || rawPO.order_date || po.po_date || '')) },
+    { label: 'เงื่อนไขการชำระ:', value: String(rawPO.payment_terms || rawPO.payment_term_hint || (creditDays ? `เครดิต ${creditDays} วัน` : 'เงินสด')) },
   ];
 
   return (
