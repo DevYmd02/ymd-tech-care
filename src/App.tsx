@@ -50,6 +50,7 @@ const PrintRFQPage = React.lazy(() => import('@/modules/procurement/pages/rfq/Pr
 const PrintAVPage = React.lazy(() => import('@/modules/procurement/pages/av/PrintAVPage'));
 const PrintQCPage = React.lazy(() => import('@/modules/procurement/pages/qc/PrintQCPage'));
 const PrintPOAPage = React.lazy(() => import('@/modules/procurement/pages/poa/PrintPOAPage'));
+const PrintDesignerPage = React.lazy(() => import('@/modules/procurement/pages/designer/PrintDesignerPage'));
 
 // Roles Pages
 const RolesDashboard = React.lazy(() => import('@/modules/admin/pages/roles/RolesDashboard'));
@@ -303,6 +304,7 @@ function AppContent() {
               <Route path="grn" element={<GRNListPage />} />
               <Route path="prt" element={<PRTListPage />} />
               <Route path="ve" element={<VEListPage />} />
+              <Route path="print-designer" element={<PrintDesignerPage />} />
             </Route>
 
             {/* Other Inner Routes ... */}

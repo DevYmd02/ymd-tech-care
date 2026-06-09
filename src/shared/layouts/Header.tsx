@@ -13,7 +13,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Bell, Settings, Moon, Sun, ChevronDown, Menu, ChevronLeft } from 'lucide-react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useTheme } from '@/core/contexts/ThemeContext';
 
@@ -29,6 +29,7 @@ interface HeaderProps {
 export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) {
     // ==================== HOOKS ====================
     const location = useLocation();
+    const navigate = useNavigate();
     const { theme, setTheme } = useTheme();
 
     // Settings dropdown state
@@ -159,12 +160,19 @@ export default function Header({ isSidebarOpen, onToggleSidebar }: HeaderProps) 
                                 </div>
                             </div>
 
-                            {/* Divider */}
-                            <div className="border-t border-gray-100 dark:border-gray-700 my-2" />
-
                             {/* Other Settings */}
-                            <div className="px-4 py-2 text-xs text-gray-400 dark:text-gray-500">
-                                More settings coming soon...
+                            <div className="px-2 py-1 border-t border-gray-100 dark:border-gray-700 mt-2">
+                                <p className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400 mb-1">ตั้งค่ารายงาน</p>
+                                <button
+                                    onClick={() => {
+                                        navigate('/procurement/print-designer');
+                                        setIsSettingsOpen(false);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                >
+                                    <Settings size={18} className="text-gray-500" />
+                                    <span>ออกแบบแบบฟอร์มพิมพ์</span>
+                                </button>
                             </div>
                         </div>
                     )}

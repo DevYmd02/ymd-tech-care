@@ -1,0 +1,199 @@
+/* print-designer.css */
+
+.designer-container {
+  display: flex;
+  min-height: calc(100vh - 64px);
+  background: #f1f5f9;
+  color: #1e293b;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.designer-sidebar {
+  width: 380px;
+  background: #fff;
+  border-right: 1px solid #e2e8f0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
+}
+
+.designer-canvas-area {
+  flex: 1;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  background: #e2e8f0;
+}
+
+.designer-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.designer-section-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 4px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-group label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #475569;
+}
+
+.designer-select, .designer-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #1e293b;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.designer-select:focus, .designer-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.draggable-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: grab;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.draggable-item-row:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.draggable-item-row.active {
+  border-left: 3px solid #3b82f6;
+}
+
+.checkbox-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-toggle input {
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: #fff;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 6px;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 6px;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  transition: background 0.15s;
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+}
+
+/* Draggable UI elements in A4 */
+.designer-draggable-block {
+  border: 1px dashed transparent;
+  position: relative;
+  transition: border-color 0.15s;
+}
+
+.designer-draggable-block:hover {
+  border-color: #3b82f6;
+}
+
+.designer-draggable-block.selected {
+  border: 2px solid #3b82f6;
+  background: rgba(59, 130, 246, 0.02);
+}
+
+.drag-handle-badge {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 3px 3px 0 0;
+  display: none;
+  pointer-events: none;
+}
+
+.designer-draggable-block:hover .drag-handle-badge,
+.designer-draggable-block.selected .drag-handle-badge {
+  display: block;
+}
+
+.designer-json-view {
+  background: #0f172a;
+  color: #38bdf8;
+  padding: 12px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.8rem;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #1e293b;
+}
+
+.designer-toolbar-top {
+  display: flex;
+  justify-content: space-between;
+  width: 210mm;
+  margin-bottom: 16px;
+}

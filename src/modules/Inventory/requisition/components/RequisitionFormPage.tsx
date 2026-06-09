@@ -217,8 +217,11 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
                 console.error('Failed to fetch first location:', err);
             }
 
+            const currentLines = formMethods.getValues('lines') || [];
+            const currentLine = currentLines[activeLineIndex] || fields[activeLineIndex];
+
             updateLine(activeLineIndex, null, {
-                ...fields[activeLineIndex],
+                ...currentLine,
                 warehouse_id: String(warehouse.warehouse_id),
                 warehouse_name: warehouse.warehouse_name,
                 location_id: locId,
@@ -238,8 +241,11 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
     };
     const handleSelectLocation = (location: Location) => {
         if (activeLineIndex !== null) {
+            const currentLines = formMethods.getValues('lines') || [];
+            const currentLine = currentLines[activeLineIndex] || fields[activeLineIndex];
+
             updateLine(activeLineIndex, null, {
-                ...fields[activeLineIndex],
+                ...currentLine,
                 location_id: String(location.location_id),
                 location_name: location.name_th,
             } as RequisitionLineFormData);
@@ -257,8 +263,11 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
     };
     const handleSelectLot = (lot: LotNo) => {
         if (activeLineIndex !== null) {
+            const currentLines = formMethods.getValues('lines') || [];
+            const currentLine = currentLines[activeLineIndex] || fields[activeLineIndex];
+
             updateLine(activeLineIndex, null, {
-                ...fields[activeLineIndex],
+                ...currentLine,
                 lot_id: String(lot.lot_no_id),
                 lot_no: lot.code,
             } as RequisitionLineFormData);

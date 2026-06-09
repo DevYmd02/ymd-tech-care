@@ -7,8 +7,9 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ClipboardList, Plus, Search, Eye, Edit2, Trash2 } from 'lucide-react';
+import { ClipboardList, Plus, Search, Eye, Edit, Send } from 'lucide-react';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
+import { toast } from 'react-hot-toast';
 
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
@@ -38,6 +39,20 @@ function CancelBadge({ flag }: { flag: string }) {
         return (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
                 ยกเลิก
+            </span>
+        );
+    }
+    if (flag === 'PENDING') {
+        return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                รออนุมัติ
+            </span>
+        );
+    }
+    if (flag === 'DRAFT') {
+        return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                แบบร่าง
             </span>
         );
     }
@@ -114,14 +129,55 @@ export default function RequisitionListPage() {
         setIsFormOpen(true);
     }, []);
 
-    const handleDelete = useCallback(
-        async (id: string) => {
-            if (!window.confirm('ต้องการลบรายการนี้หรือไม่?')) return;
-            await RequisitionService.delete(id);
-            queryClient.invalidateQueries({ queryKey: ['requisitions'] });
-        },
-        [queryClient]
-    );
+    const handleSendApproval = useCallback(async (id: string) => {
+        if (!window.confirm('คุณต้องการส่งอนุมัติใบขอเบิกนี้ใช่หรือไม่?')) {
+            return;
+        }
+        try {
+            const doc = await RequisitionService.getById(id);
+            if (!doc) {
+                toast.error('ไม่พบข้อมูลเอกสาร');
+                return;
+            }
+            const { header, lines } = doc;
+            const h = header as unknown as Record<string, unknown>;
+
+            const payload = {
+                issue_req_date: h.issue_req_date || header.docu_date,
+                doc_link_ic_id: Number(h.doc_link_ic_id || header.docu_item_no),
+                emp_dept_id: Number(header.emp_dept_id),
+                project_id: Number(h.project_id || header.job_id),
+                remarks: h.remarks || header.remark || '',
+                branch_id: Number(header.branch_id),
+                created_by_emp_id: Number(header.created_by_emp_id) || 1,
+                request_by_emp_id: Number(header.request_by_emp_id) || 1,
+                status: 'PENDING',
+                stock_effect_ic: header.stock_effect_ic !== undefined ? header.stock_effect_ic : null,
+                lines: lines.map((l) => {
+                    const lObj = l as unknown as Record<string, unknown>;
+                    return {
+                        item_id: Number(l.item_id),
+                        qty: Number(lObj.qty !== undefined && lObj.qty !== null ? lObj.qty : l.qty_ic),
+                        uom_id: Number(l.uom_id),
+                        warehouse_id: Number(l.warehouse_id),
+                        location_id: l.location_id ? Number(l.location_id) : null,
+                        lot_id: l.lot_id ? Number(l.lot_id) : null,
+                        lot_balance_id: l.lot_id ? Number(l.lot_id) : null,
+                    };
+                })
+            };
+
+            const res = await RequisitionService.update(id, payload as unknown as Parameters<typeof RequisitionService.update>[1]);
+            if (res.success) {
+                toast.success('ส่งอนุมัติสำเร็จ');
+                queryClient.invalidateQueries({ queryKey: ['requisitions'] });
+            } else {
+                toast.error(res.message || 'เกิดข้อผิดพลาดในการส่งอนุมัติ');
+            }
+        } catch {
+            toast.error('เกิดข้อผิดพลาดในการส่งอนุมัติ');
+        }
+    }, [queryClient]);
 
     const handleCloseForm = () => {
         setIsFormOpen(false);
@@ -180,19 +236,15 @@ export default function RequisitionListPage() {
                 enableSorting: false,
             }),
             colHelper.accessor('save_emp_name', {
-                header: 'ผู้บันทึก',
+                header: 'ผู้ขอเบิก',
                 cell: info => <span className="text-sm text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
                 size: 150,
                 enableSorting: false,
             }),
-            colHelper.accessor('qty_total', {
-                header: () => <div className="text-center w-full">จำนวนรวม</div>,
-                cell: info => (
-                    <div className="text-center font-semibold text-gray-800 dark:text-gray-200">
-                        {Number(info.getValue() || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 3 })}
-                    </div>
-                ),
-                size: 110,
+            colHelper.accessor('created_emp_name', {
+                header: 'ผู้บันทึก',
+                cell: info => <span className="text-sm text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
+                size: 150,
                 enableSorting: false,
             }),
             colHelper.accessor('cancel_flag', {
@@ -219,25 +271,29 @@ export default function RequisitionListPage() {
                         </button>
                         <button
                             onClick={() => handleEdit(row.original.docu_item_id)}
-                            className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                            className="flex items-center gap-1 px-2 py-1 text-xs font-bold text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30 rounded-md transition-colors"
                             title="แก้ไข"
                         >
-                            <Edit2 size={16} />
+                            <Edit size={14} />
+                            <span>แก้ไข</span>
                         </button>
-                        <button
-                            onClick={() => handleDelete(row.original.docu_item_id)}
-                            className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                            title="ลบ"
-                        >
-                            <Trash2 size={16} />
-                        </button>
+                        {row.original.cancel_flag === 'DRAFT' && (
+                            <button
+                                onClick={() => handleSendApproval(row.original.docu_item_id)}
+                                className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md shadow-sm transition-colors"
+                                title="ส่งอนุมัติ"
+                            >
+                                <Send size={12} />
+                                <span>ส่งอนุมัติ</span>
+                            </button>
+                        )}
                     </div>
                 ),
-                size: 120,
+                size: 160,
                 enableSorting: false,
             }),
         ],
-        [filters.page, filters.limit, handleView, handleEdit, handleDelete]
+        [filters.page, filters.limit, handleView, handleEdit, handleSendApproval]
     );
 
     // ── Render ─────────────────────────────────────────────────────────────────────
