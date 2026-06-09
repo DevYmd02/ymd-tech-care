@@ -25,9 +25,9 @@ const DEFAULT_VALUES: RequisitionApproveFormData = {
     emp_dept_name: '',
     job_id: '',
     job_name: '',
-    save_emp_id: '',
+    created_by_emp_id: '',
     save_emp_name: '',
-    audit_emp_id: '',
+    request_by_emp_id: '',
     audit_emp_name: '',
     remark: '',
     qty_total: 0,
@@ -73,8 +73,8 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
             const rawHeader = header as unknown as Record<string, unknown>;
             
             // Map IDs to employee names
-            const saveEmp = employees.find(e => String(e.employee_id || e.id) === String(header.save_emp_id));
-            const auditEmp = employees.find(e => String(e.employee_id || e.id) === String(header.audit_emp_id));
+            const saveEmp = employees.find(e => String(e.employee_id || e.id) === String(header.created_by_emp_id));
+            const auditEmp = employees.find(e => String(e.employee_id || e.id) === String(header.request_by_emp_id));
 
             const rawStatus = (rawHeader.status as 'PENDING' | 'APPROVED' | 'REJECTED') || 'PENDING';
             const isPending = rawStatus === 'PENDING';
@@ -100,9 +100,9 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
                 branch_id: header.branch_id,
                 emp_dept_id: header.emp_dept_id,
                 job_id: header.job_id,
-                save_emp_id: header.save_emp_id,
+                created_by_emp_id: header.created_by_emp_id,
                 save_emp_name: saveEmp ? saveEmp.employee_fullname || saveEmp.employee_name : '',
-                audit_emp_id: header.audit_emp_id,
+                request_by_emp_id: header.request_by_emp_id,
                 audit_emp_name: auditEmp ? auditEmp.employee_fullname || auditEmp.employee_name : '',
                 remark: header.remark || '',
                 qty_total: header.qty_total,

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, MapPin, Check, X } from 'lucide-react';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
 import { LocationService } from '@master-data/inventory/services/inventory-master.service';
@@ -26,21 +26,40 @@ export const LocationSearchModal: React.FC<LocationSearchModalProps> = React.mem
     warehouseId
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
+    const [showAll, setShowAll] = useState(false);
     const debouncedSearch = useDebounce(searchTerm, 400);
+
+    // Reset showAll when modal opens or warehouseId changes
+    useEffect(() => {
+        if (isOpen) {
+            setShowAll(false);
+        }
+    }, [isOpen, warehouseId]);
 
     // ดึงข้อมูลที่เก็บสินค้าผ่าน LocationService
     const { data: response, isLoading } = useQuery({
-        queryKey: ['inventory-locations-lookup', debouncedSearch, warehouseId],
-        queryFn: () => LocationService.getAll({ 
-            q: debouncedSearch, 
-            warehouse_id: warehouseId,
-            limit: 50 
-        }),
+        queryKey: ['inventory-locations-lookup', debouncedSearch, warehouseId, showAll],
+        queryFn: () => {
+            const whId = warehouseId && warehouseId !== '' && !isNaN(Number(warehouseId)) 
+                ? Number(warehouseId) 
+                : undefined;
+            return LocationService.getAll({ 
+                q: debouncedSearch, 
+                warehouse_id: showAll ? undefined : whId,
+                limit: 50 
+            });
+        },
         enabled: isOpen,
         staleTime: 1000 * 60 * 10,
     });
 
-    const locations = useMemo(() => response?.items || [], [response]);
+    const locations = useMemo(() => {
+        const items = response?.items || [];
+        if (warehouseId && !showAll) {
+            return items.filter(loc => Number(loc.warehouse_id) === Number(warehouseId));
+        }
+        return items;
+    }, [response, warehouseId, showAll]);
 
     const handleSelect = (location: Location) => {
         onSelect(location);
@@ -61,9 +80,9 @@ export const LocationSearchModal: React.FC<LocationSearchModalProps> = React.mem
             width="max-w-[1000px]"
         >
             <div className="flex flex-col h-[60vh]">
-                {/* 🔍 Search Bar */}
-                <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-                    <div className="relative group">
+                {/* 🔍 Search Bar & Filter */}
+                <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="relative group flex-1">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} />
                         <input
                             type="text"
@@ -82,6 +101,24 @@ export const LocationSearchModal: React.FC<LocationSearchModalProps> = React.mem
                             </button>
                         )}
                     </div>
+
+                    {/* Toggle switch for showing all locations */}
+                    {warehouseId && (
+                        <div className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={showAll}
+                                    onChange={(e) => setShowAll(e.target.checked)}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                <span className="ms-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 select-none">
+                                    แสดงที่เก็บทั้งหมด
+                                </span>
+                            </label>
+                        </div>
+                    )}
                 </div>
 
                 {/* 📊 Content Section */}

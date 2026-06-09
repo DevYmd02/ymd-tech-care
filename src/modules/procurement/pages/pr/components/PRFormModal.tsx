@@ -81,9 +81,8 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                     <button 
                       type="button" 
                       onClick={() => {
-                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
                         if (id) {
-                          window.open(`${apiUrl}/pr/${id}/pdf`, '_blank');
+                          window.open(`/print/pr/${id}`, '_blank');
                         }
                       }}
                       className="px-3 py-2 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-blue-200 dark:border-blue-800"

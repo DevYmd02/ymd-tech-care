@@ -208,9 +208,11 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
             try {
                 const res = await LocationService.getAll({ 
                     warehouse_id: warehouse.warehouse_id, 
-                    limit: 1 
+                    limit: 100 
                 });
-                const firstLoc = res?.items?.[0];
+                const firstLoc = res?.items?.find(
+                    loc => Number(loc.warehouse_id) === Number(warehouse.warehouse_id)
+                );
                 if (firstLoc) {
                     locId = String(firstLoc.location_id);
                     locName = firstLoc.name_th || firstLoc.code || '';

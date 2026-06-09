@@ -44,6 +44,9 @@ const POAListPage = React.lazy(() => import('@/modules/procurement/pages/poa/POA
 const GRNListPage = React.lazy(() => import('@/modules/procurement/pages/grn/GRNListPage'));
 const PRTListPage = React.lazy(() => import('@/modules/procurement/pages/prt/PRTListPage'));
 const VEListPage = React.lazy(() => import('@/modules/procurement/pages/ve/VendorEvaluationListPage'));
+const PrintPRPage = React.lazy(() => import('@/modules/procurement/pages/pr/PrintPRPage'));
+const PrintPOPage = React.lazy(() => import('@/modules/procurement/pages/po/PrintPOPage'));
+const PrintRFQPage = React.lazy(() => import('@/modules/procurement/pages/rfq/PrintRFQPage'));
 
 // Roles Pages
 const RolesDashboard = React.lazy(() => import('@/modules/admin/pages/roles/RolesDashboard'));
@@ -216,6 +219,30 @@ function AppContent() {
           <Route path="/forgot-password" element={<Navigate to={ROUTES.AUTH.FORGOT_PASSWORD} replace />} />
           <Route path="/master-data/section" element={<Navigate to={ROUTES.MASTER_DATA.EMPLOYEE_DEPT} replace />} />
 
+          {/* Print Preview Routes (A4 fullscreen) */}
+          <Route path="/print">
+            <Route path="pr/:id" element={
+              <ProtectedRoute>
+                <React.Suspense fallback={<GlobalLoading message="Loading PR Print Preview..." />}>
+                  <PrintPRPage />
+                </React.Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="po/:id" element={
+              <ProtectedRoute>
+                <React.Suspense fallback={<GlobalLoading message="Loading PO Print Preview..." />}>
+                  <PrintPOPage />
+                </React.Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="rfq/:id" element={
+              <ProtectedRoute>
+                <React.Suspense fallback={<GlobalLoading message="Loading RFQ Print Preview..." />}>
+                  <PrintRFQPage />
+                </React.Suspense>
+              </ProtectedRoute>
+            } />
+          </Route>
 
           {/* Main Layout Routes - Protected */}
           <Route path="/" element={

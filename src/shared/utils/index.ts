@@ -8,3 +8,6 @@ export * from './error-utils';
 export * from './apiUtils';
 export * from './dateUtils';
 export * from './clientFilterUtils';
+export * from './baht-text';
+export * from './format-th';
+

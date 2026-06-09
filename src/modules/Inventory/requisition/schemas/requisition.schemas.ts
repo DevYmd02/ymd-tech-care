@@ -65,11 +65,11 @@ export const requisitionHeaderSchema = z.object({
         .string()
         .min(1, 'กรุณาเลือกสาขา'),
 
-    save_emp_id: z
+    created_by_emp_id: z
         .string()
         .min(1, 'กรุณาเลือกผู้บันทึก'),
 
-    audit_emp_id: z
+    request_by_emp_id: z
         .string()
         .min(1, 'กรุณาเลือกผู้ขอเบิก'),
 

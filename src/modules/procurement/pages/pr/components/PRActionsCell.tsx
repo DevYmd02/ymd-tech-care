@@ -102,8 +102,7 @@ export const PRActionsCell = ({
             {['APPROVED', 'PARTIAL', 'COMPLETED'].includes(item.status as string) && (
                 <button 
                 onClick={() => {
-                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                    window.open(`${apiUrl}/pr/${item.pr_id}/pdf`, '_blank');
+                    window.open(`/print/pr/${item.pr_id}`, '_blank');
                 }}
                 className="p-1.5 text-blue-600 dark:text-blue-400 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-all" 
                 title="พิมพ์ใบขอซื้อ"

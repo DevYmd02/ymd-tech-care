@@ -56,8 +56,8 @@ const DEFAULT_VALUES: RequisitionHeaderFormData = {
     emp_dept_id: '',
     job_id: '',
     branch_id: '',
-    save_emp_id: '',
-    audit_emp_id: '',
+    created_by_emp_id: '',
+    request_by_emp_id: '',
     qty_total: 0,
     stock_effect_ic: 0,
     remark: '',
@@ -196,8 +196,8 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
                     emp_dept_id: header.emp_dept_id,
                     job_id: header.job_id,
                     branch_id: header.branch_id,
-                    save_emp_id: header.save_emp_id,
-                    audit_emp_id: header.audit_emp_id,
+                    created_by_emp_id: header.created_by_emp_id,
+                    request_by_emp_id: header.request_by_emp_id,
                     qty_total: header.qty_total,
                     stock_effect_ic: header.stock_effect_ic,
                     remark: header.remark ?? '',
@@ -237,7 +237,7 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
             reset({ 
                 ...DEFAULT_VALUES, 
                 docu_date: getTodayISO(), 
-                save_emp_id: user?.employee_id ? String(user.employee_id) : '',
+                created_by_emp_id: user?.employee_id ? String(user.employee_id) : '',
                 branch_id: user?.employee?.branch_id ? String(user.employee.branch_id) : '',
                 lines: [createDefaultLine(1)] 
             });

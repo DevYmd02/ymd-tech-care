@@ -18,7 +18,7 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
     empOptions = [],
 }) => {
     const { control } = useFormContext<RequisitionApproveFormData>();
-    const watchedSaveEmpId = useWatch({ control, name: 'save_emp_id' });
+    const watchedCreatedByEmpId = useWatch({ control, name: 'created_by_emp_id' });
     const status = useWatch({ control, name: 'status' });
     const isFinalized = status === 'APPROVED' || status === 'REJECTED';
 
@@ -122,7 +122,7 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
                     <input
                         type="text"
                         disabled
-                        value={empOptions.find(e => e.id === watchedSaveEmpId)?.name || watchedSaveEmpId || '-'}
+                        value={empOptions.find(e => e.id === watchedCreatedByEmpId)?.name || watchedCreatedByEmpId || '-'}
                         className={inputClass}
                     />
                 </div>
@@ -131,7 +131,7 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
                 <div className="space-y-1">
                     <label className={labelClass}>ผู้ขอเบิก</label>
                     <Controller
-                        name="audit_emp_id"
+                        name="request_by_emp_id"
                         control={control}
                         render={({ field }) => (
                             <input
