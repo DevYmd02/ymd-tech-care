@@ -113,7 +113,7 @@ export const usePRMasterData = (enabled = true) => {
         masterItems,
         purchaseTaxOptions,
         currencies,
-        masterUnits: units,
+        masterUoms: units,
         products,
         isSearchingProducts,
         searchProducts,

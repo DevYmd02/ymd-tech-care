@@ -141,6 +141,7 @@ export const POLineSchema = z.object({
     tax_code_id:     optionalIdSchema,
     discount_expression: z.string().default('0'),
     required_receipt_type: z.enum(['FULL', 'PARTIAL']).default('FULL'),
+    item_uom_id:     optionalIdSchema,
     // Internal UI fields
     qty_ordered:     z.number().optional(),
     uom_name:        z.string().optional(),

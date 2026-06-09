@@ -107,6 +107,7 @@ export const usePOActions = (props?: UsePOActionsProps) => {
                     status:         "OPEN",
                     qty:            Number(item.qty_ordered ?? item.qty ?? 0),
                     uom_id:         Number(item.uom_id),
+                    item_uom_id:    item.item_uom_id ? Number(item.item_uom_id) : undefined,
                     unit_price:     Number(item.unit_price),
                     tax_code_id:    pendingPayload.tax_code_id !== undefined ? Number(pendingPayload.tax_code_id) : Number(item.tax_code_id),
                     discount_expression: String(item.discount_expression || "0"),

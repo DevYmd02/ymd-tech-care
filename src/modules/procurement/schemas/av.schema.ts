@@ -4,10 +4,10 @@ import { PRLineSchema, PRBaseFormSchema } from '@/modules/procurement/schemas/pr
 // We extend PRLineSchema with AV-specific fields
 export const AVLineSchema = PRLineSchema.extend({
     is_approved: z.boolean().default(true),
-    approved_qty: z.number().min(0).default(0),
+    approved_qty: z.coerce.number().min(0).default(0),
     remark: z.string().optional().nullable(),
-    requested_qty: z.number().optional().nullable(),
-    remaining_qty: z.number().optional().nullable(),
+    requested_qty: z.coerce.number().optional().nullable(),
+    remaining_qty: z.coerce.number().optional().nullable(),
 });
 
 export type AVLineFormData = z.infer<typeof AVLineSchema>;

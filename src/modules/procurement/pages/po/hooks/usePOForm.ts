@@ -18,6 +18,7 @@ import { useAuth } from '@/core/auth/contexts/AuthContext';
 import { logger } from '@/shared/utils';
 import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard';
+import { UOMConversionService } from '@/modules/master-data/inventory/services/uom-conversion.service';
 
 
 // ====================================================================================
@@ -65,8 +66,8 @@ export const usePOForm = ({
     const { data: taxCodesData = [], isLoading: isLoadingTaxCodes } = useTaxCodes(isOpen);
     const taxCodes = (taxCodesData as unknown as { data: TaxCode[] })?.data || (taxCodesData as TaxCode[]); 
     
-    const { data: unitsResponse,   isLoading: isLoadingUnits }      = useUnits(isOpen);
-    const units = useMemo(() => unitsResponse?.items || [], [unitsResponse]);
+    const { data: uomsResponse,   isLoading: isLoadingUoms }      = useUnits(isOpen);
+    const uoms = useMemo(() => uomsResponse?.items || [], [uomsResponse]);
     
     const { data: currenciesResponse, isLoading: isLoadingCurrencies } = useCurrencies(isOpen);
     const currencies = useMemo(() => (currenciesResponse as unknown as { data: Currency[] })?.data || (currenciesResponse as unknown as { items: Currency[] })?.items || (currenciesResponse as Currency[]) || [], [currenciesResponse]);
@@ -362,19 +363,10 @@ export const usePOForm = ({
 
     const handleSelectItemMaster = useCallback((index: number, item: ItemSelectorResult) => {
         const anyItem = item as unknown as Record<string, unknown>;
-        const prodUomId = anyItem.uom_id || anyItem.uom_id || anyItem.base_uom_id || anyItem.sale_uom_id;
-        const prodUomName = (anyItem.uom_name || anyItem.uom_name || anyItem.base_uom_name || anyItem.sale_uom_name || '') as string;
+        const prodUomId = anyItem.purchasing_unit_id ? Number(anyItem.purchasing_unit_id) : Number(anyItem.uom_id || anyItem.base_uom_id || anyItem.sale_uom_id || 1);
+        const prodUomName = (anyItem.purchasing_unit_name || anyItem.uom_name || anyItem.base_uom_name || anyItem.sale_uom_name || 'ชิ้น') as string;
 
-        const safeUnits = Array.isArray(units) ? units : [];
-        const matchedUnit = safeUnits.find((u: unknown) => {
-            const ut = u as Record<string, unknown>;
-            if (prodUomId && (String(ut.id) === String(prodUomId) || String(ut.uom_id) === String(prodUomId))) return true;
-            const uName = (ut.uom_name || ut.uom_name || '') as string;
-            if (prodUomName && uName.trim() === (prodUomName as string).trim()) return true;
-            return false;
-        }) as Record<string, unknown> | undefined;
-
-        const finalUomId = Number(prodUomId || matchedUnit?.uom_id || matchedUnit?.id || 1);
+        const finalUomId = Number(prodUomId);
 
         update(index, {
             ...getValues(`po_lines.${index}`),
@@ -382,11 +374,27 @@ export const usePOForm = ({
             item_id: Number(item.id || item.item_id),
             item_code: String(item.item_code || item.code || ""),
             description: String(item.item_name || item.description || ""),
-            uom_id: finalUomId || 0,
+            uom_id: finalUomId,
+            uom_name: prodUomName,
             unit_price: Number(anyItem.standard_price || anyItem.unit_price || 0),
+            item_uom_id: undefined,
         });
+
+        // Resolve item_uom_id conversion PK
+        const itemId = Number(item.id || item.item_id);
+        if (itemId) {
+            UOMConversionService.getByItemId(itemId).then(response => {
+                const convs = response?.items || [];
+                const matchedConv = convs.find(c => Number(c.from_unit_id) === finalUomId) ||
+                                   convs.find(c => Number(c.conversion_factor) === 1);
+                if (matchedConv) {
+                    setValue(`po_lines.${index}.item_uom_id` as never, Number(matchedConv.conversion_id) as never, { shouldDirty: true });
+                }
+            }).catch(() => {});
+        }
+
         setTimeout(() => trigger(`po_lines.${index}.item_id`), 100);
-    }, [update, getValues, trigger, units]);
+    }, [update, getValues, trigger, setValue]);
 
     const [searchParams] = useSearchParams();
 
@@ -468,8 +476,8 @@ export const usePOForm = ({
     return {
         // Form & Master Data
         formMethods, register, control, errors, handleSubmit, setValue,
-        branches, units, currencies, taxCodes,
-        isLoadingBranches, isLoadingCurrencies, isLoadingUnits, isLoadingTaxCodes,
+        branches, uoms, currencies, taxCodes,
+        isLoadingBranches, isLoadingCurrencies, isLoadingUoms, isLoadingTaxCodes,
         fields, append, remove, replace, update,
         
         // State

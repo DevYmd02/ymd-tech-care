@@ -419,11 +419,10 @@ export default function AVListPage() {
                     >
                         {row.original.row_key?.startsWith('pending-') ? <ShieldCheck size={18} /> : <Eye size={18} />}
                     </button>
-                    {['APPROVED', 'PARTIAL'].includes(row.original.status?.toUpperCase()) && (
+                    {['APPROVED', 'PARTIAL'].includes(row.original.status?.toUpperCase()) && row.original.approval_id && (
                         <button 
                             onClick={() => {
-                                const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                window.open(`${apiUrl}/pr-approval/${row.original.approval_id}/pdf`, '_blank');
+                                window.open(`/print/av/${row.original.approval_id}`, '_blank');
                             }}
                             className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-all" 
                             title="พิมพ์ใบอนุมัติ"
@@ -587,11 +586,10 @@ export default function AVListPage() {
                                                 <><Eye size={14} /> ดูรายละเอียด</>
                                             )}
                                         </button>
-                                        {['APPROVED', 'PARTIAL'].includes(item.status?.toUpperCase()) && (
+                                        {['APPROVED', 'PARTIAL'].includes(item.status?.toUpperCase()) && item.approval_id && (
                                             <button
                                                 onClick={() => {
-                                                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                                    window.open(`${apiUrl}/pr-approval/${item.approval_id}/pdf`, '_blank');
+                                                    window.open(`/print/av/${item.approval_id}`, '_blank');
                                                 }}
                                                 className="flex-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
                                             >

@@ -11,8 +11,6 @@ import {
   HeaderGrid,
   ItemsTable,
   SummaryBlock,
-  TermsBlock,
-  SignatureRow,
   type PrintRow,
 } from '@/modules/procurement/shared/components/print/PrintLayout';
 
@@ -143,7 +141,8 @@ export default function PrintRFQPage() {
   const vendorList = rfqDetailAny.rfqVendors || rfqDetailAny.vendors || [];
   const vendor = vendorList[0];
   
-  const defaultAddress = vendorInfo?.addresses?.find((a: { is_default: boolean }) => a.is_default) || vendorInfo?.addresses?.[0];
+  const addressesList = vendorInfo?.addresses || (vendorInfo as unknown as { vendorAddresses?: { is_default: boolean; address: string; sub_district?: string; district?: string; province?: string; postal_code?: string; phone?: string }[] })?.vendorAddresses || [];
+  const defaultAddress = addressesList.find((a) => a.is_default) || addressesList[0];
   const addrParts: string[] = [];
   if (defaultAddress) {
     if (defaultAddress.address) addrParts.push(defaultAddress.address);
@@ -153,17 +152,31 @@ export default function PrintRFQPage() {
     if (defaultAddress.postal_code) addrParts.push(defaultAddress.postal_code);
   }
 
-  const vendorCode = vendorInfo?.vendor_code || vendor?.vendor_code || '';
-  const vendorName = vendorInfo?.vendor_name || vendor?.vendor_name || '';
-  const vendorPhone = vendorInfo?.phone || defaultAddress?.phone || '';
-  const vendorAddress = addrParts.join(' ') || '';
+  const defaultAddressObj = defaultAddress as unknown as { phone?: string; tel?: string; fax?: string; vendor_fax?: string } | undefined;
+  const vendorInfoObj = vendorInfo as unknown as { phone?: string; tel?: string; fax?: string; vendor_fax?: string; vendor_code?: string; vendor_name?: string } | undefined;
+  const rfqExtObj = vendor as unknown as { vendor_phone?: string; vendor_tel?: string; vendor_fax?: string; fax?: string; vendor_address?: string; vendor_code?: string; vendor_name?: string } | undefined;
+
+  const vendorCode = vendorInfoObj?.vendor_code || rfqExtObj?.vendor_code || '';
+  const vendorName = vendorInfoObj?.vendor_name || rfqExtObj?.vendor_name || '';
+  const vendorPhone = vendorInfoObj?.phone || vendorInfoObj?.tel || defaultAddressObj?.phone || defaultAddressObj?.tel || rfqExtObj?.vendor_phone || rfqExtObj?.vendor_tel || '';
+  const vendorFax = vendorInfoObj?.fax || vendorInfoObj?.vendor_fax || defaultAddressObj?.fax || defaultAddressObj?.vendor_fax || rfqExtObj?.vendor_fax || rfqExtObj?.fax || '';
+  const vendorAddress = addrParts.join(' ') || rfqExtObj?.vendor_address || '';
 
   const topLeft = vendorCode ? { label: 'รหัสผู้ขาย:', value: vendorCode } : undefined;
 
   const leftFields = [
     { label: 'ชื่อผู้ขาย:', value: vendorName || 'ผู้ให้บริการร่วมขอราคา' },
     { label: 'ที่อยู่:', value: vendorAddress || '-' },
-    { label: 'โทร.:', value: vendorPhone || '-' },
+    { 
+      label: 'โทร.:', 
+      value: (
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <span>{vendorPhone || '-'}</span>
+          <span style={{ marginLeft: '40px', fontWeight: 600 }}>โทรสาร:</span>
+          <span style={{ marginLeft: '8px' }}>{vendorFax || '-'}</span>
+        </div>
+      )
+    },
   ];
 
   const rightFields = [
@@ -192,8 +205,6 @@ export default function PrintRFQPage() {
             notes={rfqDetailAny.remarks || ''}
             costCode={''}
           />
-          <TermsBlock />
-          <SignatureRow slots={['ผู้จัดทำ', 'ผู้ตรวจสอบ', 'ผู้อนุมัติ']} />
         </A4Page>
       </div>
     </PrintAuthGate>

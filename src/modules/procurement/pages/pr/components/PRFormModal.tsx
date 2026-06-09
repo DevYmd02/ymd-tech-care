@@ -35,7 +35,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
     isWarehouseModalOpen, setIsWarehouseModalOpen,
     isLocationModalOpen, setIsLocationModalOpen, activeWarehouseId,
     isSubmitting, isActionLoading,
-    costCenters, projects, purchaseTaxOptions, currencies, masterUnits,
+    costCenters, projects, purchaseTaxOptions, currencies, masterUoms,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit,
     handleVoid,
@@ -419,7 +419,7 @@ export const PRFormModal: React.FC<Props> = ({ isOpen, onClose, id, onSuccess, r
                 openWarehouseSearch={openWarehouseSearch}
                 openLocationSearch={openLocationSearch}
                 readOnly={readOnly}
-                masterUnits={masterUnits}
+                masterUoms={masterUoms}
             />
 
             <PRFormSummary isViewMode={readOnly} />

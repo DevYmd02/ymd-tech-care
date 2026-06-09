@@ -18,10 +18,10 @@ export const PRLineSchema = z.object({
   item_code: z.string(),
   item_name: z.string(),
   description: z.string().optional().nullable(),
-  qty: z.coerce.number().optional(),
+  qty: z.coerce.number().max(99999.9999, 'จำนวนต้องไม่เกิน 99,999.9999').optional(),
   uom: z.string().optional().nullable(),
   uom_id: z.coerce.number().optional(),
-  est_unit_price: z.coerce.number().optional(),
+  est_unit_price: z.coerce.number().max(99999.9999, 'ราคาต่อหน่วยต้องไม่เกิน 99,999.9999').optional(),
   est_amount: z.coerce.number().optional(),
   needed_date: z.string().optional().nullable(),
   preferred_vendor_id: z.coerce.number().optional(),
@@ -40,6 +40,7 @@ export const PRLineSchema = z.object({
   _base_uom_id: z.coerce.number().optional(),
   _purchasing_uom_name: z.string().optional().nullable(),
   _purchasing_uom_id: z.coerce.number().optional(),
+  item_uom_id: z.coerce.number().optional().nullable(),
 });
 
 /** Canonical type for a single PR line item */
@@ -135,6 +136,19 @@ export const PRFormSchema = PRBaseFormSchema.superRefine((data, ctx) => {
         seenItemIds.add(line.item_id);
       }
     }
+
+    // 🛑 Check for line-level numeric(9,4) overflow (max 99,999.9999 including tax/calculations)
+    const qty = Number(line.qty) || 0;
+    const price = Number(line.est_unit_price) || 0;
+    const lineTotal = qty * price;
+    const estimatedWithTax = lineTotal * 1.07;
+    if (estimatedWithTax > 99999.9999) {
+      ctx.addIssue({
+        path: ['lines', index, 'est_unit_price'],
+        message: `มูลค่ารวมรายการนี้เมื่อรวมภาษี (${lineTotal.toLocaleString()} + ภาษี 7% = ${estimatedWithTax.toLocaleString()}) เกินขีดจำกัดระบบ 99,999.9999 บาท`,
+        code: z.ZodIssueCode.custom,
+      });
+    }
   });
 
   const validationTotal = activeLines.reduce((sum: number, line: PRLineFormData) => {
@@ -147,6 +161,14 @@ export const PRFormSchema = PRBaseFormSchema.superRefine((data, ctx) => {
     ctx.addIssue({
       path: ['total_amount'],
       message: 'มูลค่ารวมต้องมากกว่า 0 บาท เพื่อส่งอนุมัติ',
+      code: z.ZodIssueCode.custom,
+    });
+  }
+
+  if (validationTotal > 99999.9999) {
+    ctx.addIssue({
+      path: ['total_amount'],
+      message: `มูลค่ารวมของเอกสาร (${validationTotal.toLocaleString()} บาท) เกินขีดจำกัดระบบ 99,999.9999 บาท`,
       code: z.ZodIssueCode.custom,
     });
   }
@@ -196,6 +218,7 @@ export const createEmptyPRLine = (): PRLineFormData => ({
   warehouse_id: undefined,
   warehouse_code: '',
   location: '',
+  item_uom_id: undefined,
 });
 
 export const getPRDefaultFormValues = (user?: { id?: string | number; username?: string; employee?: { employee_fullname?: string } } | null): PRFormData => {

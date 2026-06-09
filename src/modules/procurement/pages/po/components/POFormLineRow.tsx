@@ -1,9 +1,9 @@
 import { memo } from 'react';
-import { Controller, useWatch, type Control, type FieldErrors, type UseFormRegister, type UseFormSetValue } from 'react-hook-form';
+import { Controller, useWatch, type Control, type FieldErrors, type UseFormRegister } from 'react-hook-form';
 import { Search, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/shared/utils';
 import type { POFormData } from '@/modules/procurement/schemas/po-schemas';
-import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
+
 import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
 
 // Local UI shorthand (consistent with main modal)
@@ -38,30 +38,28 @@ interface POFormLineRowProps {
     idx: number;
     isView: boolean;
     isLockedByQC: boolean;
-    isLoadingUnits: boolean;
-    units: UOMListItem[];
     handleOpenProductSearch: (index: number) => void;
     remove: (index: number) => void;
     handleAddLine: () => void;
     register: UseFormRegister<POFormData>;
     errors: FieldErrors<POFormData>;
-    setValue: UseFormSetValue<POFormData>;
+
     control: Control<POFormData>;
+    onOpenUomPicker?: (index: number) => void;
 }
 
 export const POFormLineRow = memo(({ 
     idx, 
     isView, 
     isLockedByQC, 
-    isLoadingUnits, 
-    units, 
     handleOpenProductSearch, 
     remove, 
     handleAddLine,
     register,
     errors,
-    setValue,
-    control
+
+    control,
+    onOpenUomPicker
 }: POFormLineRowProps) => {
     // 🎯 Isolated watch for this specific row data
     const line = useWatch({ control, name: `po_lines.${idx}` });
@@ -134,22 +132,20 @@ export const POFormLineRow = memo(({
                 />
             </td>
             <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
-                <select
-                    {...register(`po_lines.${idx}.uom_id`, { valueAsNumber: true })}
-                    value={line?.uom_id || ''}
-                    onChange={(e) => {
-                        const val = e.target.value === '' ? 0 : Number(e.target.value);
-                        setValue(`po_lines.${idx}.uom_id`, val, { shouldValidate: true });
-                    }}
+                <button
+                    type="button"
+                    disabled={isView || isLockedByQC || !line?.item_id}
+                    onClick={() => onOpenUomPicker?.(idx)}
                     className={cn(
-                        `${ui.select} !h-9 text-center px-1 text-[13px] shadow-sm`,
-                        rowError?.uom_id ? "border-red-500 focus:ring-red-500/20 focus:border-red-500" : "border-slate-300 dark:border-slate-700"
+                        "w-full h-8 px-3 text-left flex items-center justify-between font-medium text-[13px] bg-white dark:bg-slate-900 border rounded-lg disabled:opacity-60 disabled:cursor-not-allowed shadow-sm",
+                        rowError?.uom_id ? "border-red-500" : "border-slate-300 dark:border-slate-700"
                     )}
-                    disabled={isView || isLockedByQC || isLoadingUnits}
                 >
-                    <option value="">{isLoadingUnits ? 'โหลด...' : 'หน่วย'}</option>
-                    {Array.isArray(units) && units.map((u: UOMListItem) => <option key={u.uom_id} value={u.uom_id}>{u.uom_name}</option>)}
-                </select>
+                    <span className="truncate">
+                        {line?.uom_name || (line?.uom_id ? `[ID: ${line.uom_id}]` : 'หน่วย')}
+                    </span>
+                    {!isView && !isLockedByQC && !!line?.item_id && <span className="text-gray-400 dark:text-gray-500 text-[10px] ml-1 shrink-0">▼</span>}
+                </button>
             </td>
             <td className="px-1.5 py-1 border-r border-gray-200 dark:border-gray-700">
                 <input
@@ -222,8 +218,6 @@ export const POFormLineRow = memo(({
         prevProps.idx === nextProps.idx &&
         prevProps.isView === nextProps.isView &&
         prevProps.isLockedByQC === nextProps.isLockedByQC &&
-        prevProps.isLoadingUnits === nextProps.isLoadingUnits &&
-        prevProps.units === nextProps.units &&
         prevProps.errors.po_lines?.[prevProps.idx] === nextProps.errors.po_lines?.[nextProps.idx]
         // Note: control, register, setValue, handleOpenProductSearch, remove, handleAddLine are stable references from hooks
     );

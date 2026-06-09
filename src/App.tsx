@@ -47,6 +47,9 @@ const VEListPage = React.lazy(() => import('@/modules/procurement/pages/ve/Vendo
 const PrintPRPage = React.lazy(() => import('@/modules/procurement/pages/pr/PrintPRPage'));
 const PrintPOPage = React.lazy(() => import('@/modules/procurement/pages/po/PrintPOPage'));
 const PrintRFQPage = React.lazy(() => import('@/modules/procurement/pages/rfq/PrintRFQPage'));
+const PrintAVPage = React.lazy(() => import('@/modules/procurement/pages/av/PrintAVPage'));
+const PrintQCPage = React.lazy(() => import('@/modules/procurement/pages/qc/PrintQCPage'));
+const PrintPOAPage = React.lazy(() => import('@/modules/procurement/pages/poa/PrintPOAPage'));
 
 // Roles Pages
 const RolesDashboard = React.lazy(() => import('@/modules/admin/pages/roles/RolesDashboard'));
@@ -239,6 +242,27 @@ function AppContent() {
               <ProtectedRoute>
                 <React.Suspense fallback={<GlobalLoading message="Loading RFQ Print Preview..." />}>
                   <PrintRFQPage />
+                </React.Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="av/:id" element={
+              <ProtectedRoute>
+                <React.Suspense fallback={<GlobalLoading message="Loading AV Print Preview..." />}>
+                  <PrintAVPage />
+                </React.Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="qc/:id" element={
+              <ProtectedRoute>
+                <React.Suspense fallback={<GlobalLoading message="Loading QC Print Preview..." />}>
+                  <PrintQCPage />
+                </React.Suspense>
+              </ProtectedRoute>
+            } />
+            <Route path="poa/:id" element={
+              <ProtectedRoute>
+                <React.Suspense fallback={<GlobalLoading message="Loading POA Print Preview..." />}>
+                  <PrintPOAPage />
                 </React.Suspense>
               </ProtectedRoute>
             } />

@@ -146,6 +146,7 @@ export interface PRLine {
   qty: number;                      // DECIMAL(18,4) (Postman: qty)
   uom: string;                      // VARCHAR(50) - หน่วยนับ
   uom_id: number;                   // INTEGER
+  item_uom_id?: number;
   warehouse_id?: number;            // INTEGER
   location?: string;                // Postman: location
   est_unit_price: number;           // DECIMAL(18,2) - ราคาต่อหน่วยโดยประมาณ
@@ -293,6 +294,7 @@ export interface CreatePRLineItem {
     qty: number;                    // decimal
     est_unit_price: number;         // decimal
     uom_id: number;                 // INTEGER
+    item_uom_id?: number;
     line_no?: number;               // INTEGER (optional)
     description?: string;           // TEXT (optional)
     location?: string;              // VARCHAR (optional)

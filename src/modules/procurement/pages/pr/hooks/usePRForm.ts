@@ -24,6 +24,7 @@ import { useToast } from '@/shared/components/ui/feedback/Toast';
 import { usePRHydration } from './usePRHydration';
 import { mapPRFormToPayload } from '@/modules/procurement/utils/pr-mappers';
 import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
+import { UOMConversionService } from '@/modules/master-data/inventory/services/uom-conversion.service';
 
 const PR_CONFIG = {
   MIN_LINES: 1,
@@ -56,7 +57,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess, readOnly = false }: 
     purchaseTaxOptions,
     currencies,
     masterItems,
-    masterUnits,
+    masterUoms,
     isLoading: isMasterDataLoading,
   } = usePRMasterData();
 
@@ -186,7 +187,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess, readOnly = false }: 
     isMasterDataLoading,
     warehouses,
     masterItems,
-    masterUnits,
+    masterUoms,
     onDataLoaded: handleDataLoaded
   });
 
@@ -381,6 +382,9 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess, readOnly = false }: 
           ? baseCost * conversionFactor
           : baseCost;
 
+        const purchasingUomId = product.purchasing_unit_id ? Number(product.purchasing_unit_id) : Number(product.uom_id || 1);
+        const purchasingUomName = product.purchasing_unit_name || product.uom_name || 'ชิ้น';
+
         const line: PRLineFormData = {
           ...currentLines[targetIndex],
           item_id: Number(product.item_id),
@@ -390,9 +394,8 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess, readOnly = false }: 
           warehouse_id: Number(product.warehouse_id || product.warehouse || 1),
           warehouse_code: warehouses.find(w => String(w.value) === String(product.warehouse_id || product.warehouse || 1))?.original?.warehouse_code || '',
           location: product.location || '',
-          // 🎯 THE CRITICAL FIX: Bind the UOM Data using backend-provided keys
-          uom: product.uom_name || product.uom_name || 'ชิ้น',
-          uom_id: Number(product.uom_id || product.uom_id || 1),
+          uom: purchasingUomName,
+          uom_id: purchasingUomId,
           // Store valid units for this product so select list filters intelligently (Trap 2 fix)
           _base_uom_name: product.uom_name || product.uom_name || '',
           _base_uom_id: Number(product.uom_id || product.uom_id || 1),
@@ -407,8 +410,21 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess, readOnly = false }: 
           _item_vendor_id: product.preferred_vendor_id ? Number(product.preferred_vendor_id) : undefined,
           required_receipt_type: "FULL",
           line_discount_raw: "0",
+          item_uom_id: undefined,
         };
       updateFieldArray(targetIndex, line);
+
+      // Asynchronously resolve item_uom_id conversion PK
+      if (product.item_id) {
+        UOMConversionService.getByItemId(Number(product.item_id)).then(response => {
+          const convs = response?.items || [];
+          const matchedConv = convs.find(c => Number(c.from_unit_id) === purchasingUomId) ||
+                             convs.find(c => Number(c.conversion_factor) === 1);
+          if (matchedConv) {
+            setValue(`lines.${targetIndex}.item_uom_id` as never, Number(matchedConv.conversion_id) as never, { shouldDirty: true });
+          }
+        }).catch(() => {});
+      }
     }
     setIsProductModalOpen(false);
   };
@@ -587,7 +603,7 @@ export const usePRForm = ({ id, isOpen, onClose, onSuccess, readOnly = false }: 
     isWarehouseModalOpen, setIsWarehouseModalOpen,
     isLocationModalOpen, setIsLocationModalOpen, activeWarehouseId,
     handleSubmit, setValue, watch, isSubmitting, isActionLoading, errors, handleFormError,
-    products, costCenters, projects, purchaseTaxOptions, currencies, masterUnits,
+    products, costCenters, projects, purchaseTaxOptions, currencies, masterUoms,
     addLine, removeLine, clearLine, updateLine, handleClearLines,
     openProductSearch, openWarehouseSearch, openLocationSearch, selectProduct, selectWarehouse, selectLocation, handleVendorSelect, onSubmit, handleDelete,
     handleVoid, control, reset, formMethods, user,
