@@ -108,6 +108,7 @@ export interface POLine {
     
     uom_id: number;                 // INTEGER
     uom_name?: string;              // Display
+    item_uom_id?: number;
     
     unit_price: number;             // numeric(18,4)
     discount_expression: string;    // New field

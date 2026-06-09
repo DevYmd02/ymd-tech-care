@@ -301,8 +301,7 @@ export default function POListPage() {
                         {['APPROVED', 'PARTIAL', 'ISSUED', 'COMPLETED'].includes(item.status?.toUpperCase()) && (
                             <button
                                 onClick={() => {
-                                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                    window.open(`${apiUrl}/po/${item.po_header_id || item.po_id}/pdf`, '_blank');
+                                    window.open(`/print/po/${item.po_header_id || item.po_id}`, '_blank');
                                 }}
                                 className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
                                 title="พิมพ์ใบสั่งซื้อ"
@@ -565,8 +564,7 @@ export default function POListPage() {
                                         {['APPROVED', 'PARTIAL', 'ISSUED', 'COMPLETED'].includes(item.status?.toUpperCase()) && (
                                             <button
                                                 onClick={() => {
-                                                    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                                    window.open(`${apiUrl}/po/${item.po_header_id || item.po_id}/pdf`, '_blank');
+                                                    window.open(`/print/po/${item.po_header_id || item.po_id}`, '_blank');
                                                 }}
                                                 className="flex-1 min-w-[70px] bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs font-bold py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                                             >

@@ -9,7 +9,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
-import { FileText, Eye, Send, Edit, Search, Plus } from 'lucide-react';
+import { FileText, Eye, Send, Edit, Search, Plus, Printer } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, RFQStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
@@ -589,6 +589,15 @@ export default function RFQListPage() {
                             onClick={() => handleView(item.rfq_id)}
                         >
                             <Eye size={16} />
+                        </button>
+
+                        {/* Print Preview — always visible */}
+                        <button 
+                            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-md transition-all"
+                            title="พิมพ์ / Print Preview"
+                            onClick={() => window.open(`/print/rfq/${item.rfq_id}`, '_blank')}
+                        >
+                            <Printer size={16} />
                         </button>
                         
                         {!isTerminal && (

@@ -1,10 +1,14 @@
-import React from 'react';
-import { useFormContext, Controller } from 'react-hook-form';
+import React, { useState, useMemo } from 'react';
+import { useFormContext } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { FileBox, Eraser, Plus, Trash2, Search, AlertTriangle } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { PRFormData, PRLineFormData } from '@/modules/procurement/schemas/pr-schemas';
 import type { UOMListItem } from '@/modules/master-data/types/master-data-types';
 import { parseDiscountAmount } from '@/modules/procurement/utils/pricing.utils';
+import { UOMPickerModal, type UOMPickerItem } from '@/shared/components/ui/feedback/UOMPickerModal';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
+import { ItemBarcodeService } from '@inventory/services/item-barcode.service';
 
 interface PRFormLinesProps {
     lines: FieldArrayWithId<PRFormData, "lines", "id">[];
@@ -17,7 +21,7 @@ interface PRFormLinesProps {
     openWarehouseSearch: (index: number) => void;
     openLocationSearch: (index: number) => void;
     readOnly?: boolean;
-    masterUnits?: UOMListItem[];
+    masterUoms?: UOMListItem[];
 }
 
 export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
@@ -31,11 +35,59 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
     openWarehouseSearch,
     openLocationSearch,
     readOnly = false,
-    masterUnits = []
+    masterUoms = []
 }) => {
-    const { register, watch: watchForm, control, setValue } = useFormContext<PRFormData>();
-    const watchedLines = watchForm('lines');
+    const { register, watch: watchForm } = useFormContext<PRFormData>();
+    const watchedLines = watchForm('lines') || [];
     const headerVendorId = watchForm('preferred_vendor_id');
+
+    // --- UOM Picker States ---
+    const [activeUomRowIndex, setActiveUomRowIndex] = useState<number | null>(null);
+    const activeLine = activeUomRowIndex !== null ? watchedLines[activeUomRowIndex] : null;
+    const activeItemId = activeLine ? Number(activeLine.item_id || 0) : 0;
+
+    // Fetch conversions for selected item
+    const { data: conversionData, isLoading: isLoadingConversions } = useQuery({
+        queryKey: ['pr-uom-conversions', activeItemId],
+        queryFn: () => UOMConversionService.getByItemId(activeItemId),
+        enabled: !!activeItemId && activeItemId > 0,
+        staleTime: 2 * 60 * 1000,
+    });
+
+    // Fetch barcodes for selected item
+    const { data: barcodeData } = useQuery({
+        queryKey: ['pr-item-barcodes', activeItemId],
+        queryFn: () => ItemBarcodeService.getAll({ item_id: activeItemId }),
+        enabled: !!activeItemId && activeItemId > 0,
+        staleTime: 2 * 60 * 1000,
+    });
+
+    // Map UOM conversions to UOMPickerItem[]
+    const uomPickerItems = useMemo((): UOMPickerItem[] => {
+        const conversions = conversionData?.items || [];
+        const barcodes = barcodeData?.items || [];
+        return conversions.map(conv => {
+            const uomInfo = masterUoms.find(u => Number(u.uom_id) === Number(conv.from_unit_id));
+            const matchedBarcode = barcodes.find(b => Number(b.uom_id) === Number(conv.conversion_id));
+            return {
+                conversion_id: conv.conversion_id,
+                from_unit_id: conv.from_unit_id,
+                from_unit_name: conv.from_unit_name || uomInfo?.uom_name || String(conv.from_unit_id),
+                from_unit_name_en: uomInfo?.uom_name_en || uomInfo?.uom_nameeng || uomInfo?.uom_code || undefined,
+                conversion_factor: conv.conversion_factor,
+                barcode: matchedBarcode?.barcode || undefined,
+            };
+        });
+    }, [conversionData, masterUoms, barcodeData]);
+
+    const handleSelectUom = (item: UOMPickerItem) => {
+        if (activeUomRowIndex !== null) {
+            updateLine(activeUomRowIndex, 'uom_id', Number(item.from_unit_id));
+            updateLine(activeUomRowIndex, 'item_uom_id', Number(item.conversion_id));
+            updateLine(activeUomRowIndex, 'uom', item.from_unit_name);
+        }
+        setActiveUomRowIndex(null);
+    };
 
     const tableInputClass = 'w-full h-8 px-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 !rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white dark:focus:bg-gray-700 dark:text-white shadow-sm transition-all';
     const lockedInputClass = 'w-full h-8 px-3 text-sm bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 !rounded-xl text-gray-600 dark:text-gray-400 cursor-not-allowed shadow-sm';
@@ -169,42 +221,17 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                                     </td>
                                     
                                     <td className={tdBaseClass}>
-                                        <Controller
-                                            name={`lines.${index}.uom_id`}
-                                            control={control}
-                                            render={({ field }) => {
-                                                // Dropdown must show ALL system units unconditionally for flexible select
-                                                const options = masterUnits.map((u: UOMListItem) => ({ 
-                                                    id: Number(u.uom_id || u.uom_id), 
-                                                    name: u.uom_name || u.uom_name 
-                                                }));
-
-                                                // Fallback edit mode guard (Trap 1 style safety)
-                                                if (options.length === 0 && line.uom && line.uom_id) {
-                                                    options.push({ id: Number(line.uom_id), name: line.uom });
-                                                }
-
-                                                return (
-                                                    <select
-                                                        {...field}
-                                                        value={field.value || ''}
-                                                        disabled={readOnly}
-                                                        className={`${tableInputClass} text-center px-1`}
-                                                        onChange={(e) => {
-                                                            const selectedId = e.target.value ? Number(e.target.value) : undefined;
-                                                            field.onChange(selectedId);
-                                                            const selectedName = options.find((o) => Number(o.id) === selectedId)?.name || '';
-                                                            setValue(`lines.${index}.uom`, selectedName);
-                                                        }}
-                                                    >
-                                                        <option value="">- หน่วย -</option>
-                                                        {options.map((opt) => (
-                                                            <option key={`${opt.id}-${index}`} value={opt.id}>{opt.name}</option>
-                                                        ))}
-                                                    </select>
-                                                );
-                                            }}
-                                        />
+                                        <button
+                                            type="button"
+                                            disabled={readOnly || !line.item_id}
+                                            onClick={() => setActiveUomRowIndex(index)}
+                                            className={`${tableInputClass} text-left flex items-center justify-between font-medium disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:opacity-60 disabled:cursor-not-allowed`}
+                                        >
+                                            <span className="truncate">
+                                                {line.uom || (line.uom_id ? `[ID: ${line.uom_id}]` : '- หน่วย -')}
+                                            </span>
+                                            {!readOnly && !!line.item_id && <span className="text-gray-400 dark:text-gray-500 text-[10px] ml-1 shrink-0">▼</span>}
+                                        </button>
                                     </td>
                                     
                                     <td className={tdBaseClass}>
@@ -275,6 +302,17 @@ export const PRFormLines: React.FC<PRFormLinesProps> = React.memo(({
                 </button>
             </div>
             )}
+
+            {/* UOM Picker Modal Component */}
+            <UOMPickerModal
+                isOpen={activeUomRowIndex !== null}
+                onClose={() => setActiveUomRowIndex(null)}
+                onSelect={handleSelectUom}
+                items={uomPickerItems}
+                isLoading={isLoadingConversions}
+                selectedFromUnitId={activeLine ? Number(activeLine.uom_id || 0) : undefined}
+                title={`เลือกหน่วยนับสำหรับ ${activeLine?.item_name || 'สินค้า'}`}
+            />
         </div>
     );
 });

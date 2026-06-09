@@ -34,13 +34,13 @@ export const RequisitionFormHeader: React.FC<RequisitionFormHeaderProps> = ({
     readOnly = false,
 }) => {
     const { register, control, formState: { errors }, setValue } = useFormContext<RequisitionHeaderFormData>();
-    const watchedSaveEmpId = useWatch({ control, name: 'save_emp_id' });
-    const watchedAuditEmpId = useWatch({ control, name: 'audit_emp_id' });
+    const watchedCreatedByEmpId = useWatch({ control, name: 'created_by_emp_id' });
+    const watchedRequestByEmpId = useWatch({ control, name: 'request_by_emp_id' });
 
     const [isEmpSearchOpen, setIsEmpSearchOpen] = useState(false);
 
     const isLocked = readOnly;
-    const selectedEmpName = empOptions.find(e => e.id === watchedAuditEmpId)?.name || '';
+    const selectedEmpName = empOptions.find(e => e.id === watchedRequestByEmpId)?.name || '';
 
     // Premium Styles from Sales Pattern
     const inputClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white placeholder-gray-400 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -215,13 +215,13 @@ export const RequisitionFormHeader: React.FC<RequisitionFormHeaderProps> = ({
                         <input
                             type="text"
                             readOnly
-                            value={empOptions.find(e => e.id === watchedSaveEmpId)?.name || (watchedSaveEmpId ? 'กำลังโหลด...' : '-- ไม่ระบุ --')}
+                            value={empOptions.find(e => e.id === watchedCreatedByEmpId)?.name || (watchedCreatedByEmpId ? 'กำลังโหลด...' : '-- ไม่ระบุ --')}
                             className={`${inputClass} bg-gray-50 dark:bg-gray-800/50 italic text-gray-500 font-medium border-gray-200 dark:border-gray-700 cursor-not-allowed`}
                         />
-                        {/* Hidden input to keep save_emp_id in the form state */}
-                        <input type="hidden" {...register('save_emp_id')} />
+                        {/* Hidden input to keep created_by_emp_id in the form state */}
+                        <input type="hidden" {...register('created_by_emp_id')} />
                     </div>
-                    {errors.save_emp_id && <span className="text-[10px] text-red-500 font-medium">{errors.save_emp_id.message}</span>}
+                    {errors.created_by_emp_id && <span className="text-[10px] text-red-500 font-medium">{errors.created_by_emp_id.message}</span>}
                 </div>
 
                 {/* 8. ผู้ขอเบิก */}
@@ -234,7 +234,7 @@ export const RequisitionFormHeader: React.FC<RequisitionFormHeaderProps> = ({
                             placeholder="คลิกเพื่อค้นหาผู้ขอเบิก"
                             value={selectedEmpName}
                             onClick={() => !isLocked && setIsEmpSearchOpen(true)}
-                            className={`${inputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${getErrorClass('audit_emp_id')}`}
+                            className={`${inputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${getErrorClass('request_by_emp_id')}`}
                         />
                         {!isLocked && (
                             <button
@@ -245,9 +245,9 @@ export const RequisitionFormHeader: React.FC<RequisitionFormHeaderProps> = ({
                                 <Search size={16} />
                             </button>
                         )}
-                        <input type="hidden" {...register('audit_emp_id')} />
+                        <input type="hidden" {...register('request_by_emp_id')} />
                     </div>
-                    {errors.audit_emp_id && <span className="text-[10px] text-red-500 font-medium">{errors.audit_emp_id.message}</span>}
+                    {errors.request_by_emp_id && <span className="text-[10px] text-red-500 font-medium">{errors.request_by_emp_id.message}</span>}
                 </div>
 
 
@@ -269,7 +269,7 @@ export const RequisitionFormHeader: React.FC<RequisitionFormHeaderProps> = ({
                     isOpen={isEmpSearchOpen}
                     onClose={() => setIsEmpSearchOpen(false)}
                     onSelect={(emp) => {
-                        setValue('audit_emp_id', String(emp.id));
+                        setValue('request_by_emp_id', String(emp.id));
                     }}
                 />
             )}

@@ -46,7 +46,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
     projects,
     warehouses,
     masterItems,
-    masterUnits,
+    masterUoms,
     isLoading: isMasterDataLoading,
   } = usePRMasterData();
 
@@ -147,7 +147,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
       });
 
       const unitLookup: Record<number, string> = {};
-      masterUnits.forEach(u => {
+      masterUoms.forEach(u => {
         unitLookup[u.uom_id] = u.uom_name || u.uom_name_en || '';
       });
 
@@ -275,7 +275,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
     } finally {
       setIsSubmitting(false);
     }
-  }, [reset, toast, warehouses, masterItems, masterUnits]);
+  }, [reset, toast, warehouses, masterItems, masterUoms]);
 
   const loadAVData = useCallback(async (av: ApprovalHeader) => {
     if (!av.pr_id) return;
@@ -283,7 +283,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
   }, [loadPRData]);
 
   useEffect(() => {
-    if (isOpen && id && !isMasterDataLoading && warehouses.length > 0 && masterItems.length > 0 && masterUnits.length > 0) {
+    if (isOpen && id && !isMasterDataLoading && warehouses.length > 0 && masterItems.length > 0 && masterUoms.length > 0) {
       if (hydrationIdRef.current !== id) {
           loadPRData(id, approvalItem);
       }
@@ -294,7 +294,7 @@ export const useAVForm = ({ id, isOpen, onClose, onSuccess, approvalItem }: UseA
         abortControllerRef.current = null;
       }
     }
-  }, [isOpen, id, isMasterDataLoading, warehouses.length, masterItems.length, masterUnits.length, loadPRData, approvalItem]);
+  }, [isOpen, id, isMasterDataLoading, warehouses.length, masterItems.length, masterUoms.length, loadPRData, approvalItem]);
 
   useEffect(() => {
     return () => {

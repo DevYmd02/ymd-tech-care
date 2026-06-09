@@ -196,6 +196,7 @@ export const usePOHydration = ({
                         qty,
                         qty_ordered: qty,
                         uom_id: Number(vqL?.uom_id || prL?.uom_id || 0),
+                        item_uom_id: (vqL as unknown as Record<string, unknown>)?.item_uom_id || (prL as unknown as Record<string, unknown>)?.item_uom_id ? Number((vqL as unknown as Record<string, unknown>)?.item_uom_id || (prL as unknown as Record<string, unknown>)?.item_uom_id) : undefined,
                         unit_price: price,
                         discount_expression: discExpr,
                         discount_amount: parseDiscountAmount(discExpr, qty * price),

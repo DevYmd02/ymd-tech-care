@@ -17,8 +17,8 @@ export interface IssueRequisitionHeader {
     emp_dept_id: string;           // uuid (FK → แผนก)
     job_id: string;                // uuid (FK → job)
     branch_id: string;             // uuid (FK → สาขา)
-    save_emp_id: string;           // uuid (FK → emp ผู้บันทึก)
-    audit_emp_id: string;          // uuid (FK → emp ผู้ขอเบิก)
+    created_by_emp_id: string;     // uuid (FK → emp ผู้บันทึก)
+    request_by_emp_id: string;     // uuid (FK → emp ผู้ขอเบิก)
     qty_total: number;             // numeric(18,3) - คำนวณอัตโนมัติจาก line
     stock_effect_ic: number;       // smallint (0, 1, -1)
     remark?: string;               // varchar(255)

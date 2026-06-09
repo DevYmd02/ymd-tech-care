@@ -73,6 +73,7 @@ export const mapPRFormToPayload = (data: PRFormData, isEditMode: boolean): Creat
             qty: Number(Number(line.qty || 0).toFixed(4)),
             est_unit_price: Number(Number(line.est_unit_price || 0).toFixed(4)),
             uom_id: Number(line.uom_id),
+            item_uom_id: line.item_uom_id ? Number(line.item_uom_id) : undefined,
             required_receipt_type: line.required_receipt_type || "FULL",
             line_discount_raw: String(line.line_discount_raw || '0'),
             remark: line.remark || "",

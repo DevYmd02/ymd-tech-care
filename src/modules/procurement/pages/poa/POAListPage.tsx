@@ -166,9 +166,7 @@ export default function POAListPage() {
                             {(item.status === 'APPROVED' || item.status === 'PARTIAL') && item.approval_id && (
                                 <button
                                     onClick={() => {
-                                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                        const approvalId = item.approval_id;
-                                        window.open(`${apiUrl}/po-approval/${approvalId}/pdf`, '_blank');
+                                        window.open(`/print/poa/${item.approval_id}`, '_blank');
                                     }}
                                     className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-all"
                                     title="พิมพ์ใบอนุมัติ"
@@ -340,11 +338,9 @@ export default function POAListPage() {
                                             </button>
                                             {(item.status === 'APPROVED' || item.status === 'PARTIAL') && item.approval_id && (
                                                 <button
-                                                        onClick={() => {
-                                                            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                                            const approvalId = item.approval_id;
-                                                            window.open(`${apiUrl}/po-approval/${approvalId}/pdf`, '_blank');
-                                                        }}
+                                                    onClick={() => {
+                                                        window.open(`/print/poa/${item.approval_id}`, '_blank');
+                                                    }}
                                                     className="flex-1 bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 text-xs py-2 rounded-lg transition-colors flex items-center justify-center gap-1.5 font-bold"
                                                 >
                                                     <Printer size={16} /> พิมพ์

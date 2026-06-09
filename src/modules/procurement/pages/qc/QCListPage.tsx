@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, keepPreviousData, useQueryClient } from '@tanstack/react-query';
-import { Scale, Eye, Pencil, Search, Plus, Trophy, Clock } from 'lucide-react';
+import { Scale, Eye, Pencil, Search, Plus, Trophy, Clock, Printer } from 'lucide-react';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { PageListLayout, SmartTable, QCStatusBadge, FilterField, MobileListCard, MobileListContainer } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
@@ -278,6 +278,15 @@ export default function QCListPage() {
                         >
                             <Eye className="w-4 h-4" />
                         </button>
+                        {item.qc_id && (
+                            <button
+                                onClick={() => window.open(`/print/qc/${item.qc_id}`, '_blank')}
+                                className="p-1 px-1.5 rounded-md text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                title="พิมพ์ใบเปรียบเทียบราคา"
+                            >
+                                <Printer className="w-4 h-4" />
+                            </button>
+                        )}
                         {!isConfirmed && (
                             <button
                                 onClick={() => handleEdit(item)}
@@ -478,6 +487,14 @@ export default function QCListPage() {
                                         >
                                             <Eye size={14} /> ดู
                                         </button>
+                                        {item.qc_id && (
+                                            <button
+                                                onClick={() => window.open(`/print/qc/${item.qc_id}`, '_blank')}
+                                                className="flex-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                            >
+                                                <Printer size={14} /> พิมพ์
+                                            </button>
+                                        )}
                                         {!item.vq_header_id && (
                                             <button
                                                 onClick={() => handleEdit(item)}

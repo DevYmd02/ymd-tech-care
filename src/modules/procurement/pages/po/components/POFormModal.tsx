@@ -6,8 +6,12 @@
  *
  *  Business logic extracted to usePOForm hook.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { FormProvider, useWatch, Controller } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
+import { UOMPickerModal, type UOMPickerItem } from '@/shared/components/ui/feedback/UOMPickerModal';
+import { UOMConversionService } from '@inventory/services/uom-conversion.service';
+import { ItemBarcodeService } from '@inventory/services/item-barcode.service';
 import { SavingOverlay } from '@/shared/components/ui/feedback/SavingOverlay';
 import { ProcurementFormSkeleton } from '@/modules/procurement/shared/components/ProcurementFormSkeleton';
 import { ErrorBoundary } from '@/shared/components/system/ErrorBoundary';
@@ -121,8 +125,7 @@ export default function POFormModal({
         isConfirmModalOpen,
         setIsConfirmModalOpen,
         isSubmitting,
-        units,
-        isLoadingUnits,
+        uoms,
         taxCodes,
         isLoadingTaxCodes,
         existingPO,
@@ -143,6 +146,55 @@ export default function POFormModal({
     const handleOpenProductSearch = (index: number) => {
         setActiveSearchIndex(index);
         setIsProductModalOpen(true);
+    };
+
+    // --- UOM Picker States ---
+    const [activeUomRowIndex, setActiveUomRowIndex] = useState<number | null>(null);
+    const poLines = useWatch({ control, name: 'po_lines' }) || [];
+    const activeUomLine = activeUomRowIndex !== null ? poLines[activeUomRowIndex] : null;
+    const activeItemId = activeUomLine ? Number(activeUomLine.item_id || 0) : 0;
+
+    // Fetch conversions for selected item
+    const { data: conversionData, isLoading: isLoadingConversions } = useQuery({
+        queryKey: ['po-uom-conversions', activeItemId],
+        queryFn: () => UOMConversionService.getByItemId(activeItemId),
+        enabled: !!activeItemId && activeItemId > 0,
+        staleTime: 2 * 60 * 1000,
+    });
+
+    // Fetch barcodes for selected item
+    const { data: barcodeData } = useQuery({
+        queryKey: ['po-item-barcodes', activeItemId],
+        queryFn: () => ItemBarcodeService.getAll({ item_id: activeItemId }),
+        enabled: !!activeItemId && activeItemId > 0,
+        staleTime: 2 * 60 * 1000,
+    });
+
+    // Map UOM conversions to UOMPickerItem[]
+    const uomPickerItems = useMemo((): UOMPickerItem[] => {
+        const conversions = conversionData?.items || [];
+        const barcodes = barcodeData?.items || [];
+        return conversions.map(conv => {
+            const uomInfo = uoms.find(u => Number(u.uom_id) === Number(conv.from_unit_id));
+            const matchedBarcode = barcodes.find(b => Number(b.uom_id) === Number(conv.conversion_id));
+            return {
+                conversion_id: conv.conversion_id,
+                from_unit_id: conv.from_unit_id,
+                from_unit_name: conv.from_unit_name || uomInfo?.uom_name || String(conv.from_unit_id),
+                from_unit_name_en: uomInfo?.uom_name_en || uomInfo?.uom_nameeng || uomInfo?.uom_code || undefined,
+                conversion_factor: conv.conversion_factor,
+                barcode: matchedBarcode?.barcode || undefined,
+            };
+        });
+    }, [conversionData, uoms, barcodeData]);
+
+    const handleSelectUom = (item: UOMPickerItem) => {
+        if (activeUomRowIndex !== null) {
+            setValue(`po_lines.${activeUomRowIndex}.uom_id`, Number(item.from_unit_id), { shouldValidate: true, shouldDirty: true });
+            setValue(`po_lines.${activeUomRowIndex}.item_uom_id`, Number(item.conversion_id), { shouldDirty: true });
+            setValue(`po_lines.${activeUomRowIndex}.uom_name`, item.from_unit_name, { shouldDirty: true });
+        }
+        setActiveUomRowIndex(null);
     };
 
     if (!isOpen) return null;
@@ -181,8 +233,7 @@ export default function POFormModal({
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                        window.open(`${apiUrl}/po/${poId}/pdf`, '_blank');
+                                        window.open(`/print/po/${poId}`, '_blank');
                                     }}
                                     className="px-4 py-2 bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md text-sm font-medium flex items-center gap-1.5 border border-blue-200 dark:border-blue-800 transition-all"
                                 >
@@ -556,15 +607,13 @@ export default function POFormModal({
                                                 idx={idx}
                                                 isView={isView}
                                                 isLockedByQC={isLockedByQC}
-                                                isLoadingUnits={isLoadingUnits}
-                                                units={units}
                                                 handleOpenProductSearch={handleOpenProductSearch}
                                                 remove={remove}
                                                 handleAddLine={handleAddLine}
                                                 register={register}
                                                 errors={errors}
-                                                setValue={setValue}
                                                 control={control}
+                                                onOpenUomPicker={(index) => setActiveUomRowIndex(index)}
                                             />
                                         ))}
                                     </tbody>
@@ -632,6 +681,16 @@ export default function POFormModal({
                             }
                             setIsProductModalOpen(false);
                         }}
+                    />
+
+                    <UOMPickerModal
+                        isOpen={activeUomRowIndex !== null}
+                        onClose={() => setActiveUomRowIndex(null)}
+                        onSelect={handleSelectUom}
+                        items={uomPickerItems}
+                        isLoading={isLoadingConversions}
+                        selectedFromUnitId={activeUomLine ? Number(activeUomLine.uom_id || 0) : undefined}
+                        title={`เลือกหน่วยนับสำหรับ ${activeUomLine?.item_name || activeUomLine?.description || 'สินค้า'}`}
                     />
                     </ErrorBoundary>
             )}

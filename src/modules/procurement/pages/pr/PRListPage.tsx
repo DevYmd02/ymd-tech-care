@@ -530,8 +530,7 @@ export default function PRListPage() {
                                             {['APPROVED', 'PARTIAL', 'COMPLETED'].includes(item.status as string) && (
                                                 <button
                                                     onClick={() => {
-                                                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-                                                        window.open(`${apiUrl}/pr/${item.pr_id}/pdf`, '_blank');
+                                                        window.open(`/print/pr/${item.pr_id}`, '_blank');
                                                     }}
                                                     className="flex-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-1"
                                                 >

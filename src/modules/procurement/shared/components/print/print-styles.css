@@ -1,0 +1,273 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;700&family=Prompt:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Sarabun:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
+
+:root {
+  /* Custom Print CSS Variables editable by UI Config */
+  --print-font-family: "Sarabun", "TH Sarabun New", sans-serif;
+  --print-base-size: 11pt;
+  --print-header-mt: 8mm;
+  --print-name-size: 16pt;
+  --print-name-mb: 12px;
+  --print-addr-size: 10pt;
+  --print-addr-lh: 1.8;
+  --print-table-size: 9.5pt;
+  --print-page-padding-top: 16mm;
+  --print-page-padding-bottom: 18mm;
+  --print-page-padding-left-right: 14mm;
+}
+
+.print-shell {
+  background: #e5e7eb;           /* เทาเฉพาะ preview */
+  min-height: 100vh;
+  width: 100%; min-width: 210mm;
+  padding: 16px 0 32px;
+  font-family: var(--print-font-family);
+  color: #000; color-scheme: light;
+}
+html:has(.print-shell),
+body:has(.print-shell),
+body:has(.print-shell) > div:first-child {
+  background: #e5e7eb !important;
+  color-scheme: light;
+  min-width: 210mm;
+}
+
+.a4-page {
+  width: 210mm; min-height: 297mm;
+  margin: 0 auto 16px;
+  background: #fff;
+  padding: var(--print-page-padding-top) var(--print-page-padding-left-right) var(--print-page-padding-bottom);
+  position: relative;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  font-size: var(--print-base-size); line-height: 1.35;
+  box-sizing: border-box;
+  display: flex; flex-direction: column;     /* ✅ ใช้ flex column เพื่อ split body/bottom */
+}
+.a4-body   { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.a4-body > .items-table { flex: 1 1 auto; height: 1px; }   /* ✅ ตารางยืดเต็ม body */
+.items-table .spacer-row td { height: 100%; border-bottom: none; padding: 0; }
+.a4-bottom { flex: 0 0 auto; }                              /* ✅ signature/terms ติดล่าง */
+
+.a4-page-no    { position: absolute; top: 6mm; right: 8mm; font-size: 0.9em; font-weight: 600; }
+.company-header{ text-align: center; margin-bottom: 8px; margin-top: var(--print-header-mt); }
+.company-name  { font-weight: 700; font-size: var(--print-name-size); margin-bottom: var(--print-name-mb); }
+.company-addr  { font-size: var(--print-addr-size); line-height: var(--print-addr-lh); }
+.form-title    { text-align: center; font-weight: 700; font-size: 1.3em; margin: 14px 0 16px; }
+
+.vendor-code-row     { padding: 4px 0 4px 4px; font-size: 0.95em; display: flex; gap: 12px; }
+.vendor-code-row .k  { font-weight: 700; min-width: 90px; }
+
+.header-grid         { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+.header-grid .col    { border: 2px solid #00008B; border-radius: 8px; padding: 6px 10px; }
+.kv                  { display: flex; gap: 6px; padding: 1px 0; font-size: 0.95em; }
+.kv .k               { min-width: 90px; flex-shrink: 0; font-weight: 600; }
+
+.items-table         { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--print-table-size);
+                       border: 2px solid #00008B; border-bottom: none;
+                       border-radius: 8px 8px 0 0; overflow: hidden; table-layout: fixed; }
+.items-table th, .items-table td {
+  border: 0; border-right: 1.5px solid #00008B; border-bottom: 1px solid #00008B;
+  padding: 3px 6px; vertical-align: top; word-wrap: break-word; overflow-wrap: break-word;
+}
+.items-table th:last-child, .items-table td:last-child { border-right: none; }
+.items-table thead th { font-weight: 700; text-align: center !important; }
+.items-table .ta-left{text-align:left} .ta-right{text-align:right;font-variant-numeric:tabular-nums} .ta-center{text-align:center}
+.items-table .empty-row td { height: 28px; border-top: none; border-bottom: none; }
+.items-table tbody tr:last-child td { border-bottom: none; }
+.items-table .row-extra { font-size: 0.8em; }
+
+.summary-block       { width: 100%; border-collapse: separate; border-spacing: 0;
+                       border: 2px solid #00008B; border-radius: 0 0 8px 8px;
+                       overflow: hidden; font-size: 0.95em; table-layout: fixed; }
+.summary-block td    { border: 0; border-right: 1.5px solid #00008B; border-bottom: 1px solid #00008B;
+                       padding: 4px 8px; vertical-align: top; }
+.summary-block td:last-child { border-right: none; }
+.summary-block tr:last-child td { border-bottom: none; }
+.summary-block .notes-cell { width: 55%; }
+.summary-block .notes-body { min-height: 60px; white-space: pre-wrap; }
+.summary-block .sum-label  { width: 28%; font-weight: 600; }
+.summary-block .sum-value  { width: 17%; text-align: right; font-variant-numeric: tabular-nums; }
+.summary-block .sum-label.grand,
+.summary-block .sum-value.grand { font-weight: 700; }
+.summary-block .baht-cell  { text-align: center; font-style: italic; }
+
+.terms-block { border: 2px solid #00008B; border-radius: 8px; padding: 6px 10px; margin-top: 10px; font-size: 0.9em; }
+
+.sig-row     { display: grid; gap: 0; margin-top: 22px; border: 2px solid #00008B; border-radius: 8px; overflow: hidden; }
+.sig         { text-align: center; font-size: 0.9em; padding: 14px 10px 10px; border-left: 1px solid #00008B; }
+.sig:first-child { border-left: none; }
+.sig-line    { border-top: 1px solid #000; margin-top: 26px; width: 80%; margin-left: auto; margin-right: auto; }
+.sig-label   { margin-top: 6px; font-weight: 600; font-size: 0.8em; line-height: 1; }
+.sig-date    { margin-top: 4px; font-size: 0.8em; }
+.sig-date .u { display: inline-block; border-bottom: 1px solid #000; min-width: 40px; height: 1em; vertical-align: -2px; }
+.sig-date .u.yr { min-width: 56px; }
+
+/* Print Toolbar styling for preview */
+.print-toolbar {
+  width: 210mm;
+  margin: 0 auto 10px;
+  display: flex;
+  justify-content: space-between;
+}
+.btn-back, .btn-print {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-size: 10pt;
+}
+.btn-back {
+  background: #f3f4f6;
+  color: #374151;
+}
+.btn-print {
+  background: #00008B;
+  color: #fff;
+}
+
+/* Print Config Panel */
+.print-config-container {
+  width: 210mm;
+  margin: 0 auto 10px;
+}
+.print-shell:has(.landscape-print) .print-config-container {
+  width: 297mm;
+}
+.print-config-panel {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 10px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+.config-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.config-group label {
+  font-size: 9.5pt;
+  font-weight: 600;
+  color: #374151;
+  display: flex;
+  justify-content: space-between;
+}
+.config-group label span {
+  font-weight: normal;
+  color: #6b7280;
+}
+.config-group input[type="range"] {
+  width: 100%;
+  accent-color: #00008B;
+  cursor: pointer;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+}
+.btn-config-toggle {
+  background: #fff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 10pt;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.btn-config-toggle:hover {
+  background: #f9fafb;
+  border-color: #c0c4cc;
+}
+.btn-reset {
+  background: #dc2626;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 9pt;
+  border: none;
+  cursor: pointer;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-reset:hover {
+  background: #b91c1c;
+}
+
+/* ===== Print: A4 เต็มหน้า ไม่มีพื้นที่เทา ===== */
+@page landscape-layout {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+.landscape-print {
+  width: 297mm !important;
+  min-height: 210mm;
+  margin: 0 auto 16px;
+  background: #fff;
+  padding: 10mm 14mm 12mm;
+  position: relative;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  font-size: var(--print-base-size); line-height: 1.35;
+  box-sizing: border-box;
+  display: flex; flex-direction: column;
+}
+
+.print-shell:has(.landscape-print) {
+  min-width: 297mm;
+}
+
+.print-shell:has(.landscape-print) .print-toolbar {
+  width: 297mm;
+}
+
+@media print {
+  html, body,
+  html:has(.print-shell),
+  body:has(.print-shell),
+  body:has(.print-shell) > div:first-child {
+    background: #fff !important;        /* ❗ override สีเทา preview */
+  }
+  .print-shell { background: #fff !important; padding: 0 !important; }
+  .a4-page {
+    width: auto !important;
+    min-height: 277mm !important;       /* 297mm - margin@page 2*10mm */
+    height: 277mm !important;
+    margin: 0 !important;
+    padding: 2mm !important;
+    box-shadow: none !important;
+    page-break-after: always;
+    box-sizing: border-box !important;
+  }
+  .a4-page:last-child { page-break-after: auto; }
+  
+  .landscape-print {
+    page: landscape-layout;
+    width: auto !important;
+    min-height: 190mm !important;       /* 210mm - margin@page 2*10mm */
+    height: 190mm !important;
+    margin: 0 !important;
+    padding: 2mm !important;
+    box-shadow: none !important;
+    page-break-after: always;
+    box-sizing: border-box !important;
+  }
+  .landscape-print:last-child { page-break-after: auto; }
+  
+  .print-toolbar, .no-print { display: none !important; }
+  .items-table, .summary-block, .header-block, .terms-block, .sig-row {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  @page { size: A4 portrait; margin: 10mm 10mm; }
+}
