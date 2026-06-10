@@ -7,11 +7,12 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ClipboardList, Plus, Search, Eye, Edit, Send } from 'lucide-react';
+import { ClipboardList, Plus, Search, Eye, Edit, Send, Clock } from 'lucide-react';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 import { toast } from 'react-hot-toast';
 
 import { PageListLayout, SmartTable, FilterField } from '@ui';
+import { RequisitionApprovalHistoryModal } from './components/RequisitionApprovalHistoryModal';
 import { useTableFilters } from '@/shared/hooks';
 
 import { RequisitionService } from './services/requisition.service';
@@ -46,6 +47,20 @@ function CancelBadge({ flag }: { flag: string }) {
         return (
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                 รออนุมัติ
+            </span>
+        );
+    }
+    if (flag === 'APPROVED') {
+        return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                อนุมัติแล้ว
+            </span>
+        );
+    }
+    if (flag === 'REJECTED') {
+        return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                ไม่อนุมัติ
             </span>
         );
     }
@@ -93,6 +108,10 @@ export default function RequisitionListPage() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [isReadOnly, setIsReadOnly] = useState(false);
+    
+    // Approval History Modal State
+    const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+    const [selectedApproveId, setSelectedApproveId] = useState<string | null>(null);
 
     // ── API Query ───────────────────────────────────────────────────────────────────
     const apiParams: RequisitionListParams = {
@@ -127,6 +146,11 @@ export default function RequisitionListPage() {
         setSelectedId(id);
         setIsReadOnly(false);
         setIsFormOpen(true);
+    }, []);
+
+    const handleViewApproval = useCallback((id: string) => {
+        setSelectedApproveId(id);
+        setIsApproveModalOpen(true);
     }, []);
 
     const handleSendApproval = useCallback(async (id: string) => {
@@ -260,40 +284,68 @@ export default function RequisitionListPage() {
             colHelper.display({
                 id: 'actions',
                 header: () => <div className="flex justify-center items-center w-full">การจัดการ</div>,
-                cell: ({ row }) => (
-                    <div className="flex items-center justify-center gap-1.5 w-full">
-                        <button
-                            onClick={() => handleView(row.original.docu_item_id)}
-                            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                            title="ดูรายละเอียด"
-                        >
-                            <Eye size={16} />
-                        </button>
-                        <button
-                            onClick={() => handleEdit(row.original.docu_item_id)}
-                            className="flex items-center gap-1 px-2 py-1 text-xs font-bold text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30 rounded-md transition-colors"
-                            title="แก้ไข"
-                        >
-                            <Edit size={14} />
-                            <span>แก้ไข</span>
-                        </button>
-                        {row.original.cancel_flag === 'DRAFT' && (
+                cell: ({ row }) => {
+                    const status = row.original.cancel_flag;
+                    return (
+                        <div className="flex items-center justify-center gap-1.5 w-full">
                             <button
-                                onClick={() => handleSendApproval(row.original.docu_item_id)}
-                                className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md shadow-sm transition-colors"
-                                title="ส่งอนุมัติ"
+                                onClick={() => handleView(row.original.docu_item_id)}
+                                className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                title="ดูรายละเอียด"
                             >
-                                <Send size={12} />
-                                <span>ส่งอนุมัติ</span>
+                                <Eye size={16} />
                             </button>
-                        )}
-                    </div>
-                ),
-                size: 160,
+
+                            {(status === 'APPROVED' || status === 'REJECTED') && (
+                                <button
+                                    onClick={() => handleViewApproval(row.original.docu_item_id)}
+                                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30 rounded-md transition-colors"
+                                    title="ประวัติการอนุมัติ"
+                                >
+                                    <Clock size={16} />
+                                </button>
+                            )}
+
+                            {status === 'REJECTED' && (
+                                <button
+                                    onClick={() => handleEdit(row.original.docu_item_id)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 rounded-md shadow-sm transition-all active:scale-95"
+                                    title="แก้ไขและส่งอนุมัติใหม่"
+                                >
+                                    <Edit size={14} />
+                                    <span>แก้ไขและส่งอนุมัติใหม่</span>
+                                </button>
+                            )}
+
+                            {(status === 'DRAFT' || status === 'PENDING') && (
+                                <button
+                                    onClick={() => handleEdit(row.original.docu_item_id)}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs font-bold text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30 rounded-md transition-colors"
+                                    title="แก้ไข"
+                                >
+                                    <Edit size={14} />
+                                    <span>แก้ไข</span>
+                                </button>
+                            )}
+
+                            {status === 'DRAFT' && (
+                                <button
+                                    onClick={() => handleSendApproval(row.original.docu_item_id)}
+                                    className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-md shadow-sm transition-colors"
+                                    title="ส่งอนุมัติ"
+                                >
+                                    <Send size={12} />
+                                    <span>ส่งอนุมัติ</span>
+                                </button>
+                            )}
+                        </div>
+                    );
+                },
+                size: 200,
                 enableSorting: false,
             }),
         ],
-        [filters.page, filters.limit, handleView, handleEdit, handleSendApproval]
+        [filters.page, filters.limit, handleView, handleEdit, handleSendApproval, handleViewApproval]
     );
 
     // ── Render ─────────────────────────────────────────────────────────────────────
@@ -392,6 +444,19 @@ export default function RequisitionListPage() {
                     editId={selectedId}
                     readOnly={isReadOnly}
                     onSuccess={() => queryClient.invalidateQueries({ queryKey: ['requisitions'] })}
+                />
+            )}
+
+            {/* Approval History Modal */}
+            {isApproveModalOpen && selectedApproveId && (
+                <RequisitionApprovalHistoryModal
+                    isOpen={isApproveModalOpen}
+                    onClose={() => {
+                        setIsApproveModalOpen(false);
+                        setSelectedApproveId(null);
+                    }}
+                    requisitionId={selectedApproveId}
+                    requisitionNo={data?.items?.find(x => String(x.docu_item_id) === String(selectedApproveId))?.issue_req_no}
                 />
             )}
         </PageListLayout>

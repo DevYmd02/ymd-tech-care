@@ -8,6 +8,10 @@ import { requisitionApproveSchema, type RequisitionApproveFormData } from '../sc
 import { RequisitionApprovalService } from '../services/requisition-approval.service';
 import type { ApproveRequisitionPayload } from '../types/requisition-approval.types';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
+import { RequisitionApprovalHelper } from '../utils/requisition-approval.helper';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
+import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
+import { RequisitionService } from '../../requisition/services/requisition.service';
 
 interface UseRequisitionApproveFormOptions {
     isOpen: boolean;
@@ -17,7 +21,9 @@ interface UseRequisitionApproveFormOptions {
 }
 
 const DEFAULT_VALUES: RequisitionApproveFormData = {
+    docu_item_id: '',
     issue_req_no: '',
+    docu_item_no: '',
     docu_date: '',
     branch_id: '',
     branch_name: '',
@@ -52,30 +58,107 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
 
     const { reset } = formMethods;
 
-    // Load master data (employees lookup)
-    const { data: employees = [] } = useQuery({
+    // Load master data queries
+    const { data: employees = [], isLoading: isLoadingEmployees } = useQuery({
         queryKey: ['employees-options'],
         queryFn: () => MasterDataService.getEmployees(),
         staleTime: 5 * 60 * 1000,
         enabled: isOpen,
     });
 
+    const { data: branches = [], isLoading: isLoadingBranches } = useQuery({
+        queryKey: ['branches-options'],
+        queryFn: () => MasterDataService.getBranches(),
+        staleTime: 5 * 60 * 1000,
+        enabled: isOpen,
+    });
+
+    const { data: departments = [], isLoading: isLoadingDepartments } = useQuery({
+        queryKey: ['departments-options'],
+        queryFn: () => MasterDataService.getDepartments(),
+        staleTime: 5 * 60 * 1000,
+        enabled: isOpen,
+    });
+
+    const { data: jobs = [], isLoading: isLoadingJobs } = useQuery({
+        queryKey: ['jobs-options'],
+        queryFn: () => MasterDataService.getProjects(),
+        staleTime: 5 * 60 * 1000,
+        enabled: isOpen,
+    });
+
+    const { data: items = [], isLoading: isLoadingItems } = useQuery({
+        queryKey: ['items-options'],
+        queryFn: () => ItemMasterService.getAll({ limit: 1000 }).then(res => res.items || []),
+        staleTime: 5 * 60 * 1000,
+        enabled: isOpen,
+    });
+
+    const { data: uoms = [], isLoading: isLoadingUoms } = useQuery({
+        queryKey: ['uoms-options'],
+        queryFn: () => MasterDataService.getUOMs(),
+        staleTime: 5 * 60 * 1000,
+        enabled: isOpen,
+    });
+
+    const { data: warehouses = [], isLoading: isLoadingWarehouses } = useQuery({
+        queryKey: ['warehouses-options'],
+        queryFn: () => MasterDataService.getWarehouses(),
+        staleTime: 5 * 60 * 1000,
+        enabled: isOpen,
+    });
+
+    const { data: locations = [], isLoading: isLoadingLocations } = useQuery({
+        queryKey: ['locations-options'],
+        queryFn: () => LocationService.getAll({ limit: 1000 }).then(res => res.items || []),
+        staleTime: 5 * 60 * 1000,
+        enabled: isOpen,
+    });
+
+    const { data: docLinks = [], isLoading: isLoadingDocLinks } = useQuery({
+        queryKey: ['docLinks-options'],
+        queryFn: () => RequisitionService.getDocLinks(),
+        staleTime: 5 * 60 * 1000,
+        enabled: isOpen,
+    });
+
     // Load requisition details
-    const { data: detailData, isLoading } = useQuery({
+    const { data: detailData, isLoading: isLoadingDetail } = useQuery({
         queryKey: ['requisition-detail', requisitionId],
         queryFn: () => (requisitionId ? RequisitionApprovalService.getRequisitionById(requisitionId) : null),
         enabled: !!requisitionId && isOpen,
     });
 
-    useEffect(() => {
-        if (detailData) {
-            const { header, lines } = detailData;
-            const rawHeader = header as unknown as Record<string, unknown>;
-            
-            // Map IDs to employee names
-            const saveEmp = employees.find(e => String(e.employee_id || e.id) === String(header.created_by_emp_id));
-            const auditEmp = employees.find(e => String(e.employee_id || e.id) === String(header.request_by_emp_id));
+    const isLoading = isLoadingDetail || 
+                      isLoadingEmployees || 
+                      isLoadingBranches || 
+                      isLoadingDepartments || 
+                      isLoadingJobs || 
+                      isLoadingItems || 
+                      isLoadingUoms || 
+                      isLoadingWarehouses || 
+                      isLoadingLocations || 
+                      isLoadingDocLinks;
 
+    useEffect(() => {
+        if (detailData && !isLoadingEmployees && !isLoadingBranches && !isLoadingDepartments && !isLoadingJobs && !isLoadingItems && !isLoadingUoms && !isLoadingWarehouses && !isLoadingLocations && !isLoadingDocLinks) {
+            const { header, lines } = detailData;
+            
+            const { translatedHeader, translatedLines } = RequisitionApprovalHelper.translateHeaderAndLines(
+                header,
+                lines,
+                branches,
+                departments,
+                jobs,
+                employees,
+                items,
+                uoms,
+                warehouses,
+                locations,
+                docLinks
+            );
+
+            const rawHeader = header as unknown as Record<string, unknown>;
             const rawStatus = (rawHeader.status as 'PENDING' | 'APPROVED' | 'REJECTED') || 'PENDING';
             const isPending = rawStatus === 'PENDING';
 
@@ -94,73 +177,127 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
                 : String(rawHeader.approved_date || rawHeader.approve_date || localTodayStr);
 
             reset({
-                docu_item_id: header.docu_item_id,
-                issue_req_no: header.issue_req_no,
-                docu_date: header.docu_date,
-                branch_id: header.branch_id,
-                emp_dept_id: header.emp_dept_id,
-                job_id: header.job_id,
-                created_by_emp_id: header.created_by_emp_id,
-                save_emp_name: saveEmp ? saveEmp.employee_fullname || saveEmp.employee_name : '',
-                request_by_emp_id: header.request_by_emp_id,
-                audit_emp_name: auditEmp ? auditEmp.employee_fullname || auditEmp.employee_name : '',
-                remark: header.remark || '',
-                qty_total: header.qty_total,
+                docu_item_id: translatedHeader.docu_item_id,
+                issue_req_no: translatedHeader.issue_req_no,
+                docu_item_no: translatedHeader.docu_item_no,
+                docu_date: translatedHeader.docu_date,
+                branch_id: translatedHeader.branch_id,
+                branch_name: translatedHeader.branch_name,
+                emp_dept_id: translatedHeader.emp_dept_id,
+                emp_dept_name: translatedHeader.emp_dept_name,
+                job_id: translatedHeader.job_id,
+                job_name: translatedHeader.job_name,
+                created_by_emp_id: translatedHeader.created_by_emp_id,
+                save_emp_name: translatedHeader.save_emp_name,
+                request_by_emp_id: translatedHeader.request_by_emp_id,
+                audit_emp_name: translatedHeader.request_emp_name,
+                remark: translatedHeader.remark || '',
+                qty_total: translatedHeader.qty_total,
                 approval_no: String(rawHeader.approval_no || rawHeader.approve_no || ''),
                 approval_emp_id: resolvedEmpId,
                 status: rawStatus,
                 approved_date: resolvedApproveDate,
-                reject_reason: String(rawHeader.reject_reason || ''),
-                lines: lines.map((l, i) => {
-                    const rawLine = l as unknown as Record<string, unknown>;
-                    return {
-                        docu_item_line_id: l.docu_item_line_id,
-                        listno: l.listno || i + 1,
-                        item_id: l.item_id,
-                        item_code: l.item_code,
-                        item_name: l.item_name,
-                        uom_id: l.uom_id,
-                        warehouse_id: l.warehouse_id,
-                        warehouse_name: l.warehouse_name,
-                        location_id: l.location_id,
-                        location_name: l.location_name,
-                        lot_id: l.lot_id,
-                        lot_no: l.lot_no,
-                        qty_ic: l.qty_ic,
-                        qty_approved: typeof rawLine.qty_approved === 'number' ? rawLine.qty_approved : l.qty_ic,
-                        is_approved: typeof rawLine.is_approved === 'boolean' ? rawLine.is_approved : true,
-                        remark: l.remark || '',
-                    };
-                }),
+                reject_reason: String(rawHeader.reject_reason || rawHeader.remarks || rawHeader.remark || ''),
+                lines: translatedLines.map((l) => ({
+                    docu_item_line_id: l.docu_item_line_id,
+                    listno: l.listno,
+                    item_id: l.item_id,
+                    item_code: l.item_code,
+                    item_name: l.item_name,
+                    uom_id: l.uom_id,
+                    uom_name: l.uom_name,
+                    warehouse_id: l.warehouse_id,
+                    warehouse_name: l.warehouse_name,
+                    location_id: l.location_id,
+                    location_name: l.location_name,
+                    lot_id: l.lot_id,
+                    lot_no: l.lot_no,
+                    qty_ic: l.qty_ic,
+                    qty_approved: l.qty_approved,
+                    is_approved: l.is_approved,
+                    remark: l.remark || '',
+                    conversion_factor: l.conversion_factor,
+                    to_uom_name: l.to_uom_name,
+                })),
             });
         } else if (!requisitionId && isOpen) {
             reset(DEFAULT_VALUES);
         }
-    }, [detailData, requisitionId, isOpen, reset, user, employees]);
+    }, [
+        detailData,
+        requisitionId,
+        isOpen,
+        reset,
+        user,
+        employees,
+        branches,
+        departments,
+        jobs,
+        items,
+        uoms,
+        warehouses,
+        locations,
+        docLinks,
+        isLoadingEmployees,
+        isLoadingBranches,
+        isLoadingDepartments,
+        isLoadingJobs,
+        isLoadingItems,
+        isLoadingUoms,
+        isLoadingWarehouses,
+        isLoadingLocations,
+        isLoadingDocLinks
+    ]);
 
     // Mutation for approval action
     const approveMutation = useMutation({
         mutationFn: (payload: { status: 'APPROVED' | 'REJECTED'; rejectReason?: string }) => {
             if (!requisitionId) throw new Error('Requisition ID is required');
             const formValues = formMethods.getValues();
-            return RequisitionApprovalService.approve({
-                docu_item_id: requisitionId,
+            const header = detailData?.header as Record<string, unknown> | undefined;
+            const originalLines = detailData?.lines || [];
+
+            const mappedLines = formValues.lines.map((formLine, idx) => {
+                const origLine = originalLines.find(ol => String(ol.docu_item_line_id) === String(formLine.docu_item_line_id))
+                                 || originalLines[idx]
+                                 || {} as Record<string, unknown>;
+                const origLineRaw = origLine as unknown as Record<string, unknown>;
+
+                return {
+                    item_id: Number(formLine.item_id || origLine.item_id),
+                    qty: Number(formLine.qty_ic || origLineRaw.qty || origLine.qty_ic || 0),
+                    approved_qty: payload.status === 'APPROVED' && formLine.is_approved ? Number(formLine.qty_approved) : 0,
+                    uom_id: Number(formLine.uom_id || origLine.uom_id),
+                    warehouse_id: Number(formLine.warehouse_id || origLine.warehouse_id),
+                    location_id: formLine.location_id || origLine.location_id ? Number(formLine.location_id || origLine.location_id) : null,
+                    lot_id: formLine.lot_id || origLine.lot_id ? Number(formLine.lot_id || origLine.lot_id) : null,
+                    lot_balance_id: formLine.lot_id || origLine.lot_id ? Number(formLine.lot_id || origLine.lot_id) : null,
+                };
+            });
+
+            const approvePayload: ApproveRequisitionPayload = {
+                appv_issue_req_date: new Date(formValues.approved_date || new Date()).toISOString(),
+                doc_link_ic_id: Number(header?.doc_link_ic_id || header?.docu_item_no || 0),
+                issue_req_id: Number(requisitionId),
+                emp_dept_id: Number(header?.emp_dept_id || 0),
+                project_id: header?.project_id ? Number(header.project_id) : null,
+                remarks: payload.status === 'REJECTED' 
+                    ? (payload.rejectReason || 'Rejected') 
+                    : (formValues.remark || (header?.remarks as string) || (header?.remark as string) || ''),
+                branch_id: Number(header?.branch_id || 1),
+                approval_emp_id: Number(formValues.approval_emp_id || user?.employee_id || 1),
                 status: payload.status,
-                approval_emp_id: formValues.approval_emp_id || user?.employee_id || 0,
-                approved_date: formValues.approved_date,
-                approval_no: formValues.approval_no,
-                reject_reason: payload.rejectReason,
-                lines: formValues.lines.map(l => ({
-                    docu_item_line_id: l.docu_item_line_id,
-                    qty_approved: l.is_approved ? Number(l.qty_approved) : 0,
-                    is_approved: l.is_approved,
-                })),
-            } as ApproveRequisitionPayload);
+                stock_effect_ic: header?.stock_effect_ic !== undefined ? Number(header.stock_effect_ic) : 1,
+                lines: mappedLines,
+            };
+
+            return RequisitionApprovalService.approve(approvePayload);
         },
         onSuccess: (result) => {
             if (result.success) {
                 toast.success('ทำรายการสำเร็จ');
-                queryClient.invalidateQueries({ queryKey: ['requisition-approvals'] });
+                queryClient.invalidateQueries({ queryKey: ['requisition-pending-approvals'] });
+                queryClient.invalidateQueries({ queryKey: ['requisition-approval-history'] });
                 onSuccess?.();
                 onClose();
             } else {
@@ -177,8 +314,12 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
     return {
         formMethods,
         employees,
+        branches,
+        departments,
+        jobs,
         isLoading,
         isSaving,
+        originalStatus: ((detailData?.header as unknown as Record<string, unknown>)?.status as string) || 'PENDING',
         handleApprove: useCallback(() => {
             approveMutation.mutate({ status: 'APPROVED' });
         }, [approveMutation]),
@@ -187,3 +328,4 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
         }, [approveMutation]),
     };
 }
+

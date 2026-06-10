@@ -66,12 +66,13 @@ export const RequisitionService = {
     // ─── List ────────────────────────────────────────────────────────────────────────
     getList: async (params?: RequisitionListParams): Promise<ListResponse<RequisitionListItem>> => {
         try {
-            const [res, docLinks, departments, employees, uoms] = await Promise.all([
+            const [res, docLinks, departments, employees, uoms, approvalsRes] = await Promise.all([
                 api.get<unknown>('/issue-requistion', { params }),
                 RequisitionService.getDocLinks(),
                 MasterDataService.getDepartments(),
                 MasterDataService.getEmployees(),
-                MasterDataService.getUOMs()
+                MasterDataService.getUOMs(),
+                api.get<unknown>('/appv-issue-requistion').catch(() => [])
             ]);
             
             let items: unknown[] = [];
@@ -89,6 +90,8 @@ export const RequisitionService = {
                 items = res;
                 total = res.length;
             }
+
+            const approvals = (Array.isArray(approvalsRes) ? approvalsRes : (((approvalsRes as Record<string, unknown> | undefined)?.items || []))) as Record<string, unknown>[];
 
             const mappedItems = items.map((itemVal) => {
                 const item = itemVal as Record<string, unknown>;
@@ -124,6 +127,22 @@ export const RequisitionService = {
                 const uniqueUomNames = Array.from(new Set(uomNames));
                 const uom_name = uniqueUomNames.join(', ');
 
+                const reqId = String(item.issue_req_id || item.docu_item_id || '');
+                const matchedAppv = approvals.find(a => String(a.issue_req_id) === reqId);
+                const approvalStatus = matchedAppv ? (matchedAppv.status as 'PENDING' | 'APPROVED' | 'REJECTED') : null;
+
+                let finalFlag = item.cancel_flag === 'Y' ? 'Y' : (item.status === 'PENDING' ? 'PENDING' : (item.status === 'DRAFT' ? 'DRAFT' : 'N'));
+                if (item.cancel_flag !== 'Y') {
+                    const reqStatus = (item.status as string || '').toUpperCase();
+                    if (reqStatus === 'APPROVED' || approvalStatus === 'APPROVED') {
+                        finalFlag = 'APPROVED';
+                    } else if (reqStatus === 'REJECTED' || approvalStatus === 'REJECTED') {
+                        finalFlag = 'REJECTED';
+                    } else if (reqStatus === 'PENDING' || approvalStatus === 'PENDING') {
+                        finalFlag = 'PENDING';
+                    }
+                }
+
                 return {
                     docu_item_id: String(item.issue_req_id || item.docu_item_id || ''),
                     issue_req_no: (item.issue_req_no as string) || `REQ-${item.issue_req_id || ''}`,
@@ -133,7 +152,7 @@ export const RequisitionService = {
                     save_emp_name: emp ? ((emp.employee_fullname as string) || `${(emp.employee_firstname_th as string) || ''} ${(emp.employee_lastname_th as string) || ''}`.trim()) : '-',
                     created_emp_name: creatorEmp ? ((creatorEmp.employee_fullname as string) || `${(creatorEmp.employee_firstname_th as string) || ''} ${(creatorEmp.employee_lastname_th as string) || ''}`.trim()) : '-',
                     qty_total: qty_total,
-                    cancel_flag: item.cancel_flag === 'Y' ? 'Y' : (item.status === 'PENDING' ? 'PENDING' : (item.status === 'DRAFT' ? 'DRAFT' : 'N')),
+                    cancel_flag: finalFlag,
                     uom_name: uom_name || undefined,
                 };
             });

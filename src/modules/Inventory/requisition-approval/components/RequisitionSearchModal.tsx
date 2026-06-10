@@ -107,8 +107,7 @@ export const RequisitionSearchModal: React.FC<RequisitionSearchModalProps> = Rea
                                     <th className="px-6 py-4 text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">เลขที่เอกสาร</th>
                                     <th className="px-6 py-4 text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 whitespace-nowrap">วันที่เอกสาร</th>
                                     <th className="px-6 py-4 text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700">แผนก</th>
-                                    <th className="px-6 py-4 text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700">ผู้ขอเบิก/ผู้บันทึก</th>
-                                    <th className="px-6 py-4 text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 text-right whitespace-nowrap">จำนวนเบิก</th>
+                                    <th className="px-6 py-4 text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700">ผู้ขอเบิก</th>
                                     <th className="px-6 py-4 text-xs font-extrabold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700 text-center whitespace-nowrap w-[100px]">จัดการ</th>
                                 </tr>
                             </thead>
@@ -134,11 +133,6 @@ export const RequisitionSearchModal: React.FC<RequisitionSearchModalProps> = Rea
                                             <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
                                                 {item.save_emp_name || '-'}
                                             </td>
-                                            <td className="px-6 py-4 text-right whitespace-nowrap">
-                                                <span className="font-mono font-bold text-gray-900 dark:text-emerald-400">
-                                                    {formatNumber(item.qty_total || 0)}
-                                                </span>
-                                            </td>
                                             <td className="px-6 py-4 text-center whitespace-nowrap">
                                                 <button
                                                     onClick={(e) => {
@@ -155,7 +149,7 @@ export const RequisitionSearchModal: React.FC<RequisitionSearchModalProps> = Rea
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={6} className="px-6 py-20 text-center items-center justify-center">
+                                        <td colSpan={5} className="px-6 py-20 text-center items-center justify-center">
                                             <div className="flex flex-col items-center text-gray-400 dark:text-gray-500">
                                                 <FileText size={48} className="mb-4 opacity-20" />
                                                 <p className="text-lg font-bold">ไม่พบข้อมูล</p>
@@ -174,16 +168,6 @@ export const RequisitionSearchModal: React.FC<RequisitionSearchModalProps> = Rea
                         พบรายการ <span className="font-bold text-emerald-600 dark:text-emerald-400">{filteredData.length}</span> รายการ
                     </p>
                     <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                onSelect('TEST_REQ_ID');
-                                onClose();
-                            }}
-                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95"
-                        >
-                            เปิดแบบทดสอบ (Test Modal)
-                        </button>
                         <button
                             type="button"
                             onClick={onClose}

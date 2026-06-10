@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ShieldCheck, Search, Eye, Layers, List } from 'lucide-react';
+import { ShieldCheck, Search, Eye, Layers, List, Clock } from 'lucide-react';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
+import { RequisitionApprovalHistoryModal } from '../requisition/components/RequisitionApprovalHistoryModal';
 
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
@@ -11,7 +12,6 @@ import { RequisitionApprovalService } from './services/requisition-approval.serv
 import { RequisitionApproveFormModal } from './components/RequisitionApproveFormModal';
 import { RequisitionSearchModal } from './components/RequisitionSearchModal';
 import type { RequisitionApprovalListItem } from './types/requisition-approval.types';
-import { formatNumber } from '@/shared/utils';
 
 const colHelper = createColumnHelper<RequisitionApprovalListItem>();
 
@@ -76,6 +76,10 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [isReadOnly, setIsReadOnly] = useState(false);
     const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+
+    // Approval History Modal State
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
 
     // ── API Query ───────────────────────────────────────────────────────────────────
     const { data: pendingItems = [], isLoading: isLoadingPending } = useQuery({
@@ -156,6 +160,11 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                 ),
                 size: 160,
             }),
+            colHelper.accessor('docu_item_no', {
+                header: 'รายการเอกสาร',
+                cell: info => <span className="text-sm text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
+                size: 150,
+            }),
             colHelper.accessor('docu_date', {
                 header: 'วันที่เอกสาร',
                 cell: info => {
@@ -172,30 +181,12 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                 size: 160,
             }),
             colHelper.accessor('save_emp_name', {
-                header: 'ผู้ขอเบิก/ผู้บันทึก',
+                header: 'ผู้ขอเบิก',
                 cell: info => <span className="text-sm text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
                 size: 150,
             }),
-            colHelper.accessor('qty_total', {
-                header: () => <div className="text-center w-full">จำนวนเบิก</div>,
-                cell: info => (
-                    <div className="text-center font-bold text-emerald-600 dark:text-emerald-400">
-                        {formatNumber(info.getValue() || 0)}
-                    </div>
-                ),
-                size: 110,
-            }),
             ...(activeTab === 'history'
                 ? [
-                      colHelper.accessor('status', {
-                          header: () => <div className="flex justify-center items-center w-full">สถานะการพิจารณา</div>,
-                          cell: info => (
-                              <div className="flex justify-center items-center w-full">
-                                  <StatusBadge status={info.getValue()} />
-                              </div>
-                          ),
-                          size: 130,
-                      }),
                       colHelper.accessor('approval_emp_name', {
                           header: 'ผู้อนุมัติ',
                           cell: info => <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
@@ -203,28 +194,54 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                       }),
                   ]
                 : []),
-            colHelper.display({
-                id: 'actions',
-                header: () => <div className="flex justify-center items-center w-full">จัดการ</div>,
-                cell: ({ row }) => (
-                    <div className="flex items-center justify-center gap-1.5 w-full">
-                        <button
-                            onClick={() => handleView(row.original.docu_item_id, activeTab === 'history')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 active:scale-95 ${
-                                activeTab === 'pending'
-                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20'
-                                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200'
-                            }`}
-                        >
-                            <Eye size={14} />
-                            {activeTab === 'pending' ? 'พิจารณาอนุมัติ' : 'ดูรายละเอียด'}
-                        </button>
+            colHelper.accessor('status', {
+                header: () => <div className="flex justify-center items-center w-full">สถานะ</div>,
+                cell: info => (
+                    <div className="flex justify-center items-center w-full">
+                        <StatusBadge status={info.getValue()} />
                     </div>
                 ),
                 size: 120,
             }),
+            colHelper.display({
+                id: 'actions',
+                header: () => <div className="flex justify-center items-center w-full">จัดการ</div>,
+                cell: ({ row }) => {
+                    const isFinalized = row.original.status === 'APPROVED' || row.original.status === 'REJECTED';
+                    return (
+                        <div className="flex items-center justify-center gap-1.5 w-full">
+                            <button
+                                onClick={() => handleView(row.original.docu_item_id, isFinalized)}
+                                className={`rounded-lg text-xs font-bold transition-all shadow-sm flex items-center gap-1 active:scale-95 ${
+                                    !isFinalized
+                                        ? 'px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20'
+                                        : 'p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                }`}
+                                title={!isFinalized ? 'พิจารณาอนุมัติ' : 'ดูรายละเอียด'}
+                            >
+                                <Eye size={!isFinalized ? 14 : 16} />
+                                {!isFinalized && 'พิจารณาอนุมัติ'}
+                            </button>
+
+                            {isFinalized && (
+                                <button
+                                    onClick={() => {
+                                        setSelectedHistoryId(row.original.docu_item_id);
+                                        setIsHistoryOpen(true);
+                                    }}
+                                    className="p-1.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:text-emerald-300 dark:hover:bg-emerald-900/30 rounded-lg transition-colors border border-transparent hover:border-emerald-200"
+                                    title="ดูประวัติการอนุมัติ"
+                                >
+                                    <Clock size={16} />
+                                </button>
+                            )}
+                        </div>
+                    );
+                },
+                size: 140,
+            }),
         ];
-    }, [activeTab, handleView]);
+    }, [activeTab, handleView, setSelectedHistoryId, setIsHistoryOpen]);
 
     const modalContent = (
         <div className="space-y-6">
@@ -346,6 +363,18 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                     onSelect={(id) => {
                         handleView(id, false);
                     }}
+                />
+            )}
+
+            {isHistoryOpen && selectedHistoryId && (
+                <RequisitionApprovalHistoryModal
+                    isOpen={isHistoryOpen}
+                    onClose={() => {
+                        setIsHistoryOpen(false);
+                        setSelectedHistoryId(null);
+                    }}
+                    requisitionId={selectedHistoryId}
+                    requisitionNo={filteredItems.find(x => String(x.docu_item_id) === String(selectedHistoryId))?.issue_req_no}
                 />
             )}
         </div>
@@ -500,6 +529,18 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                     onSelect={(id) => {
                         handleView(id, false);
                     }}
+                />
+            )}
+
+            {isHistoryOpen && selectedHistoryId && (
+                <RequisitionApprovalHistoryModal
+                    isOpen={isHistoryOpen}
+                    onClose={() => {
+                        setIsHistoryOpen(false);
+                        setSelectedHistoryId(null);
+                    }}
+                    requisitionId={selectedHistoryId}
+                    requisitionNo={filteredItems.find(x => String(x.docu_item_id) === String(selectedHistoryId))?.issue_req_no}
                 />
             )}
         </PageListLayout>

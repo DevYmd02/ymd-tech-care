@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useMemo } from 'react';
-import { useForm, useFieldArray, useWatch, type Resolver, type DefaultValues } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, type Resolver, type DefaultValues, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
@@ -246,7 +246,7 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
                         created_by_emp_id: String(header.created_by_emp_id || ''),
                         request_by_emp_id: String(header.request_by_emp_id || ''),
                         qty_total: header.qty_total,
-                        stock_effect_ic: header.stock_effect_ic,
+                        stock_effect_ic: h.stock_effect_ic !== undefined && h.stock_effect_ic !== null ? Number(h.stock_effect_ic) : 0,
                         remark: typeof h.remarks === 'string' ? h.remarks : (header.remark ?? ''),
                         cancel_flag: header.cancel_flag,
                         cancel_date: header.cancel_date ?? null,
@@ -285,7 +285,7 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
                             return {
                                 _tempId: `edit-${l.docu_item_line_id ?? i}`,
                                 docu_item_line_id: l.docu_item_line_id,
-                                listno: l.listno ?? i + 1,
+                                listno: l.listno ? Number(l.listno) : i + 1,
                                 item_id: String(l.item_id),
                                 item_code: l.item_code || itemDetail?.item_code || String(itemObj.item_code || itemObj.code || ''),
                                 item_name: l.item_name || itemDetail?.item_name || String(itemObj.item_name || itemObj.name || ''),
@@ -297,7 +297,7 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
                                 location_name: l.location_name || matchedLoc?.name_th || matchedLoc?.code || String(locObj.location_name || locObj.name || ''),
                                 lot_id: l.lot_id ? String(l.lot_id) : '',
                                 lot_no: l.lot_no || matchedLot?.lot_no || String(lotObj.lot_no || lotObj.lot_number || lotObj.code || ''),
-                                qty_ic: mappedQty,
+                                qty_ic: isNaN(Number(mappedQty)) ? '' : Number(mappedQty),
                                 stock_flag: l.stock_flag ?? 0,
                                 remark: l.remark || String(lineObj.remark || lineObj.remarks || ''),
                             };
@@ -365,7 +365,13 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
                 branch_id: Number(data.branch_id),
                 created_by_emp_id: Number(data.created_by_emp_id) || 1,
                 request_by_emp_id: Number(data.request_by_emp_id) || 1,
-                status: isEditMode ? ((editData as unknown as { header?: { status?: string } })?.header?.status || 'DRAFT') : 'DRAFT',
+                status: isEditMode 
+                    ? (
+                        (editData as unknown as { header?: { status?: string } })?.header?.status === 'REJECTED'
+                            ? 'PENDING'
+                            : ((editData as unknown as { header?: { status?: string } })?.header?.status || 'DRAFT')
+                      )
+                    : 'DRAFT',
                 stock_effect_ic: null,
                 lines: (data.lines || []).map((l) => ({
                     item_id: Number(l.item_id),
@@ -392,8 +398,27 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
         [isEditMode, editId, editData, createMutation, updateMutation]
     );
 
-    const handleFormError = useCallback((errs: unknown) => {
+    const handleFormError = useCallback((errs: FieldErrors<RequisitionHeaderFormData>) => {
         console.warn('[RequisitionForm] Validation errors:', errs);
+        const firstErrorKey = Object.keys(errs)[0] as keyof FieldErrors<RequisitionHeaderFormData> | undefined;
+        if (firstErrorKey) {
+            const err = errs[firstErrorKey];
+            if (err && 'message' in err && err.message) {
+                toast.error(`ข้อผิดพลาด: ${err.message as string}`);
+                return;
+            }
+            if (Array.isArray(err)) {
+                // For lines validation errors
+                const firstLineErr = err.find(e => e) as Record<string, { message?: string }> | undefined;
+                if (firstLineErr) {
+                    const subKey = Object.keys(firstLineErr)[0];
+                    if (subKey && firstLineErr[subKey]?.message) {
+                        toast.error(`ข้อผิดพลาดในรายการ: ${firstLineErr[subKey].message}`);
+                        return;
+                    }
+                }
+            }
+        }
         toast.error('กรุณาตรวจสอบข้อมูลให้ครบถ้วน');
     }, []);
 

@@ -28,8 +28,12 @@ export const RequisitionApproveFormModal: React.FC<RequisitionApproveFormModalPr
     const {
         formMethods,
         employees,
+        branches,
+        departments,
+        jobs,
         isLoading,
         isSaving,
+        originalStatus,
         handleApprove,
         handleReject,
     } = useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSuccess });
@@ -43,7 +47,7 @@ export const RequisitionApproveFormModal: React.FC<RequisitionApproveFormModalPr
     const rejectReason = watch('reject_reason') || '';
 
     // Checks if the requisition status is already finalized
-    const isFinalized = readOnly || status === 'APPROVED' || status === 'REJECTED';
+    const isFinalized = readOnly || originalStatus === 'APPROVED' || originalStatus === 'REJECTED';
 
     const handleRejectClick = () => {
         if (status !== 'REJECTED') {
@@ -168,6 +172,21 @@ export const RequisitionApproveFormModal: React.FC<RequisitionApproveFormModalPr
                                 <div className={cardClass}>
                                     <div className="p-6">
                                         <RequisitionApproveHeader
+                                            branchOptions={branches.map(b => ({
+                                                id: String(b.branch_id || b.id || ''),
+                                                name: b.branch_name || '',
+                                            }))}
+                                            deptOptions={departments.map(d => ({
+                                                id: String(d.emp_dept_id || d.department_id || d.id || ''),
+                                                name: d.emp_dept_name || d.department_name || d.dept_name || '',
+                                            }))}
+                                            jobOptions={jobs.map(j => {
+                                                const rawJ = j as unknown as Record<string, unknown>;
+                                                return {
+                                                    id: String(rawJ.project_id || rawJ.job_id || rawJ.id || ''),
+                                                    name: (rawJ.project_name || rawJ.job_name || '') as string,
+                                                };
+                                            })}
                                             empOptions={employees.map(e => ({
                                                 id: String(e.employee_id || e.id || ''),
                                                 name: e.employee_fullname || e.employee_name || '',
