@@ -8,6 +8,7 @@ import { requisitionApproveSchema, type RequisitionApproveFormData } from '../sc
 import { RequisitionApprovalService } from '../services/requisition-approval.service';
 import type { ApproveRequisitionPayload } from '../types/requisition-approval.types';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
+import { getResolvedDocName, type DocLinkLike } from '../utils/ic-document.util';
 import { RequisitionApprovalHelper } from '../utils/requisition-approval.helper';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
@@ -117,7 +118,14 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
 
     const { data: docLinks = [], isLoading: isLoadingDocLinks } = useQuery({
         queryKey: ['docLinks-options'],
-        queryFn: () => RequisitionService.getDocLinks(),
+        queryFn: () => RequisitionService.getDocLinks('ISSUE_REQ'),
+        staleTime: 5 * 60 * 1000,
+        enabled: isOpen,
+    });
+
+    const { data: appvDocLinks = [], isLoading: isLoadingAppvDocLinks } = useQuery({
+        queryKey: ['appvDocLinks-options'],
+        queryFn: () => RequisitionService.getDocLinks('APPV_ISSUE'),
         staleTime: 5 * 60 * 1000,
         enabled: isOpen,
     });
@@ -138,10 +146,11 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
                       isLoadingUoms || 
                       isLoadingWarehouses || 
                       isLoadingLocations || 
-                      isLoadingDocLinks;
+                      isLoadingDocLinks ||
+                      isLoadingAppvDocLinks;
 
     useEffect(() => {
-        if (detailData && !isLoadingEmployees && !isLoadingBranches && !isLoadingDepartments && !isLoadingJobs && !isLoadingItems && !isLoadingUoms && !isLoadingWarehouses && !isLoadingLocations && !isLoadingDocLinks) {
+        if (detailData && !isLoadingEmployees && !isLoadingBranches && !isLoadingDepartments && !isLoadingJobs && !isLoadingItems && !isLoadingUoms && !isLoadingWarehouses && !isLoadingLocations && !isLoadingDocLinks && !isLoadingAppvDocLinks) {
             const { header, lines } = detailData;
             
             const { translatedHeader, translatedLines } = RequisitionApprovalHelper.translateHeaderAndLines(
@@ -176,10 +185,12 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
                 ? localTodayStr
                 : String(rawHeader.approved_date || rawHeader.approve_date || localTodayStr);
 
+            const docuItemNoName = getResolvedDocName(rawStatus, (rawHeader.doc_link_ic_id || header.docu_item_no) as string | number | undefined,
+                docLinks as unknown as DocLinkLike[], appvDocLinks as unknown as DocLinkLike[]);
             reset({
                 docu_item_id: translatedHeader.docu_item_id,
                 issue_req_no: translatedHeader.issue_req_no,
-                docu_item_no: translatedHeader.docu_item_no,
+                docu_item_no: docuItemNoName,
                 docu_date: translatedHeader.docu_date,
                 branch_id: translatedHeader.branch_id,
                 branch_name: translatedHeader.branch_name,
@@ -238,6 +249,7 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
         warehouses,
         locations,
         docLinks,
+        appvDocLinks,
         isLoadingEmployees,
         isLoadingBranches,
         isLoadingDepartments,
@@ -246,7 +258,8 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
         isLoadingUoms,
         isLoadingWarehouses,
         isLoadingLocations,
-        isLoadingDocLinks
+        isLoadingDocLinks,
+        isLoadingAppvDocLinks
     ]);
 
     // Mutation for approval action
@@ -275,9 +288,18 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
                 };
             });
 
+            // Get doc_type_no of the current requisition's doc link
+            const reqDocLink = (docLinks as unknown as DocLinkLike[]).find(d => Number(d.docu_type_id) === Number(header?.doc_link_ic_id || header?.docu_item_no));
+            const docTypeNo = reqDocLink ? Number(reqDocLink.docu_item_no || 0) : 0;
+
+            // Find the matching APPV_ISSUE doc link with the same doc_type_no
+            const appvDocLink = (appvDocLinks as unknown as DocLinkLike[]).find(d => Number(d.docu_item_no) === docTypeNo);
+            const resolvedDocLinkId = appvDocLink ? Number(appvDocLink.docu_type_id) : Number(header?.doc_link_ic_id || header?.docu_item_no || 0);
+
             const approvePayload: ApproveRequisitionPayload = {
                 appv_issue_req_date: new Date(formValues.approved_date || new Date()).toISOString(),
-                doc_link_ic_id: Number(header?.doc_link_ic_id || header?.docu_item_no || 0),
+                doc_link_ic_id: resolvedDocLinkId,
+                doc_type_no: docTypeNo,
                 issue_req_id: Number(requisitionId),
                 emp_dept_id: Number(header?.emp_dept_id || 0),
                 project_id: header?.project_id ? Number(header.project_id) : null,
@@ -287,7 +309,9 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
                 branch_id: Number(header?.branch_id || 1),
                 approval_emp_id: Number(formValues.approval_emp_id || user?.employee_id || 1),
                 status: payload.status,
-                stock_effect_ic: header?.stock_effect_ic !== undefined ? Number(header.stock_effect_ic) : 1,
+                stock_effect_ic: (appvDocLink as unknown as DocLinkLike)?.stock_effect_ic !== undefined 
+                    ? Number((appvDocLink as unknown as DocLinkLike).stock_effect_ic) 
+                    : (header?.stock_effect_ic !== undefined ? Number(header.stock_effect_ic) : 1),
                 lines: mappedLines,
             };
 

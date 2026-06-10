@@ -3,6 +3,7 @@ import type { RequisitionApprovalListItem, ApproveRequisitionPayload } from '../
 import type { IssueRequisitionHeader, IssueRequisitionLine } from '../../requisition/types/requisition.types';
 import type { SuccessResponse } from '@/shared/types/api.types';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
+import { getResolvedDocName, type DocLinkLike } from '../utils/ic-document.util';
 import { RequisitionService } from '../../requisition/services/requisition.service';
 
 const ENDPOINTS = {
@@ -31,13 +32,22 @@ export const RequisitionApprovalService = {
             const approvals = (Array.isArray(approvalsRes) ? approvalsRes : (((approvalsRes as Record<string, unknown> | undefined)?.items || []))) as Record<string, unknown>[];
 
             // Map master data
-            const [departments, employees, docLinks] = await Promise.all([
+            const [departments, employees, docLinks, appvDocLinks] = await Promise.all([
                 MasterDataService.getDepartments().catch(() => []),
                 MasterDataService.getEmployees().catch(() => []),
-                RequisitionService.getDocLinks().catch(() => [])
+                RequisitionService.getDocLinks('ISSUE_REQ').catch(() => []),
+                RequisitionService.getDocLinks('APPV_ISSUE').catch(() => [])
             ]);
 
             const mapped = requisitions
+                .filter(h => {
+                    const reqId = String(h.issue_req_id || h.docu_item_id || '');
+                    const matchedAppv = approvals.find(a => String(a.issue_req_id) === reqId);
+                    if (!matchedAppv && (h.status as string || '').toUpperCase() === 'DRAFT') {
+                        return false;
+                    }
+                    return true;
+                })
                 .map((h, i: number) => {
                     const dept = departments.find(
                         (d) => Number((d as unknown as Record<string, unknown>).emp_dept_id || (d as unknown as Record<string, unknown>).department_id || (d as unknown as Record<string, unknown>).id) === Number(h.emp_dept_id)
@@ -45,22 +55,25 @@ export const RequisitionApprovalService = {
                     const emp = employees.find(
                         (e) => Number((e as unknown as Record<string, unknown>).employee_id || (e as unknown as Record<string, unknown>).id) === Number(h.request_by_emp_id)
                     ) as unknown as Record<string, unknown> | undefined;
-                    const docLink = docLinks.find(
-                        (d) => Number(d.docu_type_id) === Number(h.doc_link_ic_id)
-                    );
-                    
-                    const lines = (h.issueRequistionLines || h.issueRequisitionLines || []) as Record<string, unknown>[];
-                    const qty_total = lines.reduce((sum: number, line) => sum + (Number(line.qty) || 0), 0);
+
 
                     const reqId = String(h.issue_req_id || h.docu_item_id || '');
                     const matchedAppv = approvals.find(a => String(a.issue_req_id) === reqId);
-                    const finalStatus = matchedAppv ? (matchedAppv.status as 'PENDING' | 'APPROVED' | 'REJECTED') : 'PENDING';
+                    const rawStatus = (h.status as string || 'PENDING').toUpperCase();
+                    const finalStatus = (matchedAppv 
+                        ? (matchedAppv.status as 'PENDING' | 'APPROVED' | 'REJECTED') 
+                        : (rawStatus === 'APPROVED' || rawStatus === 'REJECTED' ? rawStatus : 'PENDING')) as 'PENDING' | 'APPROVED' | 'REJECTED';
+
+                    const docName = getResolvedDocName(finalStatus, h.doc_link_ic_id as string, docLinks as unknown as DocLinkLike[], appvDocLinks as unknown as DocLinkLike[]);
+                    
+                    const lines = (h.issueRequistionLines || h.issueRequisitionLines || []) as Record<string, unknown>[];
+                    const qty_total = lines.reduce((sum: number, line) => sum + (Number(line.qty) || 0), 0);
 
                     return {
                         row_key: `pending-${h.issue_req_id || h.docu_item_id}-${i}`,
                         docu_item_id: String(h.issue_req_id || h.docu_item_id || ''),
                         issue_req_no: (h.issue_req_no as string) || `REQ-${h.issue_req_id || ''}`,
-                        docu_item_no: docLink ? (docLink.docu_name_th || docLink.docu_name_en) : '-',
+                        docu_item_no: docName,
                         docu_date: (h.issue_req_date as string) || (h.docu_date as string) || '',
                         dept_name: dept ? ((dept.emp_dept_name as string) || (dept.department_name as string) || (dept.dept_name as string) || '-') : '-',
                         save_emp_name: emp ? ((emp.employee_fullname as string) || `${(emp.employee_firstname_th as string) || ''} ${(emp.employee_lastname_th as string) || ''}`.trim()) : '-',
@@ -94,10 +107,11 @@ export const RequisitionApprovalService = {
             const approvals = (Array.isArray(approvalsRes) ? approvalsRes : (((approvalsRes as Record<string, unknown> | undefined)?.items || []))) as Record<string, unknown>[];
 
             // Map master data
-            const [departments, employees, docLinks] = await Promise.all([
+            const [departments, employees, docLinks, appvDocLinks] = await Promise.all([
                 MasterDataService.getDepartments().catch(() => []),
                 MasterDataService.getEmployees().catch(() => []),
-                RequisitionService.getDocLinks().catch(() => [])
+                RequisitionService.getDocLinks('ISSUE_REQ').catch(() => []),
+                RequisitionService.getDocLinks('APPV_ISSUE').catch(() => [])
             ]);
 
             const mapped = requisitions
@@ -108,17 +122,16 @@ export const RequisitionApprovalService = {
                     const emp = employees.find(
                         (e) => Number((e as unknown as Record<string, unknown>).employee_id || (e as unknown as Record<string, unknown>).id) === Number(h.request_by_emp_id)
                     ) as unknown as Record<string, unknown> | undefined;
-                    const docLink = docLinks.find(
-                        (d) => Number(d.docu_type_id) === Number(h.doc_link_ic_id)
-                    );
-                    
-                    const lines = (h.issueRequistionLines || h.issueRequisitionLines || []) as Record<string, unknown>[];
-                    const qty_total = lines.reduce((sum: number, line) => sum + (Number(line.qty) || 0), 0);
-
                     const reqId = String(h.issue_req_id || h.docu_item_id || '');
                     const matchedAppv = approvals.find(a => String(a.issue_req_id) === reqId);
                     
                     if (!matchedAppv) return null;
+
+                    const finalStatus = (matchedAppv.status as 'APPROVED' | 'REJECTED') || 'APPROVED';
+                    const docName = getResolvedDocName(finalStatus, h.doc_link_ic_id as string, docLinks as unknown as DocLinkLike[], appvDocLinks as unknown as DocLinkLike[]);
+
+                    const lines = (h.issueRequistionLines || h.issueRequisitionLines || []) as Record<string, unknown>[];
+                    const qty_total = lines.reduce((sum: number, line) => sum + (Number(line.qty) || 0), 0);
 
                     const approver = employees.find(
                         (e) => Number((e as unknown as Record<string, unknown>).employee_id || (e as unknown as Record<string, unknown>).id) === Number(matchedAppv.approval_emp_id)
@@ -129,7 +142,7 @@ export const RequisitionApprovalService = {
                         row_key: `history-${h.issue_req_id || h.docu_item_id}-${i}`,
                         docu_item_id: String(h.issue_req_id || h.docu_item_id || ''),
                         issue_req_no: (h.issue_req_no as string) || `REQ-${h.issue_req_id || ''}`,
-                        docu_item_no: docLink ? (docLink.docu_name_th || docLink.docu_name_en) : '-',
+                        docu_item_no: docName,
                         docu_date: (h.issue_req_date as string) || (h.docu_date as string) || '',
                         dept_name: dept ? ((dept.emp_dept_name as string) || (dept.department_name as string) || (dept.dept_name as string) || '-') : '-',
                         save_emp_name: emp ? ((emp.employee_fullname as string) || `${(emp.employee_firstname_th as string) || ''} ${(emp.employee_lastname_th as string) || ''}`.trim()) : '-',

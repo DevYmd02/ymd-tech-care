@@ -27,6 +27,8 @@ import { ItemMasterService } from '@master-data/inventory/services/item-master.s
 import { LocationService } from '@master-data/inventory/services/inventory-master.service';
 import type { Location } from '@master-data/inventory/types/inventory-master.types';
 import api from '@/core/api/api';
+import { useInventoryICOptions } from '@/modules/Inventory/shared/hooks/useInventoryICOptions';
+import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
 
 // ====================================================================================
 // HELPERS
@@ -109,6 +111,15 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
         name: 'lines',
         keyName: '_id',
     });
+
+    // ── Watch branch_id for IC Options ─────────────────────────────────────────────
+    const watchedBranchId = useWatch({ control, name: 'branch_id' });
+
+    // 🛡️ Centralized IC Option Resolution (Document-specific → Branch General → Global Default)
+    const { icOptions } = useInventoryICOptions(
+        watchedBranchId,
+        SYSTEM_DOCUMENT_CODES.INVENTORY_ISSUE_REQ
+    );
 
     // ── Watch lines for auto-calculate qty_total ──────────────────────────────────
     const watchedLines = useWatch({ control, name: 'lines' });
@@ -355,10 +366,14 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
     // ── Submit Handler ────────────────────────────────────────────────────────────
     const onSubmit = useCallback(
         async (data: RequisitionHeaderFormData) => {
+            const selectedDoc = docLinks.find(d => String(d.docu_type_id) === String(data.docu_item_no));
+            const docTypeNo = selectedDoc ? Number(selectedDoc.docu_item_no || 0) : 0;
+
             // Prepare payload matching Postman specs
             const payload: Record<string, unknown> = {
                 issue_req_date: new Date(data.docu_date).toISOString(),
                 doc_link_ic_id: Number(data.docu_item_no),
+                doc_type_no: docTypeNo,
                 emp_dept_id: Number(data.emp_dept_id),
                 project_id: Number(data.job_id),
                 remarks: data.remark || '',
@@ -395,7 +410,7 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
                 logger.error('[RequisitionForm] Submit failed:', error);
             }
         },
-        [isEditMode, editId, editData, createMutation, updateMutation]
+        [isEditMode, editId, editData, createMutation, updateMutation, docLinks]
     );
 
     const handleFormError = useCallback((errs: FieldErrors<RequisitionHeaderFormData>) => {
@@ -482,5 +497,8 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
         employees,
         projects,
         uoms,
+
+        // IC Options (from IC Option List settings)
+        icOptions,
     };
 }

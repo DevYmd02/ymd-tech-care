@@ -5,7 +5,6 @@ import { DialogFormLayout } from '@layout/DialogFormLayout';
 import { useDebounce } from '@hooks/useDebounce';
 import { RequisitionApprovalService } from '../services/requisition-approval.service';
 import type { RequisitionApprovalListItem } from '../types/requisition-approval.types';
-import { formatNumber } from '@/shared/utils';
 
 export interface RequisitionSearchModalProps {
     isOpen: boolean;

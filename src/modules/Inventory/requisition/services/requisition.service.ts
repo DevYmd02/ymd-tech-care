@@ -23,7 +23,7 @@ import type { ListResponse, SuccessResponse } from '@/shared/types/api.types';
 
 export const RequisitionService = {
     // ─── Doc Link IC Dropdown ───────────────────────────────────────────────────────
-    getDocLinks: async (): Promise<DocLinkOption[]> => {
+    getDocLinks: async (systemDocCode = 'ISSUE_REQ'): Promise<DocLinkOption[]> => {
         try {
             const [sysDocs, docLinksRaw] = await Promise.all([
                 api.get<unknown[]>('/system-document'),
@@ -33,18 +33,18 @@ export const RequisitionService = {
             const sysDocsList = Array.isArray(sysDocs) ? sysDocs : [];
             const docLinksList = Array.isArray(docLinksRaw) ? docLinksRaw : [];
 
-            // Find ISSUE_REQ system document
-            const issueReqDoc = sysDocsList.find(
-                (d) => (d as Record<string, unknown>).system_document_code?.toString().trim().toUpperCase() === 'ISSUE_REQ'
+            // Find system document by code
+            const sysDoc = sysDocsList.find(
+                (d) => (d as Record<string, unknown>).system_document_code?.toString().trim().toUpperCase() === systemDocCode.trim().toUpperCase()
             ) as Record<string, unknown> | undefined;
-            if (!issueReqDoc) return [];
+            if (!sysDoc) return [];
 
-            // Filter doc-link-ic belonging to ISSUE_REQ
+            // Filter doc-link-ic belonging to system document
             const relatedDocs = docLinksList.filter(
-                (item) => Number((item as Record<string, unknown>).system_document_id) === Number(issueReqDoc.system_document_id) && (item as Record<string, unknown>).is_active !== false
+                (item) => Number((item as Record<string, unknown>).system_document_id) === Number(sysDoc.system_document_id) && (item as Record<string, unknown>).is_active !== false
             ) as Record<string, unknown>[];
 
-            // Sort by doc_type_no (parents first, then sub-items)
+            // Sort by doc_type_no
             const sortedDocs = [...relatedDocs].sort((a, b) => Number(a.doc_type_no || 0) - Number(b.doc_type_no || 0));
 
             return sortedDocs.map((item) => {
