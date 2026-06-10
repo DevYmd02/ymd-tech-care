@@ -317,7 +317,7 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
                         className="h-10 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
                     >
                         {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                        {isSaving ? 'กำลังบันทึก...' : (isEditMode ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล')}
+                        {isSaving ? 'กำลังบันทึก...' : (isEditMode ? 'บันทึกและส่งอนุมัติใหม่' : 'บันทึกข้อมูล')}
                     </button>
                 )}
             </div>

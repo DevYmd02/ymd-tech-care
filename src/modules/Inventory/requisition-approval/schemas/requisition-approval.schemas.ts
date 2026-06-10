@@ -7,6 +7,7 @@ export const requisitionApproveLineSchema = z.object({
     item_code: z.string().optional(),
     item_name: z.string().optional(),
     uom_id: z.string(),
+    uom_name: z.string().optional(),
     warehouse_id: z.string(),
     warehouse_name: z.string().optional(),
     location_id: z.string().optional().nullable(),
@@ -22,6 +23,7 @@ export const requisitionApproveLineSchema = z.object({
 export const requisitionApproveSchema = z.object({
     docu_item_id: z.string().optional(),
     issue_req_no: z.string(),
+    docu_item_no: z.string().optional(),
     docu_date: z.string(),
     branch_id: z.string(),
     branch_name: z.string().optional(),

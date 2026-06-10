@@ -27,9 +27,7 @@ export const requisitionLineSchema = z.object({
     qty_ic: z
         .union([z.number(), z.literal('')])
         .refine(v => v !== '' && Number(v) > 0, { message: 'จำนวนต้องมากกว่า 0' }),
-    stock_flag: z.number().int().refine(v => [-1, 0, 1].includes(v), {
-        message: 'ผลต่อ Stock ต้องเป็น -1, 0 หรือ 1',
-    }),
+    stock_flag: z.union([z.number(), z.null(), z.undefined()]).optional().default(0),
     remark: z.string().max(255).optional(),
 });
 
@@ -76,11 +74,8 @@ export const requisitionHeaderSchema = z.object({
     qty_total: z.number().min(0).default(0),
 
     stock_effect_ic: z
-        .number()
-        .int()
-        .refine(v => [-1, 0, 1].includes(v), {
-            message: 'ผลต่อ Stock ต้องเป็น -1, 0 หรือ 1',
-        })
+        .union([z.number(), z.null(), z.undefined()])
+        .optional()
         .default(0),
 
     remark: z.string().max(255).optional(),

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFormContext, Controller, useWatch } from 'react-hook-form';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, XCircle } from 'lucide-react';
 import type { RequisitionApproveFormData } from '../schemas/requisition-approval.schemas';
 import { CustomDateInput } from '@ui';
 
@@ -20,6 +20,7 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
     const { control } = useFormContext<RequisitionApproveFormData>();
     const watchedCreatedByEmpId = useWatch({ control, name: 'created_by_emp_id' });
     const status = useWatch({ control, name: 'status' });
+    const rejectReason = useWatch({ control, name: 'reject_reason' });
     const isFinalized = status === 'APPROVED' || status === 'REJECTED';
 
     const inputClass = "h-9 w-full px-3 text-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-md text-gray-500 cursor-not-allowed shadow-sm font-medium";
@@ -28,6 +29,20 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
     
     return (
         <section className="space-y-6">
+            {status === 'REJECTED' && (
+                <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/50 rounded-2xl flex items-start gap-3">
+                    <div className="p-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg">
+                        <XCircle size={20} />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-bold text-red-800 dark:text-red-300">เอกสารนี้ไม่ได้รับการอนุมัติ (Rejected)</h4>
+                        <p className="text-xs text-red-600 dark:text-red-400/80 mt-1 font-medium">
+                            เหตุผล: {rejectReason || '-' }
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                     <ClipboardList size={20} strokeWidth={2.5} />
@@ -44,6 +59,22 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
                         render={({ field }) => (
                             <input
                                 {...field}
+                                disabled
+                                className={inputClass}
+                            />
+                        )}
+                    />
+                </div>
+
+                {/* รายการเอกสาร */}
+                <div className="space-y-1">
+                    <label className={labelClass}>รายการเอกสาร</label>
+                    <Controller
+                        name="docu_item_no"
+                        control={control}
+                        render={({ field }) => (
+                            <input
+                                value={field.value || '-'}
                                 disabled
                                 className={inputClass}
                             />
@@ -76,7 +107,7 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
                         control={control}
                         render={({ field }) => (
                             <input
-                                value={branchOptions.find(b => b.id === field.value)?.name || field.value || '-'}
+                                value={branchOptions.find(b => String(b.id) === String(field.value))?.name || field.value || '-'}
                                 disabled
                                 className={inputClass}
                             />
@@ -92,7 +123,7 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
                         control={control}
                         render={({ field }) => (
                             <input
-                                value={deptOptions.find(d => d.id === field.value)?.name || field.value || '-'}
+                                value={deptOptions.find(d => String(d.id) === String(field.value))?.name || field.value || '-'}
                                 disabled
                                 className={inputClass}
                             />
@@ -108,7 +139,7 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
                         control={control}
                         render={({ field }) => (
                             <input
-                                value={jobOptions.find(j => j.id === field.value)?.name || field.value || '-'}
+                                value={jobOptions.find(j => String(j.id) === String(field.value))?.name || field.value || '-'}
                                 disabled
                                 className={inputClass}
                             />
@@ -122,7 +153,7 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
                     <input
                         type="text"
                         disabled
-                        value={empOptions.find(e => e.id === watchedCreatedByEmpId)?.name || watchedCreatedByEmpId || '-'}
+                        value={empOptions.find(e => String(e.id) === String(watchedCreatedByEmpId))?.name || watchedCreatedByEmpId || '-'}
                         className={inputClass}
                     />
                 </div>
@@ -135,7 +166,7 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
                         control={control}
                         render={({ field }) => (
                             <input
-                                value={empOptions.find(e => e.id === field.value)?.name || field.value || '-'}
+                                value={empOptions.find(e => String(e.id) === String(field.value))?.name || field.value || '-'}
                                 disabled
                                 className={inputClass}
                             />
@@ -187,30 +218,16 @@ export const RequisitionApproveHeader: React.FC<RequisitionApproveHeaderProps> =
 
                 {/* ผู้อนุมัติ */}
                 <div className="space-y-1">
-                    <label className={labelClass}>ผู้อนุมัติ <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>ผู้อนุมัติ</label>
                     <Controller
                         name="approval_emp_id"
                         control={control}
                         render={({ field }) => (
-                            isFinalized ? (
-                                <input
-                                    value={empOptions.find(e => String(e.id) === String(field.value))?.name || field.value || '-'}
-                                    disabled
-                                    className={inputClass}
-                                />
-                            ) : (
-                                <select
-                                    {...field}
-                                    className="h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm font-medium focus:outline-none focus:ring-1 focus:ring-emerald-500 text-gray-900 dark:text-white"
-                                >
-                                    <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">-- เลือกผู้อนุมัติ --</option>
-                                    {empOptions.map(emp => (
-                                        <option key={emp.id} value={emp.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                                            {emp.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            )
+                            <input
+                                value={empOptions.find(e => String(e.id) === String(field.value))?.name || field.value || '-'}
+                                disabled
+                                className={inputClass}
+                            />
                         )}
                     />
                 </div>

@@ -3,6 +3,7 @@ export interface RequisitionApprovalListItem {
     approval_id?: number;
     docu_item_id: string; // matches backend requisition PK
     issue_req_no: string;
+    docu_item_no?: string;
     docu_date: string;
     dept_name?: string;
     save_emp_name?: string;
@@ -23,15 +24,25 @@ export interface RequisitionApprovalListParams {
 }
 
 export interface ApproveRequisitionPayload {
-    docu_item_id: string;
+    appv_issue_req_date: string;
+    doc_link_ic_id: number;
+    issue_req_id: number;
+    emp_dept_id: number;
+    project_id: number | null;
+    remarks: string;
+    branch_id: number;
+    approval_emp_id: number;
     status: 'APPROVED' | 'REJECTED';
-    approval_emp_id: number | string;
+    stock_effect_ic: number;
     reject_reason?: string;
-    approved_date?: string;
-    approval_no?: string;
-    lines?: {
-        docu_item_line_id?: number;
-        qty_approved: number;
-        is_approved: boolean;
+    lines: {
+        item_id: number;
+        qty: number;
+        approved_qty: number;
+        uom_id: number;
+        warehouse_id: number;
+        location_id: number | null;
+        lot_id: number | null;
+        lot_balance_id: number | null;
     }[];
 }
