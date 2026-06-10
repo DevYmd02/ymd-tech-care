@@ -26,6 +26,7 @@ export interface RequisitionApprovalListParams {
 export interface ApproveRequisitionPayload {
     appv_issue_req_date: string;
     doc_link_ic_id: number;
+    doc_type_no?: number;
     issue_req_id: number;
     emp_dept_id: number;
     project_id: number | null;

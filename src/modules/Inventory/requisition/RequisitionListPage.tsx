@@ -13,6 +13,7 @@ import { toast } from 'react-hot-toast';
 
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { RequisitionApprovalHistoryModal } from './components/RequisitionApprovalHistoryModal';
+import { ConfirmationModal } from '@system/ConfirmationModal';
 import { useTableFilters } from '@/shared/hooks';
 
 import { RequisitionService } from './services/requisition.service';
@@ -153,12 +154,20 @@ export default function RequisitionListPage() {
         setIsApproveModalOpen(true);
     }, []);
 
-    const handleSendApproval = useCallback(async (id: string) => {
-        if (!window.confirm('คุณต้องการส่งอนุมัติใบขอเบิกนี้ใช่หรือไม่?')) {
-            return;
-        }
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [confirmSendId, setConfirmSendId] = useState<string | null>(null);
+    const [isSendingApproval, setIsSendingApproval] = useState(false);
+
+    const handleSendApproval = useCallback((id: string) => {
+        setConfirmSendId(id);
+        setIsConfirmOpen(true);
+    }, []);
+
+    const handleConfirmSend = useCallback(async () => {
+        if (!confirmSendId) return;
+        setIsSendingApproval(true);
         try {
-            const doc = await RequisitionService.getById(id);
+            const doc = await RequisitionService.getById(confirmSendId);
             if (!doc) {
                 toast.error('ไม่พบข้อมูลเอกสาร');
                 return;
@@ -191,17 +200,21 @@ export default function RequisitionListPage() {
                 })
             };
 
-            const res = await RequisitionService.update(id, payload as unknown as Parameters<typeof RequisitionService.update>[1]);
+            const res = await RequisitionService.update(confirmSendId, payload as unknown as Parameters<typeof RequisitionService.update>[1]);
             if (res.success) {
                 toast.success('ส่งอนุมัติสำเร็จ');
                 queryClient.invalidateQueries({ queryKey: ['requisitions'] });
+                setIsConfirmOpen(false);
+                setConfirmSendId(null);
             } else {
                 toast.error(res.message || 'เกิดข้อผิดพลาดในการส่งอนุมัติ');
             }
         } catch {
             toast.error('เกิดข้อผิดพลาดในการส่งอนุมัติ');
+        } finally {
+            setIsSendingApproval(false);
         }
-    }, [queryClient]);
+    }, [confirmSendId, queryClient]);
 
     const handleCloseForm = () => {
         setIsFormOpen(false);
@@ -459,6 +472,21 @@ export default function RequisitionListPage() {
                     requisitionNo={data?.items?.find(x => String(x.docu_item_id) === String(selectedApproveId))?.issue_req_no}
                 />
             )}
+
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => {
+                    setIsConfirmOpen(false);
+                    setConfirmSendId(null);
+                }}
+                onConfirm={handleConfirmSend}
+                title="ยืนยันการส่งอนุมัติใบขอเบิก"
+                description="คุณต้องการส่งอนุมัติใบขอเบิกนี้ใช่หรือไม่? เมื่อส่งแล้วจะไม่สามารถแก้ไขข้อมูลได้จนกว่าจะได้รับการพิจารณา"
+                confirmText="ยืนยันส่งอนุมัติ"
+                cancelText="ยกเลิก"
+                variant="success"
+                isLoading={isSendingApproval}
+            />
         </PageListLayout>
     );
 }
