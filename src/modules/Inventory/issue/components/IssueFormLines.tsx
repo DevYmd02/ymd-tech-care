@@ -24,7 +24,6 @@ interface IssueFormLinesProps {
 }
 
 const tableInputClass = "w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
-const selectClass = "w-full h-9 px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
 
 export const IssueFormLines: React.FC<IssueFormLinesProps> = React.memo(
     ({
@@ -84,7 +83,6 @@ export const IssueFormLines: React.FC<IssueFormLinesProps> = React.memo(
                                 <th className="p-3 w-32 text-right font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">จำนวน <span className="text-blue-200">*</span></th>
                                 <th className="p-3 w-32 text-right font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">ต้นทุน/หน่วย <span className="text-blue-200">*</span></th>
                                 <th className="p-3 w-36 text-right font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">จำนวนเงิน</th>
-                                <th className="p-3 w-40 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">ผลต่อ Stock</th>
                                 <th className="p-3 min-w-[150px] text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">หมายเหตุ</th>
                                 {!readOnly && <th className="p-3 w-14 text-center sticky right-0 z-20 bg-blue-600 uppercase tracking-wider text-[11px]">ลบ</th>}
                             </tr>
@@ -228,26 +226,6 @@ export const IssueFormLines: React.FC<IssueFormLinesProps> = React.memo(
                                                 readOnly
                                                 className={`${tableInputClass} text-right bg-gray-50 dark:bg-gray-800 font-bold text-gray-800 dark:text-gray-200 cursor-not-allowed`}
                                                 value={Number(getValues(`lines.${index}.good_amnt`) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
-                                            />
-                                        </td>
-
-                                        {/* Stock Flag */}
-                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <Controller
-                                                name={`lines.${index}.stock_flag`}
-                                                control={control}
-                                                render={({ field: f }) => (
-                                                    <select
-                                                        value={f.value}
-                                                        onChange={(e) => f.onChange(Number(e.target.value))}
-                                                        disabled={readOnly}
-                                                        className={selectClass}
-                                                    >
-                                                        <option value="-1">ลด Stock (-1)</option>
-                                                        <option value="0">ไม่กระทบ Stock (0)</option>
-                                                        <option value="1">เพิ่ม Stock (1)</option>
-                                                    </select>
-                                                )}
                                             />
                                         </td>
 

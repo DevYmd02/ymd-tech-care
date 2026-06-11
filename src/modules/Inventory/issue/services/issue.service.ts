@@ -31,6 +31,17 @@ export const IssueStockService = {
         }
     },
 
+    // ─── Get Pending Issue Stock (Approved Requisitions) ────────────────────────
+    getPendingIssues: async (params?: Record<string, any>): Promise<ListResponse<any>> => {
+        try {
+            const res = await api.get<ListResponse<any>>('/issue-stock/pending-issue-stock', { params });
+            return res as ListResponse<any>;
+        } catch (error) {
+            logger.error('[IssueStockService] getPendingIssues error:', error);
+            return { items: [], total: 0, page: 1, limit: 10 };
+        }
+    },
+
     // ─── Get By ID ───────────────────────────────────────────────────────────────────
     getById: async (
         id: string

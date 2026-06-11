@@ -26,7 +26,6 @@ interface TransferFormLinesProps {
 }
 
 const tableInputClass = "w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
-const selectClass = "w-full h-9 px-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
 
 export const TransferFormLines: React.FC<TransferFormLinesProps> = React.memo(
     ({
@@ -88,7 +87,6 @@ export const TransferFormLines: React.FC<TransferFormLinesProps> = React.memo(
                                 <th className="p-3 w-48 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">ที่เก็บปลายทาง</th>
                                 <th className="p-3 w-40 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">Lot</th>
                                 <th className="p-3 w-32 text-right font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">จำนวน <span className="text-blue-200">*</span></th>
-                                <th className="p-3 w-40 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">ผลต่อ Stock</th>
                                 <th className="p-3 min-w-[150px] text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">หมายเหตุ</th>
                                 {!readOnly && <th className="p-3 w-14 text-center sticky right-0 z-20 bg-blue-600 uppercase tracking-wider text-[11px]">ลบ</th>}
                             </tr>
@@ -242,26 +240,6 @@ export const TransferFormLines: React.FC<TransferFormLinesProps> = React.memo(
                                                 className={`${tableInputClass} text-right font-bold text-blue-600 ${lineErr?.qty_ic ? 'border-red-500' : ''}`}
                                             />
                                             {lineErr?.qty_ic && <span className="text-[10px] text-red-500 font-medium block mt-0.5">{lineErr.qty_ic.message}</span>}
-                                        </td>
-
-                                        {/* Stock Flag */}
-                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <Controller
-                                                name={`lines.${index}.stock_flag`}
-                                                control={control}
-                                                render={({ field: f }) => (
-                                                    <select
-                                                        value={f.value}
-                                                        onChange={(e) => f.onChange(Number(e.target.value))}
-                                                        disabled={readOnly}
-                                                        className={selectClass}
-                                                    >
-                                                        <option value="0">ไม่กระทบ Stock (0)</option>
-                                                        <option value="1">เพิ่ม Stock (1)</option>
-                                                        <option value="-1">ลด Stock (-1)</option>
-                                                    </select>
-                                                )}
-                                            />
                                         </td>
 
                                         {/* Remark */}
