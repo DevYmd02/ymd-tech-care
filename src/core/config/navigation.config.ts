@@ -143,11 +143,10 @@ export const sidebarMenuItems: MenuItem[] = [
             { id: 'issue-return', label: 'รับคืนจากการเบิก', path: '/inventory/return' },
             { id: 'transfer', label: 'ใบขอโอนย้ายสินค้า', path: '/inventory/transfer' },
             { id: 'transfer-approval', label: 'อนุมัติใบขอโอนย้ายสินค้า', path: '/inventory/transfer-approval' },
+            { id: 'stock-transfer', label: 'ใบโอนย้ายสินค้า', path: '/inventory/stock-transfer' },
             { id: 'inbound', label: 'รับเข้า (Inbound)', path: '/inventory/inbound' },
             { id: 'outbound', label: 'จ่ายออก (Outbound)', path: '/inventory/outbound' },
             { id: 'cycle-count', label: 'นับสต็อก (Cycle Count)', path: '/inventory/cycle-count' },
-            { id: 'lot-serial', label: 'Lot/Serial/Expiry', path: '/inventory/lot-serial' },
-            { id: 'costing', label: 'ต้นทุนสินค้า (Costing)', path: '/inventory/costing' },
             { id: 'inv-reports', label: 'รายงานคลัง', path: '/inventory/reports' },
         ]
     },
