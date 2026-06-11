@@ -37,6 +37,8 @@ export const issueStockLineSchema = z.object({
         message: 'ผลต่อ Stock ต้องเป็น -1, 0 หรือ 1',
     }).default(-1), // ค่าเริ่มต้นเป็น ลดสต็อก (-1) สำหรับใบเบิก
     remark: z.string().max(255).optional(),
+    appvissue_req_line_id: z.number().optional(),
+    lot_balance_id: z.number().optional(),
 });
 
 // ====================================================================================
@@ -45,11 +47,12 @@ export const issueStockLineSchema = z.object({
 
 export const issueStockHeaderSchema = z.object({
     docu_item_id: z.string().uuid().optional(),
+    appv_issue_req_id: z.number().optional(),
+    doc_link_ic_id: z.number().optional(),
 
     docu_item_no: z
         .string()
-        .optional()
-        .nullable(),
+        .min(1, 'กรุณาเลือกรายการเอกสาร'),
 
     appvissue_req_no: z
         .string()
@@ -81,7 +84,7 @@ export const issueStockHeaderSchema = z.object({
         .string()
         .min(1, 'กรุณาเลือกผู้บันทึก'),
 
-    rece_emp_id: z
+    received_by_emp_id: z
         .string()
         .min(1, 'กรุณาเลือกผู้รับสินค้า'),
 

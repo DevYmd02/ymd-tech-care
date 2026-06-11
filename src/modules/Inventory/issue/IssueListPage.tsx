@@ -6,7 +6,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ClipboardList, Plus, Search, Eye, Edit2, Trash2 } from 'lucide-react';
+import { ClipboardList, Plus, Search, Eye, Edit } from 'lucide-react';
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 
 import { PageListLayout, SmartTable, FilterField } from '@ui';
@@ -16,13 +16,16 @@ import { IssueStockService } from './services/issue.service';
 import { IssueFormModal } from './components/IssueFormModal';
 import type { IssueStockListItem, IssueStockListParams } from './types/issue.types';
 
+import { SelectPendingIssueModal } from './components/SelectPendingIssueModal';
+import type { PendingIssueStock } from './types/issue.types';
+
 // ====================================================================================
 // CONSTANTS
 // ====================================================================================
 
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
-    { value: 'N', label: 'ปกติ' },
+    { value: 'N', label: 'ยืนยันแล้ว' },
     { value: 'Y', label: 'ยกเลิกแล้ว' },
 ];
 
@@ -42,7 +45,7 @@ function CancelBadge({ flag }: { flag: string }) {
     }
     return (
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-            ปกติ
+            ยืนยันแล้ว
         </span>
     );
 }
@@ -78,6 +81,8 @@ export default function IssueListPage() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [isReadOnly, setIsReadOnly] = useState(false);
+    const [isSelectPendingOpen, setIsSelectPendingOpen] = useState(false);
+    const [selectedPending, setSelectedPending] = useState<PendingIssueStock | null>(null);
 
     // ── API Query ───────────────────────────────────────────────────────────────────
     const apiParams: IssueStockListParams = {
@@ -98,9 +103,7 @@ export default function IssueListPage() {
 
     // ── Handlers ────────────────────────────────────────────────────────────────────
     const handleCreate = () => {
-        setSelectedId(null);
-        setIsReadOnly(false);
-        setIsFormOpen(true);
+        setIsSelectPendingOpen(true)
     };
 
     const handleView = useCallback((id: string) => {
@@ -109,26 +112,25 @@ export default function IssueListPage() {
         setIsFormOpen(true);
     }, []);
 
+    const handleSelectPending = useCallback((item: PendingIssueStock) => {
+        setSelectedPending(item);
+        setSelectedId(null);
+        setIsReadOnly(false);
+        setIsSelectPendingOpen(false);
+        setIsFormOpen(true);
+    }, [])
+
     const handleEdit = useCallback((id: string) => {
         setSelectedId(id);
         setIsReadOnly(false);
         setIsFormOpen(true);
     }, []);
 
-    const handleDelete = useCallback(
-        async (id: string) => {
-            if (!window.confirm('ต้องการยกเลิกใบเบิกรายการนี้หรือไม่?')) return;
-            const res = await IssueStockService.delete(id);
-            if (res.success) {
-                queryClient.invalidateQueries({ queryKey: ['issue-stocks'] });
-            }
-        },
-        [queryClient]
-    );
 
     const handleCloseForm = () => {
         setIsFormOpen(false);
         setSelectedId(null);
+        setSelectedPending(null);
         setIsReadOnly(false);
     };
 
@@ -182,12 +184,7 @@ export default function IssueListPage() {
                 size: 150,
                 enableSorting: false,
             }),
-            colHelper.accessor('save_emp_name', {
-                header: 'ผู้บันทึก',
-                cell: info => <span className="text-sm text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
-                size: 140,
-                enableSorting: false,
-            }),
+
             colHelper.accessor('rece_emp_name', {
                 header: 'ผู้รับสินค้า',
                 cell: info => <span className="text-sm text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
@@ -228,17 +225,11 @@ export default function IssueListPage() {
                         </button>
                         <button
                             onClick={() => handleEdit(row.original.docu_item_id)}
-                            className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                            className="flex items-center gap-1 px-2 py-1 text-xs font-bold text-amber-500 hover:text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-900/30 rounded-md transition-colors"
                             title="แก้ไข"
                         >
-                            <Edit2 size={16} />
-                        </button>
-                        <button
-                            onClick={() => handleDelete(row.original.docu_item_id)}
-                            className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                            title="ยกเลิก/ลบ"
-                        >
-                            <Trash2 size={16} />
+                            <Edit size={14} />
+                            <span>แก้ไข</span>
                         </button>
                     </div>
                 ),
@@ -246,7 +237,7 @@ export default function IssueListPage() {
                 enableSorting: false,
             }),
         ],
-        [filters.page, filters.limit, handleView, handleEdit, handleDelete]
+        [filters.page, filters.limit, handleView, handleEdit]
     );
 
     return (
@@ -343,6 +334,13 @@ export default function IssueListPage() {
                 />
             </div>
 
+            {/* เพิ่ม SelectPendingIssueModal */}
+            <SelectPendingIssueModal
+                isOpen={isSelectPendingOpen}
+                onClose={() => setIsSelectPendingOpen(false)}
+                onSelect={handleSelectPending}
+            />
+
             {/* Form Modal */}
             {isFormOpen && (
                 <IssueFormModal
@@ -350,6 +348,7 @@ export default function IssueListPage() {
                     onClose={handleCloseForm}
                     editId={selectedId}
                     readOnly={isReadOnly}
+                    pendingIssue={selectedPending}
                     onSuccess={() => queryClient.invalidateQueries({ queryKey: ['issue-stocks'] })}
                 />
             )}

@@ -19,7 +19,7 @@ export interface IssueStockHeader {
     job_id: string;                // uuid (FK → job)
     branch_id: string;             // uuid (FK → สาขา)
     save_emp_id: string;           // uuid (PK/FK → emp ผู้บันทึก)
-    rece_emp_id: string;           // uuid (PK/FK → emp ผู้รับสินค้า)
+    received_by_emp_id: string;           // uuid (PK/FK → emp ผู้รับสินค้า)
     stock_effect_ic: number;       // smallint (-1=ลด, 0=ไม่มีผล, 1=เพิ่ม)
     amnt_total: number;            // numeric(18,4)
     remark?: string;               // varchar(255)
@@ -51,6 +51,16 @@ export interface IssueStockLine {
     remark?: string;               // varchar(255)
 }
 
+/** Option สำหรับ Dropdown รายการเอกสาร (doc-link-ic) */
+export interface DocLinkOption {
+    docu_type_id: string;
+    docu_type_code: string;
+    docu_name_th: string;
+    docu_name_en: string;
+    docu_item_no: number;
+    stock_effect_ic: number;
+}
+
 // ====================================================================================
 // LIST PAGE TYPES
 // ====================================================================================
@@ -77,4 +87,43 @@ export interface IssueStockListParams {
     cancel_flag?: string;
     page?: number;
     limit?: number;
+}
+
+// ====================================================================================
+// PENDING ISSUE STOCK (ใบขอเบิกที่อนุมัติแล้ว รอสร้างใบเบิก)
+// ====================================================================================
+
+/** Line ของใบขอเบิกที่อนุมัติแล้ว */
+export interface AppvIssueRequisitionLine {
+    appvissue_req_line_id: number;
+    appv_issue_req_id: number;
+    item_id: number;
+    qty: string;
+    approved_qty: string;
+    uom_id: number;
+    warehouse_id: number;
+    location_id: number;
+    lot_id: number;
+    lot_balance_id: number;
+}
+
+/** ใบขอเบิกที่ถูกอนุมัติแล้ว (จาก /issue-stock/pending-issue-stock) */
+export interface PendingIssueStock {
+    appv_issue_req_id: number;
+    appv_issue_req_no: string;
+    appv_issue_req_date: string;
+    issue_req_id: number;
+    approval_emp_id: number;
+    doc_link_ic_id: number;
+    emp_dept_id: number;
+    project_id: number;
+    remarks: string;
+    branch_id: number;
+    stock_effect_ic: number;
+    doc_type_no: number;
+    doc_type_name: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    appvissueRequistionLines: AppvIssueRequisitionLine[];
 }

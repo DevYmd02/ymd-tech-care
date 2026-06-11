@@ -8,11 +8,11 @@ import { requisitionApproveSchema, type RequisitionApproveFormData } from '../sc
 import { RequisitionApprovalService } from '../services/requisition-approval.service';
 import type { ApproveRequisitionPayload } from '../types/requisition-approval.types';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
-import { getResolvedDocName, type DocLinkLike } from '../utils/ic-document.util';
+import { getResolvedDocName, type DocLinkLike } from '../../shared/utils/ic-document.util';
 import { RequisitionApprovalHelper } from '../utils/requisition-approval.helper';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
-import { RequisitionService } from '../../requisition/services/requisition.service';
+import { ICDocumentService } from '../../shared/services/ic-document.service';
 
 interface UseRequisitionApproveFormOptions {
     isOpen: boolean;
@@ -118,14 +118,14 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
 
     const { data: docLinks = [], isLoading: isLoadingDocLinks } = useQuery({
         queryKey: ['docLinks-options'],
-        queryFn: () => RequisitionService.getDocLinks('ISSUE_REQ'),
+        queryFn: () => ICDocumentService.getDocLinks('ISSUE_REQ'),
         staleTime: 5 * 60 * 1000,
         enabled: isOpen,
     });
 
     const { data: appvDocLinks = [], isLoading: isLoadingAppvDocLinks } = useQuery({
         queryKey: ['appvDocLinks-options'],
-        queryFn: () => RequisitionService.getDocLinks('APPV_ISSUE'),
+        queryFn: () => ICDocumentService.getDocLinks('APPV_ISSUE'),
         staleTime: 5 * 60 * 1000,
         enabled: isOpen,
     });

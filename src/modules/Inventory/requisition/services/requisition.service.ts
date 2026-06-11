@@ -14,6 +14,7 @@ import type {
     RequisitionListParams,
     DocLinkOption,
 } from '../types/requisition.types';
+import { ICDocumentService } from '@/modules/Inventory/shared/services/ic-document.service';
 import type { RequisitionFormData } from '../schemas/requisition.schemas';
 import type { ListResponse, SuccessResponse } from '@/shared/types/api.types';
 
@@ -24,43 +25,7 @@ import type { ListResponse, SuccessResponse } from '@/shared/types/api.types';
 export const RequisitionService = {
     // ─── Doc Link IC Dropdown ───────────────────────────────────────────────────────
     getDocLinks: async (systemDocCode = 'ISSUE_REQ'): Promise<DocLinkOption[]> => {
-        try {
-            const [sysDocs, docLinksRaw] = await Promise.all([
-                api.get<unknown[]>('/system-document'),
-                api.get<unknown[]>('/doc-link-ic')
-            ]);
-
-            const sysDocsList = Array.isArray(sysDocs) ? sysDocs : [];
-            const docLinksList = Array.isArray(docLinksRaw) ? docLinksRaw : [];
-
-            // Find system document by code
-            const sysDoc = sysDocsList.find(
-                (d) => (d as Record<string, unknown>).system_document_code?.toString().trim().toUpperCase() === systemDocCode.trim().toUpperCase()
-            ) as Record<string, unknown> | undefined;
-            if (!sysDoc) return [];
-
-            // Filter doc-link-ic belonging to system document
-            const relatedDocs = docLinksList.filter(
-                (item) => Number((item as Record<string, unknown>).system_document_id) === Number(sysDoc.system_document_id) && (item as Record<string, unknown>).is_active !== false
-            ) as Record<string, unknown>[];
-
-            // Sort by doc_type_no
-            const sortedDocs = [...relatedDocs].sort((a, b) => Number(a.doc_type_no || 0) - Number(b.doc_type_no || 0));
-
-            return sortedDocs.map((item) => {
-                const name = (item.doc_type_name || item.docu_name_th || item.docu_desc || item.docu_name_en || '') as string;
-                return {
-                    docu_type_id: String(item.doc_link_ic_id ?? item.docu_type_id),
-                    docu_type_code: '',
-                    docu_name_th: name,
-                    docu_name_en: (item.docu_name_en as string) || name,
-                    docu_item_no: Number(item.doc_type_no || 0),
-                };
-            });
-        } catch (error) {
-            logger.error('[RequisitionService] getDocLinks error:', error);
-            return [];
-        }
+        return ICDocumentService.getDocLinks(systemDocCode) as Promise<DocLinkOption[]>;
     },
 
     // ─── List ────────────────────────────────────────────────────────────────────────
