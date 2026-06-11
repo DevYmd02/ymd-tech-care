@@ -114,7 +114,7 @@ export const RequisitionFormHeader: React.FC<RequisitionFormHeaderProps> = ({
                             >
                                 <option value="">-- เลือกรายการเอกสาร --</option>
                                 {docLinks.map(d => (
-                                    <option key={d.docu_type_id} value={d.docu_type_id}>
+                                    <option key={d.docu_type_id} value={String((d.docu_item_no || 1) - 1)}>
                                         {d.docu_type_code ? `${d.docu_type_code} – ` : ''}{d.docu_name_th ?? d.docu_name_en}
                                     </option>
                                 ))}

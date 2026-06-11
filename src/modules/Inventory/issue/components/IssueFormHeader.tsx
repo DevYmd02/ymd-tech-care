@@ -9,8 +9,10 @@ import { ClipboardList, Search } from 'lucide-react';
 import type { IssueStockHeaderFormData } from '../schemas/issue.schemas';
 import { CustomDateInput } from '@ui';
 import { EmployeeSearchModal } from '@/modules/master-data/employee/components/EmployeeSearchModal';
+import type { DocLinkOption } from '../types/issue.types';
 
 interface IssueFormHeaderProps {
+    docLinks?: DocLinkOption[];
     deptOptions?: { id: string; name: string }[];
     jobOptions?: { id: string; name: string }[];
     branchOptions?: { id: string; name: string }[];
@@ -19,6 +21,7 @@ interface IssueFormHeaderProps {
 }
 
 export const IssueFormHeader: React.FC<IssueFormHeaderProps> = ({
+    docLinks = [],
     deptOptions = [],
     jobOptions = [],
     branchOptions = [],
@@ -27,12 +30,13 @@ export const IssueFormHeader: React.FC<IssueFormHeaderProps> = ({
 }) => {
     const { register, control, formState: { errors }, setValue } = useFormContext<IssueStockHeaderFormData>();
     const watchedSaveEmpId = useWatch({ control, name: 'save_emp_id' });
-    const watchedReceEmpId = useWatch({ control, name: 'rece_emp_id' });
+    const watchedReceEmpId = useWatch({ control, name: 'received_by_emp_id' });
 
     const [isEmpSearchOpen, setIsEmpSearchOpen] = useState(false);
+    const [localEmpName, setLocalEmpName] = useState('');
 
     const isLocked = readOnly;
-    const selectedEmpName = empOptions.find(e => e.id === watchedReceEmpId)?.name || '';
+    const selectedEmpName = localEmpName || empOptions.find(e => e.id === watchedReceEmpId)?.name || '';
 
     const inputClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white placeholder-gray-400 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
     const selectClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -110,7 +114,32 @@ export const IssueFormHeader: React.FC<IssueFormHeaderProps> = ({
                     {errors.appvissue_req_no && <span className="text-[10px] text-red-500 font-medium">{errors.appvissue_req_no.message}</span>}
                 </div>
 
-                {/* 3. วันที่เอกสาร */}
+                {/* 3. รายการเอกสาร (เชื่อม icoption) */}
+                <div className="space-y-1">
+                    <label className={labelClass}>รายการเอกสาร <span className="text-red-500">*</span></label>
+                    <Controller
+                        name="docu_item_no"
+                        control={control}
+                        render={({ field }) => (
+                            <select
+                                {...field}
+                                value={field.value || ''}
+                                disabled={isLocked}
+                                className={`${selectClass} ${getErrorClass('docu_item_no')}`}
+                            >
+                                <option value="">-- เลือกรายการเอกสาร --</option>
+                                {docLinks.map(d => (
+                                    <option key={d.docu_type_id} value={String((d.docu_item_no || 1) - 1)}>
+                                        {d.docu_type_code ? `${d.docu_type_code} – ` : ''}{d.docu_name_th ?? d.docu_name_en}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    />
+                    {errors.docu_item_no && <span className="text-[10px] text-red-500 font-medium">{errors.docu_item_no.message}</span>}
+                </div>
+
+                {/* 4. วันที่เอกสาร */}
                 <div className="space-y-1">
                     <label className={labelClass}>วันที่เอกสาร <span className="text-red-500">*</span></label>
                     <Controller
@@ -219,7 +248,7 @@ export const IssueFormHeader: React.FC<IssueFormHeaderProps> = ({
                             placeholder="คลิกเพื่อค้นหาผู้รับสินค้า"
                             value={selectedEmpName}
                             onClick={() => !isLocked && setIsEmpSearchOpen(true)}
-                            className={`${inputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${getErrorClass('rece_emp_id')}`}
+                            className={`${inputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${getErrorClass('received_by_emp_id')}`}
                         />
                         {!isLocked && (
                             <button
@@ -230,9 +259,9 @@ export const IssueFormHeader: React.FC<IssueFormHeaderProps> = ({
                                 <Search size={16} />
                             </button>
                         )}
-                        <input type="hidden" {...register('rece_emp_id')} />
+                        <input type="hidden" {...register('received_by_emp_id')} />
                     </div>
-                    {errors.rece_emp_id && <span className="text-[10px] text-red-500 font-medium">{errors.rece_emp_id.message}</span>}
+                    {errors.received_by_emp_id && <span className="text-[10px] text-red-500 font-medium">{errors.received_by_emp_id.message}</span>}
                 </div>
 
                 {/* 10. หมายเหตุ */}
@@ -252,7 +281,8 @@ export const IssueFormHeader: React.FC<IssueFormHeaderProps> = ({
                     isOpen={isEmpSearchOpen}
                     onClose={() => setIsEmpSearchOpen(false)}
                     onSelect={(emp) => {
-                        setValue('rece_emp_id', String(emp.id));
+                        setValue('received_by_emp_id', String(emp.employee_id || emp.id), { shouldValidate: true, shouldDirty: true });
+                        setLocalEmpName(`${emp.employee_firstname_th} ${emp.employee_lastname_th}`.trim());
                     }}
                 />
             )}

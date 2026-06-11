@@ -3,8 +3,8 @@ import type { RequisitionApprovalListItem, ApproveRequisitionPayload } from '../
 import type { IssueRequisitionHeader, IssueRequisitionLine } from '../../requisition/types/requisition.types';
 import type { SuccessResponse } from '@/shared/types/api.types';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
-import { getResolvedDocName, type DocLinkLike } from '../utils/ic-document.util';
-import { RequisitionService } from '../../requisition/services/requisition.service';
+import { getResolvedDocName, type DocLinkLike } from '../../shared/utils/ic-document.util';
+import { ICDocumentService } from '../../shared/services/ic-document.service';
 
 const ENDPOINTS = {
     pending: '/appv-issue-requistion/pending',
@@ -35,8 +35,8 @@ export const RequisitionApprovalService = {
             const [departments, employees, docLinks, appvDocLinks] = await Promise.all([
                 MasterDataService.getDepartments().catch(() => []),
                 MasterDataService.getEmployees().catch(() => []),
-                RequisitionService.getDocLinks('ISSUE_REQ').catch(() => []),
-                RequisitionService.getDocLinks('APPV_ISSUE').catch(() => [])
+                ICDocumentService.getDocLinks('ISSUE_REQ').catch(() => []),
+                ICDocumentService.getDocLinks('APPV_ISSUE').catch(() => [])
             ]);
 
             const mapped = requisitions
@@ -110,8 +110,8 @@ export const RequisitionApprovalService = {
             const [departments, employees, docLinks, appvDocLinks] = await Promise.all([
                 MasterDataService.getDepartments().catch(() => []),
                 MasterDataService.getEmployees().catch(() => []),
-                RequisitionService.getDocLinks('ISSUE_REQ').catch(() => []),
-                RequisitionService.getDocLinks('APPV_ISSUE').catch(() => [])
+                ICDocumentService.getDocLinks('ISSUE_REQ').catch(() => []),
+                ICDocumentService.getDocLinks('APPV_ISSUE').catch(() => [])
             ]);
 
             const mapped = requisitions

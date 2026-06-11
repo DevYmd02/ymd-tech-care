@@ -24,6 +24,8 @@ import { UOMPickerModal, type UOMPickerItem } from '@/shared/components/ui/feedb
 import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import { ItemBarcodeService } from '@inventory/services/item-barcode.service';
 import { ItemMasterService } from '@inventory/services/item-master.service';
+import type { PendingIssueStock } from '../types/issue.types';
+
 
 interface IssueFormModalProps {
     isOpen: boolean;
@@ -31,6 +33,7 @@ interface IssueFormModalProps {
     editId?: string | null;
     onSuccess?: () => void;
     readOnly?: boolean;
+    pendingIssue?: PendingIssueStock | null;
 }
 
 const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden';
@@ -41,6 +44,7 @@ export const IssueFormModal: React.FC<IssueFormModalProps> = ({
     editId,
     onSuccess,
     readOnly = false,
+    pendingIssue,
 }) => {
     const {
         formMethods,
@@ -55,10 +59,11 @@ export const IssueFormModal: React.FC<IssueFormModalProps> = ({
         updateLine,
         branches,
         departments,
+        docLinks,
         employees,
         projects,
         uoms,
-    } = useIssueForm({ isOpen, onClose, editId, onSuccess });
+    } = useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue });
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [pendingData, setPendingData] = useState<IssueStockHeaderFormData | null>(null);
@@ -188,7 +193,7 @@ export const IssueFormModal: React.FC<IssueFormModalProps> = ({
                 item_uom_id: targetItemUomId,
                 warehouse_id: product.warehouse_id ? String(product.warehouse_id) : fields[activeLineIndex].warehouse_id,
                 warehouse_name: product.warehouse || fields[activeLineIndex].warehouse_name,
-                unit_cost: product.standard_cost || 0,
+                unit_cost: (product.standard_cost && product.standard_cost >= 0) ? product.standard_cost : 0,
             } as IssueStockLineFormData);
         }
         setIsProductSearchOpen(false);
@@ -342,28 +347,29 @@ export const IssueFormModal: React.FC<IssueFormModalProps> = ({
                                 <div className={cardClass}>
                                     <div className="p-6">
                                         <IssueFormHeader
-                                            deptOptions={departments.map(d => {
+                                            docLinks={docLinks || []}
+                                            deptOptions={(departments || []).map(d => {
                                                 const item = d as unknown as Record<string, unknown>;
                                                 return { 
                                                     id: String(d.emp_dept_id || d.department_id || item.id || ''), 
                                                     name: d.emp_dept_name || d.department_name || String(item.dept_name || '') 
                                                 };
                                             })}
-                                            jobOptions={projects.map(p => {
+                                            jobOptions={(projects || []).map(p => {
                                                 const item = p as unknown as Record<string, unknown>;
                                                 return { 
                                                     id: String(p.project_id || item.id || ''), 
                                                     name: p.project_name || String(item.name || '') 
                                                 };
                                             })}
-                                            branchOptions={branches.map(b => {
+                                            branchOptions={(branches || []).map(b => {
                                                 const item = b as unknown as Record<string, unknown>;
                                                 return { 
                                                     id: String(b.branch_id || item.id || ''), 
                                                     name: b.branch_name || String(item.name || '') 
                                                 };
                                             })}
-                                            empOptions={employees.map(e => {
+                                            empOptions={(employees || []).map(e => {
                                                 const item = e as unknown as Record<string, unknown>;
                                                 return { 
                                                     id: String(e.employee_id || item.id || ''), 
@@ -383,8 +389,8 @@ export const IssueFormModal: React.FC<IssueFormModalProps> = ({
                                             addLine={addLine}
                                             removeLine={removeLine}
                                             updateLine={updateLine}
-                                            readOnly={readOnly}
-                                            uomOptions={uoms.map(u => {
+                                            readOnly={readOnly || isEditMode}
+                                            uomOptions={(uoms || []).map(u => {
                                                 const item = u as unknown as Record<string, unknown>;
                                                 const uId = String(u.uom_id ?? item.id ?? '');
                                                 return { 

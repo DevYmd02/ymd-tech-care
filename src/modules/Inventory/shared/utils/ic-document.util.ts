@@ -24,7 +24,7 @@ export const getResolvedDocName = (
     docLinks: DocLinkLike[],
     appvDocLinks: DocLinkLike[]
 ): string => {
-    const docLink = docLinks.find(d => Number(d.docu_type_id) === Number(docLinkId));
+    const docLink = docLinks.find(d => String(Number(d.docu_item_no) - 1) === String(docLinkId) || String(d.docu_type_id) === String(docLinkId));
     const docTypeNo = docLink ? Number(docLink.docu_item_no || 0) : 0;
     const appvDocLink = appvDocLinks.find(d => Number(d.docu_item_no) === docTypeNo);
 
