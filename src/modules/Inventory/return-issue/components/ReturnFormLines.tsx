@@ -99,6 +99,7 @@ export const ReturnFormLines: React.FC<ReturnFormLinesProps> = React.memo(
 
                                         {/* Item Code */}
                                         <td className="p-2 sticky left-12 z-10 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800">
+                                            <input type="hidden" {...register(`lines.${index}.issue_stock_line_id`)} />
                                             <div className="flex gap-1">
                                                 <input
                                                     {...register(`lines.${index}.item_code`)}
@@ -212,7 +213,9 @@ export const ReturnFormLines: React.FC<ReturnFormLinesProps> = React.memo(
                                         {/* Return Qty */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
                                             <input
-                                                {...register(`lines.${index}.qty_return_ic`, { valueAsNumber: true })}
+                                                {...register(`lines.${index}.qty_return_ic`, { 
+                                                    setValueAs: (v) => v === '' || isNaN(Number(v)) ? '' : Number(v)
+                                                })}
                                                 type="number"
                                                 disabled={readOnly}
                                                 className={`${tableInputClass} text-right font-bold text-blue-600 ${lineErr?.qty_return_ic ? 'border-red-500' : ''}`}
@@ -223,7 +226,9 @@ export const ReturnFormLines: React.FC<ReturnFormLinesProps> = React.memo(
                                         {/* Unit Cost */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
                                             <input
-                                                {...register(`lines.${index}.unit_cost`, { valueAsNumber: true })}
+                                                {...register(`lines.${index}.unit_cost`, { 
+                                                    setValueAs: (v) => v === '' || isNaN(Number(v)) ? '' : Number(v)
+                                                })}
                                                 type="number"
                                                 disabled={readOnly}
                                                 className={`${tableInputClass} text-right font-semibold text-gray-700 dark:text-gray-300 ${lineErr?.unit_cost ? 'border-red-500' : ''}`}
@@ -232,13 +237,15 @@ export const ReturnFormLines: React.FC<ReturnFormLinesProps> = React.memo(
 
                                         {/* Good Amount */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <input
-                                                {...register(`lines.${index}.good_amnt`)}
-                                                type="text"
-                                                readOnly
-                                                className={`${tableInputClass} text-right bg-gray-50 dark:bg-gray-800 font-bold text-gray-800 dark:text-gray-200 cursor-not-allowed`}
-                                                value={Number(getValues(`lines.${index}.good_amnt`) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
-                                            />
+                                            <div className={`${tableInputClass} text-right bg-gray-50 dark:bg-gray-800 font-bold text-gray-800 dark:text-gray-200 cursor-not-allowed flex items-center justify-end`}>
+                                                <Controller
+                                                    control={control}
+                                                    name={`lines.${index}.good_amnt`}
+                                                    render={({ field }) => (
+                                                        <span>{Number(field.value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+                                                    )}
+                                                />
+                                            </div>
                                         </td>
 
                                         {/* Remark */}

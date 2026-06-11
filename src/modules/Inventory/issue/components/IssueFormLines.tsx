@@ -201,7 +201,9 @@ export const IssueFormLines: React.FC<IssueFormLinesProps> = React.memo(
                                         {/* Quantity */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
                                             <input
-                                                {...register(`lines.${index}.qty_ic`, { valueAsNumber: true })}
+                                                {...register(`lines.${index}.qty_ic`, { 
+                                                    setValueAs: (v) => v === '' || isNaN(Number(v)) ? '' : Number(v)
+                                                })}
                                                 type="number"
                                                 disabled={readOnly}
                                                 className={`${tableInputClass} text-right font-bold text-blue-600 ${lineErr?.qty_ic ? 'border-red-500' : ''}`}
@@ -211,7 +213,9 @@ export const IssueFormLines: React.FC<IssueFormLinesProps> = React.memo(
                                         {/* Unit Cost */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
                                             <input
-                                                {...register(`lines.${index}.unit_cost`, { valueAsNumber: true })}
+                                                {...register(`lines.${index}.unit_cost`, { 
+                                                    setValueAs: (v) => v === '' || isNaN(Number(v)) ? '' : Number(v)
+                                                })}
                                                 type="number"
                                                 disabled={readOnly}
                                                 className={`${tableInputClass} text-right font-semibold text-gray-700 dark:text-gray-300 ${lineErr?.unit_cost ? 'border-red-500' : ''}`}

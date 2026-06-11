@@ -25,7 +25,13 @@ export const issueStockLineSchema = z.object({
     lot_no: z.string().optional(),
     qty_ic: z
         .union([z.number(), z.literal('')])
-        .refine(v => v !== '' && Number(v) > 0, { message: 'จำนวนต้องมากกว่า 0' }),
+        .superRefine((v, ctx) => {
+            if (v === '') {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'กรุณากรอกจำนวน' });
+            } else if (Number(v) <= 0) {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'จำนวนต้องมากกว่า 0' });
+            }
+        }),
     unit_cost: z
         .union([z.number(), z.literal('')])
         .refine(v => v !== '' && Number(v) >= 0, { message: 'ต้นทุนต้องมากกว่าหรือเท่ากับ 0' })

@@ -63,7 +63,7 @@ export interface ReturnIssueListItem {
     issue_stk_no: string;
     docu_date: string;
     dept_name?: string;
-    save_emp_name?: string;
+    doc_type_name?: string;
     rece_emp_name?: string;
     amnt_total: number;
     cancel_flag: string;
@@ -78,4 +78,69 @@ export interface ReturnIssueListParams {
     cancel_flag?: string;
     page?: number;
     limit?: number;
+}
+
+// ====================================================================================
+// PENDING RETURN ISSUE (ใบเบิกที่ Confirmed แล้ว รอสร้างใบรับคืน)
+// ====================================================================================
+
+/** Line ของใบเบิกที่ Confirmed (จาก /return-stock/pending) */
+export interface PendingReturnIssueLine {
+    issue_stock_line_id: number;
+    appvissue_req_line_id: number;
+    issue_stock_id: number;
+    item_id: number;
+    qty: string;
+    uom_id: number;
+    warehouse_id: number;
+    location_id: number;
+    lot_id: number;
+    lot_balance_id: number;
+    unit_cost_price: string;
+    goods_amount: string;
+    standard_buy_price: string;
+    standard_cost_price: string;
+    created_at: string;
+    updated_at: string;
+}
+
+/** ใบเบิกที่ Confirmed แล้ว (จาก /return-stock/pending) */
+export interface PendingReturnIssue {
+    issue_stock_id: number;
+    issue_stock_no: string;
+    issue_stock_date: string;
+    branch_id: number;
+    appv_issue_req_id: number;
+    created_by_emp_id: number;
+    received_by_emp_id: number;
+    doc_link_ic_id: number;
+    emp_dept_id: number;
+    project_id: number;
+    remarks: string;
+    doc_type_no: number;
+    doc_type_name: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+    issueStockLines: PendingReturnIssueLine[];
+}
+
+/** Paginated response จาก /return-stock/pending */
+export interface PendingReturnIssueResponse {
+    data: PendingReturnIssue[];
+    meta: {
+        total: number;
+        page: number;
+        limit: number;
+        total_pages: number;
+    };
+}
+
+/** Query params สำหรับ Pending Return API */
+export interface PendingReturnIssueParams {
+    page?: number;
+    limit?: number;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
 }
