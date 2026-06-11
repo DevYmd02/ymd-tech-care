@@ -124,6 +124,7 @@ export const ROUTES = {
         OUTBOUND: '/inventory/outbound',
         TRANSFER: '/inventory/transfer',
         TRANSFER_APPROVAL: '/inventory/transfer-approval',
+        STOCK_TRANSFER: '/inventory/stock-transfer',
         CYCLE_COUNT: '/inventory/cycle-count',
         LOT_SERIAL: '/inventory/lot-serial',
         COSTING: '/inventory/costing',
@@ -144,6 +145,7 @@ export const placeholderRoutes: Record<string, PlaceholderRoute[]> = {
     inventory: [
         { path: 'inventory/item-master', title: 'Item Master' },
         { path: 'inventory/stock-level', title: 'Stock Level' },
+        { path: 'inventory/stock-transfer', title: 'ใบโอนย้ายสินค้า' },
         { path: 'inventory/inbound', title: 'Inbound' },
         { path: 'inventory/outbound', title: 'Outbound' },
         { path: 'inventory/cycle-count', title: 'Cycle Count' },
