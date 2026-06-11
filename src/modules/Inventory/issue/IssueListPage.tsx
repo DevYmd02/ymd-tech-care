@@ -161,10 +161,27 @@ export default function IssueListPage() {
                 size: 160,
                 enableSorting: false,
             }),
-            colHelper.accessor('appvissue_req_no', {
-                header: 'เลขที่ใบขอเบิกอ้างอิง',
+            colHelper.accessor('docu_item_no', {
+                header: 'รายการเอกสาร',
                 cell: info => <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{info.getValue() || '-'}</span>,
-                size: 160,
+                size: 150,
+                enableSorting: false,
+            }),
+            colHelper.accessor('appvissue_req_no', {
+                header: 'เลขที่อนุมัติ / ใบขอเบิกอ้างอิง',
+                cell: info => (
+                    <div className="flex flex-col">
+                        <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+                            {info.getValue() && info.getValue() !== '-' ? info.getValue() : '-'}
+                        </span>
+                        {info.row.original.issue_req_no && info.row.original.issue_req_no !== '-' && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                                ({info.row.original.issue_req_no})
+                            </span>
+                        )}
+                    </div>
+                ),
+                size: 200,
                 enableSorting: false,
             }),
             colHelper.accessor('docu_date', {
@@ -257,10 +274,10 @@ export default function IssueListPage() {
                         accentColor="blue"
                     />
                     <FilterField
-                        label="เลขที่ใบขอเบิกอ้างอิง"
+                        label="เลขที่อนุมัติใบขอเบิก"
                         value={localFilters.search2 || ''}
                         onChange={(v) => handleFilterChange('search2', v)}
-                        placeholder="เลขที่ใบขอเบิกอ้างอิง"
+                        placeholder="เลขที่อนุมัติใบขอเบิก"
                         accentColor="blue"
                     />
                     <FilterField

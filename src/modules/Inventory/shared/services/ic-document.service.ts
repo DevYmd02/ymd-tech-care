@@ -44,7 +44,9 @@ export const ICDocumentService = {
             const sortedDocs = [...relatedDocs].sort((a, b) => Number(a.doc_type_no || 0) - Number(b.doc_type_no || 0));
 
             return sortedDocs.map((item) => {
-                const name = (item.doc_type_name || item.docu_name_th || item.docu_desc || item.docu_name_en || '') as string;
+                const docTypeNo = Number(item.doc_type_no || 0);
+                const baseName = (item.doc_type_name || item.docu_name_th || item.docu_desc || item.docu_name_en || '') as string;
+                const name = `${docTypeNo + 1}. ${baseName}`;
                 return {
                     docu_type_id: String(item.doc_link_ic_id ?? item.docu_type_id),
                     docu_type_code: '',

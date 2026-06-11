@@ -59,6 +59,12 @@ export const issueStockHeaderSchema = z.object({
         .min(1, 'กรุณาระบุเลขที่เอกสารอนุมัติ (อ้างอิง)')
         .max(50),
 
+    issue_req_no: z
+        .string()
+        .max(50)
+        .optional()
+        .nullable(),
+
     issue_stk_no: z
         .string()
         .min(1, 'กรุณาระบุเลขที่เอกสารใบเบิก')

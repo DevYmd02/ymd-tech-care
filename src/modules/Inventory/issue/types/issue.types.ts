@@ -13,6 +13,7 @@ export interface IssueStockHeader {
     docu_item_id: string;          // uuid (PK - backend generate)
     docu_item_no?: string | null;  // uuid (FK → doc_link_ic)
     appvissue_req_no: string;      // varchar(25) - เลขที่เอกสารอนุมัติ (อ้างอิง)
+    issue_req_no?: string;         // เลขที่ใบขอเบิกอ้างอิง
     issue_stk_no: string;          // varchar(25) - เลขที่เอกสารใบเบิก
     docu_date: string;             // date
     emp_dept_id: string;           // uuid (FK → แผนก)
@@ -68,8 +69,10 @@ export interface DocLinkOption {
 /** ข้อมูลสำหรับแสดงในตาราง List */
 export interface IssueStockListItem {
     docu_item_id: string;
+    docu_item_no?: string;
     issue_stk_no: string;
     appvissue_req_no: string;
+    issue_req_no?: string;
     docu_date: string;
     dept_name?: string;
     save_emp_name?: string;

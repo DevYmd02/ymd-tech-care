@@ -44,11 +44,17 @@ export const IssueStockService = {
             let emps: any[] = [];
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             let appvs: any[] = [];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            let reqs: any[] = [];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            let docLinks: any[] = [];
             try {
-                const [deptsRes, empsRes, appvsRes] = await Promise.all([
+                const [deptsRes, empsRes, appvsRes, reqsRes, dlRes] = await Promise.all([
                     MasterDataService.getDepartments().catch(() => []),
                     MasterDataService.getEmployees().catch(() => []),
-                    api.get('/appv-issue-requistion').catch(() => [])
+                    api.get('/appv-issue-requistion').catch(() => []),
+                    api.get('/issue-requistion').catch(() => []),
+                    ICDocumentService.getDocLinks('ISSUE_STOCK').catch(() => [])
                 ]);
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 depts = deptsRes as any[];
@@ -56,6 +62,10 @@ export const IssueStockService = {
                 emps = empsRes as any[];
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 appvs = Array.isArray(appvsRes) ? appvsRes : ((appvsRes as any)?.data || (appvsRes as any)?.items || []);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                reqs = Array.isArray(reqsRes) ? reqsRes : ((reqsRes as any)?.data || (reqsRes as any)?.items || []);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                docLinks = dlRes as any[];
             } catch (e) {
                 logger.warn('Hydration failed', e);
             }
@@ -81,16 +91,39 @@ export const IssueStockService = {
                 }
 
                 let appvReqNo = item.appv_issue_req_no || item.appvissue_req_no || '';
+                let issueReqNo = item.issue_req_no || '';
+                
                 if (!appvReqNo && appvReqId) {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     const a = appvs.find((x: any) => String(x.appv_issue_req_id || x.issue_req_id) === String(appvReqId));
-                    if (a) appvReqNo = a.appv_issue_req_no || a.approval_no || a.issue_req_no || appvReqNo;
+                    if (a) {
+                        appvReqNo = a.appv_issue_req_no || a.approval_no || a.issue_req_no || appvReqNo;
+                        
+                        if (!issueReqNo) {
+                            const reqId = a.issue_req_id || a.ref_doc_id;
+                            if (reqId) {
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                const r = reqs.find((x: any) => String(x.issue_req_id || x.id) === String(reqId));
+                                if (r) {
+                                    issueReqNo = r.issue_req_no || r.docu_item_no || issueReqNo;
+                                }
+                            }
+                        }
+                    }
                 }
+
+                const getValidId = (v: unknown) => (v !== null && v !== undefined && v !== '') ? String(v) : null;
+                const issueDocId = getValidId(item.doc_type_no) ?? getValidId(item.doc_link_ic_id) ?? getValidId(item.docu_item_no) ?? '';
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const docLink = docLinks.find((d: any) => String(d.docu_type_id) === issueDocId || String(d.docu_item_no) === issueDocId);
+                const docName = docLink ? (docLink.docu_name_th || docLink.docu_name_en || '') : '';
 
                 return {
                     docu_item_id: String(item.issue_stock_id || item.docu_item_id || ''),
+                    docu_item_no: docName,
                     issue_stk_no: item.issue_stock_no || item.issue_stk_no || '',
                     appvissue_req_no: appvReqNo || '-',
+                    issue_req_no: issueReqNo || '-',
                     docu_date: item.issue_stock_date || item.docu_date || '',
                     dept_name: deptName || '-',
                     save_emp_name: item.created_by_emp_name || item.save_emp_name || '',
@@ -124,7 +157,7 @@ export const IssueStockService = {
         }
     },
 
-    getAppvReqNo: async (id: string | number): Promise<string> => {
+    getReqNos: async (id: string | number): Promise<{ appvReqNo: string; issueReqNo: string }> => {
         try {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const res = await api.get<any>('/appv-issue-requistion');
@@ -132,12 +165,33 @@ export const IssueStockService = {
             const items = Array.isArray(res) ? res : ((res?.items || res?.data || []) as any[]);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const matched = items.find((a: any) => String(a.appv_issue_req_id) === String(id) || String(a.issue_req_id) === String(id));
+            
+            let appvReqNo = '';
+            let issueReqNo = '';
+            
             if (matched) {
-                return String(matched.appv_issue_req_no || matched.approval_no || matched.issue_req_no || '');
+                appvReqNo = String(matched.appv_issue_req_no || matched.approval_no || matched.issue_req_no || '');
+                
+                const reqId = matched.issue_req_id || matched.ref_doc_id;
+                if (reqId) {
+                    try {
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const reqsRes = await api.get<any>('/issue-requistion');
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const reqItems = Array.isArray(reqsRes) ? reqsRes : ((reqsRes?.items || reqsRes?.data || []) as any[]);
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const reqMatch = reqItems.find((r: any) => String(r.issue_req_id || r.id) === String(reqId));
+                        if (reqMatch) {
+                            issueReqNo = String(reqMatch.issue_req_no || reqMatch.docu_item_no || '');
+                        }
+                    } catch (e) {
+                        logger.warn('Failed to fetch issue-requistion', e);
+                    }
+                }
             }
-            return '';
+            return { appvReqNo, issueReqNo };
         } catch {
-            return '';
+            return { appvReqNo: '', issueReqNo: '' };
         }
     },
 

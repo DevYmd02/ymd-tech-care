@@ -24,9 +24,23 @@ export const getResolvedDocName = (
     docLinks: DocLinkLike[],
     appvDocLinks: DocLinkLike[]
 ): string => {
-    const docLink = docLinks.find(d => String(Number(d.docu_item_no) - 1) === String(docLinkId) || String(d.docu_type_id) === String(docLinkId));
-    const docTypeNo = docLink ? Number(docLink.docu_item_no || 0) : 0;
-    const appvDocLink = appvDocLinks.find(d => Number(d.docu_item_no) === docTypeNo);
+    const docLink = docLinks.find(d => String(d.docu_item_no) === String(docLinkId) || String(d.docu_type_id) === String(docLinkId));
+    
+    let appvDocLink: DocLinkLike | undefined;
+    if (docLink) {
+        // Match by name first to prevent misalignment if doc_type_no differs between ISSUE_REQ and APPV_ISSUE
+        const baseNameTh = (docLink.docu_name_th || '').replace(/^\d+\.\s*/, '').trim();
+        appvDocLink = appvDocLinks.find(d => {
+            const appvBaseNameTh = (d.docu_name_th || '').replace(/^\d+\.\s*/, '').trim();
+            return appvBaseNameTh === baseNameTh;
+        });
+
+        // Fallback to docu_item_no (doc_type_no) if name matching fails
+        if (!appvDocLink) {
+            const docTypeNo = Number(docLink.docu_item_no || 0);
+            appvDocLink = appvDocLinks.find(d => Number(d.docu_item_no) === docTypeNo);
+        }
+    }
 
     if (status === 'APPROVED' || status === 'REJECTED') {
         return appvDocLink
