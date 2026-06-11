@@ -98,7 +98,7 @@ export const IssueFormHeader: React.FC<IssueFormHeaderProps> = ({
 
                 {/* 2. เลขที่เอกสารอนุมัติ (อ้างอิง) */}
                 <div className="space-y-1">
-                    <label className={labelClass}>เลขที่ใบขอเบิกอ้างอิง <span className="text-red-500">*</span></label>
+                    <label className={labelClass}>เลขที่อนุมัติใบขอเบิก <span className="text-red-500">*</span></label>
                     <Controller
                         name="appvissue_req_no"
                         control={control}
@@ -106,12 +106,31 @@ export const IssueFormHeader: React.FC<IssueFormHeaderProps> = ({
                             <input
                                 {...field}
                                 disabled={isLocked}
-                                placeholder="เลขที่เอกสารอนุมัติอ้างอิง"
+                                placeholder="เลขที่อนุมัติใบขอเบิก"
                                 className={`${inputClass} ${getErrorClass('appvissue_req_no')}`}
                             />
                         )}
                     />
                     {errors.appvissue_req_no && <span className="text-[10px] text-red-500 font-medium">{errors.appvissue_req_no.message}</span>}
+                </div>
+
+                {/* 2.5 เลขที่ใบขอเบิกอ้างอิง */}
+                <div className="space-y-1">
+                    <label className={labelClass}>เลขที่ใบขอเบิกอ้างอิง</label>
+                    <Controller
+                        name="issue_req_no"
+                        control={control}
+                        render={({ field }) => (
+                            <input
+                                {...field}
+                                value={field.value || ''}
+                                disabled={isLocked}
+                                placeholder="เลขที่ใบขอเบิกอ้างอิง"
+                                className={`${inputClass} ${getErrorClass('issue_req_no')}`}
+                            />
+                        )}
+                    />
+                    {errors.issue_req_no && <span className="text-[10px] text-red-500 font-medium">{errors.issue_req_no.message}</span>}
                 </div>
 
                 {/* 3. รายการเอกสาร (เชื่อม icoption) */}
@@ -129,7 +148,7 @@ export const IssueFormHeader: React.FC<IssueFormHeaderProps> = ({
                             >
                                 <option value="">-- เลือกรายการเอกสาร --</option>
                                 {docLinks.map(d => (
-                                    <option key={d.docu_type_id} value={String((d.docu_item_no || 1) - 1)}>
+                                    <option key={d.docu_type_id} value={String(d.docu_type_id)}>
                                         {d.docu_type_code ? `${d.docu_type_code} – ` : ''}{d.docu_name_th ?? d.docu_name_en}
                                     </option>
                                 ))}

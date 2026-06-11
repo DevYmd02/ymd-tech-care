@@ -142,7 +142,7 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
 
     useEffect(() => {
         if (watchedDocuItemNo && docLinks.length > 0) {
-            const selectedDoc = docLinks.find(d => String(d.docu_item_no - 1) === String(watchedDocuItemNo));
+            const selectedDoc = docLinks.find(d => String(d.docu_type_id) === String(watchedDocuItemNo) || String(d.docu_item_no) === String(watchedDocuItemNo));
             if (selectedDoc && selectedDoc.stock_effect_ic !== undefined) {
                 // Ensure stock_effect_ic is a valid number: -1, 0, or 1
                 let newEffect = Number(selectedDoc.stock_effect_ic);
@@ -261,27 +261,45 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
                     logger.warn('[useIssueForm] location/lot load failed:', err);
                 }
 
-                let docuItemNoVal = String(header.docu_item_no || '');
-                if (docuItemNoVal.length > 5 && docLinks?.length) {
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const matchedDoc = docLinks.find(d => String(d.docu_type_id) === docuItemNoVal || (d as any).doc_link_ic_id === docuItemNoVal);
+                const getValidId = (v: unknown) => (v !== null && v !== undefined && v !== '') ? String(v) : null;
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                let docuItemNoVal = getValidId((header as any).doc_type_no) ?? getValidId((header as any).doc_link_ic_id) ?? getValidId(header.docu_item_no) ?? '';
+                console.log('[DEBUG] useIssueForm docuItemNoVal before:', docuItemNoVal);
+                console.log('[DEBUG] useIssueForm docLinks:', docLinks);
+                if (docLinks?.length) {
+                    // Match by UUID or old index-based value and set it to UUID so the <select> matches
+                    const matchedDoc = docLinks.find(d => String(d.docu_type_id) === docuItemNoVal || String(d.docu_item_no) === docuItemNoVal);
+                    console.log('[DEBUG] useIssueForm matchedDoc:', matchedDoc);
                     if (matchedDoc) {
-                        docuItemNoVal = String((matchedDoc.docu_item_no || 1) - 1);
+                        docuItemNoVal = String(matchedDoc.docu_type_id);
+                        console.log('[DEBUG] useIssueForm docuItemNoVal after:', docuItemNoVal);
                     }
                 }
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 let appvReqNoVal = String(header.appvissue_req_no || (header as any).appv_issue_req_no || (header as any).ref_doc_no || '');
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const issueDocId = getValidId((header as any).doc_type_no) ?? getValidId((header as any).doc_link_ic_id) ?? getValidId(header.docu_item_no) ?? '';
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const docLink = docLinks.find((d: any) => String(d.docu_type_id) === issueDocId || String(d.docu_item_no) === issueDocId);
+                const docName = docLink ? (docLink.docu_name_th || docLink.docu_name_en || '') : '';
+                console.log('[DEBUG] useIssueForm issue.service item:', header.issue_stk_no, 'issueDocId:', issueDocId, 'docName:', docName);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                let issueReqNoVal = String(header.issue_req_no || (header as any).ref_req_no || '');
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const appvReqId = (header as any).appv_issue_req_id || (header as any).appvissue_req_id || (header as any).ref_doc_id;
-                if (!appvReqNoVal && appvReqId) {
-                    appvReqNoVal = await IssueStockService.getAppvReqNo(appvReqId as string | number);
+                
+                if ((!appvReqNoVal || !issueReqNoVal) && appvReqId) {
+                    const reqNos = await IssueStockService.getReqNos(appvReqId as string | number);
+                    if (!appvReqNoVal) appvReqNoVal = reqNos.appvReqNo;
+                    if (!issueReqNoVal) issueReqNoVal = reqNos.issueReqNo;
                 }
 
                 reset({
                     docu_item_id: header.docu_item_id,
                     docu_item_no: docuItemNoVal,
                     appvissue_req_no: appvReqNoVal,
+                    issue_req_no: issueReqNoVal,
                     issue_stk_no: header.issue_stk_no,
                     docu_date: header.docu_date,
                     emp_dept_id: header.emp_dept_id,
@@ -344,6 +362,23 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
 
         const handlePendingHydration = async () => {
             const lines = pendingIssue.appvissueRequistionLines;
+            const allItemIds = [...new Set((lines || []).map(l => Number(l.item_id)).filter(id => id > 0))];
+
+            const conversionMap = new Map<number, UOMConversionListItem[]>();
+            if (allItemIds.length > 0) {
+                try {
+                    const convsList = await Promise.all(
+                        allItemIds.map(itemId =>
+                            UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                        )
+                    );
+                    convsList.forEach(c => {
+                        if (c) conversionMap.set(c.itemId, c.items);
+                    });
+                } catch (err) {
+                    console.warn('[useIssueForm] pendingHydration UOM conversions load failed:', err);
+                }
+            }
 
         // Fetch item details ทุก item พร้อมกัน
        const [ itemDetails, locationDetails, lotDetails] = await Promise.all([
@@ -362,15 +397,27 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
         )
        ])
 
+        const getValidId = (v: unknown) => (v !== null && v !== undefined && v !== '') ? String(v) : null;
+        let pendingDocuItemNo = getValidId(pendingIssue.doc_type_no) ?? getValidId(pendingIssue.doc_link_ic_id) ?? '';
+        if (docLinks?.length && pendingDocuItemNo) {
+            const matchedDoc = docLinks.find(d => String(d.docu_type_id) === pendingDocuItemNo || String(d.docu_item_no) === pendingDocuItemNo);
+            if (matchedDoc) {
+                pendingDocuItemNo = String(matchedDoc.docu_type_id);
+            }
+        }
+
+        const pendingData = pendingIssue as unknown as Record<string, unknown>;
+
         reset({
         ...DEFAULT_VALUES,
         docu_date: getTodayISO(),
         save_emp_id: user?.employee_id ? String(user.employee_id) : '',
-        docu_item_no: pendingIssue.doc_type_no != null ? String(Number(pendingIssue.doc_type_no) - 1) : '',
+        docu_item_no: pendingDocuItemNo,
         branch_id: String(pendingIssue.branch_id || ''),
         emp_dept_id: String(pendingIssue.emp_dept_id || ''),
         job_id: String(pendingIssue.project_id || ''),
         appvissue_req_no: pendingIssue.appv_issue_req_no,
+        issue_req_no: String(pendingData.issue_req_no || pendingData.ref_req_no || pendingData.ref_doc_no || ''),
         appv_issue_req_id: pendingIssue.appv_issue_req_id,
         doc_link_ic_id: pendingIssue.doc_link_ic_id,
         remark: pendingIssue.remarks || '',
@@ -384,16 +431,21 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
                 const matchedWarehouse = warehouses.find(
                     w => String((w as unknown as Record<string, unknown>).warehouse_id) === String(line.warehouse_id)
                 );
-                const warehouseName = (matchedWarehouse as unknown as { warehouse_name?: string })?.warehouse_name || '';
+                const warehouseName = (matchedWarehouse as unknown as { warehouse_name?: string })?.warehouse_name ?? '';
+
+                const itemId = Number(line.item_id);
+                const convs = conversionMap.get(itemId) || [];
+                const currentUomVal = String(line.uom_id);
+                const matchedConv = convs.find(c => String(c.conversion_id) === currentUomVal);
 
                 return {
                     ...createDefaultLine(i + 1),
-                    item_id: String(line.item_id || ''),
-                    item_code: item?.item_code || '',       
-                    item_name: item?.item_name || '',       
-                    uom_id: String(line.uom_id || ''),
-                    item_uom_id: String(line.uom_id || ''),
-                    warehouse_id: String(line.warehouse_id || ''),
+                    item_id: String(line.item_id ?? ''),
+                    item_code: item?.item_code ?? '',       
+                    item_name: item?.item_name ?? '',       
+                    uom_id: matchedConv ? String(matchedConv.from_unit_id) : String(line.uom_id ?? ''),
+                    item_uom_id: matchedConv ? String(matchedConv.conversion_id) : String(line.uom_id ?? ''),
+                    warehouse_id: String(line.warehouse_id ?? ''),
                     warehouse_name: warehouseName,          
                     location_id: String(line.location_id || ''),
                     location_name: location?.name_th || location?.code || '',
@@ -401,7 +453,7 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
                     lot_balance_id: line.lot_balance_id,
                     lot_no: lot?.code || '',
                     qty_ic: (line.approved_qty || line.qty || '') as number | '',
-                    unit_cost: (item?.standard_cost && item.standard_cost >= 0) ? item.standard_cost : 0,   
+                    unit_cost: 0,   
                     appvissue_req_line_id: line.appvissue_req_line_id || undefined,
                 };
             }),
@@ -410,7 +462,7 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
 
     void handlePendingHydration();
         
-    }, [pendingIssue, editId, isOpen, reset, user, warehouses]);
+    }, [pendingIssue, editId, isOpen, reset, user, warehouses, docLinks]);
 
     // ── Mutations ─────────────────────────────────────────────────────────────────
     const createMutation = useMutation({
@@ -454,7 +506,7 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
             // Find selected docLink to ensure doc_link_ic_id is set
             let docLinkIcId = data.doc_link_ic_id;
             if (!docLinkIcId && docLinks && docLinks.length > 0) {
-                const selectedDoc = docLinks.find(d => String(d.docu_item_no - 1) === String(data.docu_item_no));
+                const selectedDoc = docLinks.find(d => String(d.docu_type_id) === String(data.docu_item_no) || String(d.docu_item_no) === String(data.docu_item_no));
                 if (selectedDoc) docLinkIcId = Number(selectedDoc.docu_type_id);
             }
 

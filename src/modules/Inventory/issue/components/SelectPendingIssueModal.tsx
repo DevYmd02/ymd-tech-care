@@ -6,6 +6,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ClipboardCheck, Search, ChevronRight, Loader2, X } from 'lucide-react';
+import api from '@/core/api/api';
 import { IssueStockService } from '../services/issue.service';
 import type { PendingIssueStock } from '../types/issue.types';
 
@@ -29,6 +30,19 @@ export const SelectPendingIssueModal: React.FC<SelectPendingIssueModalProps> = (
         staleTime: 0,
     });
 
+    const { data: issueReqsData } = useQuery({
+        queryKey: ['issue-requisitions-ref'],
+        queryFn: () => api.get('/issue-requistion').then(res => {
+            const typedRes = res as { data?: unknown; items?: unknown } | unknown[];
+            const data = Array.isArray(typedRes) ? typedRes : (typedRes && typeof typedRes === 'object' ? ('data' in typedRes ? typedRes.data : ('items' in typedRes ? typedRes.items : typedRes)) : typedRes);
+            return Array.isArray(data) ? data : [];
+        }),
+        enabled: isOpen,
+        staleTime: 60 * 1000,
+    });
+
+    const issueReqs = (issueReqsData as Array<{ issue_req_id: number; issue_req_no: string }>) || [];
+
     // API คืนค่าเป็น array ตรงๆ (ไม่ได้ wrap ใน items)
     // ดูจาก response ในรูปแรก — root เป็น array
     const items: PendingIssueStock[] = Array.isArray(data)
@@ -43,8 +57,19 @@ export const SelectPendingIssueModal: React.FC<SelectPendingIssueModalProps> = (
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes scaleIn {
+                    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+                    to { opacity: 1; transform: scale(1) translateY(0); }
+                }
+                .animate-modal-scale { animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+            `}</style>
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden animate-modal-scale origin-center">
 
                 {/* Header */}
                 <div className="bg-emerald-600 px-6 py-4 flex items-center justify-between">
@@ -96,14 +121,32 @@ export const SelectPendingIssueModal: React.FC<SelectPendingIssueModalProps> = (
                             {filtered.map(item => (
                                 <li key={item.appv_issue_req_id}>
                                     <button
-                                        onClick={() => onSelect(item)}
+                                        onClick={() => {
+                                            const itemData = item as unknown as Record<string, unknown>;
+                                            const directRef = itemData.issue_req_no || itemData.ref_req_no || itemData.ref_doc_no;
+                                            const refNo = directRef ? String(directRef) : issueReqs.find(r => r.issue_req_id === item.issue_req_id)?.issue_req_no;
+                                            onSelect({ ...item, issue_req_no: refNo } as PendingIssueStock);
+                                        }}
                                         className="w-full px-6 py-4 flex items-center justify-between hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors text-left group"
                                     >
                                         <div className="flex flex-col gap-1">
                                             {/* เลขที่ */}
-                                            <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-sm">
-                                                {item.appv_issue_req_no}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-semibold text-emerald-600 dark:text-emerald-400 text-sm">
+                                                    {item.appv_issue_req_no}
+                                                </span>
+                                                {(() => {
+                                                    const itemData = item as unknown as Record<string, unknown>;
+                                                    const directRef = itemData.issue_req_no || itemData.ref_req_no || itemData.ref_doc_no;
+                                                    const refNo = directRef ? String(directRef) : issueReqs.find(r => r.issue_req_id === item.issue_req_id)?.issue_req_no;
+                                                    if (!refNo) return null;
+                                                    return (
+                                                        <span className="text-[10px] font-medium text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-700 whitespace-nowrap">
+                                                            อ้างอิง: {refNo}
+                                                        </span>
+                                                    );
+                                                })()}
+                                            </div>
                                             {/* วันที่ + รายการ */}
                                             <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                                                 <span>

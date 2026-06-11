@@ -144,7 +144,7 @@ export const IssueFormLines: React.FC<IssueFormLinesProps> = React.memo(
                                                             className={`${tableInputClass} text-left flex items-center justify-between font-medium disabled:bg-gray-50 dark:disabled:bg-gray-800/50 disabled:opacity-60 disabled:cursor-not-allowed ${lineErr?.uom_id ? 'border-red-500 focus:ring-red-500' : ''}`}
                                                         >
                                                             <span className="truncate">
-                                                                {uomOptions.find(u => String(u.id) === String(f.value))?.name || 
+                                                                {uomOptions.find(u => String(u.id) === String(f.value).trim())?.name || 
                                                                  (f.value ? `[ID: ${f.value}]` : '-- เลือกหน่วย --')}
                                                             </span>
                                                             {!readOnly && !!itemId && <span className="text-gray-400 text-[10px] ml-1 shrink-0">▼</span>}

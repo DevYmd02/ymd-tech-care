@@ -292,8 +292,19 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
             const reqDocLink = (docLinks as unknown as DocLinkLike[]).find(d => Number(d.docu_type_id) === Number(header?.doc_link_ic_id || header?.docu_item_no));
             const docTypeNo = reqDocLink ? Number(reqDocLink.docu_item_no || 0) : 0;
 
-            // Find the matching APPV_ISSUE doc link with the same doc_type_no
-            const appvDocLink = (appvDocLinks as unknown as DocLinkLike[]).find(d => Number(d.docu_item_no) === docTypeNo);
+            // Find the matching APPV_ISSUE doc link by name first, then fallback to doc_type_no
+            let appvDocLink: DocLinkLike | undefined;
+            if (reqDocLink) {
+                const baseNameTh = (reqDocLink.docu_name_th || '').replace(/^\d+\.\s*/, '').trim();
+                appvDocLink = (appvDocLinks as unknown as DocLinkLike[]).find(d => {
+                    const appvBaseNameTh = (d.docu_name_th || '').replace(/^\d+\.\s*/, '').trim();
+                    return appvBaseNameTh === baseNameTh;
+                });
+            }
+            if (!appvDocLink) {
+                appvDocLink = (appvDocLinks as unknown as DocLinkLike[]).find(d => Number(d.docu_item_no) === docTypeNo);
+            }
+            
             const resolvedDocLinkId = appvDocLink ? Number(appvDocLink.docu_type_id) : Number(header?.doc_link_ic_id || header?.docu_item_no || 0);
 
             const approvePayload: ApproveRequisitionPayload = {
