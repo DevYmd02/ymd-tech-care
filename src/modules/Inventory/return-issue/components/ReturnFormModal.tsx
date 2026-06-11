@@ -24,6 +24,7 @@ import { UOMPickerModal, type UOMPickerItem } from '@/shared/components/ui/feedb
 import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import { ItemBarcodeService } from '@inventory/services/item-barcode.service';
 import { ItemMasterService } from '@inventory/services/item-master.service';
+import type { PendingReturnIssue } from '../types/return.types';
 
 interface ReturnFormModalProps {
     isOpen: boolean;
@@ -31,6 +32,7 @@ interface ReturnFormModalProps {
     editId?: string | null;
     onSuccess?: () => void;
     readOnly?: boolean;
+    pendingReturn?: PendingReturnIssue | null;
 }
 
 const cardClass = 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm overflow-hidden';
@@ -41,6 +43,7 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
     editId,
     onSuccess,
     readOnly = false,
+    pendingReturn,
 }) => {
     const {
         formMethods,
@@ -58,7 +61,8 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
         employees,
         projects,
         uoms,
-    } = useReturnForm({ isOpen, onClose, editId, onSuccess });
+        docLinks,
+    } = useReturnForm({ isOpen, onClose, editId, onSuccess, pendingReturn });
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [pendingData, setPendingData] = useState<ReturnIssueHeaderFormData | null>(null);
@@ -190,7 +194,7 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
                 warehouse_name: product.warehouse || fields[activeLineIndex].warehouse_name,
                 unit_cost: product.standard_cost || 0,
                 qty_ic: 10, // Mock จำนวนเบิกเดิม หรือตั้งค่าเริ่มต้น
-                qty_return_ic: '',
+                qty_return_ic: 10,
             } as ReturnIssueLineFormData);
         }
         setIsProductSearchOpen(false);
@@ -344,6 +348,7 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
                                 <div className={cardClass}>
                                     <div className="p-6">
                                         <ReturnFormHeader
+                                            docLinks={docLinks}
                                             deptOptions={departments.map(d => {
                                                 const item = d as unknown as Record<string, unknown>;
                                                 return { 
@@ -367,9 +372,13 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
                                             })}
                                             empOptions={employees.map(e => {
                                                 const item = e as unknown as Record<string, unknown>;
+                                                const fullName = e.employee_fullname 
+                                                    || e.employee_name 
+                                                    || (e.employee_firstname_th ? `${e.employee_firstname_th} ${e.employee_lastname_th || ''}`.trim() : '')
+                                                    || String(item.name || '');
                                                 return { 
                                                     id: String(e.employee_id || item.id || ''), 
-                                                    name: e.employee_fullname || String(item.name || '') 
+                                                    name: fullName 
                                                 };
                                             })}
                                             readOnly={readOnly}
@@ -385,7 +394,7 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
                                             addLine={addLine}
                                             removeLine={removeLine}
                                             updateLine={updateLine}
-                                            readOnly={readOnly}
+                                            readOnly={readOnly || isEditMode}
                                             uomOptions={uoms.map(u => {
                                                 const item = u as unknown as Record<string, unknown>;
                                                 const uId = String(u.uom_id ?? item.id ?? '');

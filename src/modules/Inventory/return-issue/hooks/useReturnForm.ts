@@ -15,8 +15,12 @@ import { returnIssueHeaderSchema } from '../schemas/return.schemas';
 import type { ReturnIssueHeaderFormData, ReturnIssueLineFormData } from '../schemas/return.schemas';
 import { ReturnIssueService } from '../services/return.service';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
+import { ICDocumentService } from '@/modules/Inventory/shared/services/ic-document.service';
 import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import type { UOMConversionListItem } from '@/modules/master-data/types/master-data-types';
+import type { PendingReturnIssue } from '../types/return.types';
+import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
+import { LocationService, LotNoService } from '@master-data/inventory/services/inventory-master.service';
 
 // ====================================================================================
 // HELPERS
@@ -49,7 +53,7 @@ const createDefaultLine = (listno: number): ReturnIssueLineFormData => ({
 });
 
 const DEFAULT_VALUES: ReturnIssueHeaderFormData = {
-    docu_item_no: null,
+    docu_item_no: '',
     issue_stk_no: '',
     reissue_stk_no: 'ระบบจะกรอกอัตโนมัติ',
     docu_date: getTodayISO(),
@@ -76,9 +80,10 @@ interface UseReturnFormOptions {
     onClose: () => void;
     editId?: string | null;
     onSuccess?: () => void;
+    pendingReturn?: PendingReturnIssue | null;
 }
 
-export function useReturnForm({ isOpen, onClose, editId, onSuccess }: UseReturnFormOptions) {
+export function useReturnForm({ isOpen, onClose, editId, onSuccess, pendingReturn }: UseReturnFormOptions) {
     const queryClient = useQueryClient();
     const { user } = useAuth();
     const isEditMode = !!editId;
@@ -96,6 +101,7 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess }: UseReturnF
         handleSubmit,
         reset,
         setValue,
+        getValues,
         formState: { errors, isSubmitting },
     } = formMethods;
 
@@ -125,7 +131,43 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess }: UseReturnF
         setValue('amnt_total', parseFloat(total.toFixed(4)));
     }, [watchedLines, setValue]);
 
-    // ── Load Master Data ─────────────────────────────────────────────────────────
+    // ── Queries ───────────────────────────────────────────────────────────────────
+    const { data: docLinks = [] } = useQuery({
+        queryKey: ['doc-link-ic-options', 'RIS'],
+        queryFn: () => ICDocumentService.getDocLinks('RIS'),
+        staleTime: 5 * 60 * 1000,
+        enabled: isOpen,
+    });
+
+    // ── Watch docu_item_no to update stock_effect_ic ──────────────────────────────
+    const watchedDocuItemNo = useWatch({ control, name: 'docu_item_no' });
+
+    useEffect(() => {
+        if (watchedDocuItemNo && docLinks.length > 0) {
+            const selectedDoc = docLinks.find(d => String(d.docu_type_id) === String(watchedDocuItemNo) || String(d.docu_item_no) === String(watchedDocuItemNo));
+            if (selectedDoc && selectedDoc.stock_effect_ic !== undefined) {
+                // Ensure stock_effect_ic is a valid number: -1, 0, or 1
+                let newEffect = Number(selectedDoc.stock_effect_ic);
+                if (![-1, 0, 1].includes(newEffect)) {
+                    newEffect = 1; // Default to 1 for return
+                }
+
+                const currentEffect = getValues('stock_effect_ic');
+                if (currentEffect !== newEffect) {
+                    setValue('stock_effect_ic', newEffect, { shouldValidate: true, shouldDirty: true });
+                }
+                
+                // Update stock_flag for all lines
+                const currentLines = getValues('lines') || [];
+                currentLines.forEach((line: ReturnIssueLineFormData, index: number) => {
+                    if (Number(line.stock_flag) !== newEffect) {
+                        setValue(`lines.${index}.stock_flag`, newEffect, { shouldValidate: true, shouldDirty: true });
+                    }
+                });
+            }
+        }
+    }, [watchedDocuItemNo, docLinks, setValue, getValues]);
+
     const { data: branches = [] } = useQuery({
         queryKey: ['branches-options'],
         queryFn: () => MasterDataService.getBranches(),
@@ -182,6 +224,13 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess }: UseReturnF
 
             const handleHydration = async () => {
                 const conversionMap = new Map<number, UOMConversionListItem[]>();
+                const itemDetailsMap = new Map<number, { item_code?: string; item_name?: string; standard_cost?: number }>();
+                const locationDetailsMap = new Map<number, { name_th?: string; name?: string }>();
+                const lotDetailsMap = new Map<number, { code?: string; lot_no?: string }>();
+                
+                const allLocationIds = [...new Set(lines.map(l => Number(l.location_id)).filter(id => id > 0))];
+                const allLotIds = [...new Set(lines.map(l => Number(l.lot_id)).filter(id => id > 0))];
+
                 if (allItemIds.length > 0) {
                     try {
                         const convsList = await Promise.all(
@@ -192,14 +241,45 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess }: UseReturnF
                         convsList.forEach(c => {
                             if (c) conversionMap.set(c.itemId, c.items);
                         });
+
+                        const itemDetailsList = await Promise.all(
+                            allItemIds.map(itemId =>
+                                ItemMasterService.getById(itemId).then(res => ({ itemId, data: res }))
+                            )
+                        );
+                        itemDetailsList.forEach(c => {
+                            if (c.data) itemDetailsMap.set(c.itemId, c.data as unknown as Record<string, unknown>);
+                        });
+                        
+                        if (allLocationIds.length > 0) {
+                            const locationDetailsList = await Promise.all(
+                                allLocationIds.map(locId =>
+                                    LocationService.getById(locId).then(res => ({ locId, data: res }))
+                                )
+                            );
+                            locationDetailsList.forEach(c => {
+                                if (c.data) locationDetailsMap.set(c.locId, c.data as unknown as Record<string, unknown>);
+                            });
+                        }
+
+                        if (allLotIds.length > 0) {
+                            const lotDetailsList = await Promise.all(
+                                allLotIds.map(lotId =>
+                                    LotNoService.getById(lotId).then(res => ({ lotId, data: res }))
+                                )
+                            );
+                            lotDetailsList.forEach(c => {
+                                if (c.data) lotDetailsMap.set(c.lotId, c.data);
+                            });
+                        }
                     } catch (err) {
-                        logger.warn('[useReturnForm] UOM conversions load failed:', err);
+                        logger.warn('[useReturnForm] Hydration data load failed:', err);
                     }
                 }
 
                 reset({
                     docu_item_id: header.docu_item_id,
-                    docu_item_no: header.docu_item_no,
+                    docu_item_no: header.docu_item_no || '',
                     issue_stk_no: header.issue_stk_no,
                     reissue_stk_no: header.reissue_stk_no,
                     docu_date: header.docu_date,
@@ -219,27 +299,32 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess }: UseReturnF
                         const convs = conversionMap.get(itemId) || [];
                         const currentUomVal = String(l.uom_id);
                         const matchedConv = convs.find(c => String(c.conversion_id) === currentUomVal);
+                        
+                        const itemDetail = itemDetailsMap.get(itemId);
+                        const locDetail = locationDetailsMap.get(Number(l.location_id));
+                        const lotDetail = lotDetailsMap.get(Number(l.lot_id));
+                        const matchedWarehouse = warehouses.find(w => String(w.warehouse_id) === String(l.warehouse_id));
 
                         return {
                             _tempId: `edit-${l.docu_item_id ?? i}`,
                             listno: l.listno ?? i + 1,
                             item_id: l.item_id,
-                            item_code: l.item_code || '',
-                            item_name: l.item_name || '',
+                            item_code: l.item_code || itemDetail?.item_code || '',
+                            item_name: l.item_name || itemDetail?.item_name || '',
                             uom_id: matchedConv ? String(matchedConv.from_unit_id) : l.uom_id,
                             item_uom_id: matchedConv ? String(matchedConv.conversion_id) : l.uom_id,
                             warehouse_id: l.warehouse_id,
-                            warehouse_name: l.warehouse_name || '',
+                            warehouse_name: l.warehouse_name || matchedWarehouse?.warehouse_name || '',
                             location_id: l.location_id ?? '',
-                            location_name: l.location_name || '',
+                            location_name: l.location_name || locDetail?.name_th || locDetail?.name || '',
                             qty_ic: l.qty_ic,
                             qty_return_ic: l.qty_return_ic,
                             lot_id: l.lot_id ?? '',
-                            lot_no: l.lot_no || '',
-                            unit_cost: l.unit_cost,
-                            good_amnt: l.good_amnt,
+                            lot_no: l.lot_no || lotDetail?.code || lotDetail?.lot_no || '',
+                            unit_cost: Number(l.unit_cost) || Number(itemDetail?.standard_cost) || 0,
+                            good_amnt: Number(l.good_amnt) || (Number(l.qty_return_ic) * (Number(l.unit_cost) || Number(itemDetail?.standard_cost) || 0)),
                             standard_buy_price: l.standard_buy_price ?? 0,
-                            standard_cost: l.standard_cost ?? 0,
+                            standard_cost: l.standard_cost ?? itemDetail?.standard_cost ?? 0,
                             stock_flag: l.stock_flag ?? 1,
                             remark: l.remark ?? '',
                         };
@@ -256,7 +341,115 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess }: UseReturnF
                 lines: [createDefaultLine(1)] 
             });
         }
-    }, [editData, editId, isOpen, reset, user]);
+    }, [editData, editId, isOpen, reset, user, warehouses]);
+
+    // ── Hydrate from Pending Return (Confirmed Issue Stock) ───────────────────────
+    useEffect(() => {
+        if (!pendingReturn || editId || !isOpen) return;
+
+        const handlePendingHydration = async () => {
+            const lines = pendingReturn.issueStockLines || [];
+            const allItemIds = [...new Set(lines.map(l => Number(l.item_id)).filter(id => id > 0))];
+
+            const conversionMap = new Map<number, UOMConversionListItem[]>();
+            const itemMap = new Map<number, { item_code?: string; item_name?: string; standard_cost?: number }>();
+            const locMap = new Map<number, { name_th?: string; code?: string; name?: string }>();
+            const lotMap = new Map<number, { code?: string; lot_no?: string }>();
+
+            if (allItemIds.length > 0) {
+                try {
+                    const [itemsList, convsList] = await Promise.all([
+                        Promise.all(allItemIds.map(id => ItemMasterService.getById(id))),
+                        Promise.all(
+                            allItemIds.map(itemId =>
+                                UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                            )
+                        ),
+                    ]);
+                    itemsList.forEach(itm => { if (itm) itemMap.set(Number((itm as { item_id?: number | string; id?: number | string }).item_id || (itm as { id?: number | string }).id), itm as { item_code?: string; item_name?: string; standard_cost?: number }); });
+                    convsList.forEach(c => {
+                        if (c) conversionMap.set(c.itemId, c.items);
+                    });
+                } catch (err) {
+                    console.warn('[useReturnForm] pendingHydration items/UOM load failed:', err);
+                }
+            }
+
+            let autoDocuItemNo = '';
+            try {
+                const allLocIds = [...new Set(lines.map(l => Number(l.location_id)).filter(id => id > 0))];
+                const allLotIds = [...new Set(lines.map(l => Number(l.lot_id)).filter(id => id > 0))];
+
+                const [locsList, lotsList, links] = await Promise.all([
+                    Promise.all(allLocIds.map(id => LocationService.getById(id))),
+                    Promise.all(allLotIds.map(id => LotNoService.getById(id))),
+                    ICDocumentService.getDocLinks('RIS')
+                ]);
+                locsList.forEach(loc => { if (loc) locMap.set(Number((loc as { id?: number | string }).id), loc as { name_th?: string; code?: string; name?: string }); });
+                lotsList.forEach(lot => { if (lot) lotMap.set(Number((lot as { id?: number | string }).id), lot as { code?: string; lot_no?: string }); });
+                
+                if (links && links.length > 0) {
+                    const matchedDoc = links.find(d => Number(d.docu_item_no) === Number(pendingReturn.doc_type_no));
+                    if (matchedDoc) {
+                        autoDocuItemNo = String(matchedDoc.docu_type_id);
+                    }
+                }
+            } catch (err) {
+                console.warn('[useReturnForm] location/lot/docLinks load failed:', err);
+            }
+
+            reset({
+                ...DEFAULT_VALUES,
+                docu_date: getTodayISO(),
+                save_emp_id: user?.employee_id ? String(user.employee_id) : '',
+                branch_id: String(pendingReturn.branch_id || user?.employee?.branch_id || ''),
+                emp_dept_id: String(pendingReturn.emp_dept_id || ''),
+                job_id: String(pendingReturn.project_id || ''),
+                issue_stk_no: pendingReturn.issue_stock_no || '',
+                docu_item_no: autoDocuItemNo,
+                remark: pendingReturn.remarks || '',
+                issue_stock_id: pendingReturn.issue_stock_id,
+                lines: lines.map((line, i) => {
+                    const itemId = Number(line.item_id);
+                    const item = itemMap.get(itemId);
+                    const location = locMap.get(Number(line.location_id));
+                    const lot = lotMap.get(Number(line.lot_id));
+                    const convs = conversionMap.get(itemId) || [];
+                    const currentUomVal = String(line.uom_id);
+                    const matchedConv = convs.find(c => String(c.conversion_id) === currentUomVal);
+
+                    const matchedWarehouse = warehouses.find(
+                        w => String((w as unknown as Record<string, unknown>).warehouse_id) === String(line.warehouse_id)
+                    );
+                    const warehouseName = (matchedWarehouse as unknown as { warehouse_name?: string })?.warehouse_name ?? '';
+
+                    return {
+                        ...createDefaultLine(i + 1),
+                        issue_stock_line_id: line.issue_stock_line_id,
+                        item_id: String(line.item_id ?? ''),
+                        item_code: item?.item_code ?? '',
+                        item_name: item?.item_name ?? '',
+                        uom_id: matchedConv ? String(matchedConv.from_unit_id) : String(line.uom_id ?? ''),
+                        item_uom_id: matchedConv ? String(matchedConv.conversion_id) : String(line.uom_id ?? ''),
+                        warehouse_id: String(line.warehouse_id ?? ''),
+                        warehouse_name: warehouseName,
+                        location_id: String(line.location_id || ''),
+                        location_name: location?.name_th || location?.code || '',
+                        lot_id: String(line.lot_id || ''),
+                        lot_no: lot?.code || '',
+                        lot_balance_id: line.lot_balance_id,
+                        qty_ic: Number(line.qty) || 0,
+                        qty_return_ic: Number(line.qty) || 0,
+                        unit_cost: Number(line.unit_cost_price) || Number(item?.standard_cost) || 0,
+                        good_amnt: (Number(line.qty) || 0) * (Number(line.unit_cost_price) || Number(item?.standard_cost) || 0),
+                        stock_flag: 1, // รับคืน = เพิ่มสต็อก
+                    };
+                }),
+            });
+        };
+
+        void handlePendingHydration();
+    }, [pendingReturn, editId, isOpen, reset, user, warehouses]);
 
     // ── Mutations ─────────────────────────────────────────────────────────────────
     const createMutation = useMutation({
@@ -295,30 +488,48 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess }: UseReturnF
     // ── Submit Handler ────────────────────────────────────────────────────────────
     const onSubmit = useCallback(
         async (data: ReturnIssueHeaderFormData) => {
-            const payload = { ...data };
-            if (payload.reissue_stk_no === 'ระบบจะกรอกอัตโนมัติ') {
-                payload.reissue_stk_no = '';
-            }
+            // Find selected docLink to get doc_type_no
+            const selectedDoc = docLinks.find(d => String(d.docu_type_id) === String(data.docu_item_no));
+            const docTypeNo = selectedDoc ? Number(selectedDoc.docu_item_no) : undefined;
 
-            // Map uom_id to item_uom_id for backend API compatibility
-            if (payload.lines && Array.isArray(payload.lines)) {
-                payload.lines = payload.lines.map((l: ReturnIssueLineFormData) => ({
-                    ...l,
-                    uom_id: String(l.item_uom_id || l.uom_id),
-                }));
-            }
+            // Construct payload matching backend API (POST /return-stock)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const payload: Record<string, any> = {
+                issue_stock_id: pendingReturn ? Number(pendingReturn.issue_stock_id) : (data.issue_stock_id ? Number(data.issue_stock_id) : undefined),
+                return_stock_date: new Date(data.docu_date).toISOString(),
+                created_by_emp_id: Number(data.save_emp_id),
+                received_by_emp_id: Number(data.rece_emp_id),
+                doc_link_ic_id: data.docu_item_no ? Number(data.docu_item_no) : undefined,
+                doc_type_no: docTypeNo,
+                emp_dept_id: Number(data.emp_dept_id),
+                project_id: Number(data.job_id),
+                remarks: data.remark || '',
+                branch_id: Number(data.branch_id),
+                status: 'COMFIRMED',
+                lines: (data.lines || []).map((l: ReturnIssueLineFormData) => ({
+                    issue_stock_line_id: l.issue_stock_line_id ? Number(l.issue_stock_line_id) : undefined,
+                    item_id: Number(l.item_id),
+                    qty: Number(l.qty_return_ic),
+                    uom_id: Number(l.item_uom_id || l.uom_id),
+                    warehouse_id: Number(l.warehouse_id),
+                    location_id: l.location_id ? Number(l.location_id) : undefined,
+                    lot_id: l.lot_id ? Number(l.lot_id) : undefined,
+                    lot_balance_id: l.lot_balance_id ? Number(l.lot_balance_id) : undefined,
+                    unit_cost_price: Number(l.unit_cost) || 0,
+                })),
+            };
 
             try {
                 if (isEditMode && editId) {
-                    await updateMutation.mutateAsync({ id: editId, data: payload });
+                    await updateMutation.mutateAsync({ id: editId, data: payload as ReturnIssueHeaderFormData });
                 } else {
-                    await createMutation.mutateAsync(payload);
+                    await createMutation.mutateAsync(payload as ReturnIssueHeaderFormData);
                 }
             } catch (error) {
                 logger.error('[ReturnForm] Submit failed:', error);
             }
         },
-        [isEditMode, editId, createMutation, updateMutation]
+        [isEditMode, editId, createMutation, updateMutation, docLinks, pendingReturn]
     );
 
     const handleFormError = useCallback((errs: unknown) => {
@@ -382,5 +593,6 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess }: UseReturnF
         projects,
         uoms,
         warehouses,
+        docLinks,
     };
 }

@@ -9,8 +9,10 @@ import { ClipboardList, Search } from 'lucide-react';
 import type { ReturnIssueHeaderFormData } from '../schemas/return.schemas';
 import { CustomDateInput } from '@ui';
 import { EmployeeSearchModal } from '@/modules/master-data/employee/components/EmployeeSearchModal';
+import type { DocLinkOption } from '@Inventory/shared/services/ic-document.service';
 
 interface ReturnFormHeaderProps {
+    docLinks?: DocLinkOption[];
     deptOptions?: { id: string; name: string }[];
     jobOptions?: { id: string; name: string }[];
     branchOptions?: { id: string; name: string }[];
@@ -19,6 +21,7 @@ interface ReturnFormHeaderProps {
 }
 
 export const ReturnFormHeader: React.FC<ReturnFormHeaderProps> = ({
+    docLinks = [],
     deptOptions = [],
     jobOptions = [],
     branchOptions = [],
@@ -30,9 +33,10 @@ export const ReturnFormHeader: React.FC<ReturnFormHeaderProps> = ({
     const watchedReceEmpId = useWatch({ control, name: 'rece_emp_id' });
 
     const [isEmpSearchOpen, setIsEmpSearchOpen] = useState(false);
+    const [localEmpName, setLocalEmpName] = useState('');
 
     const isLocked = readOnly;
-    const selectedEmpName = empOptions.find(e => e.id === watchedReceEmpId)?.name || '';
+    const selectedEmpName = localEmpName || empOptions.find(e => e.id === watchedReceEmpId)?.name || '';
 
     const inputClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white placeholder-gray-400 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
     const selectClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -108,6 +112,31 @@ export const ReturnFormHeader: React.FC<ReturnFormHeaderProps> = ({
                         )}
                     />
                     {errors.issue_stk_no && <span className="text-[10px] text-red-500 font-medium">{errors.issue_stk_no.message}</span>}
+                </div>
+
+                {/* 2.5. รายการเอกสาร (เชื่อม icoption) */}
+                <div className="space-y-1">
+                    <label className={labelClass}>รายการเอกสาร <span className="text-red-500">*</span></label>
+                    <Controller
+                        name="docu_item_no"
+                        control={control}
+                        render={({ field }) => (
+                            <select
+                                {...field}
+                                value={field.value || ''}
+                                disabled={isLocked}
+                                className={`${selectClass} ${getErrorClass('docu_item_no')}`}
+                            >
+                                <option value="">-- เลือกรายการเอกสาร --</option>
+                                {docLinks.map(d => (
+                                    <option key={d.docu_type_id} value={String(d.docu_type_id)}>
+                                        {d.docu_type_code ? `${d.docu_type_code} – ` : ''}{d.docu_name_th ?? d.docu_name_en}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    />
+                    {errors.docu_item_no && <span className="text-[10px] text-red-500 font-medium">{errors.docu_item_no.message}</span>}
                 </div>
 
                 {/* 3. วันที่เอกสาร */}
@@ -252,7 +281,8 @@ export const ReturnFormHeader: React.FC<ReturnFormHeaderProps> = ({
                     isOpen={isEmpSearchOpen}
                     onClose={() => setIsEmpSearchOpen(false)}
                     onSelect={(emp) => {
-                        setValue('rece_emp_id', String(emp.id));
+                        setValue('rece_emp_id', String(emp.employee_id || emp.id), { shouldValidate: true, shouldDirty: true });
+                        setLocalEmpName(`${emp.employee_firstname_th} ${emp.employee_lastname_th}`.trim());
                     }}
                 />
             )}

@@ -11,6 +11,8 @@ import { z } from 'zod';
 
 export const returnIssueLineSchema = z.object({
     _tempId: z.string().optional(),
+    issue_stock_line_id: z.number().optional(),
+    lot_balance_id: z.number().optional(),
     listno: z.number().int().min(1),
     item_id: z.string().min(1, 'กรุณาเลือกสินค้า'),
     item_code: z.string().optional(),
@@ -26,7 +28,13 @@ export const returnIssueLineSchema = z.object({
         .refine(v => v !== '' && Number(v) >= 0, { message: 'จำนวนเบิกเดิมต้องไม่ติดลบ' }),
     qty_return_ic: z
         .union([z.number(), z.literal('')])
-        .refine(v => v !== '' && Number(v) > 0, { message: 'จำนวนคืนต้องมากกว่า 0' }),
+        .superRefine((v, ctx) => {
+            if (v === '') {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'กรุณากรอกจำนวนรับคืน' });
+            } else if (Number(v) <= 0) {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'จำนวนคืนต้องมากกว่า 0' });
+            }
+        }),
     lot_id: z.string().optional().nullable(),
     lot_no: z.string().optional(),
     unit_cost: z
@@ -54,12 +62,12 @@ export const returnIssueLineSchema = z.object({
 // ====================================================================================
 
 export const returnIssueHeaderSchema = z.object({
+    issue_stock_id: z.number().optional(),
     docu_item_id: z.string().uuid().optional(),
 
     docu_item_no: z
         .string()
-        .optional()
-        .nullable(),
+        .min(1, 'กรุณาเลือกรายการเอกสาร'),
 
     issue_stk_no: z
         .string()
