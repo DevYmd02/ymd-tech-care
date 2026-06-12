@@ -387,7 +387,6 @@ export const sidebarMenuItems: MenuItem[] = [
                 id: 'master-data-inventory',
                 label: 'Master Data คลังสินค้า',
                 subItems: [
-                    { id: 'ic-document-link', label: 'กำหนดเอกสารเชื่อม IC', path: '/master-data/ic-document-link' },
                     { id: 'item-master', label: 'กำหนดรหัสสินค้าและบริการ', path: '/master-data/item' },
                     { id: 'unit', label: 'กำหนดหน่วยนับ', path: '/master-data/uom' },
                     { id: 'item-type', label: 'กำหนดประเภทสินค้า', path: '/master-data/item-type' },

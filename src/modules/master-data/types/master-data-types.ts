@@ -64,7 +64,6 @@ export type SalesTargetListItem = SalePeriodListItem;
 export * from '@/modules/master-data/inventory/types/warehouse-types';
 export * from '@/modules/master-data/inventory/types/product-types';
 export * from '@/modules/master-data/inventory/types/item-lot-types';
-export * from '@/modules/master-data/inventory/types/ic-document-link.types';
 
 
 // ====================================================================================
