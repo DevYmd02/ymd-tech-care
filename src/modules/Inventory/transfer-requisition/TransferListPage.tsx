@@ -199,7 +199,7 @@ export default function TransferListPage() {
                         {(filters.page - 1) * filters.limit + info.row.index + 1}
                     </div>
                 ),
-                size: 60,
+                size: 50,
                 enableSorting: false,
             }),
             colHelper.accessor('transfer__req_no', {
@@ -212,7 +212,7 @@ export default function TransferListPage() {
                         {info.getValue()}
                     </span>
                 ),
-                size: 180,
+                size: 140,
                 enableSorting: false,
             }),
             colHelper.accessor('docu_date', {
@@ -223,13 +223,13 @@ export default function TransferListPage() {
                     const d = new Date(val);
                     return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB');
                 },
-                size: 120,
+                size: 100,
                 enableSorting: false,
             }),
             colHelper.accessor('branch_name', {
                 header: 'สาขา',
                 cell: info => <span className="text-sm text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
-                size: 150,
+                size: 120,
                 enableSorting: false,
             }),
             colHelper.accessor('from_warehouse_name', {
@@ -240,7 +240,7 @@ export default function TransferListPage() {
                         <span className="text-xs text-gray-500 dark:text-gray-400">{info.row.original.from_location_name || '-'}</span>
                     </div>
                 ),
-                size: 200,
+                size: 150,
                 enableSorting: false,
             }),
             colHelper.accessor('to_warehouse_name', {
@@ -251,13 +251,13 @@ export default function TransferListPage() {
                         <span className="text-xs text-gray-500 dark:text-gray-400">{info.row.original.to_location_name || '-'}</span>
                     </div>
                 ),
-                size: 200,
+                size: 150,
                 enableSorting: false,
             }),
             colHelper.accessor('transfer_emp_name', {
                 header: 'ผู้ขอโอน',
                 cell: info => <span className="text-sm text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
-                size: 140,
+                size: 120,
                 enableSorting: false,
             }),
             colHelper.accessor('status', {
@@ -267,7 +267,7 @@ export default function TransferListPage() {
                         <StatusBadge status={info.getValue()} flag={info.row.original.cancelflag} />
                     </div>
                 ),
-                size: 100,
+                size: 80,
                 enableSorting: false,
             }),
             colHelper.display({
@@ -302,7 +302,7 @@ export default function TransferListPage() {
                         )}
                     </div>
                 ),
-                size: 160,
+                size: 140,
                 enableSorting: false,
             }),
         ],

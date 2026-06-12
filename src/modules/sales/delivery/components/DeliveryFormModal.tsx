@@ -253,7 +253,7 @@ export function DeliveryFormModal({
                             <form
                                 id="delivery-form"
                                 onSubmit={handleSubmit(onFormSubmit)}
-                                className={`max-w-[1400px] mx-auto space-y-6 ${isViewOnly ? 'opacity-95' : ''}`}
+                                className={`w-full space-y-6 ${isViewOnly ? 'opacity-95' : ''}`}
                             >
                                 {/* 1. Header */}
                                 <div className={cardClass}>

@@ -191,7 +191,7 @@ export function QuotationFormModal({ isOpen, onClose, id, initialData, onSuccess
                             }
                         `}} />
                         <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 animate-form-fade-in">
-                        <form id="quotation-form" onSubmit={handleSubmit(onFormSubmit, onInvalidSubmit)} className="max-w-[1400px] mx-auto space-y-6">
+                        <form id="quotation-form" onSubmit={handleSubmit(onFormSubmit, onInvalidSubmit)} className="w-full space-y-6">
                             
                             {/* 1. Header Section */}
                             <div className={cardClass}>

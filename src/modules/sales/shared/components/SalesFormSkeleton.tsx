@@ -30,7 +30,7 @@ export const SalesFormSkeleton: React.FC = () => {
         }
       `}} />
 
-      <div className="max-w-[1400px] mx-auto space-y-6">
+      <div className="w-full space-y-6">
         
         {/* 1. Header Section Skeleton */}
         <div className="bg-white dark:bg-gray-900 rounded-xl p-8 space-y-6 border border-gray-200 dark:border-gray-800 shadow-sm relative overflow-hidden">
