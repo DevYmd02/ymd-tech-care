@@ -74,7 +74,7 @@ export const RequisitionApproveFormLines: React.FC<RequisitionApproveFormLinesPr
                                  const stockValidation = line.item_id 
                                      ? validateStock(
                                          Number(qtyApproved || 0), 
-                                         line.lot_no ? Number((line as Record<string, unknown>).lot_available_qty || Infinity) : Infinity, 
+                                         line.lot_no ? Number((line as Record<string, unknown>).lot_available_qty ?? Infinity) : Infinity, 
                                          line.warehouse_id, 
                                          line.location_id, 
                                          icOptions || DEFAULT_IC_OPTIONS

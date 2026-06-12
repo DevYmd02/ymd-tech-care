@@ -105,7 +105,7 @@ export const IssueFormLines: React.FC<IssueFormLinesProps> = React.memo(
                                 const stockValidation = f.item_id 
                                     ? validateStock(
                                         Number(f.qty_ic || 0), 
-                                        hasLotSelected ? Number((f as Record<string, unknown>).lot_available_qty || 0) : Infinity, 
+                                        hasLotSelected ? Number((f as Record<string, unknown>).lot_available_qty ?? Infinity) : Infinity, 
                                         f.warehouse_id, 
                                         f.location_id, 
                                         icOptions || DEFAULT_IC_OPTIONS
