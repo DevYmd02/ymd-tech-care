@@ -30,14 +30,14 @@ export interface TransferRequisitionLine {
     item_code?: string;            // varchar(25) - auto-fill
     item_name?: string;            // varchar(255) - auto-fill
     uom_id: string;                // uuid (FK → dropdown หน่วย)
-    income_inve_id: string;        // uuid - รหัสคลัง ID (ต้นทาง)
-    income_inve_name?: string;     // varchar(255) - auto-fill
-    income_loca_id?: string | null;// uuid - รหัสที่เก็บ ID (ต้นทาง)
-    income_loca_name?: string;     // varchar(255) - auto-fill
-    out_inve_id: string;           // uuid - รหัสคลัง ID (ปลายทาง)
-    out_inve_name?: string;        // varchar(255) - auto-fill
-    out_loca_id?: string | null;   // uuid - รหัสที่เก็บ ID (ปลายทาง)
-    out_loca_name?: string;        // varchar(255) - auto-fill
+    from_warehouse_id: string;        // uuid - รหัสคลัง ID (ต้นทาง)
+    from_warehouse_name?: string;     // varchar(255) - auto-fill
+    from_location_id?: string | null;// uuid - รหัสที่เก็บ ID (ต้นทาง)
+    from_location_name?: string;     // varchar(255) - auto-fill
+    to_warehouse_id: string;           // uuid - รหัสคลัง ID (ปลายทาง)
+    to_warehouse_name?: string;        // varchar(255) - auto-fill
+    to_location_id?: string | null;   // uuid - รหัสที่เก็บ ID (ปลายทาง)
+    to_location_name?: string;        // varchar(255) - auto-fill
     qty_ic: number;                // numeric(18,3)
     lot_id?: string | null;        // uuid
     lot_no?: string;               // varchar(255) - auto-fill

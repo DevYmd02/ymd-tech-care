@@ -17,14 +17,14 @@ export const transferLineSchema = z.object({
     item_name: z.string().max(255).optional(),
     uom_id: z.string().min(1, 'กรุณาเลือกหน่วยนับ'),
     item_uom_id: z.string().optional(),
-    income_inve_id: z.string().min(1, 'กรุณาเลือกคลังต้นทาง'),
-    income_inve_name: z.string().optional(),
-    income_loca_id: z.string().optional().nullable(),
-    income_loca_name: z.string().optional(),
-    out_inve_id: z.string().min(1, 'กรุณาเลือกคลังปลายทาง'),
-    out_inve_name: z.string().optional(),
-    out_loca_id: z.string().optional().nullable(),
-    out_loca_name: z.string().optional(),
+    from_warehouse_id: z.string().min(1, 'กรุณาเลือกคลังต้นทาง'),
+    from_warehouse_name: z.string().optional(),
+    from_location_id: z.string().optional().nullable(),
+    from_location_name: z.string().optional(),
+    to_warehouse_id: z.string().min(1, 'กรุณาเลือกคลังปลายทาง'),
+    to_warehouse_name: z.string().optional(),
+    to_location_id: z.string().optional().nullable(),
+    to_location_name: z.string().optional(),
     qty_ic: z
         .union([z.number(), z.literal('')])
         .refine(v => v !== '' && Number(v) > 0, { message: 'จำนวนต้องมากกว่า 0' }),
@@ -36,10 +36,10 @@ export const transferLineSchema = z.object({
     remark: z.string().max(255).optional(),
 }).refine(data => {
     // ป้องกันการเลือกคลังต้นทางและปลายทางเป็นคลังเดียวกัน
-    return data.income_inve_id !== data.out_inve_id;
+    return data.from_warehouse_id !== data.to_warehouse_id;
 }, {
     message: 'คลังปลายทางต้องไม่ใช่คลังเดียวกับคลังต้นทาง',
-    path: ['out_inve_id'],
+    path: ['to_warehouse_id'],
 });
 
 // ====================================================================================

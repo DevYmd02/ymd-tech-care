@@ -21,9 +21,9 @@ import type { ListResponse, SuccessResponse } from '@/shared/types/api.types';
 
 export const TransferService = {
     // ─── List ────────────────────────────────────────────────────────────────────────
-    getList: async (params?: TransferRequisitionListParams): Promise<ListResponse<TransferRequisitionListItem>> => {
+    getList: async (params?: TransferRequisitionListParams, config?: { signal?: AbortSignal }): Promise<ListResponse<TransferRequisitionListItem>> => {
         try {
-            const res = await api.get<ListResponse<TransferRequisitionListItem>>('/transfer-requisition', { params });
+            const res = await api.get<ListResponse<TransferRequisitionListItem>>('/transfer-requisition', { params, ...config });
             return res as ListResponse<TransferRequisitionListItem>;
         } catch (error) {
             logger.error('[TransferService] getList error:', error);

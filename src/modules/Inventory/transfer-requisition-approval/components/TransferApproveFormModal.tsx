@@ -13,7 +13,7 @@ import { TransferApproveFormLines } from './TransferApproveFormLines';
 import { TransferSearchModal } from './TransferSearchModal';
 import { useTransferApprovalForm } from '../hooks/useTransferApprovalForm';
 import type { TransferApprovalFormData } from '../schemas/transfer-approval.schemas';
-import type { TransferRequisitionListItem } from '../../transfer/types/transfer.types';
+import type { TransferRequisitionListItem } from '../../transfer-requisition/types/transfer.types';
 import type {
     BranchListItem,
     DepartmentListItem,

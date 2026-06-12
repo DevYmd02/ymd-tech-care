@@ -227,18 +227,18 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
             if (warehouseSearchTarget === 'source') {
                 updateLine(activeLineIndex, null, {
                     ...fields[activeLineIndex],
-                    income_inve_id: String(warehouse.warehouse_id),
-                    income_inve_name: warehouse.warehouse_name,
-                    income_loca_id: locId,
-                    income_loca_name: locName,
+                    from_warehouse_id: String(warehouse.warehouse_id),
+                    from_warehouse_name: warehouse.warehouse_name,
+                    from_location_id: locId,
+                    from_location_name: locName,
                 } as TransferLineFormData);
             } else {
                 updateLine(activeLineIndex, null, {
                     ...fields[activeLineIndex],
-                    out_inve_id: String(warehouse.warehouse_id),
-                    out_inve_name: warehouse.warehouse_name,
-                    out_loca_id: locId,
-                    out_loca_name: locName,
+                    to_warehouse_id: String(warehouse.warehouse_id),
+                    to_warehouse_name: warehouse.warehouse_name,
+                    to_location_id: locId,
+                    to_location_name: locName,
                 } as TransferLineFormData);
             }
         }
@@ -265,14 +265,14 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
             if (locationSearchTarget === 'source') {
                 updateLine(activeLineIndex, null, {
                     ...fields[activeLineIndex],
-                    income_loca_id: String(location.location_id),
-                    income_loca_name: location.name_th,
+                    from_location_id: String(location.location_id),
+                    from_location_name: location.name_th,
                 } as TransferLineFormData);
             } else {
                 updateLine(activeLineIndex, null, {
                     ...fields[activeLineIndex],
-                    out_loca_id: String(location.location_id),
-                    out_loca_name: location.name_th,
+                    to_location_id: String(location.location_id),
+                    to_location_name: location.name_th,
                 } as TransferLineFormData);
             }
         }
@@ -462,8 +462,8 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
                     onClose={() => setIsLotSearchOpen(false)}
                     onSelect={handleSelectLot}
                     itemId={activeItemId}
-                    warehouseId={activeLineIndex !== null ? (fields[activeLineIndex]?.income_inve_id || undefined) : undefined}
-                    locationId={activeLineIndex !== null ? (fields[activeLineIndex]?.income_loca_id || undefined) : undefined}
+                    warehouseId={activeLineIndex !== null ? (fields[activeLineIndex]?.from_warehouse_id || undefined) : undefined}
+                    locationId={activeLineIndex !== null ? (fields[activeLineIndex]?.from_location_id || undefined) : undefined}
                     itemName={activeLineIndex !== null ? fields[activeLineIndex]?.item_name : undefined}
                     itemCode={activeLineIndex !== null ? fields[activeLineIndex]?.item_code : undefined}
                 />

@@ -30,7 +30,7 @@ export const SelectPendingReturnModal: React.FC<SelectPendingReturnModalProps> =
     const params: PendingReturnIssueParams = {
         page,
         limit,
-        search: search || undefined,
+        issue_stock_no: search || undefined,
     };
 
     const { data, isLoading } = useQuery({

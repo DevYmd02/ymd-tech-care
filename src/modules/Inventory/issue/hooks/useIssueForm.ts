@@ -222,26 +222,32 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
 
             const handleHydration = async () => {
                 const conversionMap = new Map<number, UOMConversionListItem[]>();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const itemMap = new Map<number, any>();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const locMap = new Map<number, any>();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const lotMap = new Map<number, any>();
+                const itemMap = new Map<number, Record<string, unknown>>();
+                const locMap = new Map<number, Record<string, unknown>>();
+                const lotMap = new Map<number, Record<string, unknown>>();
 
                 if (allItemIds.length > 0) {
                     try {
-                        const itemsList = await Promise.all(allItemIds.map(id => ItemMasterService.getById(id)));
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        itemsList.forEach(itm => { if (itm) itemMap.set(Number((itm as any).item_id || (itm as any).id), itm); });
+                        const itemsList = await Promise.all(
+                            allItemIds.map(id => queryClient.ensureQueryData({
+                                queryKey: ['item-master', id],
+                                queryFn: () => ItemMasterService.getById(id),
+                                staleTime: 5 * 60 * 1000
+                            }))
+                        );
+                        itemsList.forEach(itm => { if (itm) itemMap.set(Number((itm as unknown as Record<string, unknown>).item_id || (itm as unknown as Record<string, unknown>).id), itm as unknown as Record<string, unknown>); });
 
                         const convsList = await Promise.all(
                             allItemIds.map(itemId =>
-                                UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                                queryClient.ensureQueryData({
+                                    queryKey: ['transfer-uom-conversions', itemId],
+                                    queryFn: () => UOMConversionService.getByItemId(itemId),
+                                    staleTime: 5 * 60 * 1000
+                                })
                             )
                         );
-                        convsList.forEach(c => {
-                            if (c) conversionMap.set(c.itemId, c.items);
+                        convsList.forEach((res, idx) => {
+                            if (res) conversionMap.set(allItemIds[idx], res.items || []);
                         });
                     } catch (err) {
                         logger.warn('[useIssueForm] UOM conversions / items load failed:', err);
@@ -252,18 +258,26 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
                     const allLocIds = [...new Set((lines || []).map(l => Number(l.location_id)).filter(id => id > 0))];
                     const allLotIds = [...new Set((lines || []).map(l => Number(l.lot_id)).filter(id => id > 0))];
                     
-                    const locsList = await Promise.all(allLocIds.map(id => LocationService.getById(id)));
-                    locsList.forEach(loc => { if (loc) locMap.set(Number(loc.id), loc); });
+                    const locsList = await Promise.all(allLocIds.map(id => queryClient.ensureQueryData({
+                        queryKey: ['location', id],
+                        queryFn: () => LocationService.getById(id),
+                        staleTime: 5 * 60 * 1000
+                    })));
+                    locsList.forEach(loc => { if (loc) locMap.set(Number(loc.id || loc.location_id), loc as unknown as Record<string, unknown>); });
                     
-                    const lotsList = await Promise.all(allLotIds.map(id => LotNoService.getById(id)));
-                    lotsList.forEach(lot => { if (lot) lotMap.set(Number(lot.id), lot); });
+                    const lotsList = await Promise.all(allLotIds.map(id => queryClient.ensureQueryData({
+                        queryKey: ['lot', id],
+                        queryFn: () => LotNoService.getById(id),
+                        staleTime: 5 * 60 * 1000
+                    })));
+                    lotsList.forEach(lot => { if (lot) lotMap.set(Number(lot.id || lot.lot_no_id), lot as unknown as Record<string, unknown>); });
                 } catch (err) {
                     logger.warn('[useIssueForm] location/lot load failed:', err);
                 }
 
                 const getValidId = (v: unknown) => (v !== null && v !== undefined && v !== '') ? String(v) : null;
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                let docuItemNoVal = getValidId((header as any).doc_type_no) ?? getValidId((header as any).doc_link_ic_id) ?? getValidId(header.docu_item_no) ?? '';
+                const headerData = header as unknown as Record<string, unknown>;
+                let docuItemNoVal = getValidId(headerData.doc_type_no) ?? getValidId(headerData.doc_link_ic_id) ?? getValidId(header.docu_item_no) ?? '';
                 console.log('[DEBUG] useIssueForm docuItemNoVal before:', docuItemNoVal);
                 console.log('[DEBUG] useIssueForm docLinks:', docLinks);
                 if (docLinks?.length) {
@@ -276,18 +290,13 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
                     }
                 }
 
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                let appvReqNoVal = String(header.appvissue_req_no || (header as any).appv_issue_req_no || (header as any).ref_doc_no || '');
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const issueDocId = getValidId((header as any).doc_type_no) ?? getValidId((header as any).doc_link_ic_id) ?? getValidId(header.docu_item_no) ?? '';
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const docLink = docLinks.find((d: any) => String(d.docu_type_id) === issueDocId || String(d.docu_item_no) === issueDocId);
+                let appvReqNoVal = String(header.appvissue_req_no || headerData.appv_issue_req_no || headerData.ref_doc_no || '');
+                const issueDocId = getValidId(headerData.doc_type_no) ?? getValidId(headerData.doc_link_ic_id) ?? getValidId(header.docu_item_no) ?? '';
+                const docLink = docLinks.find((d) => String(d.docu_type_id) === issueDocId || String(d.docu_item_no) === issueDocId);
                 const docName = docLink ? (docLink.docu_name_th || docLink.docu_name_en || '') : '';
                 console.log('[DEBUG] useIssueForm issue.service item:', header.issue_stk_no, 'issueDocId:', issueDocId, 'docName:', docName);
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                let issueReqNoVal = String(header.issue_req_no || (header as any).ref_req_no || '');
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const appvReqId = (header as any).appv_issue_req_id || (header as any).appvissue_req_id || (header as any).ref_doc_id;
+                let issueReqNoVal = String(header.issue_req_no || headerData.ref_req_no || '');
+                const appvReqId = headerData.appv_issue_req_id || headerData.appvissue_req_id || headerData.ref_doc_id;
                 
                 if ((!appvReqNoVal || !issueReqNoVal) && appvReqId) {
                     const reqNos = await IssueStockService.getReqNos(appvReqId as string | number);
@@ -328,12 +337,11 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
                             uom_id: matchedConv ? String(matchedConv.from_unit_id) : l.uom_id,
                             item_uom_id: matchedConv ? String(matchedConv.conversion_id) : l.uom_id,
                             warehouse_id: l.warehouse_id,
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            warehouse_name: l.warehouse_name || warehouses.find(w => String(w.id || (w as any).warehouse_id) === String(l.warehouse_id))?.warehouse_name || '',
+                            warehouse_name: l.warehouse_name || warehouses.find(w => String(w.id || (w as unknown as Record<string, unknown>).warehouse_id) === String(l.warehouse_id))?.warehouse_name || '',
                             location_id: l.location_id ?? '',
                             location_name: l.location_name || String(locMap.get(Number(l.location_id))?.name_th || ''),
                             lot_id: l.lot_id ?? '',
-                            lot_no: l.lot_no || lotMap.get(Number(l.lot_id))?.code || lotMap.get(Number(l.lot_id))?.name_th || '',
+                            lot_no: String(l.lot_no || lotMap.get(Number(l.lot_id))?.code || lotMap.get(Number(l.lot_id))?.name_th || ''),
                             qty_ic: l.qty_ic,
                             unit_cost: Number(l.unit_cost) >= 0 ? Number(l.unit_cost) : 0,
                             good_amnt: l.good_amnt,
@@ -355,7 +363,7 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
                 lines: [createDefaultLine(1)] 
             });
         }
-    }, [editData, editId, isOpen, reset, user, docLinks, warehouses]);
+    }, [editData, editId, isOpen, reset, user, docLinks, warehouses, queryClient]);
 
     useEffect(()=>{
         if (!pendingIssue || editId || !isOpen) return;
@@ -364,38 +372,65 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
             const lines = pendingIssue.appvissueRequistionLines;
             const allItemIds = [...new Set((lines || []).map(l => Number(l.item_id)).filter(id => id > 0))];
 
-            const conversionMap = new Map<number, UOMConversionListItem[]>();
-            if (allItemIds.length > 0) {
-                try {
-                    const convsList = await Promise.all(
-                        allItemIds.map(itemId =>
-                            UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
-                        )
-                    );
-                    convsList.forEach(c => {
-                        if (c) conversionMap.set(c.itemId, c.items);
-                    });
-                } catch (err) {
-                    console.warn('[useIssueForm] pendingHydration UOM conversions load failed:', err);
-                }
-            }
+        const allLocIds = [...new Set((lines || []).map(l => Number(l.location_id)).filter(id => id > 0))];
+        const allLotIds = [...new Set((lines || []).map(l => Number(l.lot_id)).filter(id => id > 0))];
 
-        // Fetch item details ทุก item พร้อมกัน
-       const [ itemDetails, locationDetails, lotDetails] = await Promise.all([
-        Promise.allSettled(
-            lines.map(line => ItemMasterService.getById(Number(line.item_id)))
-        ),
-        Promise.allSettled(
-            lines.map(line =>
-                line.location_id 
-                ? LocationService.getById(Number(line.location_id)): Promise.resolve(null))
-        ),
-        Promise.allSettled(
-            lines.map(line => 
-                line.lot_id 
-                ? LotNoService.getById(Number(line.lot_id)): Promise.resolve(null))
-        )
-       ])
+        const fetchItem = async (id: number) => {
+            if (!id) return null;
+            return queryClient.ensureQueryData({
+                queryKey: ['item-master', id],
+                queryFn: () => ItemMasterService.getById(id),
+                staleTime: 5 * 60 * 1000
+            });
+        };
+
+        const fetchLocation = async (id: number) => {
+            if (!id) return null;
+            return queryClient.ensureQueryData({
+                queryKey: ['location', id],
+                queryFn: () => LocationService.getById(id),
+                staleTime: 5 * 60 * 1000
+            });
+        };
+
+        const fetchLot = async (id: number) => {
+            if (!id) return null;
+            return queryClient.ensureQueryData({
+                queryKey: ['lot', id],
+                queryFn: () => LotNoService.getById(id),
+                staleTime: 5 * 60 * 1000
+            });
+        };
+
+        const fetchUomConversions = async (id: number) => {
+            if (!id) return null;
+            return queryClient.ensureQueryData({
+                queryKey: ['transfer-uom-conversions', id],
+                queryFn: () => UOMConversionService.getByItemId(id),
+                staleTime: 5 * 60 * 1000
+            });
+        };
+
+        const itemMap = new Map();
+        const locMap = new Map();
+        const lotMap = new Map();
+        const conversionMap = new Map<number, UOMConversionListItem[]>();
+
+        try {
+            const [itemsList, locsList, lotsList, convsList] = await Promise.all([
+                Promise.all(allItemIds.map(fetchItem)),
+                Promise.all(allLocIds.map(fetchLocation)),
+                Promise.all(allLotIds.map(fetchLot)),
+                Promise.all(allItemIds.map(fetchUomConversions))
+            ]);
+
+            itemsList.forEach(itm => { if (itm) itemMap.set(Number((itm as unknown as Record<string, unknown>).item_id || (itm as unknown as Record<string, unknown>).id), itm); });
+            locsList.forEach(loc => { if (loc) locMap.set(Number((loc as unknown as Record<string, unknown>).location_id || (loc as unknown as Record<string, unknown>).id), loc); });
+            lotsList.forEach(lot => { if (lot) lotMap.set(Number((lot as unknown as Record<string, unknown>).lot_no_id || (lot as unknown as Record<string, unknown>).id), lot); });
+            convsList.forEach((res, idx) => { if (res) conversionMap.set(allItemIds[idx], res.items || []); });
+        } catch (err) {
+            console.warn('[useIssueForm] pendingHydration fetch failed:', err);
+        }
 
         const getValidId = (v: unknown) => (v !== null && v !== undefined && v !== '') ? String(v) : null;
         let pendingDocuItemNo = getValidId(pendingIssue.doc_type_no) ?? getValidId(pendingIssue.doc_link_ic_id) ?? '';
@@ -422,18 +457,16 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
         doc_link_ic_id: pendingIssue.doc_link_ic_id,
         remark: pendingIssue.remarks || '',
         lines: lines.map((line, i) => {
-                //  ใช้ itemDetails ที่ fetch มาแล้ว
-                const item = itemDetails[i].status === 'fulfilled' ? itemDetails[i].value : null;
-                const location = locationDetails[i].status === 'fulfilled' ? locationDetails[i].value : null;
-                const lot = lotDetails[i].status === 'fulfilled' ? lotDetails[i].value : null;
+                const itemId = Number(line.item_id);
+                const item = itemMap.get(itemId);
+                const location = locMap.get(Number(line.location_id));
+                const lot = lotMap.get(Number(line.lot_id));
 
-                //  หา warehouse_name จาก warehouses state
                 const matchedWarehouse = warehouses.find(
                     w => String((w as unknown as Record<string, unknown>).warehouse_id) === String(line.warehouse_id)
                 );
                 const warehouseName = (matchedWarehouse as unknown as { warehouse_name?: string })?.warehouse_name ?? '';
 
-                const itemId = Number(line.item_id);
                 const convs = conversionMap.get(itemId) || [];
                 const currentUomVal = String(line.uom_id);
                 const matchedConv = convs.find(c => String(c.conversion_id) === currentUomVal);
@@ -462,12 +495,11 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
 
     void handlePendingHydration();
         
-    }, [pendingIssue, editId, isOpen, reset, user, warehouses, docLinks]);
+    }, [pendingIssue, editId, isOpen, reset, user, warehouses, docLinks, queryClient]);
 
     // ── Mutations ─────────────────────────────────────────────────────────────────
     const createMutation = useMutation({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        mutationFn: (data: any) =>
+        mutationFn: (data: Record<string, unknown>) =>
             IssueStockService.create(data),
         onSuccess: (result) => {
             if (result.success) {
@@ -483,8 +515,7 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
     });
 
     const updateMutation = useMutation({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        mutationFn: ({ id, data }: { id: string; data: any }) =>
+        mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) =>
             IssueStockService.update(id, data),
         onSuccess: (result) => {
             if (result.success) {

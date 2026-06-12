@@ -493,8 +493,7 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess, pendingRetur
             const docTypeNo = selectedDoc ? Number(selectedDoc.docu_item_no) : undefined;
 
             // Construct payload matching backend API (POST /return-stock)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const payload: Record<string, any> = {
+            const payload: Record<string, unknown> = {
                 issue_stock_id: pendingReturn ? Number(pendingReturn.issue_stock_id) : (data.issue_stock_id ? Number(data.issue_stock_id) : undefined),
                 return_stock_date: new Date(data.docu_date).toISOString(),
                 created_by_emp_id: Number(data.save_emp_id),

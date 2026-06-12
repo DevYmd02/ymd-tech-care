@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck, Search, Eye, Layers, List, Clock } from 'lucide-react';
-import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
+import { createColumnHelper } from '@tanstack/react-table';
 import { RequisitionApprovalHistoryModal } from '../requisition/components/RequisitionApprovalHistoryModal';
 
 import { PageListLayout, SmartTable, FilterField } from '@ui';
@@ -135,8 +135,7 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
     };
 
     // ── Columns ──────────────────────────────────────────────────────────────────────
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const columns: ColumnDef<RequisitionApprovalListItem, any>[] = useMemo(() => {
+    const columns = useMemo(() => {
         return [
             colHelper.display({
                 id: 'index',

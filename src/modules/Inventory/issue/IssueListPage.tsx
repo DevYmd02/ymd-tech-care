@@ -11,6 +11,7 @@ import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
 
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
+import { useEmployees, useDepartments } from '@/modules/master-data/hooks/useMasterData';
 
 import { IssueStockService } from './services/issue.service';
 import { IssueFormModal } from './components/IssueFormModal';
@@ -56,6 +57,8 @@ function CancelBadge({ flag }: { flag: string }) {
 
 export default function IssueListPage() {
     const queryClient = useQueryClient();
+    const { data: employees } = useEmployees();
+    const { data: departments } = useDepartments();
 
     // ── Filters (URL-synced) ────────────────────────────────────────────────────────
     const {
@@ -97,7 +100,7 @@ export default function IssueListPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ['issue-stocks', apiParams],
-        queryFn: () => IssueStockService.getList(apiParams),
+        queryFn: ({ signal }) => IssueStockService.getList(apiParams, { signal }),
         staleTime: 0,
     });
 
@@ -197,14 +200,28 @@ export default function IssueListPage() {
             }),
             colHelper.accessor('dept_name', {
                 header: 'แผนก',
-                cell: info => <span className="text-sm text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
+                cell: info => {
+                    let val = info.getValue() as string;
+                    if (val && val !== '-') {
+                        const d = departments?.find((x) => String(x.id || x.department_id || x.emp_dept_id) === String(val));
+                        if (d) val = (d.department_name || d.emp_dept_name || val) as string;
+                    }
+                    return <span className="text-sm text-gray-700 dark:text-gray-300">{val || '-'}</span>;
+                },
                 size: 150,
                 enableSorting: false,
             }),
 
             colHelper.accessor('rece_emp_name', {
                 header: 'ผู้รับสินค้า',
-                cell: info => <span className="text-sm text-gray-700 dark:text-gray-300">{info.getValue() || '-'}</span>,
+                cell: info => {
+                    let val = info.getValue() as string;
+                    if (val && val !== '-') {
+                        const e = employees?.find((x) => String(x.id || x.employee_id) === String(val));
+                        if (e) val = (e.employee_fullname || `${e.employee_firstname_th || ''} ${e.employee_lastname_th || ''}`.trim() || val) as string;
+                    }
+                    return <span className="text-sm text-gray-700 dark:text-gray-300">{val || '-'}</span>;
+                },
                 size: 140,
                 enableSorting: false,
             }),
@@ -254,7 +271,7 @@ export default function IssueListPage() {
                 enableSorting: false,
             }),
         ],
-        [filters.page, filters.limit, handleView, handleEdit]
+        [filters.page, filters.limit, handleView, handleEdit, departments, employees]
     );
 
     return (

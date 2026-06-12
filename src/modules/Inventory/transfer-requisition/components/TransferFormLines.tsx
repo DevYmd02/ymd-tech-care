@@ -158,27 +158,27 @@ export const TransferFormLines: React.FC<TransferFormLinesProps> = React.memo(
                                             />
                                         </td>
 
-                                        {/* Source Warehouse (income_inve_id) */}
+                                        {/* Source Warehouse (from_warehouse_id) */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
                                             <input
-                                                {...register(`lines.${index}.income_inve_name`)}
+                                                {...register(`lines.${index}.from_warehouse_name`)}
                                                 type="text"
                                                 readOnly
                                                 onClick={() => !readOnly && onSearchSourceWarehouse?.(index)}
                                                 placeholder="-- เลือกคลังต้นทาง --"
-                                                className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${lineErr?.income_inve_id ? 'border-red-500' : ''}`}
+                                                className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${lineErr?.from_warehouse_id ? 'border-red-500' : ''}`}
                                             />
                                         </td>
 
-                                        {/* Source Location (income_loca_id) */}
+                                        {/* Source Location (from_location_id) */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
                                             <input
-                                                {...register(`lines.${index}.income_loca_name`)}
+                                                {...register(`lines.${index}.from_location_name`)}
                                                 type="text"
                                                 readOnly
                                                 onClick={() => {
                                                     if (readOnly) return;
-                                                    const whId = getValues(`lines.${index}.income_inve_id`);
+                                                    const whId = getValues(`lines.${index}.from_warehouse_id`);
                                                     onSearchSourceLocation?.(index, whId);
                                                 }}
                                                 placeholder="-- เลือกที่เก็บต้นทาง --"
@@ -186,27 +186,27 @@ export const TransferFormLines: React.FC<TransferFormLinesProps> = React.memo(
                                             />
                                         </td>
 
-                                        {/* Destination Warehouse (out_inve_id) */}
+                                        {/* Destination Warehouse (to_warehouse_id) */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
                                             <input
-                                                {...register(`lines.${index}.out_inve_name`)}
+                                                {...register(`lines.${index}.to_warehouse_name`)}
                                                 type="text"
                                                 readOnly
                                                 onClick={() => !readOnly && onSearchDestWarehouse?.(index)}
                                                 placeholder="-- เลือกคลังปลายทาง --"
-                                                className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${lineErr?.out_inve_id ? 'border-red-500' : ''}`}
+                                                className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${lineErr?.to_warehouse_id ? 'border-red-500' : ''}`}
                                             />
                                         </td>
 
-                                        {/* Destination Location (out_loca_id) */}
+                                        {/* Destination Location (to_location_id) */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
                                             <input
-                                                {...register(`lines.${index}.out_loca_name`)}
+                                                {...register(`lines.${index}.to_location_name`)}
                                                 type="text"
                                                 readOnly
                                                 onClick={() => {
                                                     if (readOnly) return;
-                                                    const whId = getValues(`lines.${index}.out_inve_id`);
+                                                    const whId = getValues(`lines.${index}.to_warehouse_id`);
                                                     onSearchDestLocation?.(index, whId);
                                                 }}
                                                 placeholder="-- เลือกที่เก็บปลายทาง --"

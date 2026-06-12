@@ -90,7 +90,7 @@ export default function TransferListPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ['transfer-requisitions', apiParams],
-        queryFn: () => TransferService.getList(apiParams),
+        queryFn: ({ signal }) => TransferService.getList(apiParams, { signal }),
         staleTime: 0,
     });
 

@@ -12,7 +12,7 @@ import type {
     TransferApprovalListItem,
     TransferApprovalListParams,
 } from '../types/transfer-approval.types';
-import type { TransferRequisitionHeader, TransferRequisitionLine, TransferRequisitionListItem } from '../../transfer/types/transfer.types';
+import type { TransferRequisitionHeader, TransferRequisitionLine, TransferRequisitionListItem } from '../../transfer-requisition/types/transfer.types';
 import type { TransferApprovalFormData } from '../schemas/transfer-approval.schemas';
 import type { ListResponse, SuccessResponse } from '@/shared/types/api.types';
 
@@ -24,9 +24,9 @@ const ENDPOINTS = {
 
 export const TransferApprovalService = {
     // ─── List / History ──────────────────────────────────────────────────────────────
-    getList: async (params?: TransferApprovalListParams): Promise<ListResponse<TransferApprovalListItem>> => {
+    getList: async (params?: TransferApprovalListParams, config?: { signal?: AbortSignal }): Promise<ListResponse<TransferApprovalListItem>> => {
         try {
-            const res = await api.get<ListResponse<TransferApprovalListItem>>(ENDPOINTS.base, { params });
+            const res = await api.get<ListResponse<TransferApprovalListItem>>(ENDPOINTS.base, { params, ...config });
             return res as ListResponse<TransferApprovalListItem>;
         } catch (error) {
             logger.error('[TransferApprovalService] getList error:', error);
@@ -50,15 +50,15 @@ export const TransferApprovalService = {
     },
 
     // ─── Get Pending Requisitions ────────────────────────────────────────────────────
-    getPending: async (): Promise<TransferRequisitionListItem[]> => {
+    getPending: async (config?: { signal?: AbortSignal }): Promise<TransferRequisitionListItem[]> => {
         try {
-            const res = await api.get<ListResponse<TransferRequisitionListItem> | TransferRequisitionListItem[]>(ENDPOINTS.pending);
+            const res = await api.get<ListResponse<TransferRequisitionListItem> | TransferRequisitionListItem[]>(ENDPOINTS.pending, config);
             if (Array.isArray(res)) return res;
             return res.items || [];
         } catch {
             // Fallback: Query all transfer requisitions and filter by cancel flag
             try {
-                const res = await api.get<ListResponse<TransferRequisitionHeader>>('/transfer-requisition');
+                const res = await api.get<ListResponse<TransferRequisitionHeader>>('/transfer-requisition', config);
                 const list = res.items || [];
                 return list
                     .filter(h => h.cancelflag === 'N')
