@@ -304,7 +304,7 @@ export function SalesOrderFormModal({
                         <form
                             id="so-form"
                             onSubmit={handleSubmit(onFormSubmit, onInvalidSubmit)}
-                            className={`max-w-[1400px] mx-auto space-y-6 ${effectiveIsViewOnly ? 'opacity-90' : ''}`}
+                            className={`w-full space-y-6 ${effectiveIsViewOnly ? 'opacity-90' : ''}`}
                         >
                             {/* 1. Header */}
                             <div className={cardClass}>

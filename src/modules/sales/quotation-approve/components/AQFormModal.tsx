@@ -151,7 +151,7 @@ export const AQFormModal: React.FC<Props> = ({
             <SalesFormSkeleton />
           ) : (
             <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6">
-              <div className="max-w-[1400px] mx-auto space-y-6">
+              <div className="w-full space-y-6">
 
                 {/* ── SQ Header Info ───────────────────────────────────────── */}
                 <div className={cardClass}>

@@ -251,7 +251,7 @@ export default function AdminDashboard() {
     ];
 
     return (
-        <div className={`${styles.pageContainer} ${isSidebarOpen ? 'max-w-7xl' : 'max-w-none w-full px-2 md:px-6'} mx-auto space-y-8 animate-fade-in transition-all duration-300`}>
+        <div className={`${styles.pageContainer} w-full px-4 md:px-6 mx-auto space-y-8 animate-fade-in transition-all duration-300`}>
 
             {/* ==================== 1. PRESTIGE GREETING HERO HEADER ==================== */}
             <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-50 via-blue-50 to-indigo-100/70 dark:from-slate-900 dark:via-indigo-950 dark:to-slate-900 text-slate-800 dark:text-white p-6 md:p-8 shadow-sm dark:shadow-xl border border-indigo-100 dark:border-indigo-800/30">

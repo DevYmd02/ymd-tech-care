@@ -289,7 +289,7 @@ export function ReservationFormModal({ isOpen, onClose, id, initialData, onSucce
                                 'error'
                             );
                         })} 
-                        className="max-w-[1400px] mx-auto space-y-6"
+                        className="w-full space-y-6"
                     >
                         
                         {/* 1. Header Section */}
