@@ -9,14 +9,24 @@ import { ClipboardList, Search } from 'lucide-react';
 import type { TransferHeaderFormData } from '../schemas/transfer.schemas';
 import { CustomDateInput } from '@ui';
 import { EmployeeSearchModal } from '@/modules/master-data/employee/components/EmployeeSearchModal';
+import type { IEmployee } from '@/modules/master-data/company/types/employee-types';
+
+export interface TransferDocLink {
+    docu_type_id: string | number;
+    docu_type_code?: string;
+    docu_name_th?: string;
+    docu_name_en?: string;
+}
 
 interface TransferFormHeaderProps {
+    docLinks?: TransferDocLink[];
     branchOptions?: { id: string; name: string }[];
     empOptions?: { id: string; name: string }[];
     readOnly?: boolean;
 }
 
 export const TransferFormHeader: React.FC<TransferFormHeaderProps> = ({
+    docLinks = [],
     branchOptions = [],
     empOptions = [],
     readOnly = false,
@@ -24,11 +34,12 @@ export const TransferFormHeader: React.FC<TransferFormHeaderProps> = ({
     const { register, control, formState: { errors }, setValue } = useFormContext<TransferHeaderFormData>();
     const watchedSaveEmpId = useWatch({ control, name: 'save_emp_id' });
     const watchedTransferEmpId = useWatch({ control, name: 'transfer_emp_id' });
+    const watchedTransferEmpName = useWatch({ control, name: 'transfer_emp_name' });
 
     const [isEmpSearchOpen, setIsEmpSearchOpen] = useState(false);
 
     const isLocked = readOnly;
-    const selectedEmpName = empOptions.find(e => e.id === watchedTransferEmpId)?.name || '';
+    const selectedEmpName = watchedTransferEmpName || empOptions.find(e => e.id === watchedTransferEmpId)?.name || '';
 
     const inputClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white placeholder-gray-400 transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
     const selectClass = "h-9 w-full px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white cursor-pointer disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -104,6 +115,31 @@ export const TransferFormHeader: React.FC<TransferFormHeaderProps> = ({
                         )}
                     />
                     {errors.docu_date && <span className="text-[10px] text-red-500 font-medium">{errors.docu_date.message}</span>}
+                </div>
+
+                {/* 2.5 รายการเอกสาร (เชื่อม icoption) */}
+                <div className="space-y-1">
+                    <label className={labelClass}>รายการเอกสาร <span className="text-red-500">*</span></label>
+                    <Controller
+                        name="docu_item_no"
+                        control={control}
+                        render={({ field }) => (
+                            <select
+                                {...field}
+                                value={field.value || ''}
+                                disabled={isLocked}
+                                className={`${selectClass} ${getErrorClass('docu_item_no')}`}
+                            >
+                                <option value="">-- เลือกรายการเอกสาร --</option>
+                                {docLinks.map(d => (
+                                    <option key={d.docu_type_id} value={String(d.docu_type_id)}>
+                                        {d.docu_type_code ? `${d.docu_type_code} – ` : ''}{d.docu_name_th ?? d.docu_name_en}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+                    />
+                    {errors.docu_item_no && <span className="text-[10px] text-red-500 font-medium">{errors.docu_item_no.message}</span>}
                 </div>
 
                 {/* 3. สาขา */}
@@ -185,8 +221,9 @@ export const TransferFormHeader: React.FC<TransferFormHeaderProps> = ({
                 <EmployeeSearchModal
                     isOpen={isEmpSearchOpen}
                     onClose={() => setIsEmpSearchOpen(false)}
-                    onSelect={(emp) => {
-                        setValue('transfer_emp_id', String(emp.id));
+                    onSelect={(emp: IEmployee) => {
+                        setValue('transfer_emp_id', String(emp.employee_id || ''));
+                        setValue('transfer_emp_name', `${emp.employee_firstname_th || ''} ${emp.employee_lastname_th || ''}`.trim());
                     }}
                 />
             )}

@@ -81,7 +81,7 @@ const SalesChannelList = React.lazy(() => import('@/modules/master-data/sales/pa
 const SalesTargetList = React.lazy(() => import('@/modules/master-data/sales/pages/target/SalesTargetList'));
 const PriceListList = React.lazy(() => import('@/modules/master-data/sales/pages/price-list/PriceListList'));
 const PriceLevelList = React.lazy(() => import('@/modules/master-data/sales/pages/price-level/PriceLevelList'));
-const ICOptionList = React.lazy(() => import('@/modules/master-data/sales/pages/ic-option/ICOptionList'));
+const ICOptionList = React.lazy(() => import('@/modules/master-data/company/pages/ic-option/ICOptionList'));
 const StandardCostList = React.lazy(() => import('@/modules/master-data/sales/pages/standard-cost/StandardCostList'));
 const WarehouseList = React.lazy(() => import('@/modules/master-data/inventory/pages/warehouse/WarehouseList'));
 const ProductCategoryList = React.lazy(() => import('@/modules/master-data/inventory/pages/category/ProductCategoryList'));

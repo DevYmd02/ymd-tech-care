@@ -9,7 +9,7 @@ import type { UOMListItem, WarehouseListItem } from '@master-data/types/master-d
 import type { Location } from '@inventory/types/inventory-master.types';
 import { formatNumber } from '@/shared/utils';
 import { PriceSourceBadge } from '@sales/shared/components/PriceSourceBadge';
-import { validateLineStock, DEFAULT_IC_OPTIONS, type ICOption } from '@sales/shared/utils/stock-validation';
+import { validateStock as validateLineStock, DEFAULT_IC_OPTIONS, type ICOption } from '@/shared/ic-option';
 import { UOMPickerModal, type UOMPickerItem } from '@/shared/components/ui/feedback/UOMPickerModal';
 import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import { ItemBarcodeService } from '@inventory/services/item-barcode.service';

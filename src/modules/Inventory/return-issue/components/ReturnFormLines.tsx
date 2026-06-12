@@ -8,6 +8,7 @@ import { useFormContext, Controller } from 'react-hook-form';
 import { Plus, Trash2, ShoppingBag, Search } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { ReturnIssueHeaderFormData, ReturnIssueLineFormData } from '../schemas/return.schemas';
+import { validateStock, DEFAULT_IC_OPTIONS, type ICOption, StockValidationMessage, ICOptionSummaryBar } from '@/shared/ic-option';
 
 interface ReturnFormLinesProps {
     fields: FieldArrayWithId<ReturnIssueHeaderFormData, 'lines', '_id'>[];
@@ -21,6 +22,7 @@ interface ReturnFormLinesProps {
     onSearchLocation?: (index: number, warehouseId?: string) => void;
     onSearchLot?: (index: number, itemId?: string) => void;
     onOpenUomPicker?: (index: number) => void;
+    icOptions?: ICOption;
 }
 
 const tableInputClass = "w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -37,17 +39,26 @@ export const ReturnFormLines: React.FC<ReturnFormLinesProps> = React.memo(
         onSearchLocation,
         onSearchLot,
         onOpenUomPicker,
+        icOptions,
     }) => {
-        const { register, control, getValues, formState: { errors } } = useFormContext<ReturnIssueHeaderFormData>();
+        const { register, control, getValues, watch, formState: { errors } } = useFormContext<ReturnIssueHeaderFormData>();
         const lineErrors = errors.lines;
+        
+        // Watch lines for validation updates
+        const watchedLines = watch('lines');
 
         return (
             <div className="space-y-4">
                 {/* ── Section Header ─────────────────────────────────────────────── */}
                 <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 flex-wrap">
                         <ShoppingBag size={20} strokeWidth={2.5} />
                         <h3 className="text-lg font-bold">รายการสินค้ารับคืน — Transaction Lines</h3>
+                        {icOptions && (
+                            <div className="ml-2 border-l pl-3 border-gray-200 dark:border-gray-700 hidden xl:block">
+                                <ICOptionSummaryBar options={icOptions} stockEffect={1} />
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center gap-3">
                         {lineErrors && typeof lineErrors === 'object' && 'message' in lineErrors && (
@@ -91,6 +102,29 @@ export const ReturnFormLines: React.FC<ReturnFormLinesProps> = React.memo(
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-gray-900">
                             {fields.map((field, index) => {
                                 const lineErr = Array.isArray(lineErrors) ? lineErrors[index] : undefined;
+                                const watchedLine = watchedLines?.[index] || field;
+                                
+                                const stockValidation = watchedLine.item_id 
+                                    ? validateStock(
+                                        Number(watchedLine.qty_return_ic || 0), 
+                                        Infinity, 
+                                        watchedLine.warehouse_id, 
+                                        watchedLine.location_id, 
+                                        icOptions || DEFAULT_IC_OPTIONS
+                                      )
+                                    : { isValid: true };
+
+                                const isWhError = !!(stockValidation.message && (
+                                    stockValidation.code === 'WAREHOUSE_REQUIRED' ||
+                                    (stockValidation.code === 'WAREHOUSE_LOCATION_REQUIRED' && !watchedLine.warehouse_id)
+                                ));
+
+                                const isLocError = !!(stockValidation.message && (
+                                    stockValidation.code === 'WAREHOUSE_LOCATION_REQUIRED' &&
+                                    watchedLine.warehouse_id &&
+                                    !watchedLine.location_id
+                                ));
+
                                 return (
                                     <tr key={field._id} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/5 transition-colors group">
                                         <td className="px-2 py-1.5 text-center text-gray-500 font-medium sticky left-0 z-10 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800">
@@ -157,31 +191,37 @@ export const ReturnFormLines: React.FC<ReturnFormLinesProps> = React.memo(
                                         </td>
 
                                         {/* Warehouse */}
-                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <input
-                                                {...register(`lines.${index}.warehouse_name`)}
-                                                type="text"
-                                                readOnly
-                                                onClick={() => !readOnly && onSearchWarehouse?.(index)}
-                                                placeholder="-- เลือกคลัง --"
-                                                className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${lineErr?.warehouse_id ? 'border-red-500' : ''}`}
-                                            />
+                                        <td className={`p-2 border-r border-gray-100 dark:border-gray-800 ${lineErr?.warehouse_id || isWhError ? 'align-top' : 'align-middle'}`}>
+                                            <div className="flex flex-col gap-1">
+                                                <input
+                                                    {...register(`lines.${index}.warehouse_name`)}
+                                                    type="text"
+                                                    readOnly
+                                                    onClick={() => !readOnly && onSearchWarehouse?.(index)}
+                                                    placeholder="-- เลือกคลัง --"
+                                                    className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${(lineErr?.warehouse_id || isWhError) ? 'border-red-500 focus:ring-red-500' : ''}`}
+                                                />
+                                                <StockValidationMessage show={isWhError} message="กรุณาระบุคลังสินค้า" />
+                                            </div>
                                         </td>
 
                                         {/* Location */}
-                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <input
-                                                {...register(`lines.${index}.location_name`)}
-                                                type="text"
-                                                readOnly
-                                                onClick={() => {
-                                                    if (readOnly) return;
-                                                    const whId = getValues(`lines.${index}.warehouse_id`);
-                                                    onSearchLocation?.(index, whId);
-                                                }}
-                                                placeholder="-- เลือกที่เก็บ --"
-                                                className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors`}
-                                            />
+                                        <td className={`p-2 border-r border-gray-100 dark:border-gray-800 ${isLocError ? 'align-top' : 'align-middle'}`}>
+                                            <div className="flex flex-col gap-1">
+                                                <input
+                                                    {...register(`lines.${index}.location_name`)}
+                                                    type="text"
+                                                    readOnly
+                                                    onClick={() => {
+                                                        if (readOnly) return;
+                                                        const whId = getValues(`lines.${index}.warehouse_id`);
+                                                        onSearchLocation?.(index, whId);
+                                                    }}
+                                                    placeholder="-- เลือกที่เก็บ --"
+                                                    className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${isLocError ? 'border-red-500 focus:ring-red-500' : ''}`}
+                                                />
+                                                <StockValidationMessage show={isLocError} message="กรุณาระบุที่เก็บ" />
+                                            </div>
                                         </td>
 
                                         {/* Lot */}

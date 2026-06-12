@@ -1,37 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
-import { useBranchICOptions } from '../useBranchICOptions';
-import { ICOptionService } from '@/modules/master-data/sales/pages/ic-option/services/ic-option.service';
-import { ICOptionListService } from '@/modules/master-data/sales/pages/ic-option/services/ic-option-list.service';
-import { SystemDocumentService } from '@/modules/master-data/sales/pages/ic-option/services/system-document.service';
-import { DEFAULT_IC_OPTIONS } from '@sales/shared/utils/stock-validation';
+import { useICOptions } from './useICOptions';
+import { ICOptionService, ICOptionListService, SystemDocumentService, DEFAULT_IC_OPTIONS } from '@/shared/ic-option';
 
 // Mock the services
-vi.mock('@/modules/master-data/sales/pages/ic-option/services/ic-option.service', () => ({
+vi.mock('@/shared/ic-option/services/ic-option.service', () => ({
     ICOptionService: {
         getICOptions: vi.fn(),
     },
 }));
 
-vi.mock('@/modules/master-data/sales/pages/ic-option/services/ic-option-list.service', () => ({
+vi.mock('@/shared/ic-option/services/ic-option-list.service', () => ({
     ICOptionListService: {
         getByICOptionId: vi.fn(),
     },
 }));
 
-vi.mock('@/modules/master-data/sales/pages/ic-option/services/system-document.service', () => ({
+vi.mock('@/shared/ic-option/services/system-document.service', () => ({
     SystemDocumentService: {
         getAll: vi.fn(),
     },
 }));
 
-describe('useBranchICOptions Hook Tests', () => {
+describe('useICOptions Hook Tests', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
     it('should return DEFAULT_IC_OPTIONS when branchId is falsy', async () => {
-        const { result } = renderHook(() => useBranchICOptions(null, 'RSV'));
+        const { result } = renderHook(() => useICOptions(null, 'RSV'));
         expect(result.current.icOptions).toEqual(DEFAULT_IC_OPTIONS);
         expect(result.current.isLoading).toBe(false);
     });
@@ -97,7 +94,7 @@ describe('useBranchICOptions Hook Tests', () => {
             },
         ]);
 
-        const { result } = renderHook(() => useBranchICOptions(1, 'RSV'));
+        const { result } = renderHook(() => useICOptions(1, 'RSV'));
 
         await waitFor(() => {
             expect(result.current.isLoading).toBe(false);

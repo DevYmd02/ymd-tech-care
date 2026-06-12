@@ -2,14 +2,13 @@ import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';
 import { Save, ChevronDown, Loader2 } from 'lucide-react';
-import { ICOptionListService } from '../services/ic-option-list.service';
-import { SystemDocumentService } from '../services/system-document.service';
-import type { ICOptionListItem } from '../types/ic-option-list.types';
+import { ICOptionListService, SystemDocumentService } from '@/shared/ic-option';
+import type { ICOptionListItem } from '@/shared/ic-option';
 import {
     NEGATIVE_STOCK_CHECK_OPTIONS,
     NEGATIVE_STOCK_MODE_OPTIONS,
     QUANTITY_VALIDATION_OPTIONS,
-} from '../types/ic-option-list.types';
+} from '@/shared/ic-option';
 
 interface Props {
     icOptionId: string;

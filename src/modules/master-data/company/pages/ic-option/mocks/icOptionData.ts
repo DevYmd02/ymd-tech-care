@@ -1,4 +1,4 @@
-import type { ICOption } from '../types/ic-option.types';
+import type { ICOptionBranchConfig as ICOption } from '@/shared/ic-option';
 
 export const mockICOptions: ICOption[] = [
     {

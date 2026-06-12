@@ -1,68 +1,67 @@
-import { useState, useEffect, useRef } from 'react';
-import { logger } from '@utils';
-import { ICOptionService } from '@/modules/master-data/sales/pages/ic-option/services/ic-option.service';
-import { ICOptionListService } from '@/modules/master-data/sales/pages/ic-option/services/ic-option-list.service';
-import { SystemDocumentService } from '@/modules/master-data/sales/pages/ic-option/services/system-document.service';
-import { DEFAULT_IC_OPTIONS, type ICOption } from '@sales/shared/utils/stock-validation';
-
 /**
- * ============================================================
- * useBranchICOptions — Centralized IC Option Resolver
- * ============================================================
- * 
- * Resolves the effective Inventory Control (IC) stock validation
- * options for a given branch + document type combination.
- * 
+ * @file useICOptions.ts
+ * @description Global IC Option resolver hook — shared across all modules.
+ *
+ * Replaces:
+ *   - `sales/shared/hooks/useBranchICOptions.ts`
+ *   - `Inventory/shared/hooks/useInventoryICOptions.ts`
+ *
  * ## Fallback Hierarchy (Priority high → low):
- * 
+ *
  * 1. **IC Option List (Document-specific)**
  *    Tab "IC Option List" → per-document overrides (e.g. RSV = "สินค้าติดลบได้")
  *    If value = 0 (Default), falls through to ↓
- * 
+ *
  * 2. **Branch General Settings**
  *    Tab "ตั้งค่าทั่วไป" → branch-wide defaults
  *    Fields: check_deficit, check_deficit_option, check_qty_flag
  *    If value = 0 (Default) or missing, falls through to ↓
- * 
+ *
  * 3. **Global System Default**
- *    Hardcoded safe defaults from stock-validation.ts
+ *    Hardcoded safe defaults from DEFAULT_IC_OPTIONS
  *    negative_stock_check: 1 (BLOCK), negative_stock_mode: 2 (WAREHOUSE), quantity_validation_flag: 1 (POSITIVE)
- * 
+ *
  * ## Usage:
  * ```ts
- * // In any sales module hook (reservation, sales-order, quotation, etc.)
- * const { icOptions, isLoading } = useBranchICOptions(selectedBranchId, 'RSV');
- * const { icOptions, isLoading } = useBranchICOptions(selectedBranchId, 'SO');
+ * // Sales — ใบสั่งจอง
+ * const { icOptions } = useICOptions(branchId, 'RSV');
+ *
+ * // Inventory — ใบขอเบิก
+ * const { icOptions } = useICOptions(branchId, 'ISSUE_REQ');
+ *
+ * // Inventory — ใบเบิก
+ * const { icOptions } = useICOptions(branchId, 'ISSUE');
+ *
+ * // Inventory — ใบขอโอน
+ * const { icOptions } = useICOptions(branchId, 'TRANSFER');
+ *
+ * // Purchase — ใบสั่งซื้อ (อนาคต)
+ * const { icOptions } = useICOptions(branchId, 'PO');
  * ```
- * 
- * @param branchId - The selected branch ID from the form
- * @param documentCode - System document code (e.g. 'RSV', 'SO', 'QT', 'DO', 'INV')
+ *
+ * @param branchId     - The selected branch ID from the form
+ * @param documentCode - System document code (e.g. 'RSV', 'ISSUE_REQ', 'ISSUE', 'TRANSFER', 'PO')
  */
-export function useBranchICOptions(
+
+import { useQuery } from '@tanstack/react-query';
+import { logger } from '@/shared/utils';
+import { ICOptionService } from '../services/ic-option.service';
+import { ICOptionListService } from '../services/ic-option-list.service';
+import { SystemDocumentService } from '../services/system-document.service';
+import { DEFAULT_IC_OPTIONS } from '../utils/stock-validation';
+import type { ICOption } from '../types/ic-option.types';
+
+export function useICOptions(
     branchId: string | number | undefined | null,
     documentCode: string
 ) {
-    const [icOptions, setIcOptions] = useState<ICOption>(DEFAULT_IC_OPTIONS);
-    const [isLoading, setIsLoading] = useState(false);
-    
-    // Prevent duplicate fetches for the same branchId
-    const lastFetchedRef = useRef<string | null>(null);
+    const fetchKey = branchId ? `${branchId}-${documentCode}` : null;
 
-    useEffect(() => {
-        // Reset to safe defaults when no branch is selected
-        if (!branchId) {
-            setIcOptions(DEFAULT_IC_OPTIONS);
-            lastFetchedRef.current = null;
-            return;
-        }
+    const { data: icOptions = DEFAULT_IC_OPTIONS, isLoading } = useQuery({
+        queryKey: ['ic-options', fetchKey],
+        queryFn: async (): Promise<ICOption> => {
+            if (!branchId) return DEFAULT_IC_OPTIONS;
 
-        const fetchKey = `${branchId}-${documentCode}`;
-        if (lastFetchedRef.current === fetchKey) return;
-
-        let cancelled = false;
-
-        const resolve = async () => {
-            setIsLoading(true);
             try {
                 // ─── Step 1: Fetch all branch IC Option configs ───
                 const allOptions = await ICOptionService.getICOptions();
@@ -71,12 +70,7 @@ export function useBranchICOptions(
                 );
 
                 if (!branchOption) {
-                    // No IC Option configured for this branch at all → use global defaults
-                    if (!cancelled) {
-                        setIcOptions(DEFAULT_IC_OPTIONS);
-                        lastFetchedRef.current = fetchKey;
-                    }
-                    return;
+                    return DEFAULT_IC_OPTIONS;
                 }
 
                 // ─── Step 2: Fetch document-specific overrides (IC Option List) ───
@@ -89,23 +83,22 @@ export function useBranchICOptions(
                         SystemDocumentService.getAll(),
                     ]);
 
-                    // Find the system_document matching the requested document code
                     const matchedDoc = systemDocs.find(
-                        (doc) => doc.system_document_code?.trim().toUpperCase() === documentCode.trim().toUpperCase()
+                        (doc) =>
+                            doc.system_document_code?.trim().toUpperCase() ===
+                            documentCode.trim().toUpperCase()
                     );
 
                     if (matchedDoc) {
                         docSpecificOption = listItems.find(
-                            (item) => Number(item.system_document_id) === Number(matchedDoc.system_document_id)
+                            (item) =>
+                                Number(item.system_document_id) ===
+                                Number(matchedDoc.system_document_id)
                         ) as unknown as Record<string, number> | undefined;
                     }
                 }
 
                 // ─── Step 3: Resolve with hierarchy fallback ───
-                //
-                // For each field:
-                //   docSpecific (≠0) → branchGeneral (≠0) → globalDefault
-                //
                 const resolved: ICOption = {
                     negative_stock_check: resolveField(
                         docSpecificOption?.negative_stock_check,
@@ -124,40 +117,39 @@ export function useBranchICOptions(
                     ),
                 };
 
-                if (!cancelled) {
-                    setIcOptions(resolved);
-                    lastFetchedRef.current = fetchKey;
-
-                    logger.debug(
-                        `[useBranchICOptions] Resolved for branch=${branchId} doc=${documentCode}:`,
-                        resolved,
-                        { docSpecific: docSpecificOption, branchGeneral: {
+                logger.debug(
+                    `[useICOptions] Resolved for branch=${branchId} doc=${documentCode}:`,
+                    resolved,
+                    {
+                        docSpecific: docSpecificOption,
+                        branchGeneral: {
                             check_deficit: branchOption.check_deficit,
                             check_deficit_option: branchOption.check_deficit_option,
                             check_qty_flag: branchOption.check_qty_flag,
-                        }}
-                    );
-                }
+                        },
+                    }
+                );
+
+                return resolved;
             } catch (error) {
-                logger.error(`[useBranchICOptions] Failed for branch=${branchId} doc=${documentCode}:`, error);
-                if (!cancelled) {
-                    setIcOptions(DEFAULT_IC_OPTIONS);
-                    lastFetchedRef.current = fetchKey;
-                }
-            } finally {
-                if (!cancelled) setIsLoading(false);
+                logger.error(`[useICOptions] Failed for branch=${branchId} doc=${documentCode}:`, error);
+                return DEFAULT_IC_OPTIONS;
             }
-        };
-
-        resolve();
-
-        return () => { cancelled = true; };
-    }, [branchId, documentCode]);
+        },
+        enabled: !!branchId && !!documentCode,
+        staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    });
 
     return { icOptions, isLoading };
 }
 
-// ─── Helper ───────────────────────────────────────────────────
+// ─── Legacy aliases ───────────────────────────────────────────────────────────
+/** @deprecated Use `useICOptions` instead */
+export const useBranchICOptions = useICOptions;
+/** @deprecated Use `useICOptions` instead */
+export const useInventoryICOptions = useICOptions;
+
+// ─── Helper ───────────────────────────────────────────────────────────────────
 /**
  * Resolves a single IC option field using the 3-tier hierarchy.
  * A value of `0` means "Default" (not configured), so we fall through.

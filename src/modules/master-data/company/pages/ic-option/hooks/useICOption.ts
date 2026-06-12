@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useToast } from '@ui/feedback/Toast';
 import { logger } from '@/shared/utils';
-import type { ICOption, ICOptionFilters } from '../types/ic-option.types';
-import { ICOptionService } from '../services/ic-option.service';
+import type { ICOptionBranchConfig as ICOption, ICOptionFilters } from '@/shared/ic-option';
+import { ICOptionService } from '@/shared/ic-option';
 import { BranchService } from '@/modules/master-data/company/services/org-branch.service';
 
 export function useICOption() {

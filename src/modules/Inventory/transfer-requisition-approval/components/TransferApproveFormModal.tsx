@@ -113,7 +113,7 @@ export const TransferApproveFormModal: React.FC<TransferApproveFormModalProps> =
                         type="submit" 
                         form="transfer-approve-form"
                         disabled={isSaving}
-                        className="h-10 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                        className="h-10 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
                     >
                         {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                         {isSaving ? 'กำลังบันทึก...' : (isEditMode ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล')}
@@ -129,7 +129,7 @@ export const TransferApproveFormModal: React.FC<TransferApproveFormModalProps> =
                 isOpen={isOpen}
                 onClose={onClose}
                 title={formTitle}
-                headerColor={readOnly ? 'bg-slate-600' : 'bg-blue-600'}
+                headerColor={readOnly ? 'bg-slate-600' : 'bg-emerald-600'}
                 footer={ModalFooter}
                 titleIcon={
                     <div className="bg-white/20 p-1.5 rounded shadow-sm text-white">
@@ -150,7 +150,7 @@ export const TransferApproveFormModal: React.FC<TransferApproveFormModalProps> =
                     <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 animate-form-fade-in">
                         {isLoading ? (
                             <div className="flex items-center justify-center h-40">
-                                <Loader2 className="animate-spin text-blue-600" size={32} />
+                                <Loader2 className="animate-spin text-emerald-600" size={32} />
                             </div>
                         ) : (
                             <form id="transfer-approve-form" onSubmit={formMethods.handleSubmit(onFormSubmit, handleFormError)} className="w-full space-y-6">

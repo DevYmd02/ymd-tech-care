@@ -287,7 +287,7 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                             }`}
                         >
                             <Layers size={16} />
-                            รอพิจารณาอนุมัติ ({pendingItems.length})
+                            รอพิจารณาอนุมัติ
                         </button>
                         <button
                             onClick={() => setActiveTab('history')}
@@ -298,7 +298,7 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                             }`}
                         >
                             <List size={16} />
-                            ประวัติการอนุมัติ ({historyItems.length})
+                            ประวัติการอนุมัติ
                         </button>
                     </div>
 
@@ -452,7 +452,7 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                                 }`}
                             >
                                 <Layers size={16} />
-                                รอพิจารณาอนุมัติ ({pendingItems.length})
+                                รอพิจารณาอนุมัติ
                             </button>
                             <button
                                 onClick={() => setActiveTab('history')}
@@ -463,7 +463,7 @@ export default function RequisitionApprovalListPage({ isModal = false, onClose }
                                 }`}
                             >
                                 <List size={16} />
-                                ประวัติการอนุมัติ ({historyItems.length})
+                                ประวัติการอนุมัติ
                             </button>
                         </div>
  

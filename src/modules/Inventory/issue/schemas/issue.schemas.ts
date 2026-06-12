@@ -23,6 +23,7 @@ export const issueStockLineSchema = z.object({
     location_name: z.string().optional(),
     lot_id: z.string().optional().nullable(),
     lot_no: z.string().optional(),
+    lot_available_qty: z.number().optional(),
     qty_ic: z
         .union([z.number(), z.literal('')])
         .superRefine((v, ctx) => {

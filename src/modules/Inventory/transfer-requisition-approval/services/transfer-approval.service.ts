@@ -52,25 +52,12 @@ export const TransferApprovalService = {
     // ─── Get Pending Requisitions ────────────────────────────────────────────────────
     getPending: async (config?: { signal?: AbortSignal }): Promise<TransferRequisitionListItem[]> => {
         try {
-            const res = await api.get<ListResponse<TransferRequisitionListItem> | TransferRequisitionListItem[]>(ENDPOINTS.pending, config);
-            if (Array.isArray(res)) return res;
-            return res.items || [];
-        } catch {
-            // Fallback: Query all transfer requisitions and filter by cancel flag
-            try {
-                const res = await api.get<ListResponse<TransferRequisitionHeader>>('/transfer-requisition', config);
-                const list = res.items || [];
-                return list
-                    .filter(h => h.cancelflag === 'N')
-                    .map((h) => ({
-                        transfer__req_id: h.transfer__req_id,
-                        transfer__req_no: h.transfer__req_no,
-                        docu_date: h.docu_date,
-                        cancelflag: h.cancelflag,
-                    }));
-            } catch {
-                return [];
-            }
+            const res = await api.get<ListResponse<TransferRequisitionListItem>>('/transfer-stock', { params: { limit: 1000 }, ...config });
+            const list = res.items || [];
+            return list.filter(item => item.cancelflag === 'N' && item.status === 'PENDING');
+        } catch (error) {
+            logger.error('[TransferApprovalService] getPending error:', error);
+            return [];
         }
     },
 

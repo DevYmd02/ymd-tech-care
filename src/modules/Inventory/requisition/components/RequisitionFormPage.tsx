@@ -25,6 +25,7 @@ import { UOMPickerModal, type UOMPickerItem } from '@/shared/components/ui/feedb
 import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import { ItemBarcodeService } from '@inventory/services/item-barcode.service';
 import { ItemMasterService } from '@inventory/services/item-master.service';
+import { useICOptions } from '@/shared/ic-option';
 
 interface RequisitionFormPageProps {
     isOpen: boolean;
@@ -61,6 +62,9 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
         projects,
         uoms,
     } = useRequisitionForm({ isOpen, onClose, editId, onSuccess });
+
+    const branchId = formMethods.watch('branch_id');
+    const { icOptions } = useICOptions(Number(branchId) || undefined, 'ISSUE_REQ');
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [pendingData, setPendingData] = useState<RequisitionHeaderFormData | null>(null);
@@ -270,6 +274,7 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
                 ...currentLine,
                 lot_id: String(lot.lot_no_id),
                 lot_no: lot.code,
+                lot_available_qty: lot.qty_available ?? lot.sale_stock ?? 0,
             } as RequisitionLineFormData);
         }
         setIsLotSearchOpen(false);
@@ -414,6 +419,7 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
                                         onSearchLocation={handleOpenLocationSearch}
                                         onSearchLot={handleOpenLotSearch}
                                         onOpenUomPicker={(idx) => setActiveUomRowIndex(idx)}
+                                        icOptions={icOptions}
                                     />
                                 </div>
                             </div>

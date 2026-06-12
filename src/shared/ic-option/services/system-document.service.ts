@@ -1,14 +1,11 @@
+/**
+ * @file system-document.service.ts
+ * @description Global System Document service — shared across all modules.
+ */
+
 import api from '@/core/api/api';
 import { logger } from '@/shared/utils';
-
-export interface SystemDocument {
-    system_document_id: number;
-    system_document_code: string;
-    system_document_name: string;
-    system_document_name_eng?: string;
-    sort_order?: number;
-    is_active?: boolean;
-}
+import type { SystemDocument } from '../types/ic-option.types';
 
 export const SystemDocumentService = {
     /**
@@ -19,7 +16,7 @@ export const SystemDocumentService = {
             const response = await api.get<SystemDocument[]>('/system-document');
             return Array.isArray(response) ? response : [];
         } catch (error) {
-            logger.error('Failed to get system documents:', error);
+            logger.error('[SystemDocumentService] Failed to get system documents:', error);
             throw error;
         }
     },
@@ -32,7 +29,7 @@ export const SystemDocumentService = {
             const response = await api.get<SystemDocument>(`/system-document/${id}`);
             return response;
         } catch (error) {
-            logger.error(`Failed to get system document ID ${id}:`, error);
+            logger.error(`[SystemDocumentService] Failed to get system document ID ${id}:`, error);
             return undefined;
         }
     },

@@ -20,6 +20,8 @@ import type { UOMConversionListItem } from '@/modules/master-data/types/master-d
 import type { PendingIssueStock } from '../types/issue.types';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { LocationService, LotNoService } from '@master-data/inventory/services/inventory-master.service';
+import { useICOptions } from '@/shared/ic-option';
+import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
 
 // ====================================================================================
 // HELPERS
@@ -109,6 +111,13 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
         name: 'lines',
         keyName: '_id',
     });
+
+    // ── IC Options ────────────────────────────────────────────────────────────────
+    const watchedBranchId = useWatch({ control, name: 'branch_id' });
+    const { icOptions } = useICOptions(
+        watchedBranchId,
+        SYSTEM_DOCUMENT_CODES.INVENTORY_ISSUE
+    );
 
     // ── Watch lines for auto-calculate good_amnt and amnt_total ────────────────────
     const watchedLines = useWatch({ control, name: 'lines' });
@@ -641,5 +650,7 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
         projects,
         uoms,
         warehouses,
+        
+        icOptions,
     };
 }

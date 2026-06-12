@@ -45,18 +45,18 @@ export const TransferApproveFormLines: React.FC<TransferApproveFormLinesProps> =
                 <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm bg-white dark:bg-gray-900">
                     <table className="w-full min-w-[2400px] border-collapse text-sm">
                         <thead>
-                            <tr className="bg-blue-600 text-white border-b border-blue-500/30">
-                                <th className="p-3 w-12 text-center font-bold sticky left-0 z-20 bg-blue-600 border-r border-blue-500/30 uppercase tracking-wider text-[11px]">ลำดับ</th>
-                                <th className="p-3 w-64 text-left font-bold sticky left-12 z-20 bg-blue-600 border-r border-blue-500/30 uppercase tracking-wider text-[11px]">รหัสสินค้า</th>
-                                <th className="p-3 min-w-[300px] text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">ชื่อสินค้า</th>
-                                <th className="p-3 w-40 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">หน่วย</th>
-                                <th className="p-3 w-48 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">คลังต้นทาง</th>
-                                <th className="p-3 w-48 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">ที่เก็บต้นทาง</th>
-                                <th className="p-3 w-48 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">คลังปลายทาง</th>
-                                <th className="p-3 w-48 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">ที่เก็บปลายทาง</th>
-                                <th className="p-3 w-40 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">Lot</th>
-                                <th className="p-3 w-32 text-right font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">จำนวนขอโอนย้าย</th>
-                                <th className="p-3 w-32 text-right font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">จำนวนอนุมัติ <span className="text-blue-200">*</span></th>
+                            <tr className="bg-emerald-600 text-white border-b border-emerald-500/30">
+                                <th className="p-3 w-12 text-center font-bold sticky left-0 z-20 bg-emerald-600 border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">ลำดับ</th>
+                                <th className="p-3 w-64 text-left font-bold sticky left-12 z-20 bg-emerald-600 border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">รหัสสินค้า</th>
+                                <th className="p-3 min-w-[300px] text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">ชื่อสินค้า</th>
+                                <th className="p-3 w-40 text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">หน่วย</th>
+                                <th className="p-3 w-48 text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">คลังต้นทาง</th>
+                                <th className="p-3 w-48 text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">ที่เก็บต้นทาง</th>
+                                <th className="p-3 w-48 text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">คลังปลายทาง</th>
+                                <th className="p-3 w-48 text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">ที่เก็บปลายทาง</th>
+                                <th className="p-3 w-40 text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">Lot</th>
+                                <th className="p-3 w-32 text-right font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">จำนวนขอโอนย้าย</th>
+                                <th className="p-3 w-32 text-right font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">จำนวนอนุมัติ <span className="text-emerald-200">*</span></th>
                                 <th className="p-3 min-w-[150px] text-left font-bold uppercase tracking-wider text-[11px]">หมายเหตุ</th>
                             </tr>
                         </thead>
@@ -64,7 +64,7 @@ export const TransferApproveFormLines: React.FC<TransferApproveFormLinesProps> =
                             {fields.map((field, index) => {
                                 const lineErr = Array.isArray(lineErrors) ? lineErrors[index] : undefined;
                                 return (
-                                    <tr key={field._id} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/5 transition-colors group">
+                                    <tr key={field._id} className="hover:bg-emerald-50/30 dark:hover:bg-emerald-900/5 transition-colors group">
                                         <td className="px-2 py-1.5 text-center text-gray-500 font-medium sticky left-0 z-10 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800">
                                             {index + 1}
                                         </td>
@@ -176,14 +176,14 @@ export const TransferApproveFormLines: React.FC<TransferApproveFormLinesProps> =
                                                 type="number"
                                                 disabled={readOnly}
                                                 placeholder="0.00"
-                                                className={`${tableInputClass} text-right font-bold text-blue-600 ${lineErr?.appv_stock_qty ? 'border-red-500' : ''}`}
+                                                className={`${tableInputClass} text-right font-bold text-emerald-600 ${lineErr?.appv_stock_qty ? 'border-red-500' : 'focus:border-emerald-500 focus:ring-emerald-500'}`}
                                             />
                                             {lineErr?.appv_stock_qty && <span className="text-[10px] text-red-500 font-medium block mt-0.5">{lineErr.appv_stock_qty.message}</span>}
                                         </td>
 
                                         {/* Remark */}
                                         <td className="p-2">
-                                            <input {...register(`lines.${index}.remark`)} type="text" disabled={readOnly} className={tableInputClass} placeholder="หมายเหตุ" />
+                                            <input {...register(`lines.${index}.remark`)} type="text" disabled={readOnly} className={`${tableInputClass} focus:border-emerald-500 focus:ring-emerald-500`} placeholder="หมายเหตุ" />
                                         </td>
                                     </tr>
                                 );
@@ -195,7 +195,7 @@ export const TransferApproveFormLines: React.FC<TransferApproveFormLinesProps> =
                 {/* ── Table Footer ──────────────────────────────────────────────── */}
                 <div className="flex items-center justify-end pt-2">
                     <div className="text-sm font-bold text-gray-500 dark:text-gray-400 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
-                        รวมทั้งสิ้น: <span className="text-blue-600 dark:text-blue-400 ml-1">{fields.length}</span> รายการ
+                        รวมทั้งสิ้น: <span className="text-emerald-600 dark:text-emerald-400 ml-1">{fields.length}</span> รายการ
                     </div>
                 </div>
             </div>
