@@ -13,6 +13,7 @@ export interface IssueStockHeader {
     docu_item_id: string;          // uuid (PK - backend generate)
     docu_item_no?: string | null;  // uuid (FK → doc_link_ic)
     appvissue_req_no: string;      // varchar(25) - เลขที่เอกสารอนุมัติ (อ้างอิง)
+    appv_issue_req_id?: number;    // ID อ้างอิงเอกสารอนุมัติ
     issue_req_no?: string;         // เลขที่ใบขอเบิกอ้างอิง
     issue_stk_no: string;          // varchar(25) - เลขที่เอกสารใบเบิก
     docu_date: string;             // date
@@ -33,6 +34,7 @@ export interface IssueStockHeader {
 export interface IssueStockLine {
     docu_item_id?: string;         // uuid (FK → D5)
     listno: number;                // smallint
+    appvissue_req_line_id?: number; // ID อ้างอิงรายการอนุมัติ
     item_id: string;               // uuid (FK → dropdown สินค้า)
     item_code?: string;            // varchar(25) - auto-fill
     item_name?: string;            // varchar(255) - auto-fill

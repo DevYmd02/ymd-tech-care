@@ -37,15 +37,15 @@ export const issueStockLineSchema = z.object({
         .union([z.number(), z.literal('')])
         .refine(v => v !== '' && Number(v) >= 0, { message: 'ต้นทุนต้องมากกว่าหรือเท่ากับ 0' })
         .default(0),
-    good_amnt: z.number().min(0).default(0),
-    standard_buy_price: z.number().optional().default(0),
-    standard_cost: z.number().optional().default(0),
+    good_amnt: z.coerce.number().min(0).default(0),
+    standard_buy_price: z.coerce.number().optional().default(0),
+    standard_cost: z.coerce.number().optional().default(0),
     stock_flag: z.number().int().refine(v => [-1, 0, 1].includes(v), {
         message: 'ผลต่อ Stock ต้องเป็น -1, 0 หรือ 1',
     }).default(-1), // ค่าเริ่มต้นเป็น ลดสต็อก (-1) สำหรับใบเบิก
     remark: z.string().max(255).optional(),
-    appvissue_req_line_id: z.number().optional(),
-    lot_balance_id: z.number().optional(),
+    appvissue_req_line_id: z.number().optional().nullable(),
+    lot_balance_id: z.number().optional().nullable(),
 });
 
 // ====================================================================================
@@ -53,8 +53,8 @@ export const issueStockLineSchema = z.object({
 // ====================================================================================
 
 export const issueStockHeaderSchema = z.object({
-    docu_item_id: z.string().uuid().optional(),
-    appv_issue_req_id: z.number().optional(),
+    docu_item_id: z.string().min(1).optional(),
+    appv_issue_req_id: z.number().optional().nullable(),
     doc_link_ic_id: z.number().optional(),
 
     docu_item_no: z
@@ -109,7 +109,7 @@ export const issueStockHeaderSchema = z.object({
         })
         .default(-1), // ค่าเริ่มต้น ลดคลัง สำหรับการเบิกจ่าย
 
-    amnt_total: z.number().min(0).default(0),
+    amnt_total: z.coerce.number().min(0).default(0),
 
     remark: z.string().max(255).optional(),
 

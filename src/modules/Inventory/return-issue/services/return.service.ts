@@ -146,7 +146,7 @@ export const ReturnIssueService = {
                 docu_item_no: String(raw.doc_link_ic_id || raw.doc_type_no || raw.docu_item_no || ''),
                 issue_stk_no: String((raw.issue_stock as Record<string, unknown> | undefined)?.issue_stock_no || raw.issue_stock_no || raw.issue_stk_no || ''),
                 reissue_stk_no: String(raw.return_stock_no || raw.reissue_stk_no || ''),
-                docu_date: raw.return_stock_date || raw.docu_date || '',
+                docu_date: String(raw.return_stock_date || raw.docu_date || '').split('T')[0],
                 emp_dept_id: String(raw.emp_dept_id || ''),
                 job_id: String(raw.project_id || raw.job_id || ''),
                 branch_id: String(raw.branch_id || ''),
@@ -158,13 +158,15 @@ export const ReturnIssueService = {
                 cancel_flag: raw.status === 'CANCELLED' ? 'Y' : (raw.cancel_flag || 'N'),
             };
 
-            if (!header.issue_stk_no && raw.issue_stock_id) {
+            let issueLines: Record<string, unknown>[] = [];
+            if (raw.issue_stock_id) {
                 try {
                     const issRes = await api.get<Record<string, unknown>>(`/issue-stock/${String(raw.issue_stock_id)}`);
                     const issRaw = issRes?.data || issRes || {};
                     const issRawObj = Array.isArray(issRaw) ? issRaw[0] : (issRaw as Record<string, unknown>);
                     if (issRawObj) {
                         header.issue_stk_no = String(issRawObj.issue_stock_no || issRawObj.issue_stk_no || header.issue_stk_no);
+                        issueLines = (issRawObj.issueStockLines || issRawObj.lines || issRawObj.issue_stock_lines || []) as Record<string, unknown>[];
                     }
                 } catch (e) {
                     logger.warn('Failed to fetch issue-stock for hydration', e);
@@ -174,8 +176,20 @@ export const ReturnIssueService = {
             const rawLines = raw.returnIssueStockLines || raw.returnStockLines || raw.return_stock_lines || raw.lines || raw.items || raw.details || raw.issueStockLines || raw.issue_stock_lines || [];
 
             const lines: Record<string, unknown>[] = (rawLines as Record<string, unknown>[]).map((l: Record<string, unknown>, i: number) => {
+                const itemId = String(l.item_id || l.product_id || l.inventory_item_id || '');
+                const rawIssueLineId = l.issue_stock_line_id || l.issueStockLineId;
+                let finalIssueLineId = rawIssueLineId ? Number(rawIssueLineId) : undefined;
+                
+                if (!finalIssueLineId && issueLines.length > 0) {
+                    const matched = issueLines.find(il => String(il.item_id || il.product_id || il.inventory_item_id) === itemId);
+                    if (matched) {
+                        finalIssueLineId = Number(matched.issue_stock_line_id || matched.id || matched.docu_item_id);
+                    }
+                }
+
                 return {
                     ...l,
+                    issue_stock_line_id: finalIssueLineId,
                     listno: l.list_no || l.listno || i + 1,
                     item_id: String(l.item_id || l.product_id || l.inventory_item_id || ''),
                     item_code: l.item_code || (l.item as Record<string, unknown> | undefined)?.item_code || '',
@@ -186,6 +200,7 @@ export const ReturnIssueService = {
                     location_id: String(l.location_id || l.loc_id || ''),
                     location_name: l.location_name || (l.location as Record<string, unknown> | undefined)?.name_th || '',
                     lot_id: String(l.lot_id || l.lot_balance_id || ''),
+                    lot_balance_id: l.lot_balance_id ? Number(l.lot_balance_id) : undefined,
                     lot_no: l.lot_no || (l.lot as Record<string, unknown> | undefined)?.code || '',
                     qty_ic: Number(l.qty || l.qty_ic) || 0,
                     qty_return_ic: Number(l.qty || l.qty_return_ic) || 0,
@@ -221,7 +236,7 @@ export const ReturnIssueService = {
     // ─── Update ──────────────────────────────────────────────────────────────────────
     update: async (id: string, data: Partial<ReturnIssueFormData>): Promise<SuccessResponse> => {
         try {
-            await api.patch(`/return-issue-stock/${id}`, data);
+            await api.patch(`/return-stock/${id}`, data);
             return { success: true };
         } catch (error) {
             logger.error('[ReturnIssueService] update error:', error);

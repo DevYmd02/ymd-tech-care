@@ -21,6 +21,9 @@ export interface TransferRequisitionHeader {
     cancelflag: string;            // char(1) default 'N'
     cancle_remark?: string;        // varchar(255)
     status?: string;               // varchar(20) DRAFT, PENDING, etc
+    docu_item_no?: string;
+    doc_link_ic_id?: number | string;
+    doc_type_no?: number;
 }
 
 /** ข้อมูล Line ของใบขอโอนย้ายสินค้า (จาก Backend) */
@@ -41,6 +44,7 @@ export interface TransferRequisitionLine {
     to_location_name?: string;        // varchar(255) - auto-fill
     qty_ic: number;                // numeric(18,3)
     lot_id?: string | null;        // uuid
+    lot_balance_id?: string | null; // uuid
     lot_no?: string;               // varchar(255) - auto-fill
     stock_flag: number;            // smallint
     remark?: string;               // varchar(255)

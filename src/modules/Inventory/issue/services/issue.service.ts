@@ -208,8 +208,9 @@ export const IssueStockService = {
                 docu_item_id: String(rawRecord.issue_stock_id || rawRecord.docu_item_id || ''),
                 docu_item_no: String(rawRecord.doc_type_no != null ? rawRecord.doc_type_no : (rawRecord.doc_link_ic_id != null ? rawRecord.doc_link_ic_id : (rawRecord.docu_item_no || ''))),
                 issue_stk_no: String(rawRecord.issue_stock_no || rawRecord.issue_stk_no || ''),
+                appv_issue_req_id: rawRecord.appv_issue_req_id ? Number(rawRecord.appv_issue_req_id) : undefined,
                 appvissue_req_no: String(rawRecord.appv_issue_req_no || rawRecord.appvissue_req_no || rawRecord.ref_doc_no || ''),
-                docu_date: String(rawRecord.issue_stock_date || rawRecord.docu_date || ''),
+                docu_date: String(rawRecord.issue_stock_date || rawRecord.docu_date || '').split('T')[0],
                 emp_dept_id: String(rawRecord.emp_dept_id || ''),
                 job_id: String(rawRecord.project_id || rawRecord.job_id || ''),
                 branch_id: String(rawRecord.branch_id || ''),
@@ -232,6 +233,7 @@ export const IssueStockService = {
 
                 return {
                     ...(l as unknown as IssueStockLine),
+                    appvissue_req_line_id: l.appvissue_req_line_id ? Number(l.appvissue_req_line_id) : undefined,
                     listno: Number(l.list_no || l.listno || i + 1),
                     item_id: String(l.item_id || ''),
                     item_code: String(l.item_code || itemData?.item_code || productData?.item_code || inventoryItemData?.item_code || ''),
@@ -242,6 +244,7 @@ export const IssueStockService = {
                     location_id: String(l.location_id || ''),
                     location_name: String(l.location_name || locationData?.location_name || locationData?.name || ''),
                     lot_id: String(l.lot_id || ''),
+                    lot_balance_id: l.lot_balance_id ? Number(l.lot_balance_id) : undefined,
                     lot_no: String(l.lot_no || lotData?.lot_no || ''),
                     qty_ic: Number(l.qty || l.qty_ic || 0),
                     unit_cost: Number(l.unit_cost_price || l.unit_cost || 0),

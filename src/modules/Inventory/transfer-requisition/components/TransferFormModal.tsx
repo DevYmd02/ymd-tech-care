@@ -53,6 +53,7 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
         addLine,
         removeLine,
         updateLine,
+        setValue,
         branches,
         docLinks,
         employees,
@@ -290,13 +291,10 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
 
     const handleSelectLot = (lot: LotNo) => {
         if (activeLineIndex !== null) {
-            updateLine(activeLineIndex, null, {
-                ...fields[activeLineIndex],
-                lot_id: String(lot.lot_no_id),
-                lot_balance_id: String(lot.lot_balance_id || lot.lot_no_id || ''),
-                lot_no: lot.code,
-                lot_available_qty: lot.qty_available ?? lot.sale_stock ?? 0,
-            } as TransferLineFormData);
+            setValue(`lines.${activeLineIndex}.lot_id`, String(lot.lot_no_id));
+            setValue(`lines.${activeLineIndex}.lot_balance_id`, String(lot.lot_balance_id || lot.lot_no_id || ''));
+            setValue(`lines.${activeLineIndex}.lot_no`, lot.code);
+            setValue(`lines.${activeLineIndex}.lot_available_qty`, Number(lot.qty_available ?? lot.sale_stock ?? 0) || 0);
         }
         setIsLotSearchOpen(false);
     };

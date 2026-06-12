@@ -289,6 +289,7 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess, pendingRetur
                 reset({
                     docu_item_id: header.docu_item_id,
                     docu_item_no: header.docu_item_no || '',
+                    issue_stock_id: (header as unknown as Record<string, unknown>).issue_stock_id as number | undefined,
                     issue_stk_no: header.issue_stk_no,
                     reissue_stk_no: header.reissue_stk_no,
                     docu_date: header.docu_date,
@@ -316,6 +317,7 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess, pendingRetur
 
                         return {
                             _tempId: `edit-${l.docu_item_id ?? i}`,
+                            issue_stock_line_id: (l as unknown as Record<string, unknown>).issue_stock_line_id as number | undefined,
                             listno: l.listno ?? i + 1,
                             item_id: l.item_id,
                             item_code: l.item_code || itemDetail?.item_code || '',
@@ -329,6 +331,7 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess, pendingRetur
                             qty_ic: l.qty_ic,
                             qty_return_ic: l.qty_return_ic,
                             lot_id: l.lot_id ?? '',
+                            lot_balance_id: (l as unknown as Record<string, unknown>).lot_balance_id as number | undefined,
                             lot_no: l.lot_no || lotDetail?.code || lotDetail?.lot_no || '',
                             unit_cost: Number(l.unit_cost) || Number(itemDetail?.standard_cost) || 0,
                             good_amnt: Number(l.good_amnt) || (Number(l.qty_return_ic) * (Number(l.unit_cost) || Number(itemDetail?.standard_cost) || 0)),
