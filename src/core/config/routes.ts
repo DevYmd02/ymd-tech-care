@@ -62,7 +62,6 @@ export const ROUTES = {
         PRICE_LEVEL: '/master-data/price-level',
         PRICE_LIST: '/master-data/price-list',
         IC_OPTION: '/master-data/ic-option',
-        IC_DOCUMENT_LINK: '/master-data/ic-document-link',
         JOB: '/master-data/job',
         EMPLOYEE: '/master-data/employee',
         EMPLOYEE_GROUP: '/master-data/employee-group',

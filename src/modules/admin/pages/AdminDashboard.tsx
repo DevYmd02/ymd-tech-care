@@ -6,7 +6,6 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
 import {
     TrendingUp,
     Users,
@@ -69,9 +68,7 @@ const chartData = {
 
 export default function AdminDashboard() {
     const { user } = useAuth();
-    const context = useOutletContext<{ isSidebarOpen: boolean }>() || { isSidebarOpen: true };
-    const isSidebarOpen = context?.isSidebarOpen ?? true;
-
+    
     // ฟังก์ชันจัดการชื่อผู้ใช้ให้เป็นสากลและอบอุ่น (Corporate Friendly)
     const getFormattedName = () => {
         const rawName = user?.employee?.employee_fullname || user?.username || 'ผู้ดูแลระบบ';

@@ -102,7 +102,6 @@ const ColorList = React.lazy(() => import('@/modules/master-data/inventory/pages
 const LocationList = React.lazy(() => import('@/modules/master-data/inventory/pages/location/LocationList'));
 const ShelfList = React.lazy(() => import('@/modules/master-data/inventory/pages/shelf/ShelfList'));
 const LotNoList = React.lazy(() => import('@/modules/master-data/inventory/pages/lot-no/LotNoList'));
-const ICDocumentLinkList = React.lazy(() => import('@/modules/master-data/inventory/pages/ic-document-link/ICDocumentLinkList'));
 
 // Inventory Transaction Pages
 const RequisitionListPage = React.lazy(() => import('@/modules/Inventory/requisition/RequisitionListPage'));
@@ -335,7 +334,6 @@ function AppContent() {
             <Route path={ROUTES.MASTER_DATA.PRICE_LEVEL} element={<PriceLevelList />} />
             <Route path={ROUTES.MASTER_DATA.PRICE_LIST} element={<PriceListList />} />
             <Route path={ROUTES.MASTER_DATA.IC_OPTION} element={<ICOptionList />} />
-            <Route path={ROUTES.MASTER_DATA.IC_DOCUMENT_LINK} element={<ICDocumentLinkList />} />
 
             {/* Sales Master Data */}
             <Route path={ROUTES.MASTER_DATA.SALES_AREA} element={<SalesAreaList />} />
