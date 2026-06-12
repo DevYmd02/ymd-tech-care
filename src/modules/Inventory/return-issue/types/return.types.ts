@@ -140,7 +140,7 @@ export interface PendingReturnIssueResponse {
 export interface PendingReturnIssueParams {
     page?: number;
     limit?: number;
-    search?: string;
+    issue_stock_no?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
 }

@@ -26,7 +26,7 @@ export const ReturnIssueService = {
     // ─── Get Pending Return (Confirmed Issue Stocks) ────────────────────────────
     getPendingReturns: async (params?: PendingReturnIssueParams): Promise<PendingReturnIssueResponse> => {
         try {
-            const res = await api.get<Record<string, unknown>>('/return-stock/pending', { params });
+            const res = await api.get<Record<string, unknown>>('/return-stock/pending', { params, skipToast: true });
             // API returns { data: [...], meta: { total, page, limit, total_pages } }
             if (res && res.data && res.meta) {
                 return res as unknown as PendingReturnIssueResponse;
@@ -54,58 +54,45 @@ export const ReturnIssueService = {
             const res = await api.get<Record<string, unknown>>('/return-stock', { params });
             const rawItems: Record<string, unknown>[] = Array.isArray(res) ? res : ((res?.data as Record<string, unknown>[]) || (res?.items as Record<string, unknown>[]) || []);
 
-            // ดึงข้อมูล Master data มา map ชื่อแผนกและพนักงาน (ถ้า backend ไม่ได้ส่ง name มาให้)
-            let depts: Record<string, unknown>[] = [];
-            let emps: Record<string, unknown>[] = [];
-            let issues: Record<string, unknown>[] = [];
-            try {
-                // dynamically import MasterDataService since it might be needed for hydration
-                const { MasterDataService } = await import('@/modules/master-data/services/master-data.service');
-                const [deptsRes, empsRes, issuesRes] = await Promise.all([
-                    MasterDataService.getDepartments().catch(() => []),
-                    MasterDataService.getEmployees().catch(() => []),
-                    api.get('/issue-stock', { params: { limit: 1000 } }).catch(() => [])
-                ]);
-                depts = deptsRes as Record<string, unknown>[];
-                emps = empsRes as Record<string, unknown>[];
-                const issData = issuesRes as Record<string, unknown>;
-                issues = Array.isArray(issuesRes) ? issuesRes : ((issData?.data as Record<string, unknown>[]) || (issData?.items as Record<string, unknown>[]) || []);
-            } catch (e) {
-                logger.warn('Hydration failed', e);
+            // หา ID ของใบเบิกอ้างอิงที่ต้องดึงเลขที่เอกสาร
+            const missingIssueIds = Array.from(new Set(
+                rawItems
+                    .map(item => item.issue_stock_id as string)
+                    .filter(id => id && !rawItems.find(r => r.issue_stock_id === id)?.issue_stock_no && !rawItems.find(r => r.issue_stock_id === id)?.issue_stk_no)
+            ));
+
+            const issuesMap: Record<string, string> = {};
+            if (missingIssueIds.length > 0) {
+                try {
+                    // Fetch เฉพาะ ID ที่ต้องใช้ในหน้านี้ (ดีกว่าโหลด 1000 รายการ)
+                    const promises = missingIssueIds.map(id => api.get<Record<string, unknown>>(`/issue-stock/${id}`).catch(() => null));
+                    const results = await Promise.all(promises);
+                    results.forEach((res, idx) => {
+                        if (res) {
+                            const data = res.data || res;
+                            const itemData = Array.isArray(data) ? data[0] : (data as Record<string, unknown>);
+                            if (itemData) {
+                                issuesMap[String(missingIssueIds[idx])] = String(itemData.issue_stock_no || itemData.issue_stk_no || '');
+                            }
+                        }
+                    });
+                } catch (e) {
+                    logger.warn('Failed to fetch missing issue stocks', e);
+                }
             }
 
             const items = rawItems.map((item: Record<string, unknown>) => {
-                const deptId = item.emp_dept_id;
-                const saveEmpId = item.created_by_emp_id || item.save_emp_id;
-                const receEmpId = item.received_by_emp_id || item.rece_emp_id;
-
                 const deptObj = item.department as Record<string, unknown> | undefined;
                 const empDeptObj = item.emp_dept as Record<string, unknown> | undefined;
-                let deptName = deptObj?.emp_dept_name || empDeptObj?.emp_dept_name || item.dept_name || '';
-                if (!deptName && deptId) {
-                    const d = depts.find((x) => String(x.id || x.emp_dept_id || x.department_id) === String(deptId));
-                    if (d) deptName = d.name || d.emp_dept_name || d.department_name || deptName;
-                }
-
-                const createdByObj = item.created_by_employee as Record<string, unknown> | undefined;
-                let saveEmpName = createdByObj?.employee_fullname || item.save_emp_name || '';
-                if (!saveEmpName && saveEmpId) {
-                    const e = emps.find((x) => String(x.id || x.employee_id) === String(saveEmpId));
-                    if (e) saveEmpName = e.name || e.employee_fullname || `${e.employee_firstname_th || ''} ${e.employee_lastname_th || ''}`.trim() || saveEmpName;
-                }
+                const deptName = deptObj?.emp_dept_name || empDeptObj?.emp_dept_name || item.dept_name || item.emp_dept_id || '';
 
                 const receivedByObj = item.received_by_employee as Record<string, unknown> | undefined;
-                let receEmpName = receivedByObj?.employee_fullname || item.rece_emp_name || '';
-                if (!receEmpName && receEmpId) {
-                    const e = emps.find((x) => String(x.id || x.employee_id) === String(receEmpId));
-                    if (e) receEmpName = e.name || e.employee_fullname || `${e.employee_firstname_th || ''} ${e.employee_lastname_th || ''}`.trim() || receEmpName;
-                }
+                const receEmpName = receivedByObj?.employee_fullname || item.rece_emp_name || item.received_by_emp_id || item.rece_emp_id || '';
 
                 const issueStockObj = item.issue_stock as Record<string, unknown> | undefined;
                 let issueStkNo = issueStockObj?.issue_stock_no || item.issue_stk_no || item.issue_stock_no || '';
                 if (!issueStkNo && item.issue_stock_id) {
-                    const iss = issues.find((x) => String(x.issue_stock_id || x.id) === String(item.issue_stock_id));
-                    if (iss) issueStkNo = iss.issue_stock_no || iss.issue_stk_no || issueStkNo;
+                    issueStkNo = issuesMap[String(item.issue_stock_id)] || '';
                 }
 
                 return {
@@ -185,42 +172,21 @@ export const ReturnIssueService = {
             }
 
             const rawLines = raw.returnIssueStockLines || raw.returnStockLines || raw.return_stock_lines || raw.lines || raw.items || raw.details || raw.issueStockLines || raw.issue_stock_lines || [];
-            
-            // Try to fetch original issue lines to get missing names
-            let issueLines: Record<string, unknown>[] = [];
-            const issueId = raw.issue_stock_id || raw.doc_link_ic_id;
-            if (issueId) {
-                try {
-                    const issueRes = await api.get<Record<string, unknown>>(`/issue-stock/${issueId}`);
-                    const issueData = (issueRes.data as Record<string, unknown>) || issueRes;
-                    issueLines = (issueData.issueStockLines || issueData.lines || issueData.items || []) as Record<string, unknown>[];
-                } catch (e) {
-                    console.warn('[return.service] Failed to fetch original issue stock', e);
-                }
-            } else {
-                console.warn(`[return.service] No issueId found in raw. Keys: ${Object.keys(raw).join(', ')}`);
-            }
 
             const lines: Record<string, unknown>[] = (rawLines as Record<string, unknown>[]).map((l: Record<string, unknown>, i: number) => {
-                // Find matching issue line
-                const iLine = issueLines.find(il => 
-                    (il.issue_stock_line_id && String(il.issue_stock_line_id) === String(l.issue_stock_line_id)) || 
-                    (il.item_id && String(il.item_id) === String(l.item_id || l.product_id || l.inventory_item_id))
-                ) as Record<string, unknown> | undefined;
-
                 return {
                     ...l,
                     listno: l.list_no || l.listno || i + 1,
                     item_id: String(l.item_id || l.product_id || l.inventory_item_id || ''),
-                    item_code: l.item_code || (l.item as Record<string, unknown> | undefined)?.item_code || iLine?.item_code || (iLine?.item as Record<string, unknown> | undefined)?.item_code || (iLine?.product as Record<string, unknown> | undefined)?.item_code || '',
-                    item_name: l.item_name || (l.item as Record<string, unknown> | undefined)?.item_name || iLine?.item_name || (iLine?.item as Record<string, unknown> | undefined)?.item_name || (iLine?.product as Record<string, unknown> | undefined)?.item_name || '',
+                    item_code: l.item_code || (l.item as Record<string, unknown> | undefined)?.item_code || '',
+                    item_name: l.item_name || (l.item as Record<string, unknown> | undefined)?.item_name || '',
                     uom_id: String(l.uom_id || ''),
                     warehouse_id: String(l.warehouse_id || l.wh_id || ''),
-                    warehouse_name: l.warehouse_name || (l.warehouse as Record<string, unknown> | undefined)?.warehouse_name || iLine?.warehouse_name || (iLine?.warehouse as Record<string, unknown> | undefined)?.warehouse_name || (iLine?.warehouse as Record<string, unknown> | undefined)?.name || '',
+                    warehouse_name: l.warehouse_name || (l.warehouse as Record<string, unknown> | undefined)?.warehouse_name || '',
                     location_id: String(l.location_id || l.loc_id || ''),
-                    location_name: l.location_name || (l.location as Record<string, unknown> | undefined)?.name_th || iLine?.location_name || (iLine?.location as Record<string, unknown> | undefined)?.name_th || (iLine?.location as Record<string, unknown> | undefined)?.name || '',
+                    location_name: l.location_name || (l.location as Record<string, unknown> | undefined)?.name_th || '',
                     lot_id: String(l.lot_id || l.lot_balance_id || ''),
-                    lot_no: l.lot_no || (l.lot as Record<string, unknown> | undefined)?.code || iLine?.lot_no || (iLine?.lot as Record<string, unknown> | undefined)?.code || '',
+                    lot_no: l.lot_no || (l.lot as Record<string, unknown> | undefined)?.code || '',
                     qty_ic: Number(l.qty || l.qty_ic) || 0,
                     qty_return_ic: Number(l.qty || l.qty_return_ic) || 0,
                     unit_cost: Number(l.unit_cost_price || l.unit_cost || l.standard_cost_price || l.standard_buy_price) || 0,

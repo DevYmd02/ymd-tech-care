@@ -150,11 +150,15 @@ export function useTransferApprovalForm({
                     try {
                         const convsList = await Promise.all(
                             allItemIds.map(itemId =>
-                                UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                                queryClient.ensureQueryData({
+                                    queryKey: ['transfer-uom-conversions', itemId],
+                                    queryFn: () => UOMConversionService.getByItemId(itemId),
+                                    staleTime: 5 * 60 * 1000
+                                })
                             )
                         );
-                        convsList.forEach(c => {
-                            if (c) conversionMap.set(c.itemId, c.items);
+                        convsList.forEach((res, idx) => {
+                            if (res) conversionMap.set(allItemIds[idx], res.items || []);
                         });
                     } catch (err) {
                         logger.warn('[useTransferApprovalForm] UOM conversions load failed:', err);
@@ -210,7 +214,7 @@ export function useTransferApprovalForm({
             };
             void handleHydration();
         }
-    }, [editData, isOpen, reset]);
+    }, [editData, isOpen, reset, queryClient]);
 
     // Handle Create Mode from Reference Setup
     useEffect(() => {
@@ -224,11 +228,15 @@ export function useTransferApprovalForm({
                     try {
                         const convsList = await Promise.all(
                             allItemIds.map(itemId =>
-                                UOMConversionService.getByItemId(itemId).then(res => ({ itemId, items: res?.items || [] }))
+                                queryClient.ensureQueryData({
+                                    queryKey: ['transfer-uom-conversions', itemId],
+                                    queryFn: () => UOMConversionService.getByItemId(itemId),
+                                    staleTime: 5 * 60 * 1000
+                                })
                             )
                         );
-                        convsList.forEach(c => {
-                            if (c) conversionMap.set(c.itemId, c.items);
+                        convsList.forEach((res, idx) => {
+                            if (res) conversionMap.set(allItemIds[idx], res.items || []);
                         });
                     } catch (err) {
                         logger.warn('[useTransferApprovalForm] UOM conversions load failed:', err);
@@ -255,14 +263,14 @@ export function useTransferApprovalForm({
                             item_name: l.item_name || '',
                             uom_id: matchedConv ? String(matchedConv.from_unit_id) : l.uom_id,
                             item_uom_id: matchedConv ? String(matchedConv.conversion_id) : l.uom_id,
-                            income_inve_id: l.income_inve_id,
-                            income_inve_name: l.income_inve_name || '',
-                            income_loca_id: l.income_loca_id ?? '',
-                            income_loca_name: l.income_loca_name || '',
-                            out_inve_id: l.out_inve_id,
-                            out_inve_name: l.out_inve_name || '',
-                            out_loca_id: l.out_loca_id ?? '',
-                            out_loca_name: l.out_loca_name || '',
+                            income_inve_id: l.to_warehouse_id,
+                            income_inve_name: l.to_warehouse_name || '',
+                            income_loca_id: l.to_location_id ?? '',
+                            income_loca_name: l.to_location_name || '',
+                            out_inve_id: l.from_warehouse_id,
+                            out_inve_name: l.from_warehouse_name || '',
+                            out_loca_id: l.from_location_id ?? '',
+                            out_loca_name: l.from_location_name || '',
                             qty_ic: l.qty_ic,
                             appv_stock_qty: l.qty_ic, // Default approved quantity to request quantity
                             lot_id: l.lot_id ?? '',
@@ -281,7 +289,7 @@ export function useTransferApprovalForm({
                 appv_emp_id: user?.employee_id ? String(user.employee_id) : '',
             });
         }
-    }, [reqData, editId, requisitionId, isOpen, reset, user]);
+    }, [reqData, editId, requisitionId, isOpen, reset, user, queryClient]);
 
     // ── Mutations ─────────────────────────────────────────────────────────────────
     const createMutation = useMutation({

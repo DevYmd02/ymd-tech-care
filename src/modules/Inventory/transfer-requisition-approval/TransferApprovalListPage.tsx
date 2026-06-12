@@ -7,7 +7,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck, Search, Eye, Layers, List, Edit2, Trash2 } from 'lucide-react';
-import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
+import { createColumnHelper } from '@tanstack/react-table';
 
 import { PageListLayout, SmartTable, FilterField } from '@ui';
 import { useTableFilters } from '@/shared/hooks';
@@ -16,9 +16,10 @@ import { TransferApprovalService } from './services/transfer-approval.service';
 import { TransferApproveFormModal } from './components/TransferApproveFormModal';
 import { TransferSearchModal } from './components/TransferSearchModal';
 import type { TransferApprovalListItem, TransferApprovalListParams } from './types/transfer-approval.types';
-import type { TransferRequisitionListItem } from '../transfer/types/transfer.types';
+import type { TransferRequisitionListItem } from '../transfer-requisition/types/transfer.types';
 
 const colHelper = createColumnHelper<TransferApprovalListItem>();
+const pendingColHelper = createColumnHelper<TransferRequisitionListItem>();
 
 const STATUS_OPTIONS = [
     { value: 'ALL', label: 'ทั้งหมด' },
@@ -96,7 +97,7 @@ export default function TransferApprovalListPage() {
     // ── API Query ───────────────────────────────────────────────────────────────────
     const { data: pendingItems = [], isLoading: isLoadingPending } = useQuery({
         queryKey: ['transfer-pending-approvals'],
-        queryFn: () => TransferApprovalService.getPending(),
+        queryFn: ({ signal }) => TransferApprovalService.getPending({ signal }),
         enabled: activeTab === 'pending',
     });
 
@@ -111,7 +112,7 @@ export default function TransferApprovalListPage() {
 
     const { data: historyData, isLoading: isLoadingHistory } = useQuery({
         queryKey: ['transfer-requisition-approvals', apiParams],
-        queryFn: () => TransferApprovalService.getList(apiParams),
+        queryFn: ({ signal }) => TransferApprovalService.getList(apiParams, { signal }),
         enabled: activeTab === 'history',
     });
 
@@ -173,9 +174,8 @@ export default function TransferApprovalListPage() {
     };
 
     // ── Columns ──────────────────────────────────────────────────────────────────────
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pendingColumns: ColumnDef<TransferRequisitionListItem, any>[] = useMemo(() => [
-        {
+    const pendingColumns = useMemo(() => [
+        pendingColHelper.display({
             id: 'index',
             header: () => <div className="flex justify-center items-center w-full">ลำดับ</div>,
             cell: info => (
@@ -184,9 +184,8 @@ export default function TransferApprovalListPage() {
                 </div>
             ),
             size: 60,
-        },
-        {
-            accessorKey: 'transfer__req_no',
+        }),
+        pendingColHelper.accessor('transfer__req_no', {
             header: 'เลขที่เอกสารใบขอโอนย้าย',
             cell: info => (
                 <span className="font-semibold text-gray-900 dark:text-white">
@@ -194,9 +193,8 @@ export default function TransferApprovalListPage() {
                 </span>
             ),
             size: 200,
-        },
-        {
-            accessorKey: 'docu_date',
+        }),
+        pendingColHelper.accessor('docu_date', {
             header: 'วันที่เอกสาร',
             cell: info => {
                 const val = info.getValue() as string;
@@ -205,20 +203,18 @@ export default function TransferApprovalListPage() {
                 return isNaN(d.getTime()) ? val : d.toLocaleDateString('en-GB');
             },
             size: 130,
-        },
-        {
-            accessorKey: 'branch_name',
+        }),
+        pendingColHelper.accessor('branch_name', {
             header: 'สาขา',
             cell: info => <span className="text-sm text-gray-700 dark:text-gray-300">{(info.getValue() as string) || '-'}</span>,
             size: 160,
-        },
-        {
-            accessorKey: 'save_emp_name',
+        }),
+        pendingColHelper.accessor('save_emp_name', {
             header: 'ผู้ขอโอน/ผู้บันทึก',
             cell: info => <span className="text-sm text-gray-700 dark:text-gray-300">{(info.getValue() as string) || '-'}</span>,
             size: 160,
-        },
-        {
+        }),
+        pendingColHelper.display({
             id: 'actions',
             header: () => <div className="flex justify-center items-center w-full">จัดการ</div>,
             cell: ({ row }) => (
@@ -233,7 +229,7 @@ export default function TransferApprovalListPage() {
                 </div>
             ),
             size: 130,
-        },
+        }),
     ], []);
 
     const historyColumns = useMemo(() => [

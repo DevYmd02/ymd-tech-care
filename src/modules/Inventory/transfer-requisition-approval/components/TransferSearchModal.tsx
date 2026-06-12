@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { DialogFormLayout } from '@layout/DialogFormLayout';
 import { useDebounce } from '@hooks/useDebounce';
 import { TransferApprovalService } from '../services/transfer-approval.service';
-import type { TransferRequisitionListItem } from '../../transfer/types/transfer.types';
+import type { TransferRequisitionListItem } from '../../transfer-requisition/types/transfer.types';
 
 export interface TransferSearchModalProps {
     isOpen: boolean;
