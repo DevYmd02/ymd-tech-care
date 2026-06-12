@@ -8,7 +8,7 @@ import { FormProvider, type SubmitHandler } from 'react-hook-form';
 import { ClipboardList, Save, Loader2 } from 'lucide-react';
 import { WindowFormLayout } from '@ui';
 import { ConfirmationModal } from '@system/ConfirmationModal';
-import { TransferFormHeader } from './TransferFormHeader';
+import { TransferFormHeader, type TransferDocLink } from './TransferFormHeader';
 import { TransferFormLines } from './TransferFormLines';
 import { useTransferForm } from '../hooks/useTransferForm';
 import type { TransferHeaderFormData, TransferLineFormData } from '../schemas/transfer.schemas';
@@ -54,8 +54,10 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
         removeLine,
         updateLine,
         branches,
+        docLinks,
         employees,
         uoms,
+        icOptions,
     } = useTransferForm({ isOpen, onClose, editId, onSuccess });
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -291,7 +293,9 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
             updateLine(activeLineIndex, null, {
                 ...fields[activeLineIndex],
                 lot_id: String(lot.lot_no_id),
+                lot_balance_id: String(lot.lot_balance_id || lot.lot_no_id || ''),
                 lot_no: lot.code,
+                lot_available_qty: lot.qty_available ?? lot.sale_stock ?? 0,
             } as TransferLineFormData);
         }
         setIsLotSearchOpen(false);
@@ -375,14 +379,15 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
                                 <div className={cardClass}>
                                     <div className="p-6">
                                         <TransferFormHeader
-                                            branchOptions={branches.map(b => {
+                                            docLinks={docLinks as unknown as TransferDocLink[]}
+                                            branchOptions={(Array.isArray(branches) ? branches : []).map(b => {
                                                 const item = b as unknown as Record<string, unknown>;
                                                 return { 
                                                     id: String(b.branch_id || item.id || ''), 
                                                     name: b.branch_name || String(item.name || '') 
                                                 };
                                             })}
-                                            empOptions={employees.map(e => {
+                                            empOptions={(Array.isArray(employees) ? employees : []).map(e => {
                                                 const item = e as unknown as Record<string, unknown>;
                                                 return { 
                                                     id: String(e.employee_id || item.id || ''), 
@@ -403,7 +408,7 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
                                             removeLine={removeLine}
                                             updateLine={updateLine}
                                             readOnly={readOnly}
-                                            uomOptions={uoms.map(u => {
+                                            uomOptions={(Array.isArray(uoms) ? uoms : []).map(u => {
                                                 const item = u as unknown as Record<string, unknown>;
                                                 const uId = String(u.uom_id ?? item.id ?? '');
                                                 return { 
@@ -418,6 +423,7 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
                                             onSearchDestLocation={handleOpenDestLocationSearch}
                                             onSearchLot={handleOpenLotSearch}
                                             onOpenUomPicker={setActiveUomRowIndex}
+                                            icOptions={icOptions}
                                         />
                                     </div>
                                 </div>

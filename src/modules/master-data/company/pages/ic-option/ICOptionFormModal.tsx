@@ -3,8 +3,8 @@ import { useForm, useWatch, type UseFormWatch, type UseFormSetValue, type UseFor
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DialogFormLayout } from '@ui';
 import { Settings, Save, X, PlusCircle, AlertCircle, Package, Database, Info, List, Link2 } from 'lucide-react';
-import { ICOptionService } from './services/ic-option.service';
-import { icOptionSchema, type ICOptionFormData } from './types/ic-option.types';
+import { ICOptionService } from '@/shared/ic-option';
+import { icOptionSchema, type ICOptionFormData } from '@/shared/ic-option';
 import { BranchService } from '@company/services/org-branch.service';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';

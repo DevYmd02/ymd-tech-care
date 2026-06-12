@@ -145,6 +145,7 @@ export const sidebarMenuItems: MenuItem[] = [
             { id: 'transfer-approval', label: 'อนุมัติใบขอโอนย้ายสินค้า', path: '/inventory/transfer-requisition-approval' },
             { id: 'outbound', label: 'ใบโอนย้ายสินค้าออก', path: '/inventory/outbound' },
             { id: 'inbound', label: 'ใบโอนย้ายสินค้าเข้า', path: '/inventory/inbound' },
+            { id: 'beginning-balance', label: 'ยอดคงเหลือยกมา', path: '/inventory/beginning-balance' },
             { id: 'stock-count', label: 'นับสต็อก (Stock Count)', path: '/inventory/stock-count' },
             { id: 'inv-reports', label: 'รายงานคลัง', path: '/inventory/reports' },
         ]

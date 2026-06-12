@@ -384,7 +384,7 @@ export default function TransferApprovalListPage() {
                                 }`}
                             >
                                 <Layers size={16} />
-                                รอพิจารณาอนุมัติ ({pendingItems.length})
+                                รอพิจารณาอนุมัติ
                             </button>
                             <button
                                 onClick={() => setActiveTab('history')}
@@ -395,7 +395,7 @@ export default function TransferApprovalListPage() {
                                 }`}
                             >
                                 <List size={16} />
-                                ประวัติการอนุมัติ ({historyItems.length})
+                                ประวัติการอนุมัติ
                             </button>
                         </div>
 

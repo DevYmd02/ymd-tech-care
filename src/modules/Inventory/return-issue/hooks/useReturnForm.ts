@@ -21,6 +21,8 @@ import type { UOMConversionListItem } from '@/modules/master-data/types/master-d
 import type { PendingReturnIssue } from '../types/return.types';
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { LocationService, LotNoService } from '@master-data/inventory/services/inventory-master.service';
+import { useICOptions } from '@/shared/ic-option';
+import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
 
 // ====================================================================================
 // HELPERS
@@ -138,6 +140,13 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess, pendingRetur
         staleTime: 5 * 60 * 1000,
         enabled: isOpen,
     });
+
+    // ── IC Options ────────────────────────────────────────────────────────────────
+    const watchedBranchId = useWatch({ control, name: 'branch_id' });
+    const { icOptions } = useICOptions(
+        watchedBranchId,
+        SYSTEM_DOCUMENT_CODES.INVENTORY_RETURN_ISSUE
+    );
 
     // ── Watch docu_item_no to update stock_effect_ic ──────────────────────────────
     const watchedDocuItemNo = useWatch({ control, name: 'docu_item_no' });
@@ -593,5 +602,6 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess, pendingRetur
         uoms,
         warehouses,
         docLinks,
+        icOptions,
     };
 }

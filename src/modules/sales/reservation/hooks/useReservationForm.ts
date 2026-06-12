@@ -14,8 +14,7 @@ import {
     calculateLineTotal 
 } from '@sales/shared/utils/sales-calculations';
 import { UOMConversionService } from '@inventory/services/uom-conversion.service';
-import { validateLineStock } from '@sales/shared/utils/stock-validation';
-import { useBranchICOptions } from '@sales/shared/hooks/useBranchICOptions';
+import { validateStock as validateLineStock, useICOptions as useBranchICOptions } from '@/shared/ic-option';
 import { useUnsavedChangesGuard } from '@hooks/useUnsavedChangesGuard';
 import { useConfirmation } from '@hooks/useConfirmation';
 import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';

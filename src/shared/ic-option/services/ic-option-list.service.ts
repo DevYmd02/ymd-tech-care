@@ -1,6 +1,12 @@
+/**
+ * @file ic-option-list.service.ts
+ * @description Global IC Option List service — CRUD for /ic-option-list endpoint.
+ * Shared across all modules (Sales, Inventory, Purchase, MRP).
+ */
+
 import api from '@/core/api/api';
 import { logger } from '@/shared/utils';
-import type { ICOptionListItem, ICOptionListFormData } from '../types/ic-option-list.types';
+import type { ICOptionListItem, ICOptionListFormData } from '../types/ic-option.types';
 
 export const ICOptionListService = {
     /**
@@ -9,11 +15,11 @@ export const ICOptionListService = {
     async getByICOptionId(icOptionId: string | number): Promise<ICOptionListItem[]> {
         try {
             const response = await api.get<ICOptionListItem[]>('/ic-option-list', {
-                params: { ic_option_id: icOptionId }
+                params: { ic_option_id: icOptionId },
             });
             return Array.isArray(response) ? response : [];
         } catch (error) {
-            logger.error('Failed to get IC Option List:', error);
+            logger.error('[ICOptionListService] Failed to get IC Option List:', error);
             throw error;
         }
     },
@@ -26,7 +32,7 @@ export const ICOptionListService = {
             const response = await api.get<ICOptionListItem>(`/ic-option-list/${id}`);
             return response;
         } catch (error) {
-            logger.error(`Failed to get IC Option List ID ${id}:`, error);
+            logger.error(`[ICOptionListService] Failed to get IC Option List ID ${id}:`, error);
             return undefined;
         }
     },
@@ -39,7 +45,7 @@ export const ICOptionListService = {
             const response = await api.post<ICOptionListItem>('/ic-option-list', data);
             return response;
         } catch (error) {
-            logger.error('Failed to create IC Option List item:', error);
+            logger.error('[ICOptionListService] Failed to create IC Option List item:', error);
             throw error;
         }
     },
@@ -52,7 +58,7 @@ export const ICOptionListService = {
             const response = await api.patch<ICOptionListItem>(`/ic-option-list/${id}`, data);
             return response;
         } catch (error) {
-            logger.error(`Failed to update IC Option List ID ${id}:`, error);
+            logger.error(`[ICOptionListService] Failed to update IC Option List ID ${id}:`, error);
             throw error;
         }
     },

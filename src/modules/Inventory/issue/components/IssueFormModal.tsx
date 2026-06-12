@@ -63,6 +63,7 @@ export const IssueFormModal: React.FC<IssueFormModalProps> = ({
         employees,
         projects,
         uoms,
+        icOptions,
     } = useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue });
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -264,6 +265,7 @@ export const IssueFormModal: React.FC<IssueFormModalProps> = ({
                 ...fields[activeLineIndex],
                 lot_id: String(lot.lot_no_id),
                 lot_no: lot.code,
+                lot_available_qty: lot.qty_available ?? lot.sale_stock ?? 0,
             } as IssueStockLineFormData);
         }
         setIsLotSearchOpen(false);
@@ -403,6 +405,7 @@ export const IssueFormModal: React.FC<IssueFormModalProps> = ({
                                             onSearchLocation={handleOpenLocationSearch}
                                             onSearchLot={handleOpenLotSearch}
                                             onOpenUomPicker={(idx) => setActiveUomRowIndex(idx)}
+                                            icOptions={icOptions}
                                         />
                                     </div>
                                 </div>

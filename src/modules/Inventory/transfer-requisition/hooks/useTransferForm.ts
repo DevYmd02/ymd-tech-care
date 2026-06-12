@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useMemo } from 'react';
-import { useForm, useFieldArray, type Resolver, type DefaultValues } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, type Resolver, type DefaultValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
@@ -17,6 +17,8 @@ import { TransferService } from '../services/transfer.service';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import type { UOMConversionListItem } from '@/modules/master-data/types/master-data-types';
+import { useICOptions } from '@/shared/ic-option';
+import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
 
 // ====================================================================================
 // HELPERS
@@ -50,6 +52,7 @@ const createDefaultLine = (listno: number): TransferLineFormData => ({
 const DEFAULT_VALUES: TransferHeaderFormData = {
     transfer__req_no: 'ระบบจะกรอกอัตโนมัติ',
     docu_date: getTodayISO(),
+    docu_item_no: '',
     branch_id: '',
     save_emp_id: '',
     transfer_emp_id: '',
@@ -88,6 +91,8 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
         control,
         handleSubmit,
         reset,
+        setValue,
+        getValues,
         formState: { errors, isSubmitting },
     } = formMethods;
 
@@ -99,6 +104,48 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
     });
 
     // ── Load Master Data ─────────────────────────────────────────────────────────
+    const { data: docLinks = [] } = useQuery({
+        queryKey: ['doc-link-ic-options', SYSTEM_DOCUMENT_CODES.INVENTORY_TRANSFER_REQ],
+        queryFn: () => TransferService.getDocLinks(SYSTEM_DOCUMENT_CODES.INVENTORY_TRANSFER_REQ),
+        staleTime: 5 * 60 * 1000,
+        enabled: isOpen,
+    });
+
+    // ── IC Options ────────────────────────────────────────────────────────────────
+    const watchedBranchId = useWatch({ control, name: 'branch_id' });
+    const { icOptions } = useICOptions(watchedBranchId, SYSTEM_DOCUMENT_CODES.INVENTORY_TRANSFER_REQ);
+
+    // ── Watch docu_item_no to update stock_effect_ic ──────────────────────────────
+    const watchedDocuItemNo = useWatch({ control, name: 'docu_item_no' });
+
+    useEffect(() => {
+        if (!watchedDocuItemNo && docLinks.length > 0 && !isEditMode) {
+            // Default to the first docLink if empty and creating a new document
+            setValue('docu_item_no', String(docLinks[0].docu_type_id), { shouldValidate: true, shouldDirty: true });
+        } else if (watchedDocuItemNo && docLinks.length > 0) {
+            const selectedDoc = docLinks.find(d => String(d.docu_type_id) === String(watchedDocuItemNo));
+            if (selectedDoc && selectedDoc.stock_effect_ic !== undefined) {
+                let newEffect = Number(selectedDoc.stock_effect_ic);
+                if (![-1, 0, 1].includes(newEffect)) {
+                    newEffect = 0;
+                }
+
+                const currentEffect = getValues('stock_effect_ic');
+                if (currentEffect !== newEffect) {
+                    setValue('stock_effect_ic', newEffect, { shouldValidate: true, shouldDirty: true });
+                }
+
+                // Update stock_flag for lines
+                const currentLines = getValues('lines') || [];
+                currentLines.forEach((line, index) => {
+                    if (Number(line.stock_flag) !== newEffect) {
+                        setValue(`lines.${index}.stock_flag`, newEffect, { shouldValidate: true, shouldDirty: true });
+                    }
+                });
+            }
+        }
+    }, [watchedDocuItemNo, docLinks, setValue, getValues, isEditMode]);
+
     const { data: branches = [] } = useQuery({
         queryKey: ['branches-options'],
         queryFn: () => MasterDataService.getBranches(),
@@ -143,13 +190,28 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
 
     useEffect(() => {
         if (editData) {
-            const { header, lines } = editData;
+            const { header, lines: rawLines } = editData;
+            const lines = Array.isArray(rawLines) ? rawLines : [];
             const allItemIds = [...new Set(lines.map(l => Number(l.item_id)).filter(id => id > 0))];
 
             const handleHydration = async () => {
                 const conversionMap = new Map<number, UOMConversionListItem[]>();
+                const itemMap = new Map<number, Record<string, unknown>>();
+                const locMap = new Map<number, Record<string, unknown>>();
+                const lotMap = new Map<number, Record<string, unknown>>();
+                
                 if (allItemIds.length > 0) {
                     try {
+                        const { ItemMasterService } = await import('@/modules/master-data/inventory/services/item-master.service');
+                        const itemsList = await Promise.all(
+                            allItemIds.map(id => queryClient.ensureQueryData({
+                                queryKey: ['item-master', id],
+                                queryFn: () => ItemMasterService.getById(id),
+                                staleTime: 5 * 60 * 1000
+                            }))
+                        );
+                        itemsList.forEach(itm => { if (itm) itemMap.set(Number((itm as unknown as Record<string, unknown>).item_id || (itm as unknown as Record<string, unknown>).id), itm as unknown as Record<string, unknown>); });
+
                         const convsList = await Promise.all(
                             allItemIds.map(itemId =>
                                 queryClient.ensureQueryData({
@@ -163,8 +225,36 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
                             if (res) conversionMap.set(allItemIds[idx], res.items || []);
                         });
                     } catch (err) {
-                        logger.warn('[useTransferForm] UOM conversions load failed:', err);
+                        logger.warn('[useTransferForm] items/UOM conversions load failed:', err);
                     }
+                }
+
+                try {
+                    const { LocationService, LotNoService } = await import('@/modules/master-data/inventory/services/inventory-master.service');
+                    const allFromLocIds = lines.map(l => Number(l.from_location_id)).filter(id => id > 0);
+                    const allToLocIds = lines.map(l => Number(l.to_location_id)).filter(id => id > 0);
+                    const allLocIds = [...new Set([...allFromLocIds, ...allToLocIds])];
+                    const allLotIds = [...new Set(lines.map(l => Number(l.lot_id)).filter(id => id > 0))];
+                    
+                    if (allLocIds.length > 0) {
+                        const locsList = await Promise.all(allLocIds.map(id => queryClient.ensureQueryData({
+                            queryKey: ['location', id],
+                            queryFn: () => LocationService.getById(id),
+                            staleTime: 5 * 60 * 1000
+                        })));
+                        locsList.forEach(loc => { if (loc) locMap.set(Number((loc as unknown as Record<string, unknown>).id || (loc as unknown as Record<string, unknown>).location_id), loc as unknown as Record<string, unknown>); });
+                    }
+                    
+                    if (allLotIds.length > 0) {
+                        const lotsList = await Promise.all(allLotIds.map(id => queryClient.ensureQueryData({
+                            queryKey: ['lot', id],
+                            queryFn: () => LotNoService.getById(id),
+                            staleTime: 5 * 60 * 1000
+                        })));
+                        lotsList.forEach(lot => { if (lot) lotMap.set(Number((lot as unknown as Record<string, unknown>).id || (lot as unknown as Record<string, unknown>).lot_no_id), lot as unknown as Record<string, unknown>); });
+                    }
+                } catch (err) {
+                    logger.warn('[useTransferForm] location/lot load failed:', err);
                 }
 
                 reset({
@@ -184,25 +274,28 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
                         const currentUomVal = String(l.uom_id);
                         const matchedConv = convs.find(c => String(c.conversion_id) === currentUomVal);
 
+                        const fromWhName = String((warehouses.find(w => String(w.id || (w as unknown as Record<string, unknown>).warehouse_id) === String(l.from_warehouse_id)) as unknown as Record<string, unknown>)?.warehouse_name || '');
+                        const toWhName = String((warehouses.find(w => String(w.id || (w as unknown as Record<string, unknown>).warehouse_id) === String(l.to_warehouse_id)) as unknown as Record<string, unknown>)?.warehouse_name || '');
+
                         return {
                             _tempId: `edit-${l.transfer__req_id ?? i}`,
                             listno: l.listno ?? i + 1,
                             item_id: l.item_id,
-                            item_code: l.item_code || '',
-                            item_name: l.item_name || '',
+                            item_code: l.item_code || String(itemMap.get(itemId)?.item_code || itemMap.get(itemId)?.item_no || ''),
+                            item_name: l.item_name || String(itemMap.get(itemId)?.item_name || itemMap.get(itemId)?.item_desc || ''),
                             uom_id: matchedConv ? String(matchedConv.from_unit_id) : l.uom_id,
                             item_uom_id: matchedConv ? String(matchedConv.conversion_id) : l.uom_id,
                             from_warehouse_id: l.from_warehouse_id,
-                            from_warehouse_name: l.from_warehouse_name || '',
+                            from_warehouse_name: l.from_warehouse_name || fromWhName,
                             from_location_id: l.from_location_id ?? '',
-                            from_location_name: l.from_location_name || '',
+                            from_location_name: l.from_location_name || String(locMap.get(Number(l.from_location_id))?.name_th || ''),
                             to_warehouse_id: l.to_warehouse_id,
-                            to_warehouse_name: l.to_warehouse_name || '',
+                            to_warehouse_name: l.to_warehouse_name || toWhName,
                             to_location_id: l.to_location_id ?? '',
-                            to_location_name: l.to_location_name || '',
+                            to_location_name: l.to_location_name || String(locMap.get(Number(l.to_location_id))?.name_th || ''),
                             qty_ic: l.qty_ic,
                             lot_id: l.lot_id ?? '',
-                            lot_no: l.lot_no || '',
+                            lot_no: String(l.lot_no || lotMap.get(Number(l.lot_id))?.code || lotMap.get(Number(l.lot_id))?.name_th || ''),
                             stock_flag: l.stock_flag ?? 0,
                             remark: l.remark ?? '',
                         };
@@ -213,13 +306,14 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
         } else if (!editId && isOpen) {
             reset({ 
                 ...DEFAULT_VALUES, 
+                docu_item_no: docLinks.length > 0 ? String(docLinks[0].docu_type_id) : '',
                 docu_date: getTodayISO(), 
                 save_emp_id: user?.employee_id ? String(user.employee_id) : '',
                 branch_id: user?.employee?.branch_id ? String(user.employee.branch_id) : '',
                 lines: [createDefaultLine(1)] 
             });
         }
-    }, [editData, editId, isOpen, reset, user, queryClient]);
+    }, [editData, editId, isOpen, reset, user, queryClient, warehouses, docLinks]);
 
     // ── Mutations ─────────────────────────────────────────────────────────────────
     const createMutation = useMutation({
@@ -338,9 +432,11 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
         updateLine,
 
         branches,
+        docLinks,
         employees,
         projects,
         uoms,
         warehouses,
+        icOptions,
     };
 }

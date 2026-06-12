@@ -62,6 +62,7 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
         projects,
         uoms,
         docLinks,
+        icOptions,
     } = useReturnForm({ isOpen, onClose, editId, onSuccess, pendingReturn });
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -265,6 +266,7 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
                 ...fields[activeLineIndex],
                 lot_id: String(lot.lot_no_id),
                 lot_no: lot.code,
+                lot_available_qty: lot.qty_available ?? lot.sale_stock ?? 0,
             } as ReturnIssueLineFormData);
         }
         setIsLotSearchOpen(false);
@@ -407,7 +409,8 @@ export const ReturnFormModal: React.FC<ReturnFormModalProps> = ({
                                             onSearchWarehouse={handleOpenWarehouseSearch}
                                             onSearchLocation={handleOpenLocationSearch}
                                             onSearchLot={handleOpenLotSearch}
-                                            onOpenUomPicker={setActiveUomRowIndex}
+                                            onOpenUomPicker={(idx) => setActiveUomRowIndex(idx)}
+                                            icOptions={icOptions}
                                         />
                                     </div>
                                 </div>

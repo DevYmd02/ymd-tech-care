@@ -9,6 +9,7 @@ import { useFormContext, Controller } from 'react-hook-form';
 import { Plus, Trash2, ShoppingBag, Search } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { RequisitionHeaderFormData, RequisitionLineFormData } from '../schemas/requisition.schemas';
+import { validateStock, DEFAULT_IC_OPTIONS, type ICOption, StockValidationMessage, ICOptionSummaryBar } from '@/shared/ic-option';
 
 interface RequisitionFormLinesProps {
     fields: FieldArrayWithId<RequisitionHeaderFormData, 'lines', '_id'>[];
@@ -22,6 +23,7 @@ interface RequisitionFormLinesProps {
     onSearchLocation?: (index: number, warehouseId?: string) => void;
     onSearchLot?: (index: number, itemId?: string) => void;
     onOpenUomPicker?: (index: number) => void;
+    icOptions?: ICOption;
 }
 
 const tableInputClass = "w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -38,6 +40,7 @@ export const RequisitionFormLines: React.FC<RequisitionFormLinesProps> = React.m
         onSearchLocation,
         onSearchLot,
         onOpenUomPicker,
+        icOptions,
     }) => {
         const { register, control, getValues, formState: { errors } } = useFormContext<RequisitionHeaderFormData>();
         const lineErrors = errors.lines;
@@ -46,9 +49,14 @@ export const RequisitionFormLines: React.FC<RequisitionFormLinesProps> = React.m
             <div className="space-y-4">
                 {/* ── Section Header ─────────────────────────────────────────────── */}
                 <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 flex-wrap">
                         <ShoppingBag size={20} strokeWidth={2.5} />
                         <h3 className="text-lg font-bold">รายการสินค้า — Transaction Lines</h3>
+                        {icOptions && (
+                            <div className="ml-2 border-l pl-3 border-gray-200 dark:border-gray-700 hidden xl:block">
+                                <ICOptionSummaryBar options={icOptions} stockEffect={0} />
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center gap-3">
                         {lineErrors && typeof lineErrors === 'object' && 'message' in lineErrors && (
@@ -89,6 +97,40 @@ export const RequisitionFormLines: React.FC<RequisitionFormLinesProps> = React.m
                         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                             {fields.map((field, index) => {
                                 const lineErr = Array.isArray(lineErrors) ? lineErrors[index] : undefined;
+                                const f = getValues(`lines.${index}`);
+                                const hasLotSelected = !!f.lot_no;
+
+                                // 🔍 Evaluate Stock Validation (if item is selected)
+                                const stockValidation = f.item_id 
+                                    ? validateStock(
+                                        Number(f.qty_ic || 0), 
+                                        hasLotSelected ? Number((f as Record<string, unknown>).lot_available_qty || 0) : Infinity, 
+                                        f.warehouse_id, 
+                                        f.location_id, 
+                                        icOptions || DEFAULT_IC_OPTIONS
+                                      )
+                                    : { isValid: true };
+
+                                const isQtyError = !!(stockValidation.message && [
+                                    'INVALID_QTY',
+                                    'NEGATIVE_STOCK_ALLOWED',
+                                    'NEGATIVE_STOCK_NOT_ALLOWED',
+                                    'INSUFFICIENT_STOCK_WARNING'
+                                ].includes(stockValidation.code || ''));
+
+                                const isQtyWarning = !!(stockValidation.message && stockValidation.code === 'INSUFFICIENT_STOCK_WARNING');
+
+                                const isWhError = !!(stockValidation.message && (
+                                    stockValidation.code === 'WAREHOUSE_REQUIRED' ||
+                                    (stockValidation.code === 'WAREHOUSE_LOCATION_REQUIRED' && !f.warehouse_id)
+                                ));
+
+                                const isLocError = !!(stockValidation.message && (
+                                    stockValidation.code === 'WAREHOUSE_LOCATION_REQUIRED' &&
+                                    f.warehouse_id &&
+                                    !f.location_id
+                                ));
+
                                 return (
                                     <tr key={field._id} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/5 transition-colors group">
                                         <td className="px-2 py-1.5 text-center text-gray-500 font-medium sticky left-0 z-10 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800">
@@ -154,41 +196,60 @@ export const RequisitionFormLines: React.FC<RequisitionFormLinesProps> = React.m
                                         </td>
 
                                         {/* Warehouse */}
-                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <input
-                                                {...register(`lines.${index}.warehouse_name`)}
-                                                type="text"
-                                                readOnly
-                                                onClick={() => !readOnly && onSearchWarehouse?.(index)}
-                                                placeholder="-- เลือกคลัง --"
-                                                className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${lineErr?.warehouse_id ? 'border-red-500' : ''}`}
-                                            />
+                                        <td className={`p-2 border-r border-gray-100 dark:border-gray-800 ${isWhError || !!(lineErr as Record<string, unknown>)?.warehouse_id ? 'align-top' : 'align-middle'}`}>
+                                            <div className="flex flex-col gap-1">
+                                                <input
+                                                    {...register(`lines.${index}.warehouse_name`)}
+                                                    type="text"
+                                                    readOnly
+                                                    onClick={() => !readOnly && onSearchWarehouse?.(index)}
+                                                    placeholder="-- เลือกคลัง --"
+                                                    className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${(lineErr as Record<string, unknown>)?.warehouse_id || isWhError ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                                                />
+                                                <StockValidationMessage show={isWhError} message="กรุณาระบุคลังสินค้า" />
+                                                <StockValidationMessage show={!!(lineErr as Record<string, unknown>)?.warehouse_id && !isWhError} message="ระบุคลัง" />
+                                            </div>
                                         </td>
 
                                         {/* Location */}
-                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <input
-                                                {...register(`lines.${index}.location_name`)}
-                                                type="text"
-                                                readOnly
-                                                onClick={() => {
-                                                    if (readOnly) return;
-                                                    const whId = getValues(`lines.${index}.warehouse_id`);
-                                                    onSearchLocation?.(index, whId);
-                                                }}
-                                                placeholder="-- เลือกที่เก็บ --"
-                                                className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors`}
-                                            />
+                                        <td className={`p-2 border-r border-gray-100 dark:border-gray-800 ${isLocError ? 'align-top' : 'align-middle'}`}>
+                                            <div className="flex flex-col gap-1">
+                                                <input
+                                                    {...register(`lines.${index}.location_name`)}
+                                                    type="text"
+                                                    readOnly
+                                                    onClick={() => {
+                                                        if (readOnly) return;
+                                                        const whId = getValues(`lines.${index}.warehouse_id`);
+                                                        onSearchLocation?.(index, whId);
+                                                    }}
+                                                    placeholder="-- เลือกที่เก็บ --"
+                                                    className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors ${isLocError ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                                                />
+                                                <StockValidationMessage show={isLocError} message="กรุณาระบุที่เก็บ" />
+                                            </div>
                                         </td>
 
                                         {/* Quantity */}
-                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <input
-                                                {...register(`lines.${index}.qty_ic`, { valueAsNumber: true })}
-                                                type="number"
-                                                disabled={readOnly}
-                                                className={`${tableInputClass} text-right font-bold text-blue-600 ${lineErr?.qty_ic ? 'border-red-500' : ''}`}
-                                            />
+                                        <td className={`p-2 border-r border-gray-100 dark:border-gray-800 ${(!stockValidation.isValid && !!stockValidation.message) || !!(lineErr as Record<string, unknown>)?.qty_ic ? 'align-top' : 'align-middle'}`}>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <input
+                                                    {...register(`lines.${index}.qty_ic`, { valueAsNumber: true })}
+                                                    type="number"
+                                                    disabled={readOnly}
+                                                    className={`${tableInputClass} text-right font-bold ${
+                                                        isQtyError ? 'text-red-600 border-red-500 ring-1 ring-red-500' : 
+                                                        isQtyWarning ? 'text-amber-600 border-amber-500 ring-1 ring-amber-500' : 
+                                                        'text-blue-600'
+                                                    } ${(lineErr as Record<string, unknown>)?.qty_ic && !isQtyError && !isQtyWarning ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                                                />
+                                                <StockValidationMessage 
+                                                    show={!stockValidation.isValid && !!stockValidation.message} 
+                                                    type={isQtyError ? 'error' : 'warning'}
+                                                    message={stockValidation.message} 
+                                                />
+                                                <StockValidationMessage show={!!(lineErr as Record<string, unknown>)?.qty_ic && stockValidation.isValid} message="ระบุจำนวน" />
+                                            </div>
                                         </td>
 
                                         {/* Lot */}

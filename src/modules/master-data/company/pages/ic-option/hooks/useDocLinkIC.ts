@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@ui/feedback/Toast';
 import { DocLinkICService } from '../services/doc-link-ic.service';
-import { SystemDocumentService } from '../services/system-document.service';
+import { SystemDocumentService } from '@/shared/ic-option';
 import type { DocLinkIC, DocLinkICCreatePayload, DocLinkICUpdatePayload, DocLinkICItem } from '../types/doc-link-ic.types';
-import type { SystemDocument } from '../services/system-document.service';
+import type { SystemDocument } from '@/shared/ic-option';
 import { extractErrorMessage } from '@/core/api/api';
 
 export type SubItem = { docu_item_id?: string; name: string; stock_effect_ic: 0 | 1 | 2; docu_desc?: string; remark?: string; };

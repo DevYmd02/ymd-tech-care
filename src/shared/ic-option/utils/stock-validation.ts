@@ -1,37 +1,18 @@
 /**
  * @file stock-validation.ts
- * @description Inventory module stock validation logic.
- * 
- * Mirrors the Sales module's stock-validation.ts but for Inventory-specific
- * document types (ISSUE_REQ, APPV_ISSUE, ISSUE, TRANSFER, etc.)
- * 
+ * @description Global stock validation utility — shared across all modules.
+ *
+ * Used by: Sales, Inventory, Purchase (จัดซื้อ), MRP, and any future module.
+ *
  * ## IC Option Resolution Hierarchy (Priority high → low):
  * 1. IC Option List (document-specific override per system_document_code)
  * 2. Branch General Settings (check_deficit, check_deficit_option, check_qty_flag)
- * 3. Global System Default (hardcoded safe fallback)
+ * 3. Global System Default → DEFAULT_IC_OPTIONS below
  */
 
-export interface InventoryICOption {
-    /** ตรวจสอบสินค้าติดลบ: 1=ห้าม, 2=อนุญาต, 3=เตือนก่อน */
-    negative_stock_check: number;
-    /** ตรวจสอบจำนวน: 0=รวม, 2=แยกคลัง, 3=แยกคลัง+ที่เก็บ */
-    negative_stock_mode: number;
-    /** ตรวจสอบจำนวนจอง: 1=ยอดคงเหลือ, 2=ยอดจอง */
-    quantity_validation_flag: number;
-}
+import type { ICOption, StockValidationResult } from '../types/ic-option.types';
 
-export interface InventoryStockValidationResult {
-    isValid: boolean;
-    type?: 'error' | 'warning';
-    message?: string;
-    code?:
-        | 'INVALID_QTY'
-        | 'NEGATIVE_STOCK_NOT_ALLOWED'
-        | 'NEGATIVE_STOCK_ALLOWED'
-        | 'INSUFFICIENT_STOCK_WARNING'
-        | 'WAREHOUSE_REQUIRED'
-        | 'WAREHOUSE_LOCATION_REQUIRED';
-}
+export type { ICOption, StockValidationResult };
 
 const NEGATIVE_STOCK = {
     BLOCK: 1, // ห้ามติดลบ
@@ -51,33 +32,40 @@ const QTY_FLAG = {
 } as const;
 
 /**
- * Default IC Options — safe fallback for Inventory module.
- * Defaults to blocking negative stock and requiring a warehouse.
+ * Default IC Options — safe fallback for all modules.
+ * Defaults to: block negative stock, require warehouse, check balance qty.
  */
-export const DEFAULT_INVENTORY_IC_OPTIONS: InventoryICOption = {
-    negative_stock_check: 1,      // ห้ามติดลบ
-    quantity_validation_flag: 1,  // ยอดคงเหลือ
-    negative_stock_mode: 2,       // แยกคลังสินค้า
+export const DEFAULT_IC_OPTIONS: ICOption = {
+    negative_stock_check: 1,     // ห้ามติดลบ
+    quantity_validation_flag: 1, // ยอดคงเหลือ
+    negative_stock_mode: 2,      // แยกคลังสินค้า
 };
 
 /**
  * Validates a stock transaction line against the resolved IC options.
- * 
+ *
  * Used for form validation (blocking submission) and UI feedback (showing warnings).
- * 
- * @param qty - จำนวนที่ต้องการเบิก/โอน
- * @param availableQty - จำนวนสินค้าคงเหลือ
- * @param warehouseId - รหัสคลังสินค้าที่เลือก
- * @param locationId - รหัสที่เก็บที่เลือก (null ถ้าไม่กำหนด)
- * @param options - IC Options ที่ resolve แล้ว
+ *
+ * @param qty           - จำนวนที่ต้องการเบิก/โอน/จอง
+ * @param availableQty  - จำนวนสินค้าคงเหลือ
+ * @param warehouseId   - รหัสคลังสินค้าที่เลือก
+ * @param locationId    - รหัสที่เก็บที่เลือก (null ถ้าไม่กำหนด)
+ * @param options       - IC Options ที่ resolve แล้ว (จาก useICOptions)
+ *
+ * @example
+ * // Sales reservation
+ * const result = validateStock(qty, availQty, warehouseId, locationId, icOptions);
+ *
+ * // Inventory issue
+ * const result = validateStock(qty, availQty, warehouseId, locationId, icOptions);
  */
-export const validateInventoryStock = (
+export const validateStock = (
     qty: number,
     availableQty: number,
     warehouseId: number | string | null | undefined,
     locationId: number | string | null | undefined,
-    options: InventoryICOption = DEFAULT_INVENTORY_IC_OPTIONS
-): InventoryStockValidationResult => {
+    options: ICOption = DEFAULT_IC_OPTIONS
+): StockValidationResult => {
     // ─── Guard: Check if required scope (Warehouse/Location) is missing ───
     const isWarehouseReq = options.negative_stock_mode === STOCK_MODE.WAREHOUSE_REQUIRED;
     const isLocationReq = options.negative_stock_mode === STOCK_MODE.WAREHOUSE_LOCATION_REQUIRED;
@@ -86,6 +74,7 @@ export const validateInventoryStock = (
         (isLocationReq && (!warehouseId || !locationId));
 
     // ─── 1. Negative Stock Rules (skip if scope not selected yet) ───
+    // UX: Don't yell at user before they've had a chance to pick a warehouse/location.
     if (!isMissingScope) {
         if (options.negative_stock_check === NEGATIVE_STOCK.BLOCK && qty > availableQty) {
             return {
@@ -146,3 +135,11 @@ export const validateInventoryStock = (
 
     return { isValid: true };
 };
+
+// ─── Legacy aliases (backward-compat for existing imports) ───────────────────
+/** @deprecated Use `validateStock` instead */
+export const validateLineStock = validateStock;
+/** @deprecated Use `validateStock` instead */
+export const validateInventoryStock = validateStock;
+/** @deprecated Use `DEFAULT_IC_OPTIONS` instead */
+export const DEFAULT_INVENTORY_IC_OPTIONS = DEFAULT_IC_OPTIONS;

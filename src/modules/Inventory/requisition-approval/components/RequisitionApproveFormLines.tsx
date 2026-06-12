@@ -3,8 +3,13 @@ import { useFormContext } from 'react-hook-form';
 import { Package } from 'lucide-react';
 import type { RequisitionApproveFormData } from '../schemas/requisition-approval.schemas';
 import { formatNumber } from '@/shared/utils';
+import { validateStock, DEFAULT_IC_OPTIONS, type ICOption, StockValidationMessage, ICOptionSummaryBar } from '@/shared/ic-option';
 
-export const RequisitionApproveFormLines: React.FC = () => {
+interface RequisitionApproveFormLinesProps {
+    icOptions?: ICOption;
+}
+
+export const RequisitionApproveFormLines: React.FC<RequisitionApproveFormLinesProps> = ({ icOptions }) => {
     const { register, watch, setValue } = useFormContext<RequisitionApproveFormData>();
     const lines = watch('lines') || [];
     const status = watch('status') as 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -24,9 +29,14 @@ export const RequisitionApproveFormLines: React.FC = () => {
 
     return (
         <section className="space-y-4">
-            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 flex-wrap">
                 <Package size={20} strokeWidth={2.5} />
                 <h3 className="text-lg font-bold">รายการสินค้า — Transaction Lines</h3>
+                {icOptions && (
+                    <div className="ml-2 border-l pl-3 border-gray-200 dark:border-gray-700 hidden xl:block">
+                        <ICOptionSummaryBar options={icOptions} stockEffect={0} />
+                    </div>
+                )}
             </div>
 
             <div className="overflow-x-auto border border-gray-200 dark:border-gray-800 rounded-xl">
@@ -58,6 +68,39 @@ export const RequisitionApproveFormLines: React.FC = () => {
                         {lines.length > 0 ? (
                              lines.map((line, idx) => {
                                  const isLineApproved = status === 'REJECTED' ? false : watch(`lines.${idx}.is_approved`);
+                                 const qtyApproved = watch(`lines.${idx}.qty_approved`);
+                                 
+                                 // 🔍 Evaluate Stock Validation (if item is selected)
+                                 const stockValidation = line.item_id 
+                                     ? validateStock(
+                                         Number(qtyApproved || 0), 
+                                         line.lot_no ? Number((line as Record<string, unknown>).lot_available_qty || Infinity) : Infinity, 
+                                         line.warehouse_id, 
+                                         line.location_id, 
+                                         icOptions || DEFAULT_IC_OPTIONS
+                                       )
+                                     : { isValid: true };
+
+                                 const isQtyError = !!(stockValidation.message && [
+                                     'INVALID_QTY',
+                                     'NEGATIVE_STOCK_ALLOWED',
+                                     'NEGATIVE_STOCK_NOT_ALLOWED',
+                                     'INSUFFICIENT_STOCK_WARNING'
+                                 ].includes(stockValidation.code || ''));
+
+                                 const isQtyWarning = !!(stockValidation.message && stockValidation.code === 'INSUFFICIENT_STOCK_WARNING');
+
+                                 const isWhError = !!(stockValidation.message && (
+                                     stockValidation.code === 'WAREHOUSE_REQUIRED' ||
+                                     (stockValidation.code === 'WAREHOUSE_LOCATION_REQUIRED' && !line.warehouse_id)
+                                 ));
+
+                                 const isLocError = !!(stockValidation.message && (
+                                     stockValidation.code === 'WAREHOUSE_LOCATION_REQUIRED' &&
+                                     line.warehouse_id &&
+                                     !line.location_id
+                                 ));
+
                                  return (
                                      <tr key={line.docu_item_line_id || idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/10 transition-colors">
                                          <td className={`${tdClass} text-center`}>
@@ -77,23 +120,36 @@ export const RequisitionApproveFormLines: React.FC = () => {
                                          <td className={`${tdClass} text-right font-bold text-gray-600 dark:text-gray-400`}>
                                              {formatNumber(line.qty_ic)}
                                          </td>
-                                         <td className={`${tdClass} text-right`}>
-                                             {status === 'REJECTED' ? (
-                                                 <input
-                                                     type="text"
-                                                     disabled
-                                                     value="0"
-                                                     className="w-24 px-2 py-1 text-right text-sm border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/50 text-gray-500 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"
-                                                 />
-                                             ) : (
-                                                 <input
-                                                     type="number"
-                                                     step="any"
-                                                     disabled={isFinalized || !isLineApproved}
-                                                     {...register(`lines.${idx}.qty_approved`, { valueAsNumber: true })}
-                                                     className="w-24 px-2 py-1 text-right text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800/50"
-                                                 />
-                                             )}
+                                         <td className={`${tdClass} text-right ${!isFinalized && isLineApproved && !stockValidation.isValid && !!stockValidation.message ? 'align-top' : 'align-middle'}`}>
+                                             <div className="flex flex-col items-end gap-1">
+                                                 {status === 'REJECTED' ? (
+                                                     <input
+                                                         type="text"
+                                                         disabled
+                                                         value="0"
+                                                         className="w-24 px-2 py-1 text-right text-sm border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/50 text-gray-500 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50"
+                                                     />
+                                                 ) : (
+                                                     <input
+                                                         type="number"
+                                                         step="any"
+                                                         disabled={isFinalized || !isLineApproved}
+                                                         {...register(`lines.${idx}.qty_approved`, { valueAsNumber: true })}
+                                                         className={`w-24 px-2 py-1 text-right text-sm border dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-1 disabled:opacity-50 disabled:bg-gray-100 dark:disabled:bg-gray-800/50 ${
+                                                             isQtyError ? 'border-red-500 focus:ring-red-500 text-red-600' : 
+                                                             isQtyWarning ? 'border-amber-500 focus:ring-amber-500 text-amber-600' : 
+                                                             'border-gray-300 dark:border-gray-700 focus:ring-emerald-500'
+                                                         }`}
+                                                     />
+                                                 )}
+                                                 {!isFinalized && isLineApproved && (
+                                                     <StockValidationMessage 
+                                                         show={!stockValidation.isValid && !!stockValidation.message} 
+                                                         type={isQtyError ? 'error' : 'warning'}
+                                                         message={stockValidation.message} 
+                                                     />
+                                                 )}
+                                             </div>
                                          </td>
                                         <td className={`${tdClass} text-center`}>
                                             <div className="font-semibold text-gray-900 dark:text-white">{line.uom_name || line.uom_id || '-'}</div>
@@ -111,8 +167,18 @@ export const RequisitionApproveFormLines: React.FC = () => {
                                                 return null;
                                             })()}
                                         </td>
-                                        <td className={`${tdClass} truncate max-w-[130px]`}>{line.warehouse_name || line.warehouse_id || '-'}</td>
-                                        <td className={`${tdClass} truncate max-w-[130px]`}>{line.location_name || line.location_id || '-'}</td>
+                                        <td className={`${tdClass} max-w-[130px] ${isWhError ? 'align-top' : 'align-middle'}`}>
+                                            <div className="flex flex-col gap-1">
+                                                <span className="truncate">{line.warehouse_name || line.warehouse_id || '-'}</span>
+                                                <StockValidationMessage show={isWhError} message="กรุณาระบุคลังสินค้า" />
+                                            </div>
+                                        </td>
+                                        <td className={`${tdClass} max-w-[130px] ${isLocError ? 'align-top' : 'align-middle'}`}>
+                                            <div className="flex flex-col gap-1">
+                                                <span className="truncate">{line.location_name || line.location_id || '-'}</span>
+                                                <StockValidationMessage show={isLocError} message="กรุณาระบุที่เก็บ" />
+                                            </div>
+                                        </td>
                                         <td className={`${tdClass} whitespace-nowrap`}>
                                             {line.lot_no || '-'}
                                         </td>

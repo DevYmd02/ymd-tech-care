@@ -8,6 +8,7 @@ import { useFormContext, Controller } from 'react-hook-form';
 import { Plus, Trash2, ShoppingBag, Search } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { TransferHeaderFormData, TransferLineFormData } from '../schemas/transfer.schemas';
+import { type ICOption, ICOptionSummaryBar } from '@/shared/ic-option';
 
 interface TransferFormLinesProps {
     fields: FieldArrayWithId<TransferHeaderFormData, 'lines', '_id'>[];
@@ -23,6 +24,7 @@ interface TransferFormLinesProps {
     onSearchDestLocation?: (index: number, warehouseId?: string) => void;
     onSearchLot?: (index: number, itemId?: string) => void;
     onOpenUomPicker?: (index: number) => void;
+    icOptions?: ICOption;
 }
 
 const tableInputClass = "w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -41,6 +43,7 @@ export const TransferFormLines: React.FC<TransferFormLinesProps> = React.memo(
         onSearchDestLocation,
         onSearchLot,
         onOpenUomPicker,
+        icOptions,
     }) => {
         const { register, control, getValues, formState: { errors } } = useFormContext<TransferHeaderFormData>();
         const lineErrors = errors.lines;
@@ -49,9 +52,14 @@ export const TransferFormLines: React.FC<TransferFormLinesProps> = React.memo(
             <div className="space-y-4">
                 {/* ── Section Header ─────────────────────────────────────────────── */}
                 <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 flex-wrap">
                         <ShoppingBag size={20} strokeWidth={2.5} />
                         <h3 className="text-lg font-bold">รายการสินค้าขอโอนย้าย — Transaction Lines</h3>
+                        {icOptions && (
+                            <div className="ml-2 border-l pl-3 border-gray-200 dark:border-gray-700 hidden xl:block">
+                                <ICOptionSummaryBar options={icOptions} stockEffect={0} />
+                            </div>
+                        )}
                     </div>
                     <div className="flex items-center gap-3">
                         {lineErrors && typeof lineErrors === 'object' && 'message' in lineErrors && (
@@ -83,9 +91,9 @@ export const TransferFormLines: React.FC<TransferFormLinesProps> = React.memo(
                                 <th className="p-3 w-40 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">หน่วย <span className="text-blue-200">*</span></th>
                                 <th className="p-3 w-48 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">คลังต้นทาง <span className="text-blue-200">*</span></th>
                                 <th className="p-3 w-48 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">ที่เก็บต้นทาง</th>
+                                <th className="p-3 w-40 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">Lot</th>
                                 <th className="p-3 w-48 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">คลังปลายทาง <span className="text-blue-200">*</span></th>
                                 <th className="p-3 w-48 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">ที่เก็บปลายทาง</th>
-                                <th className="p-3 w-40 text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">Lot</th>
                                 <th className="p-3 w-32 text-right font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">จำนวน <span className="text-blue-200">*</span></th>
                                 <th className="p-3 min-w-[150px] text-left font-bold border-r border-blue-500/30 uppercase tracking-wider text-[11px]">หมายเหตุ</th>
                                 {!readOnly && <th className="p-3 w-14 text-center sticky right-0 z-20 bg-blue-600 uppercase tracking-wider text-[11px]">ลบ</th>}
@@ -186,6 +194,22 @@ export const TransferFormLines: React.FC<TransferFormLinesProps> = React.memo(
                                             />
                                         </td>
 
+                                        {/* Lot */}
+                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
+                                            <input
+                                                {...register(`lines.${index}.lot_no`)}
+                                                type="text"
+                                                readOnly
+                                                onClick={() => {
+                                                    if (readOnly) return;
+                                                    const itemId = getValues(`lines.${index}.item_id`);
+                                                    onSearchLot?.(index, itemId);
+                                                }}
+                                                placeholder="-- เลือก Lot --"
+                                                className={`${tableInputClass} bg-emerald-50/30 dark:bg-emerald-900/10 cursor-pointer hover:bg-emerald-100/50 transition-colors`}
+                                            />
+                                        </td>
+
                                         {/* Destination Warehouse (to_warehouse_id) */}
                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
                                             <input
@@ -211,22 +235,6 @@ export const TransferFormLines: React.FC<TransferFormLinesProps> = React.memo(
                                                 }}
                                                 placeholder="-- เลือกที่เก็บปลายทาง --"
                                                 className={`${tableInputClass} bg-blue-50/30 dark:bg-blue-900/10 cursor-pointer hover:bg-blue-100/50 transition-colors`}
-                                            />
-                                        </td>
-
-                                        {/* Lot */}
-                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <input
-                                                {...register(`lines.${index}.lot_no`)}
-                                                type="text"
-                                                readOnly
-                                                onClick={() => {
-                                                    if (readOnly) return;
-                                                    const itemId = getValues(`lines.${index}.item_id`);
-                                                    onSearchLot?.(index, itemId);
-                                                }}
-                                                placeholder="-- เลือก Lot --"
-                                                className={`${tableInputClass} bg-emerald-50/30 dark:bg-emerald-900/10 cursor-pointer hover:bg-emerald-100/50 transition-colors`}
                                             />
                                         </td>
 

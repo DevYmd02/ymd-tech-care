@@ -27,7 +27,7 @@ import { ItemMasterService } from '@master-data/inventory/services/item-master.s
 import { LocationService } from '@master-data/inventory/services/inventory-master.service';
 import type { Location } from '@master-data/inventory/types/inventory-master.types';
 import api from '@/core/api/api';
-import { useInventoryICOptions } from '@/modules/Inventory/shared/hooks/useInventoryICOptions';
+import { useICOptions } from '@/shared/ic-option';
 import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
 
 // ====================================================================================
@@ -116,7 +116,7 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
     const watchedBranchId = useWatch({ control, name: 'branch_id' });
 
     // 🛡️ Centralized IC Option Resolution (Document-specific → Branch General → Global Default)
-    const { icOptions } = useInventoryICOptions(
+    const { icOptions } = useICOptions(
         watchedBranchId,
         SYSTEM_DOCUMENT_CODES.INVENTORY_ISSUE_REQ
     );

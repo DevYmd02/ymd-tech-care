@@ -2,7 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { Settings } from 'lucide-react';
 import ICOptionFormModal from './ICOptionFormModal';
 import { useICOption } from './hooks/useICOption';
-import type { ICOption } from './types/ic-option.types';
+import type { ICOptionBranchConfig as ICOption } from '@/shared/ic-option';
 import { FilterFormBuilder, type FilterFieldConfig } from '@ui';
 import { SmartTable } from '@ui';
 import type { ColumnDef } from '@tanstack/react-table';

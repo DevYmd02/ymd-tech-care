@@ -33,6 +33,7 @@ export const RequisitionApproveFormModal: React.FC<RequisitionApproveFormModalPr
         jobs,
         isLoading,
         isSaving,
+        icOptions,
         originalStatus,
         handleApprove,
         handleReject,
@@ -197,7 +198,7 @@ export const RequisitionApproveFormModal: React.FC<RequisitionApproveFormModalPr
 
                                 <div className={cardClass}>
                                     <div className="p-6">
-                                        <RequisitionApproveFormLines />
+                                        <RequisitionApproveFormLines icOptions={icOptions} />
                                     </div>
                                 </div>
 

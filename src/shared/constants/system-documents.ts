@@ -16,6 +16,7 @@ export const SYSTEM_DOCUMENT_CODES = {
     INVENTORY_ISSUE_REQ: 'ISSUE_REQ',         // ใบขอเบิก
     INVENTORY_APPV_ISSUE: 'APPV_ISSUE',       // ใบอนุมัติเบิก
     INVENTORY_ISSUE: 'ISSUE',                 // ใบเบิก
+    INVENTORY_TRANSFER_REQ: 'TR',             // ใบขอโอนย้ายสินค้า
     INVENTORY_TRANSFER: 'TRANSFER',           // ใบโอนสินค้า
     INVENTORY_TRANSFER_APPV: 'TRANSFER_APPV', // ใบอนุมัติโอนสินค้า
     INVENTORY_RETURN_ISSUE: 'RETURN_ISSUE',   // ใบคืนสินค้า

@@ -20,6 +20,7 @@ export interface TransferRequisitionHeader {
     stock_effect_ic?: number | null; // number
     cancelflag: string;            // char(1) default 'N'
     cancle_remark?: string;        // varchar(255)
+    status?: string;               // varchar(20) DRAFT, PENDING, etc
 }
 
 /** ข้อมูล Line ของใบขอโอนย้ายสินค้า (จาก Backend) */
@@ -57,7 +58,12 @@ export interface TransferRequisitionListItem {
     branch_name?: string;
     save_emp_name?: string;
     transfer_emp_name?: string;
+    from_warehouse_name?: string;
+    from_location_name?: string;
+    to_warehouse_name?: string;
+    to_location_name?: string;
     cancelflag: string;
+    status?: string;
 }
 
 /** Query params สำหรับ List API */

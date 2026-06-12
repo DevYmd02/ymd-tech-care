@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { useForm, type Resolver, type DefaultValues } from 'react-hook-form';
+import { useForm, useWatch, type Resolver, type DefaultValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
@@ -13,6 +13,8 @@ import { RequisitionApprovalHelper } from '../utils/requisition-approval.helper'
 import { ItemMasterService } from '@/modules/master-data/inventory/services/item-master.service';
 import { LocationService } from '@/modules/master-data/inventory/services/inventory-master.service';
 import { ICDocumentService } from '../../shared/services/ic-document.service';
+import { useICOptions } from '@/shared/ic-option';
+import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
 
 interface UseRequisitionApproveFormOptions {
     isOpen: boolean;
@@ -129,6 +131,16 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
         staleTime: 5 * 60 * 1000,
         enabled: isOpen,
     });
+
+    // ── IC Options ────────────────────────────────────────────────────────────────
+    const watchedBranchId = useWatch({
+        control: formMethods.control,
+        name: 'branch_id'
+    });
+    const { icOptions } = useICOptions(
+        watchedBranchId,
+        SYSTEM_DOCUMENT_CODES.INVENTORY_ISSUE_REQ
+    );
 
     // Load requisition details
     const { data: detailData, isLoading: isLoadingDetail } = useQuery({
@@ -354,6 +366,7 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
         jobs,
         isLoading,
         isSaving,
+        icOptions,
         originalStatus: ((detailData?.header as unknown as Record<string, unknown>)?.status as string) || 'PENDING',
         handleApprove: useCallback(() => {
             approveMutation.mutate({ status: 'APPROVED' });
