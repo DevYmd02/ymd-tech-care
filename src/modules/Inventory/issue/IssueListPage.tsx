@@ -57,8 +57,8 @@ function CancelBadge({ flag }: { flag: string }) {
 
 export default function IssueListPage() {
     const queryClient = useQueryClient();
-    const { data: employees } = useEmployees();
-    const { data: departments } = useDepartments();
+    const { data: employees, isLoading: isLoadingEmployees } = useEmployees();
+    const { data: departments, isLoading: isLoadingDepartments } = useDepartments();
 
     // ── Filters (URL-synced) ────────────────────────────────────────────────────────
     const {
@@ -201,6 +201,7 @@ export default function IssueListPage() {
             colHelper.accessor('dept_name', {
                 header: 'แผนก',
                 cell: info => {
+                    if (isLoadingDepartments) return <span className="text-sm text-gray-400 italic">กำลังโหลด...</span>;
                     let val = info.getValue() as string;
                     if (val && val !== '-') {
                         const d = departments?.find((x) => String(x.id || x.department_id || x.emp_dept_id) === String(val));
@@ -215,6 +216,7 @@ export default function IssueListPage() {
             colHelper.accessor('rece_emp_name', {
                 header: 'ผู้รับสินค้า',
                 cell: info => {
+                    if (isLoadingEmployees) return <span className="text-sm text-gray-400 italic">กำลังโหลด...</span>;
                     let val = info.getValue() as string;
                     if (val && val !== '-') {
                         const e = employees?.find((x) => String(x.id || x.employee_id) === String(val));
@@ -271,7 +273,7 @@ export default function IssueListPage() {
                 enableSorting: false,
             }),
         ],
-        [filters.page, filters.limit, handleView, handleEdit, departments, employees]
+        [filters.page, filters.limit, handleView, handleEdit, departments, employees, isLoadingDepartments, isLoadingEmployees]
     );
 
     return (

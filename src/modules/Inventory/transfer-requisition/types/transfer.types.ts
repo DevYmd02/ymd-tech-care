@@ -17,6 +17,7 @@ export interface TransferRequisitionHeader {
     branch_id: string;             // uuid
     save_emp_id: string;           // uuid (PK/FK → emp ผู้บันทึก)
     transfer_emp_id: string;       // uuid (PK/FK → emp ผู้ขอโอน)
+    transfer_emp_name?: string;    // added for UI display
     stock_effect_ic?: number | null; // number
     cancelflag: string;            // char(1) default 'N'
     cancle_remark?: string;        // varchar(255)

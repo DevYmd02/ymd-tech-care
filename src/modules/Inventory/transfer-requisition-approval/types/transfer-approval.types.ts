@@ -10,6 +10,12 @@
 
 export interface TransferApprovalHeader {
     transfer_req_id: string;        // uuid - ID เอกสารอ้างอิงใบขอโอนย้าย
+    transfer_req_no?: string;       // varchar(25) - เลขที่เอกสารอ้างอิงใบขอโอนย้าย
+    transfer_req_date?: string;
+    docu_date?: string;
+    transfer_docu_item_name?: string;
+    transfer_emp_id?: string;
+    transfer_emp_name?: string;
     appv_transfer_id: string;       // uuid (PK) - ID เอกสารอนุมัติขอโอนย้าย
     appv_transfer_no: string;       // varchar(25) (PK) - เลขที่เอกสารอนุมัติ
     appv_date: string;              // date - วันที่อนุมัติ

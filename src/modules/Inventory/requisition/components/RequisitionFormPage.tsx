@@ -7,7 +7,7 @@
 import React, { useState } from 'react';
 import { FormProvider, type SubmitHandler } from 'react-hook-form';
 import { ClipboardList, Save, Loader2 } from 'lucide-react';
-import { WindowFormLayout } from '@ui';
+import { WindowFormLayout, FormSkeleton } from '@ui';
 import { ConfirmationModal } from '@system/ConfirmationModal';
 import { RequisitionFormHeader } from '../components/RequisitionFormHeader';
 import { RequisitionFormLines } from '../components/RequisitionFormLines';
@@ -354,9 +354,7 @@ export const RequisitionFormPage: React.FC<RequisitionFormPageProps> = ({
                 `}} />
                 <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 animate-form-fade-in">
                     {isLoading ? (
-                        <div className="flex items-center justify-center h-40">
-                            <Loader2 className="animate-spin text-blue-600" size={32} />
-                        </div>
+                        <FormSkeleton rows={4} />
                     ) : (
                         <form id="requisition-form" onSubmit={formMethods.handleSubmit(onFormSubmit, handleFormError)} className="w-full space-y-6">
                             {/* 1. Header Section */}

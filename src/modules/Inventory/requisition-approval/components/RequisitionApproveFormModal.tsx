@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FormProvider } from 'react-hook-form';
 import { ShieldCheck, CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import { WindowFormLayout } from '@ui';
+import { WindowFormLayout, FormSkeleton } from '@ui';
 import { ConfirmationModal } from '@system/ConfirmationModal';
 import { useRequisitionApproveForm } from '../hooks/useRequisitionApproveForm';
 import { RequisitionApproveHeader } from './RequisitionApproveHeader';
@@ -165,9 +165,7 @@ export const RequisitionApproveFormModal: React.FC<RequisitionApproveFormModalPr
                     `}} />
                     <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 animate-form-fade-in">
                         {isLoading ? (
-                            <div className="flex items-center justify-center h-40">
-                                <Loader2 className="animate-spin text-emerald-600" size={32} />
-                            </div>
+                            <FormSkeleton rows={4} />
                         ) : (
                             <div className="w-full space-y-6">
                                 <div className={cardClass}>
