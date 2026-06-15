@@ -22,6 +22,7 @@ import { ItemMasterService } from '@/modules/master-data/inventory/services/item
 import { LocationService, LotNoService } from '@master-data/inventory/services/inventory-master.service';
 import { useICOptions } from '@/shared/ic-option';
 import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
+import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard';
 
 // ====================================================================================
 // HELPERS
@@ -110,6 +111,13 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
         control,
         name: 'lines',
         keyName: '_id',
+    });
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: formMethods.formState.isDirty,
+        enabled: isOpen,
+        onSafeClose: onClose
     });
 
     // ── IC Options ────────────────────────────────────────────────────────────────
@@ -640,6 +648,8 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
         isSaving,
         isLoading: isLoadingEdit,
         isEditMode,
+        onClose: handleCloseAttempt,
+        blocker,
 
         fields,
         addLine,

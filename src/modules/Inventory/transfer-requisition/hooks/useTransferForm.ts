@@ -21,6 +21,7 @@ import { UOMConversionService } from '@inventory/services/uom-conversion.service
 import type { UOMConversionListItem } from '@/modules/master-data/types/master-data-types';
 import { useICOptions } from '@/shared/ic-option';
 import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
+import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard';
 
 // ====================================================================================
 // HELPERS
@@ -106,6 +107,13 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
         control,
         name: 'lines',
         keyName: '_id',
+    });
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: formMethods.formState.isDirty,
+        enabled: isOpen,
+        onSafeClose: onClose
     });
 
     // ── Load Master Data ─────────────────────────────────────────────────────────
@@ -494,6 +502,8 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
         isSaving,
         isLoading: isLoadingEdit,
         isEditMode,
+        onClose: handleCloseAttempt,
+        blocker,
 
         fields,
         addLine,

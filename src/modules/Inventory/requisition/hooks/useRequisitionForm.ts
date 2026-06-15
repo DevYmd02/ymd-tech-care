@@ -29,6 +29,7 @@ import type { Location } from '@master-data/inventory/types/inventory-master.typ
 import api from '@/core/api/api';
 import { useICOptions } from '@/shared/ic-option';
 import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
+import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard';
 
 // ====================================================================================
 // HELPERS
@@ -110,6 +111,13 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
         control,
         name: 'lines',
         keyName: '_id',
+    });
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: formMethods.formState.isDirty,
+        enabled: isOpen,
+        onSafeClose: onClose
     });
 
     // ── Watch branch_id for IC Options ─────────────────────────────────────────────
@@ -483,6 +491,8 @@ export function useRequisitionForm({ isOpen, onClose, editId, onSuccess }: UseRe
         isSaving,
         isLoading: isLoadingEdit,
         isEditMode,
+        onClose: handleCloseAttempt,
+        blocker,
 
         // Lines
         fields,
