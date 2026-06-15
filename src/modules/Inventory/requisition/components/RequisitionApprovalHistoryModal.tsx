@@ -5,6 +5,7 @@ import { X, ShieldCheck, Clock, AlertCircle } from 'lucide-react';
 import api from '@/core/api/api';
 import { formatThaiDate } from '@/shared/utils/dateUtils';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
+import { FormSkeleton } from '@ui';
 
 interface RequisitionApprovalHistoryModalProps {
     isOpen: boolean;
@@ -108,10 +109,7 @@ export const RequisitionApprovalHistoryModal: React.FC<RequisitionApprovalHistor
                 {/* Body */}
                 <div className="p-6 overflow-y-auto flex-1">
                     {isLoading ? (
-                        <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                            <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mb-2" />
-                            <span>กำลังดึงข้อมูลประวัติการอนุมัติ...</span>
-                        </div>
+                        <FormSkeleton rows={2} />
                     ) : error ? (
                         <div className="flex flex-col items-center justify-center py-10 text-red-500">
                             <AlertCircle className="w-10 h-10 mb-2" />

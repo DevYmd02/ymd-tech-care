@@ -16,8 +16,6 @@ import type { TransferApprovalFormData } from '../schemas/transfer-approval.sche
 import type { TransferRequisitionListItem } from '../../transfer-requisition/types/transfer.types';
 import type {
     BranchListItem,
-    DepartmentListItem,
-    Project,
     EmployeeListItem,
     UOMListItem,
 } from '@/modules/master-data/types/master-data-types';
@@ -54,8 +52,6 @@ export const TransferApproveFormModal: React.FC<TransferApproveFormModalProps> =
         fields,
         branches,
         employees,
-        departments,
-        projects,
         uoms,
         setValue,
     } = useTransferApprovalForm({ 
@@ -68,10 +64,6 @@ export const TransferApproveFormModal: React.FC<TransferApproveFormModalProps> =
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [pendingData, setPendingData] = useState<TransferApprovalFormData | null>(null);
-
-    const handleOpenSearch = () => {
-        setIsSearchModalOpen(true);
-    };
 
     const handleSelectRequisition = (reqId: string, item?: TransferRequisitionListItem) => {
         setSelectedRequisitionId(reqId);
@@ -162,20 +154,11 @@ export const TransferApproveFormModal: React.FC<TransferApproveFormModalProps> =
                                                 id: String(b.branch_id || b.id || ''),
                                                 name: b.branch_name || ''
                                             }))}
-                                            deptOptions={departments.map((d: DepartmentListItem) => ({
-                                                id: String(d.emp_dept_id || d.department_id || d.id || ''),
-                                                name: d.emp_dept_name || d.department_name || d.dept_name || ''
-                                            }))}
-                                            jobOptions={projects.map((p: Project) => ({
-                                                id: String(p.project_id || p.id || ''),
-                                                name: p.project_name || ''
-                                            }))}
                                             empOptions={employees.map((e: EmployeeListItem) => ({
                                                 id: String(e.employee_id || e.id || ''),
                                                 name: e.employee_fullname || e.employee_name || ''
                                             }))}
                                             readOnly={readOnly}
-                                            onSearchTransfer={handleOpenSearch}
                                         />
                                     </div>
                                 </div>

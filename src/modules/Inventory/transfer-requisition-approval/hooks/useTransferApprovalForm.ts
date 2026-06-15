@@ -169,6 +169,11 @@ export function useTransferApprovalForm({
                     appv_transfer_id: header.appv_transfer_id,
                     appv_transfer_no: header.appv_transfer_no,
                     transfer_req_id: header.transfer_req_id,
+                    transfer_req_no: header.transfer_req_no || '',
+                    docu_date: header.transfer_req_date || header.docu_date || '',
+                    docu_item_name: header.transfer_docu_item_name || '',
+                    transfer_emp_id: header.transfer_emp_id || '',
+                    transfer_emp_name: header.transfer_emp_name || '',
                     appv_date: header.appv_date,
                     emp_dept_id: header.emp_dept_id,
                     job_id: header.job_id ?? '',
@@ -247,9 +252,13 @@ export function useTransferApprovalForm({
                     ...DEFAULT_VALUES,
                     transfer_req_id: header.transfer__req_id,
                     transfer_req_no: header.transfer__req_no,
+                    docu_date: header.docu_date || '',
+                    docu_item_name: header.docu_item_no || '',
+                    transfer_emp_id: header.transfer_emp_id || '',
+                    transfer_emp_name: header.transfer_emp_name || '',
                     branch_id: header.branch_id,
-                    save_emp_id: user?.employee_id ? String(user.employee_id) : '',
-                    appv_emp_id: user?.employee_id ? String(user.employee_id) : '',
+                    save_emp_id: user?.employee?.employee_id ? String(user.employee.employee_id) : (user?.employee_id ? String(user.employee_id) : ''),
+                    appv_emp_id: user?.employee?.employee_id ? String(user.employee.employee_id) : (user?.employee_id ? String(user.employee_id) : ''),
                     lines: lines.map((l, i) => {
                         const itemId = Number(l.item_id);
                         const convs = conversionMap.get(itemId) || [];
@@ -285,8 +294,8 @@ export function useTransferApprovalForm({
         } else if (!editId && !requisitionId && isOpen) {
             reset({
                 ...DEFAULT_VALUES,
-                save_emp_id: user?.employee_id ? String(user.employee_id) : '',
-                appv_emp_id: user?.employee_id ? String(user.employee_id) : '',
+                save_emp_id: user?.employee?.employee_id ? String(user.employee.employee_id) : (user?.employee_id ? String(user.employee_id) : ''),
+                appv_emp_id: user?.employee?.employee_id ? String(user.employee.employee_id) : (user?.employee_id ? String(user.employee_id) : ''),
             });
         }
     }, [reqData, editId, requisitionId, isOpen, reset, user, queryClient]);

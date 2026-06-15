@@ -13,10 +13,11 @@ import {
     ChevronsLeft, 
     ChevronsRight, 
     Search,
-    ChevronUp,
-    ChevronDown
+    ChevronUp, 
+    ChevronDown 
 } from 'lucide-react';
 import { styles } from '@/shared/constants/styles';
+import { TableSkeleton } from '../feedback/TableSkeleton';
 
 interface SortConfig {
     key: string;
@@ -250,22 +251,12 @@ export function SmartTable<TData>({
                         {isLoading ? (
                             <tr>
                                 <td colSpan={columns.length} className="p-0">
-                                    <div className="border-none">
-                                        <div className="flex border-b border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-gray-800/30 px-4 py-4 animate-pulse">
-                                            {Array.from({ length: Math.min(6, columns.length) }).map((_, i) => (
-                                                <div key={i} className="h-4 bg-gray-200 dark:bg-gray-700 rounded mr-4 flex-1" />
-                                            ))}
-                                        </div>
-                                        <div className="divide-y divide-gray-50 dark:divide-gray-800">
-                                            {Array.from({ length: pagination.pageSize }).map((_, rowIndex) => (
-                                                <div key={rowIndex} className="flex px-4 py-4 items-center animate-pulse">
-                                                    {Array.from({ length: Math.min(6, columns.length) }).map((_, colIndex) => (
-                                                        <div key={colIndex} className="h-3 bg-gray-100 dark:bg-gray-800 rounded mr-4 flex-1 opacity-60" />
-                                                    ))}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    <TableSkeleton 
+                                        hasHeader={false} 
+                                        rows={pagination.pageSize || 10} 
+                                        cols={Math.min(6, columns.length)} 
+                                        className="border-0 rounded-none shadow-none" 
+                                    />
                                 </td>
                             </tr>
                         ) : (data?.length ?? 0) > 0 ? (

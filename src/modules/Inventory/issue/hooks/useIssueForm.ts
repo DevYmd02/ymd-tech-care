@@ -316,6 +316,7 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
                 reset({
                     docu_item_id: header.docu_item_id,
                     docu_item_no: docuItemNoVal,
+                    appv_issue_req_id: appvReqId ? Number(appvReqId) : undefined,
                     appvissue_req_no: appvReqNoVal,
                     issue_req_no: issueReqNoVal,
                     issue_stk_no: header.issue_stk_no,
@@ -340,6 +341,7 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
                         return {
                             _tempId: `edit-${l.docu_item_id ?? i}`,
                             listno: l.listno ?? i + 1,
+                            appvissue_req_line_id: (l as unknown as Record<string, unknown>).appvissue_req_line_id as number | undefined,
                             item_id: l.item_id,
                             item_code: l.item_code || String(itemMap.get(itemId)?.item_code || ''),
                             item_name: l.item_name || String(itemMap.get(itemId)?.item_name || ''),
@@ -350,6 +352,7 @@ export function useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue 
                             location_id: l.location_id ?? '',
                             location_name: l.location_name || String(locMap.get(Number(l.location_id))?.name_th || ''),
                             lot_id: l.lot_id ?? '',
+                            lot_balance_id: (l as unknown as Record<string, unknown>).lot_balance_id as number | undefined,
                             lot_no: String(l.lot_no || lotMap.get(Number(l.lot_id))?.code || lotMap.get(Number(l.lot_id))?.name_th || ''),
                             qty_ic: l.qty_ic,
                             unit_cost: Number(l.unit_cost) >= 0 ? Number(l.unit_cost) : 0,

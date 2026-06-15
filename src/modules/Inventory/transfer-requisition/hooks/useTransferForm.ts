@@ -14,6 +14,8 @@ import { logger } from '@/shared/utils';
 import { transferHeaderSchema } from '../schemas/transfer.schemas';
 import type { TransferHeaderFormData, TransferLineFormData } from '../schemas/transfer.schemas';
 import { TransferService } from '../services/transfer.service';
+
+import { ReservationInventoryService } from '@/modules/sales/reservation/services/reservation-inventory.service';
 import { MasterDataService } from '@/modules/master-data/services/master-data.service';
 import { UOMConversionService } from '@inventory/services/uom-conversion.service';
 import type { UOMConversionListItem } from '@/modules/master-data/types/master-data-types';
@@ -44,7 +46,9 @@ const createDefaultLine = (listno: number): TransferLineFormData => ({
     to_location_name: '',
     qty_ic: '',
     lot_id: '',
+    lot_balance_id: '',
     lot_no: '',
+    lot_available_qty: 0,
     stock_flag: 0,
     remark: '',
 });
@@ -60,6 +64,7 @@ const DEFAULT_VALUES: TransferHeaderFormData = {
     remark: '',
     cancelflag: 'N',
     cancle_remark: '',
+    status: 'DRAFT',
     lines: [createDefaultLine(1)],
 };
 
@@ -199,6 +204,7 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
                 const itemMap = new Map<number, Record<string, unknown>>();
                 const locMap = new Map<number, Record<string, unknown>>();
                 const lotMap = new Map<number, Record<string, unknown>>();
+                const balanceMap = new Map<string, number>();
                 
                 if (allItemIds.length > 0) {
                     try {
@@ -253,14 +259,54 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
                         })));
                         lotsList.forEach(lot => { if (lot) lotMap.set(Number((lot as unknown as Record<string, unknown>).id || (lot as unknown as Record<string, unknown>).lot_no_id), lot as unknown as Record<string, unknown>); });
                     }
+
+                    // Fetch actual balances for edit mode so users can increase quantity without fake errors
+                    if (lines.length > 0) {
+                        try {
+                            const balancesList = await Promise.all(lines.map(async l => {
+                                if (!l.item_id || !l.from_warehouse_id) return null;
+                                const res = await ReservationInventoryService.getAvailableLots({
+                                    item_id: l.item_id,
+                                    warehouse_id: l.from_warehouse_id,
+                                    location_id: l.from_location_id || undefined,
+                                    q: l.lot_no || undefined,
+                                    limit: 50
+                                });
+                                // Match by lot_id or lot_no
+                                const lot = res?.items?.find(b => String(b.lot_no_id) === String(l.lot_id) || b.code === l.lot_no);
+                                if (lot) {
+                                    return { id: l.lot_id, qty: lot.qty_available ?? lot.sale_stock ?? 0 };
+                                }
+                                return null;
+                            }));
+                            balancesList.forEach(b => { if (b) balanceMap.set(String(b.id), Number(b.qty)); });
+                        } catch (err) {
+                            logger.warn('[useTransferForm] balance load failed:', err);
+                        }
+                    }
                 } catch (err) {
                     logger.warn('[useTransferForm] location/lot load failed:', err);
+                }
+                let finalDocuItemNo = '';
+                if (header.docu_item_no) {
+                    const exactMatch = docLinks.find(d => String(d.docu_type_id) === String(header.docu_item_no));
+                    if (exactMatch) {
+                        finalDocuItemNo = String(exactMatch.docu_type_id);
+                    } else if (header.doc_type_no !== undefined) {
+                        // Fallback to matching by doc_type_no if ID doesn't exist in the dropdown
+                        const typeMatch = docLinks.find(d => Number(d.docu_item_no) === Number(header.doc_type_no));
+                        if (typeMatch) finalDocuItemNo = String(typeMatch.docu_type_id);
+                        else finalDocuItemNo = String(header.docu_item_no);
+                    } else {
+                        finalDocuItemNo = String(header.docu_item_no);
+                    }
                 }
 
                 reset({
                     transfer__req_id: header.transfer__req_id,
                     transfer__req_no: header.transfer__req_no,
                     docu_date: header.docu_date,
+                    docu_item_no: finalDocuItemNo,
                     branch_id: header.branch_id,
                     save_emp_id: header.save_emp_id,
                     transfer_emp_id: header.transfer_emp_id,
@@ -268,6 +314,7 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
                     remark: header.remark ?? '',
                     cancelflag: header.cancelflag,
                     cancle_remark: header.cancle_remark ?? '',
+                    status: header.status || 'DRAFT',
                     lines: lines.map((l, i) => {
                         const itemId = Number(l.item_id);
                         const convs = conversionMap.get(itemId) || [];
@@ -295,7 +342,9 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
                             to_location_name: l.to_location_name || String(locMap.get(Number(l.to_location_id))?.name_th || ''),
                             qty_ic: l.qty_ic,
                             lot_id: l.lot_id ?? '',
+                            lot_balance_id: String(l.lot_balance_id || ''),
                             lot_no: String(l.lot_no || lotMap.get(Number(l.lot_id))?.code || lotMap.get(Number(l.lot_id))?.name_th || ''),
+                            lot_available_qty: Number(balanceMap.get(String(l.lot_id)) ?? lotMap.get(Number(l.lot_id))?.qty_available ?? lotMap.get(Number(l.lot_id))?.sale_stock ?? l.qty_ic ?? 0) || 0,
                             stock_flag: l.stock_flag ?? 0,
                             remark: l.remark ?? '',
                         };
@@ -352,6 +401,25 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
     // ── Submit Handler ────────────────────────────────────────────────────────────
     const onSubmit = useCallback(
         async (data: TransferHeaderFormData) => {
+            // Validate Stock against IC Options
+            const invalidLines = data.lines.map((l, idx) => {
+                if (!l.lot_id || !icOptions) return null;
+                const qty = Number(l.qty_ic) || 0;
+                const avail = Number(l.lot_available_qty) || 0;
+                
+                // Using dynamic import to prevent circular dependency issues at module load
+                return import('@/shared/ic-option').then(({ validateStock }) => {
+                    const res = validateStock(qty, avail, l.from_warehouse_id, l.from_location_id, icOptions);
+                    return !res.isValid ? { index: idx + 1, message: res.message } : null;
+                });
+            });
+
+            const validationResults = (await Promise.all(invalidLines)).filter(Boolean);
+            if (validationResults.length > 0) {
+                toast.error(`รายการที่ ${validationResults.map(r => r?.index).join(', ')}: ${validationResults[0]?.message}`);
+                return;
+            }
+
             const payload = {
                 ...data,
                 lines: data.lines.map(l => ({
@@ -363,6 +431,7 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
                 payload.transfer__req_no = '';
             }
 
+
             try {
                 if (isEditMode && editId) {
                     await updateMutation.mutateAsync({ id: editId, data: payload });
@@ -373,7 +442,7 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
                 logger.error('[TransferForm] Submit failed:', error);
             }
         },
-        [isEditMode, editId, createMutation, updateMutation]
+        [isEditMode, editId, createMutation, updateMutation, icOptions]
     );
 
     const handleFormError = useCallback((errs: unknown) => {
@@ -430,6 +499,8 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
         addLine,
         removeLine,
         updateLine,
+        setValue,
+        getValues,
 
         branches,
         docLinks,

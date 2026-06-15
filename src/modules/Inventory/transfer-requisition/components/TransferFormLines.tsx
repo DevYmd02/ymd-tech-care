@@ -4,11 +4,25 @@
  */
 
 import React from 'react';
-import { useFormContext, Controller } from 'react-hook-form';
+import { useFormContext, Controller, useWatch } from 'react-hook-form';
 import { Plus, Trash2, ShoppingBag, Search } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { TransferHeaderFormData, TransferLineFormData } from '../schemas/transfer.schemas';
-import { type ICOption, ICOptionSummaryBar } from '@/shared/ic-option';
+import { type ICOption, ICOptionSummaryBar, StockValidationMessage, validateStock } from '@/shared/ic-option';
+
+const LineQtyValidation = ({ index, icOptions }: { index: number; icOptions?: ICOption }) => {
+    const line = useWatch({ name: `lines.${index}` });
+
+    if (!icOptions || !line?.lot_id) return null;
+
+    const qty = Number(line.qty_ic) || 0;
+    const avail = Number(line.lot_available_qty) || 0;
+    const res = validateStock(qty, avail, line.from_warehouse_id, line.from_location_id, icOptions);
+
+    if (res.isValid && res.type !== 'warning') return null;
+
+    return <StockValidationMessage show={true} type={res.type} message={res.message} />;
+};
 
 interface TransferFormLinesProps {
     fields: FieldArrayWithId<TransferHeaderFormData, 'lines', '_id'>[];
@@ -248,6 +262,7 @@ export const TransferFormLines: React.FC<TransferFormLinesProps> = React.memo(
                                                 className={`${tableInputClass} text-right font-bold text-blue-600 ${lineErr?.qty_ic ? 'border-red-500' : ''}`}
                                             />
                                             {lineErr?.qty_ic && <span className="text-[10px] text-red-500 font-medium block mt-0.5">{lineErr.qty_ic.message}</span>}
+                                            <LineQtyValidation index={index} icOptions={icOptions} />
                                         </td>
 
                                         {/* Remark */}

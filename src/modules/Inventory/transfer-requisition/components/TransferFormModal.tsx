@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { FormProvider, type SubmitHandler } from 'react-hook-form';
 import { ClipboardList, Save, Loader2 } from 'lucide-react';
-import { WindowFormLayout } from '@ui';
+import { WindowFormLayout, FormSkeleton } from '@ui';
 import { ConfirmationModal } from '@system/ConfirmationModal';
 import { TransferFormHeader, type TransferDocLink } from './TransferFormHeader';
 import { TransferFormLines } from './TransferFormLines';
@@ -53,6 +53,7 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
         addLine,
         removeLine,
         updateLine,
+        setValue,
         branches,
         docLinks,
         employees,
@@ -290,13 +291,10 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
 
     const handleSelectLot = (lot: LotNo) => {
         if (activeLineIndex !== null) {
-            updateLine(activeLineIndex, null, {
-                ...fields[activeLineIndex],
-                lot_id: String(lot.lot_no_id),
-                lot_balance_id: String(lot.lot_balance_id || lot.lot_no_id || ''),
-                lot_no: lot.code,
-                lot_available_qty: lot.qty_available ?? lot.sale_stock ?? 0,
-            } as TransferLineFormData);
+            setValue(`lines.${activeLineIndex}.lot_id`, String(lot.lot_no_id));
+            setValue(`lines.${activeLineIndex}.lot_balance_id`, String(lot.lot_balance_id || lot.lot_no_id || ''));
+            setValue(`lines.${activeLineIndex}.lot_no`, lot.code);
+            setValue(`lines.${activeLineIndex}.lot_available_qty`, Number(lot.qty_available ?? lot.sale_stock ?? 0) || 0);
         }
         setIsLotSearchOpen(false);
     };
@@ -370,9 +368,7 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
                     `}} />
                     <div className="flex-1 overflow-auto bg-slate-100 dark:bg-[#0b1120] p-6 space-y-6 animate-form-fade-in">
                         {isLoading ? (
-                            <div className="flex items-center justify-center h-40">
-                                <Loader2 className="animate-spin text-blue-600" size={32} />
-                            </div>
+                            <FormSkeleton rows={4} />
                         ) : (
                             <form id="transfer-form" onSubmit={formMethods.handleSubmit(onFormSubmit, handleFormError)} className="w-full space-y-6">
                                 {/* 1. Header Section */}

@@ -137,7 +137,7 @@ export const sidebarMenuItems: MenuItem[] = [
         icon: Package,
         subItems: [
             { id: 'inv-dashboard', label: 'Warehouse Dashboard', path: '/inventory/dashboard' },
-            { id: 'requisition', label: 'ใบขอเบิก (Requisition)', path: '/inventory/requisition' },
+            { id: 'requisition', label: 'ใบขอเบิก', path: '/inventory/requisition' },
             { id: 'requisition-approval', label: 'อนุมัติใบขอเบิก', path: '/inventory/requisition-approval' },
             { id: 'issue', label: 'ใบเบิก', path: '/inventory/issue' },
             { id: 'issue-return', label: 'รับคืนจากการเบิก', path: '/inventory/return' },

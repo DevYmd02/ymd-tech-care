@@ -152,7 +152,7 @@ export const TransferService = {
             const header: TransferRequisitionHeader = {
                 transfer__req_id: String(rawHeader.transfer__req_id || rawHeader.transfer_req_id || id),
                 transfer__req_no: String(rawHeader.transfer__req_no || rawHeader.transfer_req_no || ''),
-                docu_date: String(rawHeader.docu_date || rawHeader.transfer_req_date || ''),
+                docu_date: String(rawHeader.docu_date || rawHeader.transfer_req_date || '').split('T')[0],
                 branch_id: String(rawHeader.branch_id || rawHeader.from_branch_id || ''),
                 save_emp_id: String(rawHeader.save_emp_id || rawHeader.created_by_emp_id || ''),
                 transfer_emp_id: String(rawHeader.transfer_emp_id || rawHeader.transfer_by_emp_id || ''),
@@ -160,6 +160,9 @@ export const TransferService = {
                 status: String(rawHeader.status || ((rawHeader as unknown as Record<string, unknown>).cancel_flag === 'Y' ? 'VOID' : 'DRAFT')),
                 remark: String(rawHeader.remark || rawHeader.remarks || ''),
                 cancle_remark: String(rawHeader.cancle_remark || rawHeader.cancel_remarks || ''),
+                docu_item_no: String(rawHeader.doc_link_ic_id || data.doc_link_ic_id || rawHeader.doc_type_no || data.doc_type_no || rawHeader.docu_item_no || data.docu_item_no || ''),
+                doc_link_ic_id: (rawHeader.doc_link_ic_id ?? data.doc_link_ic_id) as number | string | undefined,
+                doc_type_no: Number(rawHeader.doc_type_no ?? data.doc_type_no ?? 0),
             };
             
             // Map lines
@@ -203,18 +206,23 @@ export const TransferService = {
                 transfer_by_emp_id: Number(data.transfer_emp_id),
                 remarks: data.remark || '',
                 status: data.cancelflag === 'Y' ? 'VOID' : 'DRAFT',
-                lines: data.lines.map(line => ({
-                    item_id: Number(line.item_id),
-                    qty: Number(line.qty_ic),
-                    uom_id: Number(line.uom_id),
-                    from_warehouse_id: Number(line.from_warehouse_id),
-                    from_location_id: line.from_location_id ? Number(line.from_location_id) : null,
-                    to_warehouse_id: Number(line.to_warehouse_id),
-                    to_location_id: line.to_location_id ? Number(line.to_location_id) : null,
-                    lot_id: line.lot_id ? Number(line.lot_id) : null,
-                    lot_balance_id: line.lot_balance_id ? Number(line.lot_balance_id) : null,
-                    remarks: line.remark || ''
-                }))
+                lines: data.lines.map(line => {
+                    const mapped: Record<string, unknown> = {
+                        item_id: Number(line.item_id),
+                        qty: Number(line.qty_ic),
+                        uom_id: Number(line.uom_id),
+                        from_warehouse_id: Number(line.from_warehouse_id),
+                        from_location_id: line.from_location_id ? Number(line.from_location_id) : null,
+                        to_warehouse_id: Number(line.to_warehouse_id),
+                        to_location_id: line.to_location_id ? Number(line.to_location_id) : null,
+                        remarks: line.remark || ''
+                    };
+                    if (line.lot_id) {
+                        mapped.lot_id = Number(line.lot_id);
+                        mapped.lot_balance_id = Number(line.lot_balance_id || line.lot_id);
+                    }
+                    return mapped;
+                })
             };
 
             // ใช้ endpoint ตาม Postman
@@ -230,7 +238,44 @@ export const TransferService = {
     // ─── Update ──────────────────────────────────────────────────────────────────────
     update: async (id: string, data: Partial<TransferFormData> | Record<string, unknown>): Promise<SuccessResponse> => {
         try {
-            await api.patch(`/transfer-stock/${id}`, data);
+            // Map frontend schema to backend payload (same as create)
+            const formData = data as TransferFormData;
+            const payload: Record<string, unknown> = {
+                transfer_req_date: formData.docu_date ? new Date(formData.docu_date).toISOString() : undefined,
+                branch_id: formData.branch_id ? Number(formData.branch_id) : undefined,
+                doc_link_ic_id: formData.docu_item_no ? Number(formData.docu_item_no) : null,
+                created_by_emp_id: formData.save_emp_id ? Number(formData.save_emp_id) : undefined,
+                transfer_by_emp_id: formData.transfer_emp_id ? Number(formData.transfer_emp_id) : undefined,
+                remarks: formData.remark ?? '',
+                status: formData.status || 'DRAFT',
+            };
+
+            if (formData.lines && Array.isArray(formData.lines)) {
+                payload.lines = formData.lines.map(line => {
+                    const mapped: Record<string, unknown> = {
+                        item_id: Number(line.item_id),
+                        qty: Number(line.qty_ic),
+                        uom_id: Number(line.uom_id),
+                        from_warehouse_id: Number(line.from_warehouse_id),
+                        from_location_id: line.from_location_id ? Number(line.from_location_id) : null,
+                        to_warehouse_id: Number(line.to_warehouse_id),
+                        to_location_id: line.to_location_id ? Number(line.to_location_id) : null,
+                        remarks: line.remark || ''
+                    };
+                    if (line.lot_id) {
+                        mapped.lot_id = Number(line.lot_id);
+                        mapped.lot_balance_id = Number(line.lot_balance_id || line.lot_id);
+                    }
+                    return mapped;
+                });
+            }
+
+            // Remove undefined values
+            Object.keys(payload).forEach(key => {
+                if (payload[key] === undefined) delete payload[key];
+            });
+
+            await api.patch(`/transfer-stock/${id}`, payload);
             return { success: true };
         } catch (error) {
             logger.error('[TransferService] update error:', error);

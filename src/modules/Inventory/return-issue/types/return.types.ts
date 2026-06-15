@@ -12,6 +12,7 @@
 export interface ReturnIssueHeader {
     docu_item_id: string;          // uuid (PK - backend generate)
     docu_item_no?: string | null;  // uuid (FK → doc_link_ic)
+    issue_stock_id?: number;       // ID ของเอกสารใบเบิกต้นทาง
     issue_stk_no: string;          // varchar(25) - เลขที่เอกสารใบเบิก (อ้างอิง)
     reissue_stk_no: string;        // varchar(25) - เลขที่เอกสารรับคืนจากการเบิก
     docu_date: string;             // date
@@ -31,6 +32,7 @@ export interface ReturnIssueHeader {
 /** ข้อมูล Line ของใบรับคืนจากการเบิก (จาก Backend) */
 export interface ReturnIssueLine {
     docu_item_id?: string;         // uuid (FK → D7)
+    issue_stock_line_id?: number;  // ID ของรายการใบเบิกต้นทาง
     listno: number;                // smallint
     item_id: string;               // uuid (FK → dropdown สินค้า)
     item_code?: string;            // varchar(25) - auto-fill

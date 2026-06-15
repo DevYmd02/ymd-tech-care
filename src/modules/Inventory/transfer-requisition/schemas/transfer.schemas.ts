@@ -26,7 +26,7 @@ export const transferLineSchema = z.object({
     to_location_id: z.string().optional().nullable(),
     to_location_name: z.string().optional(),
     qty_ic: z
-        .union([z.number({ message: 'กรุณาระบุจำนวนเป็นตัวเลข' }), z.literal('')])
+        .union([z.number({ message: 'กรุณาระบุจำนวนเป็นตัวเลข' }), z.literal(''), z.nan()])
         .refine(v => v !== '' && !isNaN(Number(v)) && Number(v) > 0, { message: 'จำนวนต้องมากกว่า 0' }),
     lot_id: z.string().optional().nullable(),
     lot_balance_id: z.string().optional().nullable(),
@@ -49,7 +49,7 @@ export const transferLineSchema = z.object({
 // ====================================================================================
 
 export const transferHeaderSchema = z.object({
-    transfer__req_id: z.string().uuid().optional(),
+    transfer__req_id: z.string().min(1).optional(),
 
     transfer__req_no: z
         .string()
@@ -90,6 +90,8 @@ export const transferHeaderSchema = z.object({
     cancelflag: z.string().length(1).default('N'),
 
     cancle_remark: z.string().max(255).optional(),
+
+    status: z.string().optional().default('DRAFT'),
 
     lines: z
         .array(transferLineSchema)

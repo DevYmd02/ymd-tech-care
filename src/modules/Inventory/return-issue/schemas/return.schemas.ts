@@ -11,8 +11,8 @@ import { z } from 'zod';
 
 export const returnIssueLineSchema = z.object({
     _tempId: z.string().optional(),
-    issue_stock_line_id: z.number().optional(),
-    lot_balance_id: z.number().optional(),
+    issue_stock_line_id: z.number().optional().nullable(),
+    lot_balance_id: z.number().optional().nullable(),
     listno: z.number().int().min(1),
     item_id: z.string().min(1, 'กรุณาเลือกสินค้า'),
     item_code: z.string().optional(),
@@ -42,9 +42,9 @@ export const returnIssueLineSchema = z.object({
         .union([z.number(), z.literal('')])
         .refine(v => v !== '' && Number(v) >= 0, { message: 'ต้นทุนต้องมากกว่าหรือเท่ากับ 0' })
         .default(0),
-    good_amnt: z.number().min(0).default(0),
-    standard_buy_price: z.number().optional().default(0),
-    standard_cost: z.number().optional().default(0),
+    good_amnt: z.coerce.number().min(0).default(0),
+    standard_buy_price: z.coerce.number().optional().default(0),
+    standard_cost: z.coerce.number().optional().default(0),
     stock_flag: z.number().int().refine(v => [-1, 0, 1].includes(v), {
         message: 'ผลต่อ Stock ต้องเป็น -1, 0 หรือ 1',
     }).default(1), // รับคืนเข้าคลัง = เพิ่มสต็อก (1) เป็นค่าเริ่มต้น
@@ -63,8 +63,8 @@ export const returnIssueLineSchema = z.object({
 // ====================================================================================
 
 export const returnIssueHeaderSchema = z.object({
-    issue_stock_id: z.number().optional(),
-    docu_item_id: z.string().uuid().optional(),
+    issue_stock_id: z.number().optional().nullable(),
+    docu_item_id: z.string().min(1).optional(),
 
     docu_item_no: z
         .string()
@@ -112,7 +112,7 @@ export const returnIssueHeaderSchema = z.object({
         })
         .default(1), // ค่าเริ่มต้น เพิ่มคลัง สำหรับการรับคืน
 
-    amnt_total: z.number().min(0).default(0),
+    amnt_total: z.coerce.number().min(0).default(0),
 
     remark: z.string().max(255).optional(),
 
