@@ -257,6 +257,7 @@ export const TransferService = {
             if (formData.lines && Array.isArray(formData.lines)) {
                 payload.lines = formData.lines.map(line => {
                     const mapped: Record<string, unknown> = {
+                        transfer_req_line_id: line.transfer_req_line_id ? Number(line.transfer_req_line_id) : undefined,
                         item_id: Number(line.item_id),
                         qty: Number(line.qty_ic),
                         uom_id: Number(line.uom_id),

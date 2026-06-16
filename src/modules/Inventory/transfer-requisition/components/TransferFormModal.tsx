@@ -65,6 +65,9 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [pendingData, setPendingData] = useState<TransferHeaderFormData | null>(null);
 
+    const documentStatus = formMethods.watch('status');
+    const editButtonText = (documentStatus === 'REJECTED' || documentStatus === 'REJECT') ? 'บันทึกและส่งอนุมัติใหม่' : 'บันทึกการแก้ไข';
+
     // 🔍 Search Modals state
     const [isProductSearchOpen, setIsProductSearchOpen] = useState(false);
     const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null);
@@ -336,7 +339,7 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
                         className="h-10 px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
                     >
                         {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                        {isSaving ? 'กำลังบันทึก...' : (isEditMode ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล')}
+                        {isSaving ? 'กำลังบันทึก...' : (isEditMode ? editButtonText : 'บันทึกข้อมูล')}
                     </button>
                 )}
             </div>
@@ -433,8 +436,8 @@ export const TransferFormModal: React.FC<TransferFormModalProps> = ({
                     isOpen={isConfirmOpen}
                     onClose={() => !isSaving && setIsConfirmOpen(false)}
                     onConfirm={handleConfirmSave}
-                    title="ยืนยันการบันทึกข้อมูล"
-                    description="คุณต้องการบันทึกข้อมูลใบขอโอนย้ายนี้ใช่หรือไม่?"
+                    title={isEditMode && (documentStatus === 'REJECTED' || documentStatus === 'REJECT') ? "ยืนยันการส่งอนุมัติใหม่" : "ยืนยันการบันทึกข้อมูล"}
+                    description={isEditMode && (documentStatus === 'REJECTED' || documentStatus === 'REJECT') ? "คุณต้องการบันทึกและส่งเอกสารใบขอโอนย้ายนี้เพื่ออนุมัติใหม่ใช่หรือไม่?" : "คุณต้องการบันทึกข้อมูลใบขอโอนย้ายนี้ใช่หรือไม่?"}
                     confirmText="ยืนยันการบันทึก"
                     cancelText="ยกเลิก"
                     variant="info"

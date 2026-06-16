@@ -260,7 +260,7 @@ export const TransferApproveFormLines: React.FC<TransferApproveFormLinesProps> =
                             {...register('reject_reason')}
                             rows={3}
                             placeholder="โปรดระบุเหตุผลในการปฏิเสธ..."
-                            className={`w-full p-3 text-sm bg-white dark:bg-gray-800 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.reject_reason ? 'border-red-500 focus:ring-red-500/20' : 'border-red-300 dark:border-red-900/50 focus:border-red-500 focus:ring-red-500/20'}`}
+                            className={`w-full p-3 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.reject_reason ? 'border-red-500 focus:ring-red-500/20' : 'border-red-300 dark:border-red-900/50 focus:border-red-500 focus:ring-red-500/20'}`}
                         />
                         {errors.reject_reason && (
                             <span className="text-xs text-red-500">{errors.reject_reason.message}</span>

@@ -24,6 +24,10 @@ export interface ICOption {
     negative_stock_mode: number;
     /** ตรวจสอบจำนวนจอง: 1=ยอดคงเหลือ, 2=ยอดจอง */
     quantity_validation_flag: number;
+    /** ผลต่อคลังสินค้า: 0=ไม่กระทบ, 1=เพิ่มคลัง, 2=ลดคลัง */
+    stock_effect?: number;
+    /** รหัสเอกสารอ้างอิง */
+    doc_link_ic_id?: number;
 }
 
 export interface StockValidationResult {
@@ -167,4 +171,5 @@ export interface SystemDocument {
     system_document_name_eng?: string;
     sort_order?: number;
     is_active?: boolean;
+    stock_effect?: number;
 }

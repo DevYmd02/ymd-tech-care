@@ -124,6 +124,7 @@ export const TransferFormLines: React.FC<TransferFormLinesProps> = React.memo(
 
                                         {/* Item Code */}
                                         <td className="p-2 sticky left-12 z-10 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800">
+                                            <input type="hidden" {...register(`lines.${index}.transfer_req_line_id`)} />
                                             <div className="flex gap-1">
                                                 <input
                                                     {...register(`lines.${index}.item_code`)}

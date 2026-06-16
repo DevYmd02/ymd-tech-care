@@ -110,6 +110,8 @@ const IssueListPage = React.lazy(() => import('@/modules/Inventory/issue/IssueLi
 const ReturnListPage = React.lazy(() => import('@/modules/Inventory/return-issue/ReturnListPage'));
 const TransferListPage = React.lazy(() => import('@/modules/Inventory/transfer-requisition/TransferListPage'));
 const TransferApprovalListPage = React.lazy(() => import('@/modules/Inventory/transfer-requisition-approval/TransferApprovalListPage'));
+const TransferOutListPage = React.lazy(() => import('@/modules/Inventory/transfer-out/TransferOutListPage'));
+const TransferInListPage = React.lazy(() => import('@/modules/Inventory/transfer-in/TransferInListPage'));
 const InventoryDashboard = React.lazy(() => import('@/modules/Inventory/dashboard/InventoryDashboard'));
 // Currency Pages
 const CurrencyCodeList = React.lazy(() => import('@/modules/master-data/currency/pages/code/CurrencyCodeList'));
@@ -401,6 +403,8 @@ function AppContent() {
               <Route path="return" element={<ReturnListPage />} />
               <Route path="transfer-requisition" element={<TransferListPage />} />
               <Route path="transfer-requisition-approval" element={<TransferApprovalListPage />} />
+              <Route path="transfer-out" element={<TransferOutListPage />} />
+              <Route path="transfer-in" element={<TransferInListPage />} />
             </Route>
 
             {/* ==================== PLACEHOLDER ROUTES ==================== */}
