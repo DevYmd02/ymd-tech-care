@@ -33,7 +33,7 @@ interface SmartTableProps<TData> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     columns: ColumnDef<TData, any>[]; // polymorphism required
     isLoading?: boolean;
-    pagination: {
+    pagination?: {
         pageIndex: number;
         pageSize: number;
         totalCount: number;
@@ -165,9 +165,9 @@ export function SmartTable<TData>({
     }, [visibleColumns, stickyColumns]);
 
     // Pagination calculations
-    const totalPages = Math.ceil(pagination.totalCount / pagination.pageSize);
-    const startRow = (pagination.pageIndex - 1) * pagination.pageSize + 1;
-    const endRow = Math.min(pagination.pageIndex * pagination.pageSize, pagination.totalCount);
+    const totalPages = pagination ? Math.ceil(pagination.totalCount / pagination.pageSize) : 0;
+    const startRow = pagination ? (pagination.pageIndex - 1) * pagination.pageSize + 1 : 0;
+    const endRow = pagination ? Math.min(pagination.pageIndex * pagination.pageSize, pagination.totalCount) : 0;
 
     return (
         <div className={`flex flex-col h-full ${styles.bg.surface} rounded-lg shadow-sm border ${styles.border.default} ${className}`}>
@@ -253,7 +253,7 @@ export function SmartTable<TData>({
                                 <td colSpan={columns.length} className="p-0">
                                     <TableSkeleton 
                                         hasHeader={false} 
-                                        rows={pagination.pageSize || 10} 
+                                        rows={pagination?.pageSize || 10} 
                                         cols={Math.min(6, columns.length)} 
                                         className="border-0 rounded-none shadow-none" 
                                     />
@@ -339,7 +339,7 @@ export function SmartTable<TData>({
                 </div>
  
             {/* Pagination Footer */}
-            {showPagination && (
+            {showPagination && pagination && (
                 <div className={`px-4 py-3 ${styles.bg.subtle} border-t ${styles.border.default} flex flex-col sm:flex-row items-center justify-between gap-4 select-none`}>
                     
                     {/* Left: Info & Size Selector */}

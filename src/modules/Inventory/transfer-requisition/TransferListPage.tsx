@@ -63,6 +63,13 @@ function StatusBadge({ status, flag }: { status?: string; flag: string }) {
             </span>
         );
     }
+    if (status === 'REJECTED') {
+        return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-200 dark:border-red-800">
+                ไม่อนุมัติ
+            </span>
+        );
+    }
     return (
         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
             แบบร่าง
@@ -158,24 +165,24 @@ export default function TransferListPage() {
             const { header, lines } = doc;
             
             const payload = {
-                transfer_req_date: header.docu_date || new Date().toISOString(),
-                branch_id: Number(header.branch_id),
-                doc_link_ic_id: (header as unknown as Record<string, unknown>).doc_link_ic_id ? Number((header as unknown as Record<string, unknown>).doc_link_ic_id) : null,
-                created_by_emp_id: Number(header.save_emp_id) || 1,
-                transfer_by_emp_id: Number(header.transfer_emp_id) || 1,
-                remarks: header.remark || '',
+                docu_date: header.docu_date || new Date().toISOString(),
+                branch_id: String(header.branch_id || ''),
+                docu_item_no: String(header.doc_link_ic_id || header.doc_type_no || header.docu_item_no || 0),
+                save_emp_id: String(header.save_emp_id || ''),
+                transfer_emp_id: String(header.transfer_emp_id || ''),
+                remark: header.remark || '',
                 status: 'PENDING',
                 lines: lines.map(line => ({
-                    item_id: Number(line.item_id),
-                    qty: Number(line.qty_ic),
-                    uom_id: Number(line.uom_id),
-                    from_warehouse_id: Number(line.from_warehouse_id),
-                    from_location_id: line.from_location_id ? Number(line.from_location_id) : null,
-                    to_warehouse_id: Number(line.to_warehouse_id),
-                    to_location_id: line.to_location_id ? Number(line.to_location_id) : null,
-                    lot_id: line.lot_id ? Number(line.lot_id) : null,
-                    lot_balance_id: (line as unknown as Record<string, unknown>).lot_balance_id ? Number((line as unknown as Record<string, unknown>).lot_balance_id) : null,
-                    remarks: line.remark || ''
+                    item_id: String(line.item_id),
+                    qty_ic: Number(line.qty_ic),
+                    uom_id: String(line.uom_id),
+                    from_warehouse_id: String(line.from_warehouse_id),
+                    from_location_id: line.from_location_id ? String(line.from_location_id) : null,
+                    to_warehouse_id: String(line.to_warehouse_id),
+                    to_location_id: line.to_location_id ? String(line.to_location_id) : null,
+                    lot_id: line.lot_id ? String(line.lot_id) : null,
+                    lot_balance_id: (line as unknown as Record<string, unknown>).lot_balance_id ? String((line as unknown as Record<string, unknown>).lot_balance_id) : null,
+                    remark: line.remark || ''
                 }))
             };
 
@@ -292,10 +299,10 @@ export default function TransferListPage() {
                         <button
                             onClick={() => handleEdit(row.original.transfer__req_id)}
                             className="px-2.5 py-1 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-md transition-colors flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
-                            title="แก้ไข"
+                            title={row.original.status === 'REJECTED' || row.original.status === 'REJECT' ? "แก้ไขและส่งอนุมัติใหม่" : "แก้ไข"}
                         >
                             <Edit size={14} />
-                            แก้ไข
+                            {row.original.status === 'REJECTED' || row.original.status === 'REJECT' ? "แก้ไขและส่งอนุมัติใหม่" : "แก้ไข"}
                         </button>
                         {row.original.status === 'DRAFT' && row.original.cancelflag !== 'Y' && (
                             <button

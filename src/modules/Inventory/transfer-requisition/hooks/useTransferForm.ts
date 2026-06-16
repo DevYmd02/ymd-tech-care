@@ -334,6 +334,7 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
 
                         return {
                             _tempId: `edit-${l.transfer__req_id ?? i}`,
+                            transfer_req_line_id: (l.transfer__req_line_id || (l as unknown as Record<string, unknown>).id || (l as unknown as Record<string, unknown>).transfer_req_line_id) as string | number | undefined,
                             listno: l.listno ?? i + 1,
                             item_id: l.item_id,
                             item_code: l.item_code || String(itemMap.get(itemId)?.item_code || itemMap.get(itemId)?.item_no || ''),
@@ -430,6 +431,7 @@ export function useTransferForm({ isOpen, onClose, editId, onSuccess }: UseTrans
 
             const payload = {
                 ...data,
+                status: (data.status === 'REJECTED' || data.status === 'REJECT') ? 'PENDING' : data.status,
                 lines: data.lines.map(l => ({
                     ...l,
                     uom_id: l.item_uom_id || l.uom_id,

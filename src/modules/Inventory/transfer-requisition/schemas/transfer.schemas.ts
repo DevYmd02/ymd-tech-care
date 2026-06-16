@@ -11,6 +11,7 @@ import { z } from 'zod';
 
 export const transferLineSchema = z.object({
     _tempId: z.string().optional(),
+    transfer_req_line_id: z.union([z.string(), z.number()]).optional(),
     listno: z.number().int().min(1),
     item_id: z.string().min(1, 'กรุณาเลือกสินค้า'),
     item_code: z.string().optional(),

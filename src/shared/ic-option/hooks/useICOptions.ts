@@ -77,6 +77,9 @@ export function useICOptions(
                 const branchOptionId = branchOption.ic_option_id || (branchOption as Record<string, unknown>).id;
                 let docSpecificOption: Record<string, number> | undefined;
 
+                let docLinkIcId: number | undefined;
+                let stockEffect: number | undefined;
+
                 if (branchOptionId) {
                     const [listItems, systemDocs] = await Promise.all([
                         ICOptionListService.getByICOptionId(branchOptionId as string),
@@ -90,6 +93,9 @@ export function useICOptions(
                     );
 
                     if (matchedDoc) {
+                        docLinkIcId = matchedDoc.system_document_id;
+                        stockEffect = matchedDoc.stock_effect;
+                        
                         docSpecificOption = listItems.find(
                             (item) =>
                                 Number(item.system_document_id) ===
@@ -115,6 +121,8 @@ export function useICOptions(
                         branchOption.check_qty_flag,
                         DEFAULT_IC_OPTIONS.quantity_validation_flag
                     ),
+                    doc_link_ic_id: docLinkIcId,
+                    stock_effect: stockEffect,
                 };
 
                 logger.debug(

@@ -490,9 +490,9 @@ export function useTransferApprovalForm({
     // ── Submit Handler ────────────────────────────────────────────────────────────
     const onSubmit = useCallback(
         async (data: TransferApprovalFormData) => {
-            // Auto-detect partial approval: if any line has appv_stock_qty < qty_ic
-            const isPartial = data.lines.some(l => Number(l.appv_stock_qty) < Number(l.qty_ic));
-            const resolvedFlag: 'Y' | 'P' | 'N' = isPartial ? 'P' : 'Y';
+            // Auto-detect partial approval: if any line's total approved (previous + current) is less than requested qty
+            const isPartial = data.lines.some(l => (Number(l.approved_qty || 0) + Number(l.appv_stock_qty || 0)) < Number(l.qty_ic));
+            const resolvedFlag: 'Y' | 'P' | 'N' = data.appv_flag === 'N' ? 'N' : (isPartial ? 'P' : 'Y');
 
             const payload: TransferApprovalFormData = {
                 ...data,
