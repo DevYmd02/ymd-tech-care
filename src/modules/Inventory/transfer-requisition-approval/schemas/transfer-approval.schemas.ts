@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 export const transferApprovalLineSchema = z.object({
+    transfer_req_line_id: z.union([z.string(), z.number()]).optional(),
     listno: z.number().int(),
     item_id: z.string().min(1, 'กรุณาระบุสินค้า'),
     item_code: z.string().optional(),
@@ -16,11 +17,13 @@ export const transferApprovalLineSchema = z.object({
     out_loca_id: z.string().optional().nullable(),
     out_loca_name: z.string().optional(),
     qty_ic: z.number().min(0),
+    approved_qty: z.number().optional().default(0),
     appv_stock_qty: z
         .union([z.number(), z.literal('')])
         .refine(v => v !== '' && Number(v) >= 0, { message: 'จำนวนอนุมัติต้องไม่น้อยกว่า 0' })
         .transform(v => Number(v)),
     lot_id: z.string().optional().nullable(),
+    lot_balance_id: z.string().optional().nullable(),
     lot_no: z.string().optional(),
     stock_flag: z.number().int().default(0),
     remark: z.string().max(255).optional(),
@@ -32,7 +35,7 @@ export const transferApprovalSchema = z.object({
     transfer_req_id: z.string().min(1, 'กรุณาเลือกเอกสารขอโอนย้ายอ้างอิง'),
     transfer_req_no: z.string().optional(),
     appv_date: z.string().min(1, 'กรุณาระบุวันที่อนุมัติ'),
-    emp_dept_id: z.string().min(1, 'กรุณาเลือกแผนก'),
+    emp_dept_id: z.string().optional().nullable(),
     job_id: z.string().optional().nullable(),
     remark: z.string().max(255).optional(),
     branch_id: z.string().min(1, 'กรุณาเลือกสาขา'),
@@ -40,13 +43,17 @@ export const transferApprovalSchema = z.object({
     cancel_date: z.string().optional().nullable(),
     cancel_flag: z.string().length(1).default('N'),
     cancel_remark: z.string().max(255).optional(),
+    reject_reason: z.string().optional(),
     docu_date: z.string().optional().nullable(),
     docu_item_name: z.string().optional().nullable(),
     transfer_emp_id: z.string().optional().nullable(),
     transfer_emp_name: z.string().optional().nullable(),
     save_emp_id: z.string().min(1, 'กรุณาเลือกผู้บันทึก'),
+    save_emp_name: z.string().optional().nullable(),
     appv_emp_id: z.string().min(1, 'กรุณาเลือกผู้อนุมัติ'),
+    appv_emp_name: z.string().optional().nullable(),
     stock_effect_ic: z.number().int().default(0),
+    doc_link_ic_id: z.union([z.string(), z.number()]).optional(),
     lines: z.array(transferApprovalLineSchema).min(1, 'กรุณาระบุรายการอนุมัติอย่างน้อย 1 รายการ'),
 });
 

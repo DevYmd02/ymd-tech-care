@@ -37,6 +37,7 @@ export const RequisitionApproveFormModal: React.FC<RequisitionApproveFormModalPr
         originalStatus,
         handleApprove,
         handleReject,
+        onClose: handleClose,
     } = useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSuccess });
 
     const { watch, setValue } = formMethods;
@@ -94,7 +95,7 @@ export const RequisitionApproveFormModal: React.FC<RequisitionApproveFormModalPr
             <div className="flex gap-2">
                 <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     disabled={isSaving}
                     className="h-10 px-6 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
                 >
@@ -143,7 +144,7 @@ export const RequisitionApproveFormModal: React.FC<RequisitionApproveFormModalPr
         <>
             <WindowFormLayout
                 isOpen={isOpen}
-                onClose={onClose}
+                onClose={handleClose}
                 title="พิจารณาอนุมัติใบขอเบิก (Requisition Approval)"
                 headerColor="bg-emerald-700"
                 footer={modalFooter}

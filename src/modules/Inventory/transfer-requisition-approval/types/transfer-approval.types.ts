@@ -70,10 +70,14 @@ export interface TransferApprovalListItem {
     transfer_req_id: string;
     transfer_req_no?: string;
     appv_date: string;
+    appv_transfer_date?: string;
     branch_name?: string;
     save_emp_name?: string;
+    transfer_emp_name?: string;
     appv_emp_name?: string;
+    approval_emp_id?: string | number;
     appv_flag: string;
+    status?: string;
     cancel_flag: string;
 }
 

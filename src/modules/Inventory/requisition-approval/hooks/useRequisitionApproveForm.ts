@@ -15,6 +15,7 @@ import { LocationService } from '@/modules/master-data/inventory/services/invent
 import { ICDocumentService } from '../../shared/services/ic-document.service';
 import { useICOptions } from '@/shared/ic-option';
 import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
+import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard';
 
 interface UseRequisitionApproveFormOptions {
     isOpen: boolean;
@@ -60,6 +61,13 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
     });
 
     const { reset } = formMethods;
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: formMethods.formState.isDirty,
+        enabled: isOpen,
+        onSafeClose: onClose
+    });
 
     // Load master data queries
     const { data: employees = [], isLoading: isLoadingEmployees } = useQuery({
@@ -374,6 +382,8 @@ export function useRequisitionApproveForm({ isOpen, onClose, requisitionId, onSu
         handleReject: useCallback((reason: string) => {
             approveMutation.mutate({ status: 'REJECTED', rejectReason: reason });
         }, [approveMutation]),
+        onClose: handleCloseAttempt,
+        blocker,
     };
 }
 

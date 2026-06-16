@@ -23,12 +23,15 @@ export interface TransferRequisitionHeader {
     cancle_remark?: string;        // varchar(255)
     status?: string;               // varchar(20) DRAFT, PENDING, etc
     docu_item_no?: string;
+    doc_type_name?: string;
+    transfer_docu_item_name?: string;
     doc_link_ic_id?: number | string;
     doc_type_no?: number;
 }
 
 /** ข้อมูล Line ของใบขอโอนย้ายสินค้า (จาก Backend) */
 export interface TransferRequisitionLine {
+    transfer__req_line_id?: number | string; // PK
     transfer__req_id?: string;     // uuid (FK → D9)
     listno: number;                // smallint
     item_id: string;               // uuid (FK → dropdown สินค้า)
@@ -48,6 +51,7 @@ export interface TransferRequisitionLine {
     lot_balance_id?: string | null; // uuid
     lot_no?: string;               // varchar(255) - auto-fill
     stock_flag: number;            // smallint
+    approved_qty?: number;         // numeric(18,3) - already approved qty
     remark?: string;               // varchar(255)
 }
 

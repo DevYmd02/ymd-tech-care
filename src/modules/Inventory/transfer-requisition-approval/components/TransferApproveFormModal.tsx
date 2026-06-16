@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { FormProvider, type SubmitHandler } from 'react-hook-form';
-import { ClipboardList, Save, Loader2 } from 'lucide-react';
+import { ClipboardList, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { WindowFormLayout } from '@ui';
 import { ConfirmationModal } from '@system/ConfirmationModal';
 import { TransferApproveHeader } from './TransferApproveHeader';
@@ -53,6 +53,7 @@ export const TransferApproveFormModal: React.FC<TransferApproveFormModalProps> =
         branches,
         employees,
         uoms,
+        icOptions,
         setValue,
     } = useTransferApprovalForm({ 
         isOpen, 
@@ -62,8 +63,13 @@ export const TransferApproveFormModal: React.FC<TransferApproveFormModalProps> =
         onSuccess 
     });
 
-    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+    const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
+    const [isRejectConfirmOpen, setIsRejectConfirmOpen] = useState(false);
     const [pendingData, setPendingData] = useState<TransferApprovalFormData | null>(null);
+    const [isPartialApproval, setIsPartialApproval] = useState(false);
+
+    const appvFlag = formMethods.watch('appv_flag');
+    const rejectReason = formMethods.watch('reject_reason') || '';
 
     const handleSelectRequisition = (reqId: string, item?: TransferRequisitionListItem) => {
         setSelectedRequisitionId(reqId);
@@ -73,13 +79,46 @@ export const TransferApproveFormModal: React.FC<TransferApproveFormModalProps> =
     };
 
     const onFormSubmit: SubmitHandler<TransferApprovalFormData> = (data) => {
+        if (data.appv_flag === 'N') {
+            setIsRejectConfirmOpen(true);
+        } else {
+            const partial = data.lines.some(l => Number(l.appv_stock_qty) < Number(l.qty_ic));
+            setIsPartialApproval(partial);
+            setIsApproveConfirmOpen(true);
+        }
         setPendingData(data);
-        setIsConfirmOpen(true);
+    };
+
+    const handleRejectClick = () => {
+        if (appvFlag !== 'N') {
+            setValue('appv_flag', 'N');
+            return;
+        }
+
+        if (!rejectReason.trim()) {
+            formMethods.setError('reject_reason', {
+                type: 'manual',
+                message: 'กรุณาระบุเหตุผลในการปฏิเสธการอนุมัติ',
+            });
+            return;
+        }
+
+        formMethods.handleSubmit(onFormSubmit, handleFormError)();
+    };
+
+    const handleCancelRejectMode = () => {
+        setValue('appv_flag', 'Y');
+        setValue('reject_reason', '');
+        formMethods.clearErrors('reject_reason');
     };
 
     const handleConfirmSave = async () => {
         if (!pendingData || isSaving) return;
-        await onSubmit(pendingData);
+        const dataToSubmit = { ...pendingData };
+        if (dataToSubmit.appv_flag === 'N') {
+            dataToSubmit.lines = dataToSubmit.lines.map(line => ({ ...line, appv_stock_qty: 0 }));
+        }
+        await onSubmit(dataToSubmit);
     };
 
     const formTitle = readOnly
@@ -101,15 +140,38 @@ export const TransferApproveFormModal: React.FC<TransferApproveFormModalProps> =
                     {isEditMode ? 'ปิด' : 'ยกเลิก'}
                 </button>
                 {!readOnly && (
-                    <button 
-                        type="submit" 
-                        form="transfer-approve-form"
-                        disabled={isSaving}
-                        className="h-10 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
-                    >
-                        {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                        {isSaving ? 'กำลังบันทึก...' : (isEditMode ? 'บันทึกการแก้ไข' : 'บันทึกข้อมูล')}
-                    </button>
+                    <>
+                        {appvFlag === 'N' && (
+                            <button
+                                type="button"
+                                onClick={handleCancelRejectMode}
+                                disabled={isSaving}
+                                className="h-10 px-6 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
+                            >
+                                ยกเลิกปฏิเสธ
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={handleRejectClick}
+                            disabled={isSaving}
+                            className="h-10 px-6 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/35 border border-red-200 dark:border-red-800/50 text-red-600 dark:text-red-400 rounded-lg text-sm font-bold shadow-sm transition-all flex items-center gap-2"
+                        >
+                            <XCircle size={18} />
+                            {appvFlag === 'N' ? 'ยืนยันการปฏิเสธ' : 'ปฏิเสธ (Reject)'}
+                        </button>
+                        {appvFlag !== 'N' && (
+                            <button
+                                type="submit"
+                                form="transfer-approve-form"
+                                disabled={isSaving}
+                                className="h-10 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
+                                {isSaving ? 'กำลังบันทึก...' : (isEditMode ? 'บันทึกการแก้ไข' : 'อนุมัติ (Approve)')}
+                            </button>
+                        )}
+                    </>
                 )}
             </div>
         </div>
@@ -173,6 +235,7 @@ export const TransferApproveFormModal: React.FC<TransferApproveFormModalProps> =
                                                 id: String(u.uom_id ?? u.id ?? ''),
                                                 name: u.uom_name || ''
                                             }))}
+                                            icOptions={icOptions}
                                         />
                                     </div>
                                 </div>
@@ -182,14 +245,29 @@ export const TransferApproveFormModal: React.FC<TransferApproveFormModalProps> =
                 </FormProvider>
 
                 <ConfirmationModal 
-                    isOpen={isConfirmOpen}
-                    onClose={() => !isSaving && setIsConfirmOpen(false)}
+                    isOpen={isApproveConfirmOpen}
+                    onClose={() => !isSaving && setIsApproveConfirmOpen(false)}
                     onConfirm={handleConfirmSave}
-                    title="ยืนยันการอนุมัติข้อมูล"
-                    description="คุณต้องการบันทึกข้อมูลการอนุมัติใบขอโอนย้ายนี้ใช่หรือไม่?"
-                    confirmText="ยืนยันการบันทึก"
+                    title={isPartialApproval ? 'ยืนยันการอนุมัติบางส่วน' : 'ยืนยันการอนุมัติข้อมูล'}
+                    description={isPartialApproval
+                        ? 'จำนวนอนุมัติน้อยกว่าจำนวนที่ขอในบางรายการ เอกสารนี้จะถูกบันทึกเป็นสถานะ "อนุมัติบางส่วน" และสามารถอนุมัติส่วนที่เหลือได้ภายหลัง ต้องการดำเนินการต่อหรือไม่?'
+                        : 'คุณต้องการบันทึกข้อมูลการอนุมัติใบขอโอนย้ายนี้ใช่หรือไม่?'
+                    }
+                    confirmText={isPartialApproval ? 'ยืนยันอนุมัติบางส่วน' : 'ยืนยันการบันทึก'}
                     cancelText="ยกเลิก"
-                    variant="info"
+                    variant={isPartialApproval ? 'warning' : 'info'}
+                    isLoading={isSaving}
+                />
+
+                <ConfirmationModal
+                    isOpen={isRejectConfirmOpen}
+                    onClose={() => !isSaving && setIsRejectConfirmOpen(false)}
+                    onConfirm={handleConfirmSave}
+                    title="ยืนยันการปฏิเสธการโอนย้าย"
+                    description="คุณต้องการปฏิเสธใบขอโอนย้ายนี้ใช่หรือไม่? สถานะของเอกสารจะเปลี่ยนเป็น 'ไม่อนุมัติ' และจำนวนที่ถูกอนุมัติจะเป็น 0 ทั้งหมด"
+                    confirmText="ยืนยันปฏิเสธ"
+                    cancelText="ยกเลิก"
+                    variant="danger"
                     isLoading={isSaving}
                 />
 

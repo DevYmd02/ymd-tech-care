@@ -1,0 +1,217 @@
+import React from 'react';
+import { createPortal } from 'react-dom';
+import { useQuery } from '@tanstack/react-query';
+import { X, ShieldCheck, Clock, AlertCircle } from 'lucide-react';
+import api from '@/core/api/api';
+import { formatThaiDate } from '@/shared/utils/dateUtils';
+import { MasterDataService } from '@/modules/master-data/services/master-data.service';
+import { FormSkeleton } from '@ui';
+
+interface TransferApprovalHistoryModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    requisitionId: string | number;
+    requisitionNo?: string;
+}
+
+export const TransferApprovalHistoryModal: React.FC<TransferApprovalHistoryModalProps> = ({
+    isOpen,
+    onClose,
+    requisitionId,
+    requisitionNo,
+}) => {
+    const { data, isLoading, error } = useQuery({
+        queryKey: ['transfer-approvals-history', requisitionId, requisitionNo],
+        queryFn: async () => {
+            // Fetch the approvals history, employees, and UOMs
+            const [res, employees, uoms] = await Promise.all([
+                api.get<unknown>('/appv-transfer-stock'),
+                MasterDataService.getEmployees().catch(() => []),
+                MasterDataService.getUOMs().catch(() => [])
+            ]);
+
+            const resData = (res as Record<string, unknown>)?.data || res;
+            const allRecords = (Array.isArray(resData) ? resData : (((resData as Record<string, unknown> | undefined)?.items || []))) as Record<string, unknown>[];
+            const employeesList = employees as unknown as Record<string, unknown>[];
+            const uomsList = uoms as unknown as Record<string, unknown>[];
+            
+            // Filter records for this requisition
+            const filtered = allRecords.filter(rec => 
+                String(rec.transfer_req_id) === String(requisitionId) ||
+                (requisitionNo && String(rec.transfer_req_no) === String(requisitionNo))
+            );
+
+            // Fetch requisition details to get lines and map UOMs
+            const reqRes = await api.get<unknown>(`/transfer-stock/${requisitionId}`).catch(() => null);
+            const reqDetail = (reqRes as Record<string, unknown>)?.data || reqRes;
+            
+            let uomName = 'ชิ้น';
+
+            if (reqDetail && typeof reqDetail === 'object') {
+                const reqObj = reqDetail as Record<string, unknown>;
+                const lines = (reqObj.lines || reqObj.transferStockLines || reqObj.transferRequisitionLines || []) as Record<string, unknown>[];
+
+                if (lines.length > 0) {
+                    const firstLine = lines[0];
+                    const matchedUom = uomsList.find(u => Number(u.uom_id || u.id) === Number(firstLine.uom_id || firstLine.item_uom_id));
+                    if (matchedUom) {
+                        uomName = String(matchedUom.uom_name || matchedUom.uom_name_en || 'ชิ้น');
+                    }
+                    
+                    const uniqueUomIds = [...new Set(lines.map(l => Number(l.uom_id || l.item_uom_id)))];
+                    if (uniqueUomIds.length > 1) {
+                        uomName = 'รายการ';
+                    }
+                }
+            }
+
+            return filtered.map(rec => {
+                const emp = employeesList.find(e => Number(e.employee_id || e.id) === Number(rec.approval_emp_id || rec.appv_emp_id));
+                const empName = emp ? (emp.employee_fullname as string || `${(emp.employee_firstname_th as string) || ''} ${(emp.employee_lastname_th as string) || ''}`.trim()) : '-';
+                
+                // Map the new API status correctly
+                let recStatus = String(rec.status || rec.appv_flag);
+                if (recStatus === 'Y') recStatus = 'APPROVED';
+                else if (recStatus === 'N') recStatus = 'REJECTED';
+                else if (recStatus === 'P' || recStatus === 'PARTIAL_APPROVED') recStatus = 'PARTIAL';
+                
+                if (!recStatus || recStatus === 'undefined') recStatus = 'PENDING';
+
+                // Calculate qty_total from appvTransferLines
+                let qtyTotal = 0;
+                const linesArray = rec.appvTransferLines as Record<string, unknown>[] || [];
+                if (Array.isArray(linesArray) && linesArray.length > 0) {
+                    qtyTotal = linesArray.reduce((sum, line) => sum + Number(line.qty_approved || 0), 0);
+                }
+
+                return {
+                    appv_transfer_id: Number(rec.appv_transfer_id || rec.id || 0),
+                    appv_transfer_no: String(rec.appv_transfer_no || rec.approval_no || '-'),
+                    appv_transfer_date: String(rec.appv_transfer_date || rec.appv_date || rec.approved_date || rec.approve_date || ''),
+                    approval_emp_name: empName,
+                    status: recStatus,
+                    remarks: String(rec.remarks || rec.remark || ''),
+                    qty_total: recStatus === 'REJECTED' ? 0 : qtyTotal,
+                    uom_name: uomName
+                };
+            });
+        },
+        enabled: isOpen && (!!requisitionId || !!requisitionNo),
+        staleTime: 5 * 1000,
+    });
+
+    if (!isOpen) return null;
+
+    const approvals = data || [];
+
+    return createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-4xl border border-gray-200 dark:border-gray-700 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+                
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700 bg-emerald-50 dark:bg-emerald-900/10 rounded-t-lg">
+                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                        <ShieldCheck className="w-5 h-5" />
+                        <h3 className="font-semibold text-lg">ประวัติการอนุมัติเอกสาร {requisitionNo ? `(${requisitionNo})` : ''}</h3>
+                    </div>
+                    <button 
+                        onClick={onClose}
+                        className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors p-1 rounded-full hover:bg-white/50 dark:hover:bg-black/20"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div className="p-6 overflow-y-auto flex-1">
+                    {isLoading ? (
+                        <FormSkeleton rows={2} />
+                    ) : error ? (
+                        <div className="flex flex-col items-center justify-center py-10 text-red-500">
+                            <AlertCircle className="w-10 h-10 mb-2" />
+                            <span>เกิดข้อผิดพลาดในการดึงข้อมูล</span>
+                        </div>
+                    ) : approvals.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                            <Clock className="w-12 h-12 mb-3 stroke-[1.5]" />
+                            <p className="font-medium">ยังไม่มีประวัติการอนุมัติสำหรับใบขอโอนย้ายนี้</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">รายการนี้อาจยังไม่ได้ผ่านกระบวนการ หรือรอการตัดสินใจ</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {/* Summary Stats */}
+                            <div className="flex items-center justify-between bg-gray-50 dark:bg-slate-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">จำนวนที่อนุมัติแล้ว:</span>
+                                <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">{approvals.length} ชุด (Transfer)</span>
+                            </div>
+
+                            {/* Table View */}
+                            <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg">
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-auto">
+                                    <thead className="bg-gray-50 dark:bg-slate-800 text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                                        <tr>
+                                            <th className="px-4 py-3 text-center w-12">ลำดับ</th>
+                                            <th className="px-4 py-3 text-left">เลขที่อนุมัติใบขอโอนย้าย</th>
+                                            <th className="px-4 py-3 text-left">วันที่อนุมัติ</th>
+                                            <th className="px-4 py-3 text-left">ผู้อนุมัติ</th>
+                                            <th className="px-4 py-3 text-right">จำนวนรวม</th>
+                                            <th className="px-4 py-3 text-left">สถานะ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-800 text-sm">
+                                        {approvals.map((av, index) => (
+                                            <tr key={av.appv_transfer_id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                <td className="px-4 py-3 text-center text-gray-500">{index + 1}</td>
+                                                <td className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                                                    {av.appv_transfer_no || '-'}
+                                                </td>
+                                                <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                                    {av.appv_transfer_date && av.appv_transfer_date !== 'null' ? formatThaiDate(av.appv_transfer_date) : '-'}
+                                                </td>
+                                                <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                                                    {av.approval_emp_name || '-'}
+                                                </td>
+                                                <td className="px-4 py-3 text-right font-bold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                                                    {new Intl.NumberFormat('th-TH').format(Number(av.qty_total || 0))} {av.uom_name}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold
+                                                        ${av.status === 'APPROVED' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : ''}
+                                                        ${av.status === 'REJECTED' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800' : ''}
+                                                        ${av.status !== 'APPROVED' && av.status !== 'REJECTED' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800' : ''}
+                                                    `}>
+                                                        {av.status === 'APPROVED' ? 'อนุมัติแล้ว' : 
+                                                         av.status === 'REJECTED' ? 'ไม่อนุมัติ' : 
+                                                         av.status === 'PARTIAL' ? 'อนุมัติบางส่วน' :
+                                                         av.status || '-'}
+                                                    </span>
+                                                    {av.remarks && av.remarks !== 'null' && (
+                                                        <p className="text-xs text-gray-400 mt-1 truncate max-w-[200px]" title={av.remarks}>
+                                                            หมายเหตุ: {av.remarks}
+                                                        </p>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="flex justify-end p-4 border-t border-gray-100 dark:border-gray-700 gap-3 rounded-b-lg">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-slate-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 dark:focus:ring-gray-700 transition-colors"
+                    >
+                        ปิด
+                    </button>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+};

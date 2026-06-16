@@ -10,6 +10,7 @@ import { DialogFormLayout } from '@layout/DialogFormLayout';
 import { useDebounce } from '@hooks/useDebounce';
 import { TransferApprovalService } from '../services/transfer-approval.service';
 import type { TransferRequisitionListItem } from '../../transfer-requisition/types/transfer.types';
+import { useBranches, useEmployees } from '@/modules/master-data/hooks/useMasterData';
 
 export interface TransferSearchModalProps {
     isOpen: boolean;
@@ -33,17 +34,32 @@ export const TransferSearchModal: React.FC<TransferSearchModalProps> = React.mem
         staleTime: 0,
     });
 
+    const { data: branches = [] } = useBranches(isOpen);
+    const { data: employees = [] } = useEmployees(isOpen);
+
+    const mappedData = useMemo(() => {
+        return rawData.map(item => {
+            const branch = branches.find(b => String(b.branch_id) === String((item as unknown as Record<string, unknown>).branch_id) || String(b.id) === String((item as unknown as Record<string, unknown>).branch_id));
+            const saveEmp = employees.find(e => String(e.employee_id) === String((item as unknown as Record<string, unknown>).created_by_emp_id) || String(e.id) === String((item as unknown as Record<string, unknown>).created_by_emp_id));
+            return {
+                ...item,
+                branch_name: branch ? branch.branch_name : (item.branch_name || '-'),
+                save_emp_name: saveEmp ? (saveEmp.employee_fullname || saveEmp.employee_name || saveEmp.first_name) : (item.save_emp_name || '-'),
+            };
+        });
+    }, [rawData, branches, employees]);
+
     const filteredData = useMemo(() => {
-        if (!debouncedSearch) return rawData;
+        if (!debouncedSearch) return mappedData;
         const term = debouncedSearch.toLowerCase();
-        return rawData.filter((item) => {
+        return mappedData.filter((item) => {
             return (
                 String(item.transfer__req_no || '').toLowerCase().includes(term) ||
                 String(item.branch_name || '').toLowerCase().includes(term) ||
                 String(item.save_emp_name || '').toLowerCase().includes(term)
             );
         });
-    }, [rawData, debouncedSearch]);
+    }, [mappedData, debouncedSearch]);
 
     const handleSelect = (item: TransferRequisitionListItem) => {
         onSelect(item.transfer__req_id, item);
@@ -172,16 +188,7 @@ export const TransferSearchModal: React.FC<TransferSearchModalProps> = React.mem
                         พบรายการ <span className="font-bold text-emerald-600 dark:text-emerald-400">{filteredData.length}</span> รายการ
                     </p>
                     <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                onSelect('TEST_REQ_ID');
-                                onClose();
-                            }}
-                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-bold shadow-sm transition-all active:scale-95"
-                        >
-                            เปิดแบบทดสอบ (Test Modal)
-                        </button>
+
                         <button
                             type="button"
                             onClick={onClose}

@@ -23,6 +23,7 @@ import { ItemMasterService } from '@/modules/master-data/inventory/services/item
 import { LocationService, LotNoService } from '@master-data/inventory/services/inventory-master.service';
 import { useICOptions } from '@/shared/ic-option';
 import { SYSTEM_DOCUMENT_CODES } from '@/shared/constants/system-documents';
+import { useUnsavedChangesGuard } from '@/shared/hooks/useUnsavedChangesGuard';
 
 // ====================================================================================
 // HELPERS
@@ -112,6 +113,13 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess, pendingRetur
         control,
         name: 'lines',
         keyName: '_id',
+    });
+
+    // 🛡️ Unsaved Changes Guard
+    const { handleCloseAttempt, blocker } = useUnsavedChangesGuard({
+        isDirty: formMethods.formState.isDirty,
+        enabled: isOpen,
+        onSafeClose: onClose
     });
 
     // ── Watch lines for auto-calculate good_amnt and amnt_total ────────────────────
@@ -592,6 +600,8 @@ export function useReturnForm({ isOpen, onClose, editId, onSuccess, pendingRetur
         isSaving,
         isLoading: isLoadingEdit,
         isEditMode,
+        onClose: handleCloseAttempt,
+        blocker,
 
         fields,
         addLine,

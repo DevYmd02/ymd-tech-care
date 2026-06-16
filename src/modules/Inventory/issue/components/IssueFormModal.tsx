@@ -64,6 +64,7 @@ export const IssueFormModal: React.FC<IssueFormModalProps> = ({
         projects,
         uoms,
         icOptions,
+        onClose: handleClose,
     } = useIssueForm({ isOpen, onClose, editId, onSuccess, pendingIssue });
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -293,7 +294,7 @@ export const IssueFormModal: React.FC<IssueFormModalProps> = ({
             <div className="flex gap-2">
                 <button 
                     type="button" 
-                    onClick={onClose}
+                    onClick={handleClose}
                     disabled={isSaving}
                     className="h-10 px-6 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg text-sm font-bold transition-all disabled:opacity-50"
                 >
@@ -318,7 +319,7 @@ export const IssueFormModal: React.FC<IssueFormModalProps> = ({
         <>
             <WindowFormLayout
                 isOpen={isOpen}
-                onClose={onClose}
+                onClose={handleClose}
                 title={formTitle}
                 headerColor={readOnly ? 'bg-slate-600' : 'bg-blue-600'}
                 footer={ModalFooter}
