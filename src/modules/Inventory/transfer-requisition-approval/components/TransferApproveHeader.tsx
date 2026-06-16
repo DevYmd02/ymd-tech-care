@@ -22,7 +22,9 @@ export const TransferApproveHeader: React.FC<TransferApproveHeaderProps> = ({
 }) => {
     const { register, control, formState: { errors } } = useFormContext<TransferApprovalFormData>();
     const watchedSaveEmpId = useWatch({ control, name: 'save_emp_id' });
+    const watchedSaveEmpName = useWatch({ control, name: 'save_emp_name' });
     const watchedAppvEmpId = useWatch({ control, name: 'appv_emp_id' });
+    const watchedAppvEmpName = useWatch({ control, name: 'appv_emp_name' });
     const watchedTransferEmpId = useWatch({ control, name: 'transfer_emp_id' });
     const watchedTransferEmpName = useWatch({ control, name: 'transfer_emp_name' });
     const watchedDocuItemName = useWatch({ control, name: 'docu_item_name' });
@@ -146,7 +148,7 @@ export const TransferApproveHeader: React.FC<TransferApproveHeaderProps> = ({
                     <input
                         type="text"
                         readOnly
-                        value={empOptions.find(e => String(e.id) === String(watchedSaveEmpId))?.name || (watchedSaveEmpId ? 'กำลังโหลด...' : '-- ไม่ระบุ --')}
+                        value={watchedSaveEmpName || empOptions.find(e => String(e.id) === String(watchedSaveEmpId))?.name || (watchedSaveEmpId ? 'กำลังโหลด...' : '-- ไม่ระบุ --')}
                         className={`${inputClass} bg-gray-50 dark:bg-gray-800/50 italic text-gray-500 font-medium border-gray-200 dark:border-gray-700 cursor-not-allowed`}
                     />
                 </div>
@@ -208,7 +210,7 @@ export const TransferApproveHeader: React.FC<TransferApproveHeaderProps> = ({
                         <input
                             type="text"
                             readOnly
-                            value={empOptions.find(e => String(e.id) === String(watchedAppvEmpId))?.name || (watchedAppvEmpId ? 'กำลังโหลด...' : '-- ไม่ระบุ --')}
+                            value={watchedAppvEmpName || empOptions.find(e => String(e.id) === String(watchedAppvEmpId))?.name || (watchedAppvEmpId ? 'กำลังโหลด...' : '-- ไม่ระบุ --')}
                             className={`${inputClass} bg-gray-50 dark:bg-gray-800/50 italic text-gray-500 font-medium border-gray-200 dark:border-gray-700 cursor-not-allowed`}
                         />
                         <input type="hidden" {...register('appv_emp_id')} />

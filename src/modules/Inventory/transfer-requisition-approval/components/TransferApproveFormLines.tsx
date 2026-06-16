@@ -8,11 +8,13 @@ import { useFormContext, Controller } from 'react-hook-form';
 import { ShoppingBag } from 'lucide-react';
 import type { FieldArrayWithId } from 'react-hook-form';
 import type { TransferApprovalFormData } from '../schemas/transfer-approval.schemas';
+import { type ICOption, ICOptionSummaryBar } from '@/shared/ic-option';
 
 interface TransferApproveFormLinesProps {
     fields: FieldArrayWithId<TransferApprovalFormData, 'lines', '_id'>[];
     readOnly?: boolean;
     uomOptions?: { id: string; name: string }[];
+    icOptions?: ICOption;
 }
 
 const tableInputClass = "w-full h-9 px-3 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-white transition-all disabled:bg-gray-50 dark:disabled:bg-gray-800/50 shadow-sm";
@@ -22,17 +24,26 @@ export const TransferApproveFormLines: React.FC<TransferApproveFormLinesProps> =
         fields,
         readOnly = false,
         uomOptions = [],
+        icOptions,
     }) => {
-        const { register, control, formState: { errors } } = useFormContext<TransferApprovalFormData>();
+        const { register, control, watch, formState: { errors } } = useFormContext<TransferApprovalFormData>();
         const lineErrors = errors.lines;
+        const hasPartialApproval = fields.some(f => Number(f.approved_qty) > 0);
+        const appvFlag = watch('appv_flag');
+        const totalApprovedQty = fields.reduce((sum, f) => sum + Number(f.appv_stock_qty || 0), 0);
 
         return (
             <div className="space-y-4">
                 {/* ── Section Header ─────────────────────────────────────────────── */}
                 <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 flex-wrap">
                         <ShoppingBag size={20} strokeWidth={2.5} />
                         <h3 className="text-lg font-bold">รายการขออนุมัติโอนย้าย — Transaction Lines</h3>
+                        {icOptions && (
+                            <div className="ml-2 border-l pl-3 border-gray-200 dark:border-gray-700 hidden xl:block">
+                                <ICOptionSummaryBar options={icOptions} stockEffect={0} />
+                            </div>
+                        )}
                     </div>
                     {lineErrors && typeof lineErrors === 'object' && 'message' in lineErrors && (
                         <span className="text-xs text-red-500 font-medium bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-full border border-red-100 dark:border-red-900/30 animate-pulse">
@@ -49,14 +60,17 @@ export const TransferApproveFormLines: React.FC<TransferApproveFormLinesProps> =
                                 <th className="p-3 w-12 text-center font-bold sticky left-0 z-20 bg-emerald-600 border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">ลำดับ</th>
                                 <th className="p-3 w-64 text-left font-bold sticky left-12 z-20 bg-emerald-600 border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">รหัสสินค้า</th>
                                 <th className="p-3 min-w-[300px] text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">ชื่อสินค้า</th>
+                                <th className="p-3 w-32 text-right font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">จำนวนขอโอนย้าย</th>
+                                {hasPartialApproval && (
+                                    <th className="p-3 w-32 text-right font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px] text-amber-200">อนุมัติไปแล้ว</th>
+                                )}
+                                <th className="p-3 w-32 text-right font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">จำนวนอนุมัติ <span className="text-emerald-200">*</span></th>
                                 <th className="p-3 w-40 text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">หน่วย</th>
                                 <th className="p-3 w-48 text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">คลังต้นทาง</th>
                                 <th className="p-3 w-48 text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">ที่เก็บต้นทาง</th>
                                 <th className="p-3 w-48 text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">คลังปลายทาง</th>
                                 <th className="p-3 w-48 text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">ที่เก็บปลายทาง</th>
                                 <th className="p-3 w-40 text-left font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">Lot</th>
-                                <th className="p-3 w-32 text-right font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">จำนวนขอโอนย้าย</th>
-                                <th className="p-3 w-32 text-right font-bold border-r border-emerald-500/30 uppercase tracking-wider text-[11px]">จำนวนอนุมัติ <span className="text-emerald-200">*</span></th>
                                 <th className="p-3 min-w-[150px] text-left font-bold uppercase tracking-wider text-[11px]">หมายเหตุ</th>
                             </tr>
                         </thead>
@@ -88,6 +102,65 @@ export const TransferApproveFormLines: React.FC<TransferApproveFormLinesProps> =
                                                 className={`${tableInputClass} bg-gray-50 dark:bg-gray-800/50 italic cursor-not-allowed`}
                                             />
                                         </td>
+
+                                         {/* Requisition Qty */}
+                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
+                                             <input
+                                                 {...register(`lines.${index}.qty_ic`, { valueAsNumber: true })}
+                                                 type="number"
+                                                 readOnly
+                                                 className={`${tableInputClass} text-right text-gray-500 bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed`}
+                                             />
+                                         </td>
+
+                                         {/* Already Approved Qty */}
+                                         {hasPartialApproval && (
+                                             <td className="p-2 border-r border-gray-100 dark:border-gray-800">
+                                                 <input
+                                                     {...register(`lines.${index}.approved_qty`, { valueAsNumber: true })}
+                                                     type="number"
+                                                     readOnly
+                                                     className={`${tableInputClass} text-right text-amber-600 font-medium bg-amber-50 dark:bg-amber-900/10 cursor-not-allowed border-amber-200 dark:border-amber-800/50`}
+                                                 />
+                                             </td>
+                                         )}
+
+                                         {/* Approved Qty */}
+                                         <td className="p-2 border-r border-gray-100 dark:border-gray-800">
+                                             <Controller
+                                                 name={`lines.${index}.appv_stock_qty`}
+                                                 control={control}
+                                                 render={({ field: f }) => {
+                                                     const reqQty = Number(field.qty_ic || 0);
+                                                     const appvQty = Number(f.value || 0);
+                                                     const isPartial = appvQty > 0 && appvQty < reqQty;
+                                                     return (
+                                                         <div>
+                                                             <input
+                                                                 {...f}
+                                                                 type="number"
+                                                                 disabled={readOnly}
+                                                                 placeholder="0.00"
+                                                                 onChange={(e) => f.onChange(e.target.value === '' ? '' : Number(e.target.value))}
+                                                                 className={`${tableInputClass} text-right font-bold ${
+                                                                     lineErr?.appv_stock_qty
+                                                                         ? 'border-red-500 text-red-600'
+                                                                         : isPartial
+                                                                             ? 'border-amber-400 ring-1 ring-amber-300 text-amber-600 dark:text-amber-400 focus:border-amber-500 focus:ring-amber-500'
+                                                                             : 'text-emerald-600 focus:border-emerald-500 focus:ring-emerald-500'
+                                                                 }`}
+                                                             />
+                                                             {lineErr?.appv_stock_qty && <span className="text-[10px] text-red-500 font-medium block mt-0.5">{lineErr.appv_stock_qty.message}</span>}
+                                                             {isPartial && !lineErr?.appv_stock_qty && (
+                                                                 <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold block mt-0.5">
+                                                                     อนุมัติบางส่วน
+                                                                 </span>
+                                                             )}
+                                                         </div>
+                                                     );
+                                                 }}
+                                             />
+                                         </td>
 
                                          {/* UOM */}
                                          <td className="p-2 border-r border-gray-100 dark:border-gray-800">
@@ -159,28 +232,6 @@ export const TransferApproveFormLines: React.FC<TransferApproveFormLinesProps> =
                                             />
                                         </td>
 
-                                        {/* Requisition Qty */}
-                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <input
-                                                {...register(`lines.${index}.qty_ic`)}
-                                                type="number"
-                                                readOnly
-                                                className={`${tableInputClass} text-right text-gray-500 bg-gray-50 dark:bg-gray-800/50 cursor-not-allowed`}
-                                            />
-                                        </td>
-
-                                        {/* Approved Qty */}
-                                        <td className="p-2 border-r border-gray-100 dark:border-gray-800">
-                                            <input
-                                                {...register(`lines.${index}.appv_stock_qty`, { valueAsNumber: true })}
-                                                type="number"
-                                                disabled={readOnly}
-                                                placeholder="0.00"
-                                                className={`${tableInputClass} text-right font-bold text-emerald-600 ${lineErr?.appv_stock_qty ? 'border-red-500' : 'focus:border-emerald-500 focus:ring-emerald-500'}`}
-                                            />
-                                            {lineErr?.appv_stock_qty && <span className="text-[10px] text-red-500 font-medium block mt-0.5">{lineErr.appv_stock_qty.message}</span>}
-                                        </td>
-
                                         {/* Remark */}
                                         <td className="p-2">
                                             <input {...register(`lines.${index}.remark`)} type="text" disabled={readOnly} className={`${tableInputClass} focus:border-emerald-500 focus:ring-emerald-500`} placeholder="หมายเหตุ" />
@@ -194,10 +245,28 @@ export const TransferApproveFormLines: React.FC<TransferApproveFormLinesProps> =
 
                 {/* ── Table Footer ──────────────────────────────────────────────── */}
                 <div className="flex items-center justify-end pt-2">
-                    <div className="text-sm font-bold text-gray-500 dark:text-gray-400 bg-slate-100 dark:bg-slate-800 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
-                        รวมทั้งสิ้น: <span className="text-emerald-600 dark:text-emerald-400 ml-1">{fields.length}</span> รายการ
+                    <div className="flex items-center gap-2 p-4 bg-emerald-50 dark:bg-emerald-900/10 border-t border-emerald-100 dark:border-emerald-800/30">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium ml-auto">ยอดรวมอนุมัติ:</span>
+                        <span className="text-2xl font-black text-emerald-700 dark:text-emerald-500">{totalApprovedQty}</span>
                     </div>
                 </div>
+
+                {appvFlag === 'N' && (
+                    <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-xl space-y-2 animate-form-fade-in">
+                        <label className="block text-sm font-bold text-red-600 dark:text-red-400">
+                            เหตุผลในการปฏิเสธการอนุมัติ <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                            {...register('reject_reason')}
+                            rows={3}
+                            placeholder="โปรดระบุเหตุผลในการปฏิเสธ..."
+                            className={`w-full p-3 text-sm bg-white dark:bg-gray-800 border rounded-lg focus:outline-none focus:ring-2 transition-all ${errors.reject_reason ? 'border-red-500 focus:ring-red-500/20' : 'border-red-300 dark:border-red-900/50 focus:border-red-500 focus:ring-red-500/20'}`}
+                        />
+                        {errors.reject_reason && (
+                            <span className="text-xs text-red-500">{errors.reject_reason.message}</span>
+                        )}
+                    </div>
+                )}
             </div>
         );
     }
